@@ -2,7 +2,8 @@
 /target
 backend/target/
 **/*.rs.bk
-Cargo.lock
+# Cargo.lock はアプリケーションの場合は含める（バイナリクレート）
+# backend/Cargo.lock
 
 # Node.js
 node_modules/
