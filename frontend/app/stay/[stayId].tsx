@@ -1,0 +1,229 @@
+// app/stay/[stayId].tsx
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from "react-native";
+
+type Stay = {
+  id: number;
+  schedule_id: number;
+  check_in: string;
+  check_out: string;
+  hotel_name: string;
+  fee: number;
+  breakfast_flag: boolean;
+  deadline?: string | null;
+  penalty?: number | null;
+  status: string;
+};
+
+import { authenticatedFetch, getApiUrl } from "../../utils/api";
+import { NotionProperty, NotionPropertyBlock } from "../../components/notion-property";
+import { NotionTag } from "../../components/notion-tag";
+
+export default function StayDetailScreen() {
+  const { stayId } = useLocalSearchParams<{ stayId: string }>();
+  const router = useRouter();
+
+  const [stay, setStay] = useState<Stay | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleEdit = () => {
+    router.push(`/stay/${stayId}/edit`);
+  };
+
+  const handleDuplicate = () => {
+    // schedule_idを取得するために既存データを取得
+    if (!stay) return;
+    router.push(`/stay/new?scheduleId=${stay.schedule_id}&copyFrom=${stayId}`);
+  };
+
+  useEffect(() => {
+    if (!stayId) return;
+
+    const fetchStay = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await authenticatedFetch(getApiUrl(`/stay/${stayId}`));
+        if (!res.ok) {
+          if (res.status === 404) {
+            throw new Error("Stay not found");
+          }
+          throw new Error(`status: ${res.status}`);
+        }
+        const data: Stay = await res.json();
+        setStay(data);
+      } catch (e: any) {
+        setError(e.message ?? "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStay();
+  }, [stayId]);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator color="#333333" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Stay Detail</Text>
+        <Text style={styles.errorText}>Error: {error}</Text>
+      </View>
+    );
+  }
+
+  if (!stay) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Stay Detail</Text>
+        <Text style={styles.errorText}>Stay not found</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* タイトル */}
+        <View style={styles.titleHeader}>
+          <Text style={styles.mainTitle} numberOfLines={2}>
+            {stay.hotel_name}
+          </Text>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.duplicateButton}
+              onPress={handleDuplicate}
+            >
+              <Text style={styles.duplicateButtonText}>複製</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={handleEdit}
+            >
+              <Text style={styles.editButtonText}>編集</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* [Stay Info] */}
+        <NotionPropertyBlock title="Stay Info">
+          <NotionProperty
+            label="Check In"
+            value={stay.check_in}
+          />
+          <NotionProperty
+            label="Check Out"
+            value={stay.check_out}
+          />
+          <NotionProperty
+            label="Fee"
+            value={formatCurrency(stay.fee)}
+          />
+          <NotionProperty
+            label="Breakfast"
+            value={stay.breakfast_flag ? "Yes" : "No"}
+          />
+          <NotionProperty
+            label="Deadline"
+            value={
+              stay.deadline && stay.deadline.trim().length > 0
+                ? stay.deadline
+                : undefined
+            }
+          />
+          <NotionProperty
+            label="Penalty"
+            value={
+              stay.penalty !== null && stay.penalty !== undefined
+                ? `${stay.penalty}%`
+                : undefined
+            }
+          />
+          <NotionProperty
+            label="Status"
+            value={stay.status}
+          />
+        </NotionPropertyBlock>
+      </ScrollView>
+    </View>
+  );
+}
+
+function formatCurrency(value: number): string {
+  return `¥${value.toLocaleString("ja-JP")}`;
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  scrollContent: {
+    padding: 24,
+    paddingBottom: 32,
+    maxWidth: 900,
+    alignSelf: "center",
+    width: "100%",
+  },
+  titleHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
+    gap: 16,
+  },
+  mainTitle: {
+    fontSize: 40,
+    fontWeight: "700",
+    color: "#37352f",
+    lineHeight: 48,
+    flex: 1,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 8,
+    alignSelf: "flex-start",
+  },
+  duplicateButton: {
+    backgroundColor: "#f7f6f3",
+    borderWidth: 1,
+    borderColor: "#e9e9e7",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 3,
+  },
+  duplicateButtonText: {
+    color: "#37352f",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  editButton: {
+    backgroundColor: "#37352f",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 3,
+  },
+  editButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  emptyValue: {
+    fontSize: 14,
+    color: "#9b9a97",
+  },
+  errorText: {
+    color: "#d93025",
+    marginVertical: 8,
+    fontSize: 14,
+  },
+});

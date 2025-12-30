@@ -1,0 +1,12 @@
+/Users/mei/workspace/live-schedule-api/target/debug/deps/libtracing-2a9c8a72b41929a6.rmeta: /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/lib.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/macros.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/dispatcher.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/field.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/instrument.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/level_filters.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/span.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/subscriber.rs
+
+/Users/mei/workspace/live-schedule-api/target/debug/deps/tracing-2a9c8a72b41929a6.d: /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/lib.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/macros.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/dispatcher.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/field.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/instrument.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/level_filters.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/span.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/subscriber.rs
+
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/lib.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/macros.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/dispatcher.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/field.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/instrument.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/level_filters.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/span.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.44/src/subscriber.rs:

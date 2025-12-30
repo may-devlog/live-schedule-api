@@ -1,0 +1,12 @@
+/Users/mei/workspace/live-schedule-api/target/debug/deps/libasync_trait-c764846c8a44919f.dylib: /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/lib.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/args.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/bound.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/expand.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/lifetime.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/parse.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/receiver.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/verbatim.rs
+
+/Users/mei/workspace/live-schedule-api/target/debug/deps/async_trait-c764846c8a44919f.d: /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/lib.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/args.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/bound.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/expand.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/lifetime.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/parse.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/receiver.rs /Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/verbatim.rs
+
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/lib.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/args.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/bound.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/expand.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/lifetime.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/parse.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/receiver.rs:
+/Users/mei/.cargo/registry/src/index.crates.io-6f17d22bba15001f/async-trait-0.1.89/src/verbatim.rs:

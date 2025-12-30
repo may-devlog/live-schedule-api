@@ -1,0 +1,2 @@
+fn(axum::extract::Path<i32>, Extension<Pool<Sqlite>>, axum::Json<NewSchedule>, AuthenticatedUser) -> impl Future<Output = Result<axum::Json<Schedule>, axum::http::StatusCode>> {update_schedule}
+fn(axum::extract::Path<i32>, Extension<Pool<Sqlite>>, axum::Json<NewSchedule>, AuthenticatedUser) -> impl Future<Output = Result<axum::Json<Schedule>, axum::http::StatusCode>> {update_schedule}: Handler<_, _>

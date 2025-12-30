@@ -1,0 +1,36 @@
+[package]
+name = "live-schedule-api"
+version = "0.1.0"
+edition = "2021"
+default-run = "live-schedule-api"
+
+[[bin]]
+name = "create_user"
+path = "src/bin/create_user.rs"
+
+[[bin]]
+name = "seed_data"
+path = "src/bin/seed_data.rs"
+
+[[bin]]
+name = "fix_bidirectional_relations"
+path = "src/bin/fix_bidirectional_relations.rs"
+
+[[bin]]
+name = "calculate_all_rollups"
+path = "src/bin/calculate_all_rollups.rs"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde", "clock"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors"] }
+jsonwebtoken = "9.2"
+bcrypt = "0.15"
+rand = "0.8"
+urlencoding = "2.1"
+hex = "0.4"
