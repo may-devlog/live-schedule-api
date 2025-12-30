@@ -1,2 +1,0 @@
-fn(Extension<Pool<Sqlite>>, axum::Json<NewSchedule>, AuthenticatedUser) -> impl Future<Output = Result<(axum::http::StatusCode, axum::Json<Schedule>), axum::http::StatusCode>> {create_schedule}
-fn(Extension<Pool<Sqlite>>, axum::Json<NewSchedule>, AuthenticatedUser) -> impl Future<Output = Result<(axum::http::StatusCode, axum::Json<Schedule>), axum::http::StatusCode>> {create_schedule}: Handler<_, _>
