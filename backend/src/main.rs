@@ -209,9 +209,13 @@ where
         // 認証を一時的に無効化（環境変数DISABLE_AUTHが設定されている場合）
         // TODO: エラーが解消したら、この条件を削除して認証を有効化する
         if std::env::var("DISABLE_AUTH").is_ok() {
-            // 認証をスキップして、デフォルトのuser_id（1）を返す
-            println!("[AUTH DISABLED] Skipping authentication, using default user_id=1");
-            return Ok(AuthenticatedUser { user_id: 1 });
+            // 認証をスキップして、環境変数DEFAULT_USER_IDからユーザーIDを取得（デフォルトは1）
+            let default_user_id = std::env::var("DEFAULT_USER_ID")
+                .ok()
+                .and_then(|s| s.parse::<i32>().ok())
+                .unwrap_or(1);
+            println!("[AUTH DISABLED] Skipping authentication, using user_id={}", default_user_id);
+            return Ok(AuthenticatedUser { user_id: default_user_id });
         }
         
         // 通常の認証処理（コードは残しておく）
@@ -1813,46 +1817,100 @@ async fn update_schedule(
 }
 
 // GET /public/schedules - 公開されているスケジュール一覧
+// DISABLE_AUTHが設定されている場合、DEFAULT_USER_IDのスケジュールも返す
 async fn list_public_schedules(
     Query(params): Query<ScheduleQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Json<Vec<Schedule>> {
-    let rows: Vec<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
-        r#"
-        SELECT
-          id,
-          title,
-          "group",
-          date,
-          open,
-          start,
-          "end",
-          notes,
-          category,
-          area,
-          venue,
-          target,
-          lineup,
-          seller,
-          ticket_fee,
-          drink_fee,
-          total_fare,
-          stay_fee,
-          travel_cost,
-          total_cost,
-          status,
-          related_schedule_ids,
-          user_id,
-          is_public,
-          created_at,
-          updated_at
-        FROM schedules
-        WHERE is_public = 1
-        "#,
-    )
-    .fetch_all(&pool)
-    .await
-    .expect("failed to fetch public schedules");
+    // DISABLE_AUTHが設定されている場合、DEFAULT_USER_IDのスケジュールも取得
+    let default_user_id = if std::env::var("DISABLE_AUTH").is_ok() {
+        std::env::var("DEFAULT_USER_ID")
+            .ok()
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(1) // デフォルトは1
+    } else {
+        -1 // 認証が有効な場合は使用しない
+    };
+    
+    let rows: Vec<ScheduleRow> = if default_user_id > 0 {
+        // DISABLE_AUTHが設定されている場合、特定のユーザーIDのスケジュールも取得
+        println!("[PUBLIC SCHEDULES] Including schedules for user_id={} (DISABLE_AUTH is set)", default_user_id);
+        sqlx::query_as::<_, ScheduleRow>(
+            r#"
+            SELECT
+              id,
+              title,
+              "group",
+              date,
+              open,
+              start,
+              "end",
+              notes,
+              category,
+              area,
+              venue,
+              target,
+              lineup,
+              seller,
+              ticket_fee,
+              drink_fee,
+              total_fare,
+              stay_fee,
+              travel_cost,
+              total_cost,
+              status,
+              related_schedule_ids,
+              user_id,
+              is_public,
+              created_at,
+              updated_at
+            FROM schedules
+            WHERE is_public = 1 OR user_id = ?
+            "#,
+        )
+        .bind(default_user_id)
+        .fetch_all(&pool)
+        .await
+        .expect("failed to fetch public schedules")
+    } else {
+        // 通常の動作：公開スケジュールのみ
+        sqlx::query_as::<_, ScheduleRow>(
+            r#"
+            SELECT
+              id,
+              title,
+              "group",
+              date,
+              open,
+              start,
+              "end",
+              notes,
+              category,
+              area,
+              venue,
+              target,
+              lineup,
+              seller,
+              ticket_fee,
+              drink_fee,
+              total_fare,
+              stay_fee,
+              travel_cost,
+              total_cost,
+              status,
+              related_schedule_ids,
+              user_id,
+              is_public,
+              created_at,
+              updated_at
+            FROM schedules
+            WHERE is_public = 1
+            "#,
+        )
+        .fetch_all(&pool)
+        .await
+        .expect("failed to fetch public schedules")
+    };
 
     let mut schedules: Vec<Schedule> = rows.into_iter().map(row_to_schedule).collect();
 
