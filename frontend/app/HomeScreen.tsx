@@ -77,30 +77,39 @@ export default function HomeScreen() {
       console.log("Public schedules received:", data.length, "items");
       
       // 現在時刻をJST（日本標準時）で取得
-      // ブラウザのローカルタイムゾーンを使用（JSTに設定されている場合）
-      // または、UTC+9として明示的に計算
-      const now = new Date();
-      // JSTはUTC+9なので、UTC時刻に9時間を加算
-      const jstOffset = 9 * 60 * 60 * 1000; // ミリ秒
-      const jstNow = new Date(now.getTime() + jstOffset);
+      // UTC時刻を取得し、JST（UTC+9）に変換
+      const nowUTC = new Date();
+      const jstOffset = 9 * 60 * 60 * 1000; // JSTはUTC+9（ミリ秒）
+      // UTC時刻に9時間を加算してJST時刻を取得
+      const jstNow = new Date(nowUTC.getTime() + jstOffset);
+      
+      console.log("Current UTC time:", nowUTC.toISOString());
+      console.log("Current JST time (UTC+9):", jstNow.toISOString());
       
       // 未来のスケジュールのみをフィルタリング（JSTで比較）
-      // schedule.dateとschedule.startからJSTの日時を構築
+      // schedule.datetimeはUTC形式（例: "2025-07-03T17:00:00Z"）で来ているが、
+      // 実際にはJSTの日時を表しているので、9時間を加算してJSTとして扱う
       const futureSchedules = data.filter((schedule) => {
-        if (!schedule.date) {
-          return false; // 日付がない場合は除外
+        if (!schedule.datetime) {
+          return false; // datetimeがない場合は除外
         }
         
-        // date: "YYYY-MM-DD", start: "HH:MM" からJSTの日時を構築
-        const timeStr = schedule.start || "00:00";
-        // JSTの日時として解釈（UTC+9）
-        const jstDateTimeStr = `${schedule.date}T${timeStr}:00+09:00`;
-        const scheduleDateJST = new Date(jstDateTimeStr);
+        // datetimeはUTC形式だが、実際にはJSTの日時を表している
+        // なので、UTC時刻として解釈し、9時間を加算してJST時刻として扱う
+        const scheduleDateUTC = new Date(schedule.datetime);
+        const scheduleDateJST = new Date(scheduleDateUTC.getTime() + jstOffset);
         
         // 現在のJST時刻と比較
         const isFuture = scheduleDateJST > jstNow;
+        
+        if (!isFuture) {
+          console.log(`Filtering out past schedule ${schedule.id}: ${schedule.datetime} (JST: ${scheduleDateJST.toISOString()})`);
+        }
+        
         return isFuture;
       });
+      
+      console.log(`Found ${futureSchedules.length} future schedules out of ${data.length} total`);
       
       console.log("Future schedules:", futureSchedules.length, "items");
       
