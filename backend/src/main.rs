@@ -1840,9 +1840,10 @@ async fn list_public_schedules(
         -1 // 認証が有効な場合は使用しない
     };
     
-    let rows: Vec<ScheduleRow> = if default_user_id > 0 {
-        // DISABLE_AUTHが設定されている場合、特定のユーザーIDのスケジュールも取得
-        println!("[PUBLIC SCHEDULES] Including schedules for user_id={} (DISABLE_AUTH is set)", default_user_id);
+    // DISABLE_AUTHが設定されている場合、全てのスケジュールを取得（ユーザーIDによるフィルタリングなし）
+    let rows: Vec<ScheduleRow> = if std::env::var("DISABLE_AUTH").is_ok() {
+        // 認証が無効化されている場合、全てのスケジュールを返す
+        println!("[PUBLIC SCHEDULES] DISABLE_AUTH is set, returning ALL schedules (ignoring user_id and is_public)");
         sqlx::query_as::<_, ScheduleRow>(
             r#"
             SELECT
@@ -1873,13 +1874,11 @@ async fn list_public_schedules(
               created_at,
               updated_at
             FROM schedules
-            WHERE is_public = 1 OR user_id = ?
             "#,
         )
-        .bind(default_user_id)
         .fetch_all(&pool)
         .await
-        .expect("failed to fetch public schedules")
+        .expect("failed to fetch all schedules")
     } else {
         // 通常の動作：公開スケジュールのみ
         sqlx::query_as::<_, ScheduleRow>(
