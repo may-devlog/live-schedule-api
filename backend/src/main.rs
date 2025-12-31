@@ -2793,6 +2793,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .allow_headers(Any)
     };
 
+    // 一時的なエンドポイント：SQLダンプを実行（データベースのコピー用）
+    // 注意: 本番環境では削除すること
+    async fn import_database_dump(
+        Extension(pool): Extension<Pool<Sqlite>>,
+        Json(payload): Json<serde_json::Value>,
+    ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+        // DISABLE_AUTHが設定されている場合のみ実行可能
+        if std::env::var("DISABLE_AUTH").is_err() {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ErrorResponse {
+                    error: "This endpoint is only available when DISABLE_AUTH is set".to_string(),
+                }),
+            ));
+        }
+        
+        let sql_dump = payload.get("sql").and_then(|v| v.as_str()).ok_or((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "Missing 'sql' field in request body".to_string(),
+            }),
+        ))?;
+        
+        // SQLダンプを実行（複数のステートメントを分割）
+        let statements: Vec<&str> = sql_dump
+            .split(';')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty() && !s.starts_with("PRAGMA") && !s.starts_with("BEGIN") && !s.starts_with("COMMIT"))
+            .collect();
+        
+        let mut executed = 0;
+        for statement in statements {
+            if let Err(e) = sqlx::query(statement).execute(&pool).await {
+                eprintln!("Error executing SQL: {} - Error: {}", statement, e);
+                continue;
+            }
+            executed += 1;
+        }
+        
+        Ok(Json(serde_json::json!({
+            "success": true,
+            "executed": executed
+        })))
+    }
+    
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/auth/register", post(register))
@@ -2813,6 +2858,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/stay", get(list_stays).post(create_stay))
         .route("/stay/all", get(list_all_stays))
         .route("/stay/:id", get(get_stay).put(update_stay))
+        .route("/admin/import-db", post(import_database_dump)) // 一時的なエンドポイント
         .layer(cors)
         .layer(Extension(pool));
 
