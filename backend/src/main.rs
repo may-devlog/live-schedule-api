@@ -2539,24 +2539,7 @@ async fn update_stay(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // データベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
     let db_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite://data/app.db".to_string());
-    
-    // データベースファイルのディレクトリが存在するか確認し、存在しない場合は作成
-    if let Some(db_path) = db_url.strip_prefix("sqlite://") {
-        let db_path = if db_path.starts_with('/') {
-            db_path
-        } else {
-            db_path
-        };
-        let path = std::path::Path::new(db_path);
-        if let Some(parent) = path.parent() {
-            println!("Creating database directory: {:?}", parent);
-            std::fs::create_dir_all(parent)?;
-        }
-        println!("Database path: {:?}", path);
-    }
-    
-    println!("Connecting to database: {}", db_url);
+        .unwrap_or_else(|_| "sqlite:///app/data/app.db".to_string());
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect(&db_url)
