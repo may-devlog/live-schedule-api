@@ -206,6 +206,15 @@ where
         parts: &mut Parts,
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
+        // 認証を一時的に無効化（環境変数DISABLE_AUTHが設定されている場合）
+        // TODO: エラーが解消したら、この条件を削除して認証を有効化する
+        if std::env::var("DISABLE_AUTH").is_ok() {
+            // 認証をスキップして、デフォルトのuser_id（1）を返す
+            println!("[AUTH DISABLED] Skipping authentication, using default user_id=1");
+            return Ok(AuthenticatedUser { user_id: 1 });
+        }
+        
+        // 通常の認証処理（コードは残しておく）
         let headers = &parts.headers;
         let token = extract_token_from_header(headers)?;
         let user_id = verify_token(&token)?;
@@ -2587,6 +2596,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     
+    // データベースファイルが存在しない場合は、空のファイルを作成してから接続を試みる
+    // これにより、SQLiteがファイルを作成できない問題を回避できる
+    let db_file_path = std::path::Path::new(&db_path);
+    if !db_file_path.exists() {
+        println!("Database file does not exist, creating empty file...");
+        match std::fs::File::create(&db_file_path) {
+            Ok(_) => {
+                println!("✓ Empty database file created");
+            }
+            Err(e) => {
+                println!("⚠ Could not create empty database file: {}", e);
+                println!("Will let SQLite create the file during connection");
+            }
+        }
+    } else {
+        println!("✓ Database file already exists");
+    }
+    
     // sqlxのSQLiteドライバーは、絶対パスに対してsqlite:形式（1つのコロン）を使用する必要がある
     // sqlite:///形式（3つのスラッシュ）は動作しない可能性がある
     let connection_url = if db_path.starts_with('/') {
@@ -2598,6 +2625,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     
     println!("Connection URL: {}", connection_url);
+    println!("Database file path: {:?}", db_file_path);
+    println!("Database file exists: {}", db_file_path.exists());
     
     // データベース接続（SQLiteがファイルを自動作成する）
     println!("Connecting to database...");
@@ -2606,12 +2635,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect(&connection_url)
         .await
         .map_err(|e| {
-            let error_msg = format!("Failed to connect to database: {}\nOriginal URL: {}\nConnection URL: {}\nDatabase path: {}", e, db_url, connection_url, db_path);
+            let error_msg = format!("Failed to connect to database: {}\nOriginal URL: {}\nConnection URL: {}\nDatabase path: {}\nFile exists: {}", e, db_url, connection_url, db_path, db_file_path.exists());
             eprintln!("{}", error_msg);
             error_msg
         })?;
     
     println!("✓ Database connected successfully");
+    
+    // 接続後にデータベースファイルの状態を確認
+    if db_file_path.exists() {
+        match std::fs::metadata(db_file_path) {
+            Ok(metadata) => {
+                println!("✓ Database file size: {} bytes", metadata.len());
+            }
+            Err(e) => {
+                println!("⚠ Could not read database file metadata: {}", e);
+            }
+        }
+    } else {
+        println!("⚠ Database file does not exist after connection (this should not happen)");
+    }
 
     init_db(&pool).await.map_err(|e| {
         let error_msg = format!("Failed to initialize database: {}", e);
