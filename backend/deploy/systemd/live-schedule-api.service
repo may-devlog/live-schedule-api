@@ -1,0 +1,22 @@
+[Unit]
+Description=Live Schedule API Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/live-schedule-api
+# 環境変数ファイルから読み込む（推奨）
+EnvironmentFile=/var/www/live-schedule-api/.env
+# または直接環境変数を設定
+# Environment="DATABASE_URL=sqlite:///var/www/live-schedule-api/data/app.db"
+# Environment="JWT_SECRET=your-secret-key-change-this"
+# Environment="BASE_URL=https://schedule.null-relife.com"
+# Environment="ALLOWED_ORIGIN=https://schedule.null-relife.com"
+ExecStart=/var/www/live-schedule-api/live-schedule-api
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+

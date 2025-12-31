@@ -88,12 +88,17 @@ struct UserRow {
     updated_at: Option<String>,
 }
 
-// JWT秘密鍵（本番環境では環境変数から読み込むべき）
-const JWT_SECRET: &str = "your-secret-key-change-in-production";
+// JWT秘密鍵（環境変数から読み込む、未設定の場合はデフォルト値）
+fn get_jwt_secret() -> String {
+    std::env::var("JWT_SECRET")
+        .unwrap_or_else(|_| "your-secret-key-change-in-production".to_string())
+}
 
-// メール確認URLのベースURL（本番環境では環境変数から読み込むべき）
-// フロントエンドのURL（Expoのデフォルトポート）
-const BASE_URL: &str = "http://localhost:8081";
+// メール確認URLのベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
+fn get_base_url() -> String {
+    std::env::var("BASE_URL")
+        .unwrap_or_else(|_| "http://localhost:8081".to_string())
+}
 
 // ====== 認証ヘルパー関数 ======
 
@@ -106,7 +111,8 @@ fn generate_token() -> String {
 
 // メール送信（開発環境ではコンソールに出力）
 async fn send_verification_email(email: &str, token: &str) {
-    let verification_url = format!("{}/verify-email?token={}", BASE_URL, urlencoding::encode(token));
+    let base_url = get_base_url();
+    let verification_url = format!("{}/verify-email?token={}", base_url, urlencoding::encode(token));
     
     // 開発環境ではコンソールに出力
     println!("=== メール送信（開発環境） ===");
@@ -122,7 +128,8 @@ async fn send_verification_email(email: &str, token: &str) {
 }
 
 async fn send_password_reset_email(email: &str, token: &str) {
-    let reset_url = format!("{}/reset-password?token={}", BASE_URL, urlencoding::encode(token));
+    let base_url = get_base_url();
+    let reset_url = format!("{}/reset-password?token={}", base_url, urlencoding::encode(token));
     
     // 開発環境ではコンソールに出力
     println!("=== メール送信（開発環境） ===");
@@ -148,18 +155,20 @@ fn create_token(user_id: i32) -> String {
         exp: expiration,
     };
 
+    let jwt_secret = get_jwt_secret();
     encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(JWT_SECRET.as_ref()),
+        &EncodingKey::from_secret(jwt_secret.as_ref()),
     )
     .unwrap()
 }
 
 fn verify_token(token: &str) -> Result<i32, StatusCode> {
+    let jwt_secret = get_jwt_secret();
     let token_data = decode::<Claims>(
         token,
-        &DecodingKey::from_secret(JWT_SECRET.as_ref()),
+        &DecodingKey::from_secret(jwt_secret.as_ref()),
         &Validation::default(),
     )
     .map_err(|_| StatusCode::UNAUTHORIZED)?;
@@ -2528,7 +2537,9 @@ async fn update_stay(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let db_url = "sqlite://data/app.db";
+    // データベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
+    let db_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "sqlite://data/app.db".to_string());
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect(db_url)
@@ -2536,10 +2547,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     init_db(&pool).await?;
 
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+    // CORS設定（環境変数から許可するオリジンを読み込む）
+    let allowed_origin = std::env::var("ALLOWED_ORIGIN")
+        .unwrap_or_else(|_| "*".to_string());
+    
+    let cors = if allowed_origin == "*" {
+        CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers(Any)
+    } else {
+        CorsLayer::new()
+            .allow_origin(allowed_origin.parse().unwrap())
+            .allow_methods(Any)
+            .allow_headers(Any)
+    };
 
     let app = Router::new()
         .route("/health", get(health_check))
@@ -2564,8 +2586,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(cors)
         .layer(Extension(pool));
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    println!("Server running at {{http://{}}}", addr);
+    // ポート番号を環境変数から読み込む（Fly.ioなどではPORT環境変数が設定される）
+    let port = std::env::var("PORT")
+        .unwrap_or_else(|_| "3000".to_string())
+        .parse::<u16>()
+        .unwrap_or(3000);
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    println!("Server running at http://0.0.0.0:{}", port);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
