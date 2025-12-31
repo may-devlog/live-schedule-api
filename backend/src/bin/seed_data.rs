@@ -13,8 +13,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect(db_url)
         .await?;
     
-    // ユーザーIDを取得（8tdys8@gmail.com）
-    let user_id: Option<i64> = sqlx::query_scalar("SELECT id FROM users WHERE email = '8tdys8@gmail.com'")
+    // ユーザーIDを取得（テスト用メールアドレス）
+    let user_id: Option<i64> = sqlx::query_scalar("SELECT id FROM users WHERE email = ?")
+        .bind("test@example.com")
         .fetch_optional(&pool)
         .await?;
     
