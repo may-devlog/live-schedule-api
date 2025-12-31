@@ -2730,12 +2730,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Attempting database connection ===");
     println!("Connection URL: {}", final_db_url);
     
-    // sqlxのSQLiteドライバーは、絶対パスに対してsqlite:///形式（3つのスラッシュ）を使用する
+    // sqlxのSQLiteドライバーは、絶対パスに対してsqlite:形式（1つのコロン）を使用する
+    // sqlite:///形式（3つのスラッシュ）は相対パスとして解釈される可能性がある
     // ローカル環境ではsqlite://data/app.db（相対パス）が動作しているが、
-    // Fly.ioでは絶対パスが必要なので、sqlite:///形式を使用する
+    // Fly.ioでは絶対パスが必要なので、sqlite:形式を使用する
     let connection_url = if db_path.starts_with('/') {
-        // 絶対パスの場合、sqlite:///形式を使用（sqlxの標準形式）
-        format!("sqlite://{}", db_path)
+        // 絶対パスの場合、sqlite:形式を使用（最も確実な形式）
+        format!("sqlite:{}", db_path)
     } else {
         // 相対パスの場合、元の形式を使用
         final_db_url.clone()
