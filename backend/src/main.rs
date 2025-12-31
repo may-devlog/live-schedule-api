@@ -2543,11 +2543,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // データベースファイルのディレクトリが存在するか確認し、存在しない場合は作成
     if let Some(db_path) = db_url.strip_prefix("sqlite://") {
-        if let Some(parent) = std::path::Path::new(db_path).parent() {
+        let db_path = if db_path.starts_with('/') {
+            db_path
+        } else {
+            db_path
+        };
+        let path = std::path::Path::new(db_path);
+        if let Some(parent) = path.parent() {
+            println!("Creating database directory: {:?}", parent);
             std::fs::create_dir_all(parent)?;
         }
+        println!("Database path: {:?}", path);
     }
     
+    println!("Connecting to database: {}", db_url);
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect(&db_url)
