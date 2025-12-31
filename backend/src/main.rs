@@ -2691,8 +2691,12 @@ async fn get_user_id_by_email(pool: &Pool<Sqlite>, email: &str) -> Option<i32> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // .envファイルから環境変数を読み込む（ローカル開発環境用）
+    dotenv::dotenv().ok();
+    
     println!("=== Starting application ===");
     println!("RUST_LOG: {:?}", std::env::var("RUST_LOG").ok());
+    println!("DISABLE_AUTH: {:?}", std::env::var("DISABLE_AUTH").ok());
     
     // データベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
     // ローカル環境: sqlite://data/app.db（相対パス）
