@@ -2542,7 +2542,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| "sqlite://data/app.db".to_string());
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
-        .connect(db_url)
+        .connect(&db_url)
         .await?;
 
     init_db(&pool).await?;
