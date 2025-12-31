@@ -11,7 +11,12 @@ RUN apt-get update && apt-get install -y \
 
 # 依存関係をコピーしてビルド（キャッシュを効かせるため）
 COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && echo "fn main() {}" > src/main.rs
+RUN mkdir -p src/bin && \
+    echo "fn main() {}" > src/main.rs && \
+    echo "fn main() {}" > src/bin/create_user.rs && \
+    echo "fn main() {}" > src/bin/seed_data.rs && \
+    echo "fn main() {}" > src/bin/fix_bidirectional_relations.rs && \
+    echo "fn main() {}" > src/bin/calculate_all_rollups.rs
 RUN cargo build --release
 RUN rm -rf src
 
