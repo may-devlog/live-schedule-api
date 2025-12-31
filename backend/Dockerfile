@@ -1,5 +1,5 @@
 # Rustアプリ用のDockerfile
-FROM rust:1.79 as builder
+FROM rust:latest as builder
 
 WORKDIR /app
 
