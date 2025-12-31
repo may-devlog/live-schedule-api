@@ -2626,43 +2626,90 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db_url.clone()
     };
     println!("Final database URL: {}", final_db_url);
+    println!("Database path: {}", db_path);
     
-    // ボリュームマウントの完了を待つ（/app/dataが存在することを確認）
-    println!("Waiting for volume mount to be ready...");
+    // ボリュームマウントの完了を待つ（/app/dataが存在し、書き込み可能であることを確認）
+    println!("=== Waiting for volume mount to be ready ===");
     let data_dir = std::path::Path::new("/app/data");
-    for i in 0..10 {
+    let mut volume_ready = false;
+    
+    for i in 0..20 {
+        println!("Checking /app/data (attempt {}/20)...", i + 1);
+        
         if data_dir.exists() {
-            println!("Volume mount is ready: /app/data exists");
-            break;
-        }
-        if i < 9 {
-            println!("Waiting for /app/data to exist... (attempt {}/{})", i + 1, 10);
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            println!("✓ /app/data exists");
+            
+            // 書き込み権限を確認
+            match std::fs::metadata(data_dir) {
+                Ok(metadata) => {
+                    println!("✓ /app/data metadata: {:?}", metadata.permissions());
+                    
+                    // テストファイルを作成して書き込み権限を確認
+                    let test_file = data_dir.join(".write_test");
+                    match std::fs::File::create(&test_file) {
+                        Ok(_) => {
+                            println!("✓ /app/data is writable");
+                            let _ = std::fs::remove_file(&test_file);
+                            volume_ready = true;
+                            break;
+                        }
+                        Err(e) => {
+                            println!("✗ /app/data is not writable: {}", e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("✗ Failed to get /app/data metadata: {}", e);
+                }
+            }
         } else {
-            return Err("Volume mount /app/data does not exist after waiting".into());
+            println!("✗ /app/data does not exist");
+        }
+        
+        if i < 19 {
+            println!("Waiting 2 seconds before next check...");
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         }
     }
     
+    if !volume_ready {
+        return Err("Volume mount /app/data is not ready (does not exist or not writable) after waiting".into());
+    }
+    
+    println!("=== Volume mount is ready ===");
+    
+    // データベースファイルの親ディレクトリが存在することを確認
+    let db_parent = std::path::Path::new(&db_path).parent().unwrap();
+    if !db_parent.exists() {
+        println!("Creating database parent directory: {:?}", db_parent);
+        std::fs::create_dir_all(db_parent).map_err(|e| {
+            format!("Failed to create database parent directory: {}", e)
+        })?;
+    }
+    
     // データベース接続をリトライ（ボリュームマウントの完了を待つ）
+    println!("=== Attempting database connection ===");
     let pool = {
         let mut retries = 10;
         let mut last_error = None;
         
         loop {
+            println!("Attempting to connect to database... ({} retries left)", retries);
             match SqlitePoolOptions::new()
                 .max_connections(5)
                 .connect(&final_db_url)
                 .await
             {
                 Ok(pool) => {
-                    println!("Database connected successfully");
+                    println!("✓ Database connected successfully");
                     break pool;
                 }
                 Err(e) => {
+                    println!("✗ Database connection failed: {:?}", e);
                     last_error = Some(e);
                     retries -= 1;
                     if retries > 0 {
-                        println!("Database connection failed, retrying in 3 seconds... ({} retries left)", retries);
+                        println!("Retrying in 3 seconds...");
                         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
                     } else {
                         let error_msg = format!("Failed to connect to database after retries: {:?}\nOriginal URL: {}\nFinal URL: {}\nDatabase path: {}", last_error, db_url, final_db_url, db_path);
@@ -2674,7 +2721,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     };
-    println!("Database connected successfully");
 
     init_db(&pool).await.map_err(|e| {
         let error_msg = format!("Failed to initialize database: {}", e);
