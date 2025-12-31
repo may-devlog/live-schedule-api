@@ -2559,13 +2559,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // データベースファイルのパスを抽出（親ディレクトリの作成のため）
     let db_path = if db_url.starts_with("sqlite:///") {
         // 絶対パス: sqlite:///app/data/app.db -> /app/data/app.db
-        db_url.strip_prefix("sqlite:///").unwrap().to_string()
+        let path = db_url.strip_prefix("sqlite:///").unwrap();
+        if path.starts_with('/') {
+            path.to_string()
+        } else {
+            // /で始まらない場合でも、絶対パスとして扱う（/app/data/app.db）
+            format!("/{}", path)
+        }
     } else if db_url.starts_with("sqlite://") {
         // 相対パス: sqlite://data/app.db -> data/app.db
         db_url.strip_prefix("sqlite://").unwrap().to_string()
     } else if db_url.starts_with("sqlite:") {
         // sqlite:形式: sqlite:/app/data/app.db -> /app/data/app.db
-        db_url.strip_prefix("sqlite:").unwrap().to_string()
+        let path = db_url.strip_prefix("sqlite:").unwrap();
+        if path.starts_with('/') {
+            path.to_string()
+        } else {
+            format!("/{}", path)
+        }
     } else {
         db_url.clone()
     };
