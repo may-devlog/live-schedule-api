@@ -2609,19 +2609,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Connecting to database: {}", db_url);
     println!("Database path: {}", db_path);
     
-    // sqlxのSQLiteドライバーはsqlite:///形式を期待する
-    // 絶対パスの場合はsqlite:///を維持する
+    // sqlxのSQLiteドライバーは絶対パスに対してsqlite:/形式（2つのスラッシュ）を使用する
+    // sqlite:///形式（3つのスラッシュ）は相対パスとして解釈される可能性がある
     let final_db_url = if db_url.starts_with("sqlite:///") {
-        // 既に正しい形式なのでそのまま使用
-        db_url.clone()
-    } else if db_url.starts_with("sqlite:") {
-        // sqlite:形式の場合はsqlite:///に変換
-        let path = db_url.strip_prefix("sqlite:").unwrap();
+        // sqlite:///形式の場合はsqlite:/形式に変換（絶対パスの場合）
+        let path = db_url.strip_prefix("sqlite:///").unwrap();
         if path.starts_with('/') {
-            format!("sqlite://{}", path)
+            // 既に絶対パスなので、sqlite:/形式に変換
+            format!("sqlite:{}", path)
         } else {
-            format!("sqlite:///{}", path)
+            // 相対パスの場合はsqlite:///形式を維持
+            db_url.clone()
         }
+    } else if db_url.starts_with("sqlite:") {
+        // sqlite:形式の場合はそのまま使用
+        db_url.clone()
     } else {
         db_url.clone()
     };
@@ -2723,14 +2725,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     
     // データベース接続をリトライ（ボリュームマウントの完了を待つ）
+    // sqlxのSQLiteドライバーは複数のURL形式をサポートしているため、複数の形式を試す
     println!("=== Attempting database connection ===");
     println!("Connection URL: {}", final_db_url);
+    
+    // 試すURL形式のリスト（絶対パスの場合）
+    let url_variants = if db_path.starts_with('/') {
+        vec![
+            format!("sqlite:{}", db_path),  // sqlite:/path/to/db.db
+            format!("sqlite://{}", db_path), // sqlite:///path/to/db.db
+            final_db_url.clone(),            // 元の形式
+        ]
+    } else {
+        vec![final_db_url.clone()]
+    };
+    
     let pool = {
         let mut retries = 10;
         let mut last_error = None;
+        let mut url_index = 0;
         
         loop {
+            let current_url = &url_variants[url_index % url_variants.len()];
             println!("Attempting to connect to database... ({} retries left)", retries);
+            println!("Trying URL format {}: {}", url_index % url_variants.len() + 1, current_url);
             
             // 接続前にデータベースファイルの状態を確認
             if db_file_path.exists() {
@@ -2741,11 +2759,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             match SqlitePoolOptions::new()
                 .max_connections(5)
-                .connect(&final_db_url)
+                .connect(current_url)
                 .await
             {
                 Ok(pool) => {
-                    println!("✓ Database connected successfully");
+                    println!("✓ Database connected successfully with URL: {}", current_url);
                     // 接続後にデータベースファイルの状態を確認
                     if db_file_path.exists() {
                         match std::fs::metadata(db_file_path) {
@@ -2760,7 +2778,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     break pool;
                 }
                 Err(e) => {
-                    println!("✗ Database connection failed: {:?}", e);
+                    println!("✗ Database connection failed with URL {}: {:?}", current_url, e);
                     // エラー後にデータベースファイルの状態を確認
                     if db_file_path.exists() {
                         println!("⚠ Database file exists after failed connection");
@@ -2768,15 +2786,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("⚠ Database file still does not exist after failed connection");
                     }
                     last_error = Some(e);
-                    retries -= 1;
-                    if retries > 0 {
-                        println!("Retrying in 3 seconds...");
-                        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                    
+                    // 次のURL形式を試す
+                    url_index += 1;
+                    if url_index >= url_variants.len() {
+                        // すべてのURL形式を試したので、リトライ回数を減らす
+                        retries -= 1;
+                        url_index = 0; // 最初の形式に戻す
+                        
+                        if retries > 0 {
+                            println!("All URL formats failed, retrying in 3 seconds...");
+                            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                        } else {
+                            let error_msg = format!("Failed to connect to database after retries with all URL formats: {:?}\nOriginal URL: {}\nFinal URL: {}\nDatabase path: {}\nTried URLs: {:?}", last_error, db_url, final_db_url, db_path, url_variants);
+                            println!("{}", error_msg);
+                            eprintln!("{}", error_msg);
+                            return Err(error_msg.into());
+                        }
                     } else {
-                        let error_msg = format!("Failed to connect to database after retries: {:?}\nOriginal URL: {}\nFinal URL: {}\nDatabase path: {}", last_error, db_url, final_db_url, db_path);
-                        println!("{}", error_msg);
-                        eprintln!("{}", error_msg);
-                        return Err(error_msg.into());
+                        println!("Trying next URL format...");
                     }
                 }
             }
