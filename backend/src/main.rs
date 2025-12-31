@@ -2541,335 +2541,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("RUST_LOG: {:?}", std::env::var("RUST_LOG").ok());
     
     // データベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
+    // ローカル環境: sqlite://data/app.db（相対パス）
+    // Fly.io環境: sqlite:///app/data/app.db（絶対パス、3つのスラッシュ）
     let db_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite:///app/data/app.db".to_string());
-    println!("DATABASE_URL from env: {:?}", std::env::var("DATABASE_URL").ok());
+        .unwrap_or_else(|_| "sqlite://data/app.db".to_string());
+    println!("DATABASE_URL: {}", db_url);
     
-    // データベースディレクトリが存在することを確認（SQLiteのURLからパスを抽出）
-    // sqlite:/// の後の3つのスラッシュは絶対パスを示す
+    // データベースファイルのパスを抽出（親ディレクトリの作成のため）
     let db_path = if db_url.starts_with("sqlite:///") {
-        // 3つのスラッシュの後のパスを取得し、絶対パスとして扱う
-        let path = db_url.strip_prefix("sqlite:///").unwrap();
-        if !path.starts_with('/') {
-            format!("/{}", path)
-        } else {
-            path.to_string()
-        }
+        // 絶対パス: sqlite:///app/data/app.db -> /app/data/app.db
+        db_url.strip_prefix("sqlite:///").unwrap().to_string()
+    } else if db_url.starts_with("sqlite://") {
+        // 相対パス: sqlite://data/app.db -> data/app.db
+        db_url.strip_prefix("sqlite://").unwrap().to_string()
     } else if db_url.starts_with("sqlite:") {
+        // sqlite:形式: sqlite:/app/data/app.db -> /app/data/app.db
         db_url.strip_prefix("sqlite:").unwrap().to_string()
     } else {
         db_url.clone()
     };
     
-    // データベースディレクトリの作成とパーミッション設定
+    // 親ディレクトリが存在することを確認し、存在しない場合は作成
     if let Some(parent_dir) = std::path::Path::new(&db_path).parent() {
-        println!("Checking database directory: {:?}", parent_dir);
         if !parent_dir.exists() {
-            println!("Database directory does not exist, creating...");
+            println!("Creating database directory: {:?}", parent_dir);
             std::fs::create_dir_all(parent_dir)?;
-            println!("Created database directory: {:?}", parent_dir);
-        } else {
-            println!("Database directory exists: {:?}", parent_dir);
-        }
-        
-        // パーミッションを確認
-        match std::fs::metadata(parent_dir) {
-            Ok(metadata) => {
-                println!("Directory permissions: {:?}", metadata.permissions());
-            }
-            Err(e) => {
-                println!("Warning: Could not read directory metadata: {}", e);
-            }
+            println!("✓ Database directory created");
         }
     }
     
-    // データベースファイルの親ディレクトリが存在することを再確認
-    if let Some(parent_dir) = std::path::Path::new(&db_path).parent() {
-        if !parent_dir.exists() {
-            return Err(format!("Database directory does not exist after creation: {:?}", parent_dir).into());
-        }
-        
-        // ディレクトリが書き込み可能かテスト
-        let test_file = parent_dir.join(".write_test");
-        match std::fs::File::create(&test_file) {
-            Ok(_) => {
-                let _ = std::fs::remove_file(&test_file);
-                println!("Directory is writable: {:?}", parent_dir);
-            }
-            Err(e) => {
-                return Err(format!("Database directory is not writable: {:?}, error: {}", parent_dir, e).into());
-            }
-        }
-    }
-    
-    // データベースファイルのパスを確認
-    println!("Final database path: {}", db_path);
-    println!("Database path exists: {}", std::path::Path::new(&db_path).exists());
-    
+    // データベース接続（SQLiteがファイルを自動作成する）
     println!("Connecting to database: {}", db_url);
-    println!("Database path: {}", db_path);
-    
-    // sqlxのSQLiteドライバーは絶対パスに対してsqlite:/形式（2つのスラッシュ）を使用する
-    // sqlite:///形式（3つのスラッシュ）は相対パスとして解釈される可能性がある
-    let final_db_url = if db_url.starts_with("sqlite:///") {
-        // sqlite:///形式の場合はsqlite:/形式に変換（絶対パスの場合）
-        let path = db_url.strip_prefix("sqlite:///").unwrap();
-        if path.starts_with('/') {
-            // 既に絶対パスなので、sqlite:/形式に変換
-            format!("sqlite:{}", path)
-        } else {
-            // 相対パスの場合はsqlite:///形式を維持
-            db_url.clone()
-        }
-    } else if db_url.starts_with("sqlite:") {
-        // sqlite:形式の場合はそのまま使用
-        db_url.clone()
-    } else {
-        db_url.clone()
-    };
-    println!("Final database URL: {}", final_db_url);
-    println!("Database path: {}", db_path);
-    
-    // ボリュームマウントの完了を待つ（/app/dataが存在し、書き込み可能であることを確認）
-    println!("=== Waiting for volume mount to be ready ===");
-    let data_dir = std::path::Path::new("/app/data");
-    let mut volume_ready = false;
-    
-    for i in 0..20 {
-        println!("Checking /app/data (attempt {}/20)...", i + 1);
-        
-        if data_dir.exists() {
-            println!("✓ /app/data exists");
-            
-            // 書き込み権限を確認
-            match std::fs::metadata(data_dir) {
-                Ok(metadata) => {
-                    println!("✓ /app/data metadata: {:?}", metadata.permissions());
-                    
-                    // テストファイルを作成して書き込み権限を確認
-                    let test_file = data_dir.join(".write_test");
-                    match std::fs::File::create(&test_file) {
-                        Ok(_) => {
-                            println!("✓ /app/data is writable");
-                            let _ = std::fs::remove_file(&test_file);
-                            volume_ready = true;
-                            break;
-                        }
-                        Err(e) => {
-                            println!("✗ /app/data is not writable: {}", e);
-                        }
-                    }
-                }
-                Err(e) => {
-                    println!("✗ Failed to get /app/data metadata: {}", e);
-                }
-            }
-        } else {
-            println!("✗ /app/data does not exist");
-        }
-        
-        if i < 19 {
-            println!("Waiting 2 seconds before next check...");
-            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-        }
-    }
-    
-    if !volume_ready {
-        return Err("Volume mount /app/data is not ready (does not exist or not writable) after waiting".into());
-    }
-    
-    println!("=== Volume mount is ready ===");
-    
-    // データベースファイルの親ディレクトリが存在することを確認
-    let db_parent = std::path::Path::new(&db_path).parent().unwrap();
-    println!("Database parent directory: {:?}", db_parent);
-    if !db_parent.exists() {
-        println!("Creating database parent directory: {:?}", db_parent);
-        std::fs::create_dir_all(db_parent).map_err(|e| {
-            format!("Failed to create database parent directory: {}", e)
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&db_url)
+        .await
+        .map_err(|e| {
+            let error_msg = format!("Failed to connect to database: {}\nDatabase URL: {}", e, db_url);
+            eprintln!("{}", error_msg);
+            error_msg
         })?;
-        println!("✓ Database parent directory created");
-    } else {
-        println!("✓ Database parent directory exists");
-    }
     
-    // データベースファイルのパスを確認
-    let db_file_path = std::path::Path::new(&db_path);
-    println!("Database file path: {:?}", db_file_path);
-    if db_file_path.exists() {
-        println!("✓ Database file exists");
-        match std::fs::metadata(db_file_path) {
-            Ok(metadata) => {
-                println!("✓ Database file metadata: {:?}", metadata.permissions());
-                println!("✓ Database file size: {} bytes", metadata.len());
-            }
-            Err(e) => {
-                println!("✗ Failed to get database file metadata: {}", e);
-            }
-        }
-    } else {
-        println!("⚠ Database file does not exist yet (will be created by SQLite)");
-    }
-    
-    // データベースファイルの親ディレクトリに書き込み権限があることを確認
-    let test_db_file = db_parent.join(".db_write_test");
-    match std::fs::File::create(&test_db_file) {
-        Ok(_) => {
-            println!("✓ Can create files in database parent directory");
-            let _ = std::fs::remove_file(&test_db_file);
-        }
-        Err(e) => {
-            println!("✗ Cannot create files in database parent directory: {}", e);
-            return Err(format!("Cannot create files in database parent directory: {}", e).into());
-        }
-    }
-    
-    // データベース接続をリトライ（ボリュームマウントの完了を待つ）
-    // sqlxのSQLiteドライバーは、ローカル環境ではsqlite://data/app.db（相対パス）が動作している
-    // Fly.ioでは絶対パスが必要なので、sqlite:形式（1つのコロン）を使用する
-    println!("=== Attempting database connection ===");
-    println!("Connection URL: {}", final_db_url);
-    
-    // sqlxのSQLiteドライバーは、絶対パスに対してsqlite:形式（1つのコロン）を使用する
-    // sqlite:///形式（3つのスラッシュ）は相対パスとして解釈される可能性がある
-    // ローカル環境ではsqlite://data/app.db（相対パス）が動作しているが、
-    // Fly.ioでは絶対パスが必要なので、sqlite:形式を使用する
-    let connection_url = if db_path.starts_with('/') {
-        // 絶対パスの場合、sqlite:形式を使用（最も確実な形式）
-        format!("sqlite:{}", db_path)
-    } else {
-        // 相対パスの場合、元の形式を使用
-        final_db_url.clone()
-    };
-    
-    println!("Using connection URL: {}", connection_url);
-    
-    // SQLiteがファイルを作成できるかテスト（接続前に空のファイルを作成してみる）
-    println!("=== Testing file creation ===");
-    println!("Database file path: {:?}", db_file_path);
-    println!("Database file path (string): {}", db_path);
-    
-    // 親ディレクトリの詳細を確認
-    if let Some(parent) = db_file_path.parent() {
-        println!("Parent directory path: {:?}", parent);
-        println!("Parent directory exists: {}", parent.exists());
-        if parent.exists() {
-            match std::fs::metadata(parent) {
-                Ok(meta) => {
-                    println!("Parent directory permissions: {:?}", meta.permissions());
-                    println!("Parent directory is directory: {}", meta.is_dir());
-                }
-                Err(e) => {
-                    println!("✗ Cannot read parent directory metadata: {}", e);
-                }
-            }
-        }
-    }
-    
-    // ファイル作成テスト
-    println!("Attempting to create test file...");
-    match std::fs::File::create(&db_file_path) {
-        Ok(mut file) => {
-            println!("✓ Can create database file directly");
-            // ファイルに何か書き込んでみる
-            use std::io::Write;
-            if let Err(e) = file.write_all(b"test") {
-                println!("✗ Cannot write to test file: {}", e);
-            } else {
-                println!("✓ Can write to test file");
-            }
-            // ファイルを閉じて削除（SQLiteが作成できるように）
-            drop(file);
-            if let Err(e) = std::fs::remove_file(&db_file_path) {
-                println!("⚠ Could not remove test file: {}", e);
-            } else {
-                println!("✓ Test file removed successfully");
-            }
-        }
-        Err(e) => {
-            println!("✗ Cannot create database file directly: {}", e);
-            println!("Error kind: {:?}", e.kind());
-            println!("This may indicate a filesystem or permission issue");
-        }
-    }
-    
-    println!("=== End of file creation test ===");
-    
-    let pool = {
-        let mut retries = 10;
-        let mut last_error = None;
-        
-        loop {
-            println!("Attempting to connect to database... ({} retries left)", retries);
-            
-            // 接続前にデータベースファイルの状態を確認
-            if db_file_path.exists() {
-                println!("Database file exists before connection attempt");
-            } else {
-                println!("Database file does not exist (SQLite will create it)");
-            }
-            
-            // 親ディレクトリの状態を確認
-            if let Some(parent) = db_file_path.parent() {
-                println!("Parent directory: {:?}", parent);
-                if parent.exists() {
-                    println!("✓ Parent directory exists");
-                    match std::fs::metadata(parent) {
-                        Ok(meta) => {
-                            println!("✓ Parent directory permissions: {:?}", meta.permissions());
-                        }
-                        Err(e) => {
-                            println!("✗ Cannot read parent directory metadata: {}", e);
-                        }
-                    }
-                } else {
-                    println!("✗ Parent directory does not exist");
-                }
-            }
-            
-            match SqlitePoolOptions::new()
-                .max_connections(5)
-                .connect(&connection_url)
-                .await
-            {
-                Ok(pool) => {
-                    println!("✓ Database connected successfully with URL: {}", connection_url);
-                    // 接続後にデータベースファイルの状態を確認
-                    if db_file_path.exists() {
-                        match std::fs::metadata(db_file_path) {
-                            Ok(metadata) => {
-                                println!("✓ Database file created, size: {} bytes", metadata.len());
-                            }
-                            Err(e) => {
-                                println!("⚠ Database file exists but cannot read metadata: {}", e);
-                            }
-                        }
-                    }
-                    break pool;
-                }
-                Err(e) => {
-                    println!("✗ Database connection failed: {:?}", e);
-                    // エラー後にデータベースファイルの状態を確認
-                    if db_file_path.exists() {
-                        println!("⚠ Database file exists after failed connection");
-                    } else {
-                        println!("⚠ Database file still does not exist after failed connection");
-                    }
-                    last_error = Some(e);
-                    retries -= 1;
-                    if retries > 0 {
-                        println!("Retrying in 3 seconds...");
-                        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-                    } else {
-                        let error_msg = format!("Failed to connect to database after retries: {:?}\nOriginal URL: {}\nConnection URL: {}\nDatabase path: {}", last_error, db_url, connection_url, db_path);
-                        println!("{}", error_msg);
-                        eprintln!("{}", error_msg);
-                        return Err(error_msg.into());
-                    }
-                }
-            }
-        }
-    };
+    println!("✓ Database connected successfully");
 
     init_db(&pool).await.map_err(|e| {
         let error_msg = format!("Failed to initialize database: {}", e);
