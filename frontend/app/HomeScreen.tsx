@@ -7,8 +7,14 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Alert,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/contexts/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
 
 export type Schedule = {
   id: number;
@@ -40,33 +46,46 @@ export type Schedule = {
   is_public?: boolean;
 };
 
-import { authenticatedFetch, getApiUrl } from "../utils/api";
+import { getApiUrl } from "../utils/api";
 
 const YEARS = [2024, 2025, 2026];
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { isAuthenticated, login, logout, email } = useAuth();
 
   const [nextSchedules, setNextSchedules] = useState<Schedule[]>([]);
   const [loadingNext, setLoadingNext] = useState(false);
   const [errorNext, setErrorNext] = useState<string | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const fetchUpcoming = async () => {
     try {
       setLoadingNext(true);
       setErrorNext(null);
-      const url = getApiUrl("/schedules/upcoming");
-      console.log("Fetching upcoming schedules from:", url);
-      const res = await authenticatedFetch(url);
+      // 公開スケジュールAPIを使用（認証不要）
+      const url = getApiUrl("/public/schedules");
+      console.log("Fetching public schedules from:", url);
+      const res = await fetch(url);
       if (!res.ok) {
         throw new Error(`status: ${res.status}`);
       }
       const data: Schedule[] = await res.json();
-      console.log("Upcoming schedules received:", data.length, "items");
-      console.log("Data:", data);
-      setNextSchedules(data);
+      console.log("Public schedules received:", data.length, "items");
+      
+      // 日付順にソート（未来のイベントを先に）
+      const sorted = data.sort((a, b) => {
+        const dateA = new Date(a.datetime).getTime();
+        const dateB = new Date(b.datetime).getTime();
+        return dateA - dateB;
+      });
+      
+      setNextSchedules(sorted);
     } catch (e: any) {
-      console.error("Error fetching upcoming schedules:", e);
+      console.error("Error fetching schedules:", e);
       setErrorNext(e.message ?? "Unknown error");
     } finally {
       setLoadingNext(false);
@@ -78,7 +97,45 @@ export default function HomeScreen() {
   };
 
   const handleOpenNew = () => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
     router.push("/new");
+  };
+
+  const handleLogin = async () => {
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      Alert.alert("エラー", "メールアドレスとパスワードを入力してください");
+      return;
+    }
+
+    try {
+      setLoginLoading(true);
+      const result = await login(loginEmail.trim(), loginPassword);
+      if (!result.email_verified) {
+        Alert.alert(
+          "メール確認が必要です",
+          "メールアドレスの確認が完了していません。登録時に送信されたメールを確認してください。"
+        );
+        return;
+      }
+      setShowLoginModal(false);
+      setLoginEmail("");
+      setLoginPassword("");
+    } catch (error: any) {
+      Alert.alert("ログインエラー", error.message || "ログインに失敗しました");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error: any) {
+      Alert.alert("エラー", "ログアウトに失敗しました");
+    }
   };
 
   useEffect(() => {
@@ -87,11 +144,38 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Live SCHEDULE</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Live SCHEDULE</Text>
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={() => {
+            if (isAuthenticated) {
+              Alert.alert(
+                "ログアウト",
+                `${email} でログイン中です。ログアウトしますか？`,
+                [
+                  { text: "キャンセル", style: "cancel" },
+                  { text: "ログアウト", onPress: handleLogout, style: "destructive" },
+                ]
+              );
+            } else {
+              setShowLoginModal(true);
+            }
+          }}
+        >
+          <Ionicons
+            name={isAuthenticated ? "person" : "log-in-outline"}
+            size={24}
+            color="#37352f"
+          />
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
-        <Text style={styles.newButtonText}>+ New Live</Text>
-      </TouchableOpacity>
+      {isAuthenticated && (
+        <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
+          <Text style={styles.newButtonText}>+ New Live</Text>
+        </TouchableOpacity>
+      )}
 
       <Text style={styles.sectionTitle}>NEXT</Text>
       {loadingNext && <ActivityIndicator color="#333333" />}
@@ -135,6 +219,69 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* ログインモーダル */}
+      <Modal
+        visible={showLoginModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowLoginModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>ログイン</Text>
+              <TouchableOpacity
+                onPress={() => setShowLoginModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color="#37352f" />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.input}
+              placeholder="メールアドレス"
+              value={loginEmail}
+              onChangeText={setLoginEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="パスワード"
+              value={loginPassword}
+              onChangeText={setLoginPassword}
+              secureTextEntry
+              autoComplete="password"
+            />
+
+            <TouchableOpacity
+              style={[styles.loginSubmitButton, loginLoading && styles.loginSubmitButtonDisabled]}
+              onPress={handleLogin}
+              disabled={loginLoading}
+            >
+              {loginLoading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.loginSubmitButtonText}>ログイン</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.registerLink}
+              onPress={() => {
+                setShowLoginModal(false);
+                router.push("/login");
+              }}
+            >
+              <Text style={styles.registerLinkText}>新規登録はこちら</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -162,11 +309,19 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
   },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
   title: {
     fontSize: 40,
     fontWeight: "700",
     color: "#37352f",
-    marginBottom: 24,
+  },
+  loginButton: {
+    padding: 8,
   },
   newButton: {
     alignSelf: "flex-start",
@@ -243,5 +398,65 @@ const styles = StyleSheet.create({
     color: "#37352f",
     fontSize: 16,
     fontWeight: "500",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    padding: 24,
+    width: "90%",
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#37352f",
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#e9e9e7",
+    borderRadius: 4,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+    backgroundColor: "#ffffff",
+  },
+  loginSubmitButton: {
+    backgroundColor: "#37352f",
+    borderRadius: 4,
+    padding: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  loginSubmitButtonDisabled: {
+    opacity: 0.6,
+  },
+  loginSubmitButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  registerLink: {
+    marginTop: 16,
+    alignItems: "center",
+  },
+  registerLinkText: {
+    color: "#37352f",
+    fontSize: 14,
+    textDecorationLine: "underline",
   },
 });

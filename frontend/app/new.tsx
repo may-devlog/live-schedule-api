@@ -22,10 +22,19 @@ import {
   loadSelectOptions,
   saveSelectOptions,
 } from "../utils/select-options-storage";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function NewScheduleScreen() {
   const router = useRouter();
   const { copyFrom } = useLocalSearchParams<{ copyFrom?: string }>();
+  const { isAuthenticated } = useAuth();
+
+  // 未ログインの場合はログイン画面にリダイレクト
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated, router]);
 
   // 選択肢の状態管理（SelectOption型）
   const [categories, setCategories] = useState<SelectOption[]>([]);

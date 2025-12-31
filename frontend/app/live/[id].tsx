@@ -19,6 +19,7 @@ import { NotionStayRelation } from "../../components/notion-stay-relation";
 import { getOptionColor } from "../../utils/get-option-color";
 import { Ionicons } from "@expo/vector-icons";
 import { loadSelectOptions } from "../../utils/select-options-storage";
+import { useAuth } from "@/contexts/AuthContext";
 
 type TrafficSummary = {
   id: number;
@@ -52,6 +53,7 @@ type StaySummary = {
 export default function DetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
@@ -572,20 +574,22 @@ export default function DetailScreen() {
           <Text style={styles.mainTitle} numberOfLines={2}>
             {schedule.title}
           </Text>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={styles.duplicateButton}
-              onPress={handleDuplicate}
-            >
-              <Text style={styles.duplicateButtonText}>複製</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEdit}
-            >
-              <Text style={styles.editButtonText}>編集</Text>
-            </TouchableOpacity>
-          </View>
+          {isAuthenticated && (
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={styles.duplicateButton}
+                onPress={handleDuplicate}
+              >
+                <Text style={styles.duplicateButtonText}>複製</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={handleEdit}
+              >
+                <Text style={styles.editButtonText}>編集</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* [Event Info] */}
