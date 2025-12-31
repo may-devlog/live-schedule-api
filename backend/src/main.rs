@@ -2542,10 +2542,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // データベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
     // ローカル環境: sqlite://data/app.db（相対パス）
-    // Fly.io環境: sqlite:///app/data/app.db（絶対パス、3つのスラッシュ）
+    // Fly.io環境: sqlite:///app/data/app.db（絶対パス、3つのスラッシュ）またはsqlite:/app/data/app.db（1つのコロン）
     let db_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "sqlite://data/app.db".to_string());
-    println!("DATABASE_URL: {}", db_url);
+    println!("DATABASE_URL from env: {}", db_url);
     
     // データベースファイルのパスを抽出（親ディレクトリの作成のため）
     let db_path = if db_url.starts_with("sqlite:///") {
@@ -2561,23 +2561,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db_url.clone()
     };
     
+    println!("Database path: {}", db_path);
+    
     // 親ディレクトリが存在することを確認し、存在しない場合は作成
     if let Some(parent_dir) = std::path::Path::new(&db_path).parent() {
+        println!("Database parent directory: {:?}", parent_dir);
         if !parent_dir.exists() {
             println!("Creating database directory: {:?}", parent_dir);
             std::fs::create_dir_all(parent_dir)?;
             println!("✓ Database directory created");
+        } else {
+            println!("✓ Database directory exists");
+        }
+        
+        // 書き込み権限を確認
+        let test_file = parent_dir.join(".write_test");
+        match std::fs::File::create(&test_file) {
+            Ok(_) => {
+                let _ = std::fs::remove_file(&test_file);
+                println!("✓ Database directory is writable");
+            }
+            Err(e) => {
+                return Err(format!("Database directory is not writable: {:?}, error: {}", parent_dir, e).into());
+            }
         }
     }
     
+    // sqlxのSQLiteドライバーは、絶対パスに対してsqlite:形式（1つのコロン）を使用する必要がある
+    // sqlite:///形式（3つのスラッシュ）は動作しない可能性がある
+    let connection_url = if db_path.starts_with('/') {
+        // 絶対パスの場合、sqlite:形式に変換
+        format!("sqlite:{}", db_path)
+    } else {
+        // 相対パスの場合、元の形式を使用
+        db_url.clone()
+    };
+    
+    println!("Connection URL: {}", connection_url);
+    
     // データベース接続（SQLiteがファイルを自動作成する）
-    println!("Connecting to database: {}", db_url);
+    println!("Connecting to database...");
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
-        .connect(&db_url)
+        .connect(&connection_url)
         .await
         .map_err(|e| {
-            let error_msg = format!("Failed to connect to database: {}\nDatabase URL: {}", e, db_url);
+            let error_msg = format!("Failed to connect to database: {}\nOriginal URL: {}\nConnection URL: {}\nDatabase path: {}", e, db_url, connection_url, db_path);
             eprintln!("{}", error_msg);
             error_msg
         })?;
