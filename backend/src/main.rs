@@ -2554,26 +2554,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &db_url
     };
     
+    // データベースディレクトリの作成とパーミッション設定
     if let Some(parent_dir) = std::path::Path::new(db_path).parent() {
+        println!("Checking database directory: {:?}", parent_dir);
         if !parent_dir.exists() {
+            println!("Database directory does not exist, creating...");
             std::fs::create_dir_all(parent_dir)?;
             println!("Created database directory: {:?}", parent_dir);
+        } else {
+            println!("Database directory exists: {:?}", parent_dir);
         }
-        println!("Database directory exists: {:?}", parent_dir);
+        
+        // パーミッションを確認
+        match std::fs::metadata(parent_dir) {
+            Ok(metadata) => {
+                println!("Directory permissions: {:?}", metadata.permissions());
+            }
+            Err(e) => {
+                println!("Warning: Could not read directory metadata: {}", e);
+            }
+        }
+    }
+    
+    // データベースファイルの親ディレクトリが存在することを再確認
+    if let Some(parent_dir) = std::path::Path::new(db_path).parent() {
+        if !parent_dir.exists() {
+            return Err(format!("Database directory does not exist after creation: {:?}", parent_dir).into());
+        }
     }
     
     println!("Connecting to database: {}", db_url);
     println!("Database path: {}", db_path);
-    let pool = SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url)
-        .await
-        .map_err(|e| {
-            let error_msg = format!("Failed to connect to database: {}\nDatabase URL: {}", e, db_url);
-            println!("{}", error_msg);
-            eprintln!("{}", error_msg);
-            e
-        })?;
+    
+    // データベース接続をリトライ（ボリュームマウントの完了を待つ）
+    let pool = {
+        let mut retries = 5;
+        let mut last_error = None;
+        
+        loop {
+            match SqlitePoolOptions::new()
+                .max_connections(5)
+                .connect(&db_url)
+                .await
+            {
+                Ok(pool) => {
+                    println!("Database connected successfully");
+                    break pool;
+                }
+                Err(e) => {
+                    last_error = Some(e);
+                    retries -= 1;
+                    if retries > 0 {
+                        println!("Database connection failed, retrying in 2 seconds... ({} retries left)", retries);
+                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                    } else {
+                        let error_msg = format!("Failed to connect to database after retries: {:?}\nDatabase URL: {}\nDatabase path: {}", last_error, db_url, db_path);
+                        println!("{}", error_msg);
+                        eprintln!("{}", error_msg);
+                        return Err(error_msg.into());
+                    }
+                }
+            }
+        }
+    };
     println!("Database connected successfully");
 
     init_db(&pool).await.map_err(|e| {
