@@ -2609,18 +2609,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Connecting to database: {}", db_url);
     println!("Database path: {}", db_path);
     
-    // SQLiteのURL形式を確認（sqlxはsqlite:プレフィックスを期待する場合がある）
+    // sqlxのSQLiteドライバーはsqlite:///形式を期待する
+    // 絶対パスの場合はsqlite:///を維持する
     let final_db_url = if db_url.starts_with("sqlite:///") {
-        // sqlite:/// を sqlite: に変換（絶対パスの場合）
-        format!("sqlite:{}", db_path)
+        // 既に正しい形式なのでそのまま使用
+        db_url.clone()
+    } else if db_url.starts_with("sqlite:") {
+        // sqlite:形式の場合はsqlite:///に変換
+        let path = db_url.strip_prefix("sqlite:").unwrap();
+        if path.starts_with('/') {
+            format!("sqlite://{}", path)
+        } else {
+            format!("sqlite:///{}", path)
+        }
     } else {
         db_url.clone()
     };
     println!("Final database URL: {}", final_db_url);
     
+    // ボリュームマウントの完了を待つ（/app/dataが存在することを確認）
+    println!("Waiting for volume mount to be ready...");
+    let data_dir = std::path::Path::new("/app/data");
+    for i in 0..10 {
+        if data_dir.exists() {
+            println!("Volume mount is ready: /app/data exists");
+            break;
+        }
+        if i < 9 {
+            println!("Waiting for /app/data to exist... (attempt {}/{})", i + 1, 10);
+            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        } else {
+            return Err("Volume mount /app/data does not exist after waiting".into());
+        }
+    }
+    
     // データベース接続をリトライ（ボリュームマウントの完了を待つ）
     let pool = {
-        let mut retries = 5;
+        let mut retries = 10;
         let mut last_error = None;
         
         loop {
@@ -2637,8 +2662,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     last_error = Some(e);
                     retries -= 1;
                     if retries > 0 {
-                        println!("Database connection failed, retrying in 2 seconds... ({} retries left)", retries);
-                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                        println!("Database connection failed, retrying in 3 seconds... ({} retries left)", retries);
+                        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
                     } else {
                         let error_msg = format!("Failed to connect to database after retries: {:?}\nOriginal URL: {}\nFinal URL: {}\nDatabase path: {}", last_error, db_url, final_db_url, db_path);
                         println!("{}", error_msg);
