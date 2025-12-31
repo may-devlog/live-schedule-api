@@ -2552,10 +2552,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     
+    println!("Connecting to database: {}", db_url);
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect(&db_url)
-        .await?;
+        .await
+        .map_err(|e| {
+            eprintln!("Failed to connect to database: {}", e);
+            eprintln!("Database URL: {}", db_url);
+            e
+        })?;
+    println!("Database connected successfully");
 
     init_db(&pool).await?;
 
