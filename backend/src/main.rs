@@ -2817,20 +2817,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ))?;
         
         // SQLダンプを実行（複数のステートメントを分割）
-        let statements: Vec<&str> = sql_dump
-            .split(';')
+        // 各行を処理し、空行やコメントをスキップ
+        let statements: Vec<String> = sql_dump
+            .lines()
             .map(|s| s.trim())
-            .filter(|s| !s.is_empty() && !s.starts_with("PRAGMA") && !s.starts_with("BEGIN") && !s.starts_with("COMMIT"))
+            .filter(|s| !s.is_empty() && !s.starts_with("--") && !s.starts_with("PRAGMA"))
+            .collect::<Vec<_>>()
+            .join("\n")
+            .split(';')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty() && !s.starts_with("BEGIN") && !s.starts_with("COMMIT"))
             .collect();
         
+        println!("[IMPORT DB] Found {} SQL statements to execute", statements.len());
         let mut executed = 0;
-        for statement in statements {
-            if let Err(e) = sqlx::query(statement).execute(&pool).await {
-                eprintln!("Error executing SQL: {} - Error: {}", statement, e);
+        let mut errors = 0;
+        for (i, statement) in statements.iter().enumerate() {
+            if statement.is_empty() {
                 continue;
             }
-            executed += 1;
+            // 最初の100文字だけをログに出力
+            let preview = if statement.len() > 100 {
+                format!("{}...", &statement[..100])
+            } else {
+                statement.clone()
+            };
+            match sqlx::query(statement).execute(&pool).await {
+                Ok(_) => {
+                    executed += 1;
+                    if executed <= 5 || executed % 10 == 0 {
+                        println!("[IMPORT DB] Executed statement {}/{}: {}", executed, statements.len(), preview);
+                    }
+                }
+                Err(e) => {
+                    errors += 1;
+                    eprintln!("[IMPORT DB] Error executing statement {}: {} - Error: {}", i + 1, preview, e);
+                }
+            }
         }
+        
+        println!("[IMPORT DB] Import completed: {} executed, {} errors", executed, errors);
         
         Ok(Json(serde_json::json!({
             "success": true,
