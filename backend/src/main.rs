@@ -2542,17 +2542,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| "sqlite:///app/data/app.db".to_string());
     
     // データベースディレクトリが存在することを確認（SQLiteのURLからパスを抽出）
-    if db_url.starts_with("sqlite:///") {
-        let db_path = db_url.strip_prefix("sqlite:///").unwrap();
-        if let Some(parent_dir) = std::path::Path::new(db_path).parent() {
-            if !parent_dir.exists() {
-                std::fs::create_dir_all(parent_dir)?;
-                println!("Created database directory: {:?}", parent_dir);
-            }
+    let db_path = if db_url.starts_with("sqlite:///") {
+        db_url.strip_prefix("sqlite:///").unwrap()
+    } else if db_url.starts_with("sqlite:") {
+        db_url.strip_prefix("sqlite:").unwrap()
+    } else {
+        &db_url
+    };
+    
+    if let Some(parent_dir) = std::path::Path::new(db_path).parent() {
+        if !parent_dir.exists() {
+            std::fs::create_dir_all(parent_dir)?;
+            println!("Created database directory: {:?}", parent_dir);
         }
+        println!("Database directory exists: {:?}", parent_dir);
     }
     
     println!("Connecting to database: {}", db_url);
+    println!("Database path: {}", db_path);
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect(&db_url)
@@ -2564,7 +2571,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })?;
     println!("Database connected successfully");
 
-    init_db(&pool).await?;
+    init_db(&pool).await.map_err(|e| {
+        eprintln!("Failed to initialize database: {}", e);
+        e
+    })?;
+    println!("Database initialized successfully");
 
     // CORS設定（環境変数から許可するオリジンを読み込む）
     let allowed_origin = std::env::var("ALLOWED_ORIGIN")
@@ -2613,8 +2624,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("Server running at http://0.0.0.0:{}", port);
 
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    println!("Binding to address: {}", addr);
+    let listener = tokio::net::TcpListener::bind(addr).await.map_err(|e| {
+        eprintln!("Failed to bind to address {}: {}", addr, e);
+        e
+    })?;
+    println!("Server listening on {}", addr);
+    
+    axum::serve(listener, app).await.map_err(|e| {
+        eprintln!("Server error: {}", e);
+        e
+    })?;
 
     Ok(())
 }
