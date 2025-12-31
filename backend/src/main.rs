@@ -2730,11 +2730,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Attempting database connection ===");
     println!("Connection URL: {}", final_db_url);
     
-    // ローカル環境ではsqlite://data/app.dbが動作しているので、それを参考にする
-    // 絶対パスの場合、sqlite:形式（1つのコロン）が最も確実
+    // sqlxのSQLiteドライバーは、絶対パスに対してsqlite:///形式（3つのスラッシュ）を使用する
+    // ローカル環境ではsqlite://data/app.db（相対パス）が動作しているが、
+    // Fly.ioでは絶対パスが必要なので、sqlite:///形式を使用する
     let connection_url = if db_path.starts_with('/') {
-        // 絶対パスの場合、sqlite:形式を使用（ローカル環境のsqlite://data/app.dbを参考）
-        format!("sqlite:{}", db_path)
+        // 絶対パスの場合、sqlite:///形式を使用（sqlxの標準形式）
+        format!("sqlite://{}", db_path)
     } else {
         // 相対パスの場合、元の形式を使用
         final_db_url.clone()
@@ -2743,21 +2744,55 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Using connection URL: {}", connection_url);
     
     // SQLiteがファイルを作成できるかテスト（接続前に空のファイルを作成してみる）
-    println!("Testing if SQLite can create database file...");
+    println!("=== Testing file creation ===");
+    println!("Database file path: {:?}", db_file_path);
+    println!("Database file path (string): {}", db_path);
+    
+    // 親ディレクトリの詳細を確認
+    if let Some(parent) = db_file_path.parent() {
+        println!("Parent directory path: {:?}", parent);
+        println!("Parent directory exists: {}", parent.exists());
+        if parent.exists() {
+            match std::fs::metadata(parent) {
+                Ok(meta) => {
+                    println!("Parent directory permissions: {:?}", meta.permissions());
+                    println!("Parent directory is directory: {}", meta.is_dir());
+                }
+                Err(e) => {
+                    println!("✗ Cannot read parent directory metadata: {}", e);
+                }
+            }
+        }
+    }
+    
+    // ファイル作成テスト
+    println!("Attempting to create test file...");
     match std::fs::File::create(&db_file_path) {
         Ok(mut file) => {
             println!("✓ Can create database file directly");
+            // ファイルに何か書き込んでみる
+            use std::io::Write;
+            if let Err(e) = file.write_all(b"test") {
+                println!("✗ Cannot write to test file: {}", e);
+            } else {
+                println!("✓ Can write to test file");
+            }
             // ファイルを閉じて削除（SQLiteが作成できるように）
             drop(file);
             if let Err(e) = std::fs::remove_file(&db_file_path) {
                 println!("⚠ Could not remove test file: {}", e);
+            } else {
+                println!("✓ Test file removed successfully");
             }
         }
         Err(e) => {
             println!("✗ Cannot create database file directly: {}", e);
+            println!("Error kind: {:?}", e.kind());
             println!("This may indicate a filesystem or permission issue");
         }
     }
+    
+    println!("=== End of file creation test ===");
     
     let pool = {
         let mut retries = 10;
