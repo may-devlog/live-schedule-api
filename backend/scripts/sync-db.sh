@@ -18,6 +18,11 @@ function download_db() {
         cp "$LOCAL_DB" "$BACKUP_FILE"
     fi
     
+    # 既存のファイルを削除（flyctl sftpは既存ファイルを上書きしないため）
+    if [ -f "$LOCAL_DB" ]; then
+        rm "$LOCAL_DB"
+    fi
+    
     # 本番環境からデータベースをダウンロード
     flyctl sftp shell --app "$APP_NAME" <<EOF
 get $REMOTE_DB $LOCAL_DB
