@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
-import { Ionicons } from "@expo/vector-icons";
+// アイコンは絵文字を使用（フォントに依存しない）
 
 export type Schedule = {
   id: number;
@@ -202,11 +202,9 @@ export default function HomeScreen() {
             }
           }}
         >
-          <Ionicons
-            name={isAuthenticated ? "person" : "log-in-outline"}
-            size={24}
-            color="#37352f"
-          />
+          <Text style={{ fontSize: 24 }}>
+            {isAuthenticated ? "👤" : "🔐"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -274,7 +272,7 @@ export default function HomeScreen() {
                 onPress={() => setShowLoginModal(false)}
                 style={styles.modalCloseButton}
               >
-                <Ionicons name="close" size={24} color="#37352f" />
+                <Text style={{ fontSize: 24 }}>✕</Text>
               </TouchableOpacity>
             </View>
 

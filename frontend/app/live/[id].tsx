@@ -17,7 +17,7 @@ import { NotionRelation } from "../../components/notion-relation";
 import { NotionTrafficRelation } from "../../components/notion-traffic-relation";
 import { NotionStayRelation } from "../../components/notion-stay-relation";
 import { getOptionColor } from "../../utils/get-option-color";
-import { Ionicons } from "@expo/vector-icons";
+// アイコンは絵文字を使用（フォントに依存しない）
 import { loadSelectOptions } from "../../utils/select-options-storage";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -789,7 +789,7 @@ export default function DetailScreen() {
                     )}
                   </View>
                   <View style={styles.cardRow}>
-                    <Ionicons name="document-text" size={16} color="#787774" />
+                    <Text style={{ fontSize: 16, marginRight: 8 }}>📄</Text>
                     <Text style={styles.cardDetail}>{detailWithNotes}</Text>
                   </View>
                 </TouchableOpacity>
@@ -845,7 +845,7 @@ export default function DetailScreen() {
                     <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
                   </View>
                   <View style={styles.cardRow}>
-                    <Ionicons name="document-text" size={16} color="#787774" />
+                    <Text style={{ fontSize: 16, marginRight: 8 }}>📄</Text>
                     <Text style={styles.cardDetail}>{stay.hotel_name}</Text>
                   </View>
                 </TouchableOpacity>

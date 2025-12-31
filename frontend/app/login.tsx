@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
+// アイコンは絵文字を使用（フォントに依存しない）
 
 export default function LoginScreen() {
   const [isLogin, setIsLogin] = useState(true);
@@ -138,11 +138,9 @@ export default function LoginScreen() {
             onPress={() => setShowPassword(!showPassword)}
             disabled={loading}
           >
-            <Ionicons
-              name={showPassword ? 'eye-off' : 'eye'}
-              size={20}
-              color="#666"
-            />
+            <Text style={{ fontSize: 20 }}>
+              {showPassword ? '🙈' : '👁️'}
+            </Text>
           </TouchableOpacity>
         </View>
 
