@@ -2537,9 +2537,13 @@ async fn update_stay(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("=== Starting application ===");
+    println!("RUST_LOG: {:?}", std::env::var("RUST_LOG").ok());
+    
     // データベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
     let db_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "sqlite:///app/data/app.db".to_string());
+    println!("DATABASE_URL from env: {:?}", std::env::var("DATABASE_URL").ok());
     
     // データベースディレクトリが存在することを確認（SQLiteのURLからパスを抽出）
     let db_path = if db_url.starts_with("sqlite:///") {
@@ -2565,14 +2569,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect(&db_url)
         .await
         .map_err(|e| {
-            eprintln!("Failed to connect to database: {}", e);
-            eprintln!("Database URL: {}", db_url);
+            let error_msg = format!("Failed to connect to database: {}\nDatabase URL: {}", e, db_url);
+            println!("{}", error_msg);
+            eprintln!("{}", error_msg);
             e
         })?;
     println!("Database connected successfully");
 
     init_db(&pool).await.map_err(|e| {
-        eprintln!("Failed to initialize database: {}", e);
+        let error_msg = format!("Failed to initialize database: {}", e);
+        println!("{}", error_msg);
+        eprintln!("{}", error_msg);
         e
     })?;
     println!("Database initialized successfully");
@@ -2626,13 +2633,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Binding to address: {}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await.map_err(|e| {
-        eprintln!("Failed to bind to address {}: {}", addr, e);
+        let error_msg = format!("Failed to bind to address {}: {}", addr, e);
+        println!("{}", error_msg);
+        eprintln!("{}", error_msg);
         e
     })?;
     println!("Server listening on {}", addr);
     
     axum::serve(listener, app).await.map_err(|e| {
-        eprintln!("Server error: {}", e);
+        let error_msg = format!("Server error: {}", e);
+        println!("{}", error_msg);
+        eprintln!("{}", error_msg);
         e
     })?;
 
