@@ -1,7 +1,13 @@
 # Rustアプリ用のDockerfile
-FROM rust:1.75 as builder
+FROM rust:1.79 as builder
 
 WORKDIR /app
+
+# SQLiteのビルド依存関係をインストール
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # 依存関係をコピーしてビルド（キャッシュを効かせるため）
 COPY Cargo.toml Cargo.lock ./
@@ -23,6 +29,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
+    libsqlite3-0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
