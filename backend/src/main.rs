@@ -1,6 +1,6 @@
 use axum::{
     extract::{Extension, Path, Query},
-    http::{header::AUTHORIZATION, StatusCode, HeaderMap, request::Parts},
+    http::{header::AUTHORIZATION, HeaderValue, StatusCode, HeaderMap, request::Parts},
     response::Json,
     routing::{get, post, put},
     Router,
@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::{Pool, Sqlite};
 use std::net::SocketAddr;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{Any, AllowOrigin, CorsLayer};
 
 // ====== 認証関連の型定義 ======
 
@@ -2558,7 +2558,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .allow_headers(Any)
     } else {
         CorsLayer::new()
-            .allow_origin(allowed_origin.parse().unwrap())
+            .allow_origin(AllowOrigin::exact(HeaderValue::from_str(&allowed_origin).unwrap()))
             .allow_methods(Any)
             .allow_headers(Any)
     };
