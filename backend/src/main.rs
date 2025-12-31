@@ -1884,9 +1884,10 @@ async fn list_public_schedules(
         if rows.is_empty() {
             println!("[PUBLIC SCHEDULES] WARNING: No schedules found in database. The database might be empty.");
         } else {
-            println!("[PUBLIC SCHEDULES] First schedule: id={}, title={:?}", 
+            let first_title = rows[0].title.as_ref().map(|s| s.as_str()).unwrap_or("(no title)");
+            println!("[PUBLIC SCHEDULES] First schedule: id={}, title={}", 
                 rows[0].id, 
-                rows[0].title.as_deref().unwrap_or("(no title)")
+                first_title
             );
         }
         
