@@ -131,10 +131,8 @@ export function NotionTrafficRelation({
         style={styles.selectButton}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={[styles.selectText, selectedTraffics.length === 0 && styles.placeholder]}>
-          {selectedTraffics.length > 0
-            ? `${selectedTraffics.length}件選択中`
-            : placeholder}
+        <Text style={[styles.selectText, styles.placeholder]}>
+          {placeholder}
         </Text>
       </TouchableOpacity>
 
@@ -158,7 +156,12 @@ export function NotionTrafficRelation({
             onStartShouldSetResponder={() => true}
             onTouchEnd={(e) => e.stopPropagation()}
           >
-            <Text style={styles.modalTitle}>既存の交通情報を選択</Text>
+            <Text style={styles.modalTitle}>
+              既存の交通情報を選択
+              {selectedTraffics.length > 0 && (
+                <Text style={styles.selectedCount}> ({selectedTraffics.length}件選択中)</Text>
+              )}
+            </Text>
 
             {/* 検索バー */}
             <View
@@ -285,6 +288,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#37352f",
     marginBottom: 16,
+  },
+  selectedCount: {
+    fontSize: 18,
+    fontWeight: "400",
+    color: "#787774",
   },
   searchInput: {
     backgroundColor: "#f7f6f3",

@@ -296,17 +296,22 @@ export default function DetailScreen() {
   const handleLinkTraffics = async (trafficIds: number[]) => {
     if (!schedule) return;
     
+    // 以前選択されていたが、今は選択されていないTrafficを特定（状態更新前に計算）
+    const removedIds = selectedTrafficIds.filter((id) => !trafficIds.includes(id));
+    // 新しく選択されたTrafficを特定（状態更新前に計算）
+    const newIds = trafficIds.filter((id) => !selectedTrafficIds.includes(id));
+    
     // まず選択状態を即座に更新（UIの応答性を向上）
     setSelectedTrafficIds(trafficIds);
     
+    // 画面表示を即座に更新（選択解除されたアイテムを削除）
+    setTrafficSummaries((prev) => prev.filter((t) => trafficIds.includes(t.id)));
+    
     try {
-      // 以前選択されていたが、今は選択されていないTrafficを特定
-      const removedIds = selectedTrafficIds.filter((id) => !trafficIds.includes(id));
-      
       // 選択解除されたTrafficのschedule_idを元のスケジュールに戻す（または0に設定）
-      for (const trafficId of removedIds) {
+      const unlinkPromises = removedIds.map(async (trafficId) => {
         const getRes = await authenticatedFetch(getApiUrl(`/traffic/${trafficId}`));
-        if (!getRes.ok) continue;
+        if (!getRes.ok) return;
         const traffic = await getRes.json();
 
         // 元のschedule_idを取得（保存されていない場合は0に設定）
@@ -333,31 +338,32 @@ export default function DetailScreen() {
         if (!updateRes.ok) {
           console.error(`Failed to unlink traffic ${trafficId}`);
         }
-      }
+      });
 
       // 新しく選択されたTrafficのschedule_idを更新
-      const newIds = trafficIds.filter((id) => !selectedTrafficIds.includes(id));
-      for (const trafficId of newIds) {
+      // 他のスケジュールに紐づいている場合でも、現在のスケジュールに移動させる
+      const linkPromises = newIds.map(async (trafficId) => {
         const getRes = await authenticatedFetch(getApiUrl(`/traffic/${trafficId}`));
         if (!getRes.ok) {
           console.error(`Failed to get traffic ${trafficId}`);
-          continue;
+          return;
         }
         const traffic = await getRes.json();
 
-        // 元のschedule_idを保存
+        // 元のschedule_idを保存（選択解除時に元のスケジュールに戻すため）
+        // 他のスケジュールに紐づいている場合、そのschedule_idが保存される
         setTrafficOriginalScheduleIds((prev) => {
           const newMap = new Map(prev);
           newMap.set(trafficId, traffic.schedule_id);
           return newMap;
         });
 
-        // schedule_idを更新
+        // schedule_idを現在のスケジュールに更新（他のスケジュールから移動）
         const updateRes = await authenticatedFetch(getApiUrl(`/traffic/${trafficId}`), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            schedule_id: schedule.id,
+            schedule_id: schedule.id, // 現在のスケジュールに紐づける
             date: traffic.date,
             order: traffic.order,
             transportation: traffic.transportation,
@@ -373,7 +379,10 @@ export default function DetailScreen() {
         if (!updateRes.ok) {
           console.error(`Failed to update traffic ${trafficId}`);
         }
-      }
+      });
+
+      // すべての更新が完了するのを待つ
+      await Promise.all([...unlinkPromises, ...linkPromises]);
 
       // Traffic一覧を再取得（現在のスケジュールに紐づいているもののみ）
       const listRes = await authenticatedFetch(getApiUrl(`/traffic?schedule_id=${schedule.id}`));
@@ -385,10 +394,13 @@ export default function DetailScreen() {
           }
           return a.order - b.order;
         });
-        setTrafficSummaries(list);
-        // 現在のスケジュールに紐づいているTrafficのIDのみを選択状態に反映
+        // 再取得したデータで完全に置き換え（ユーザーが選択したIDのみを表示）
         const linkedIds = list.map((t) => t.id);
-        setSelectedTrafficIds(trafficIds.filter((id) => linkedIds.includes(id)));
+        const finalSelectedIds = trafficIds.filter((id) => linkedIds.includes(id));
+        // ユーザーが選択したIDに含まれるもののみを表示
+        const filteredList = list.filter((t) => trafficIds.includes(t.id));
+        setTrafficSummaries(filteredList);
+        setSelectedTrafficIds(finalSelectedIds);
       }
     } catch (error) {
       console.error("Error linking traffics:", error);
@@ -398,17 +410,22 @@ export default function DetailScreen() {
   const handleLinkStays = async (stayIds: number[]) => {
     if (!schedule) return;
     
+    // 以前選択されていたが、今は選択されていないStayを特定（状態更新前に計算）
+    const removedIds = selectedStayIds.filter((id) => !stayIds.includes(id));
+    // 新しく選択されたStayを特定（状態更新前に計算）
+    const newIds = stayIds.filter((id) => !selectedStayIds.includes(id));
+    
     // まず選択状態を即座に更新（UIの応答性を向上）
     setSelectedStayIds(stayIds);
     
+    // 画面表示を即座に更新（選択解除されたアイテムを削除）
+    setStaySummaries((prev) => prev.filter((s) => stayIds.includes(s.id)));
+    
     try {
-      // 以前選択されていたが、今は選択されていないStayを特定
-      const removedIds = selectedStayIds.filter((id) => !stayIds.includes(id));
-      
       // 選択解除されたStayのschedule_idを元のスケジュールに戻す（または0に設定）
-      for (const stayId of removedIds) {
+      const unlinkPromises = removedIds.map(async (stayId) => {
         const getRes = await authenticatedFetch(getApiUrl(`/stay/${stayId}`));
-        if (!getRes.ok) continue;
+        if (!getRes.ok) return;
         const stay = await getRes.json();
 
         // 元のschedule_idを取得（保存されていない場合は0に設定）
@@ -434,31 +451,32 @@ export default function DetailScreen() {
         if (!updateRes.ok) {
           console.error(`Failed to unlink stay ${stayId}`);
         }
-      }
+      });
 
       // 新しく選択されたStayのschedule_idを更新
-      const newIds = stayIds.filter((id) => !selectedStayIds.includes(id));
-      for (const stayId of newIds) {
+      // 他のスケジュールに紐づいている場合でも、現在のスケジュールに移動させる
+      const linkPromises = newIds.map(async (stayId) => {
         const getRes = await authenticatedFetch(getApiUrl(`/stay/${stayId}`));
         if (!getRes.ok) {
           console.error(`Failed to get stay ${stayId}`);
-          continue;
+          return;
         }
         const stay = await getRes.json();
 
-        // 元のschedule_idを保存
+        // 元のschedule_idを保存（選択解除時に元のスケジュールに戻すため）
+        // 他のスケジュールに紐づいている場合、そのschedule_idが保存される
         setStayOriginalScheduleIds((prev) => {
           const newMap = new Map(prev);
           newMap.set(stayId, stay.schedule_id);
           return newMap;
         });
 
-        // schedule_idを更新
+        // schedule_idを現在のスケジュールに更新（他のスケジュールから移動）
         const updateRes = await authenticatedFetch(getApiUrl(`/stay/${stayId}`), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            schedule_id: schedule.id,
+            schedule_id: schedule.id, // 現在のスケジュールに紐づける
             check_in: stay.check_in,
             check_out: stay.check_out,
             hotel_name: stay.hotel_name,
@@ -473,16 +491,22 @@ export default function DetailScreen() {
         if (!updateRes.ok) {
           console.error(`Failed to update stay ${stayId}`);
         }
-      }
+      });
+
+      // すべての更新が完了するのを待つ
+      await Promise.all([...unlinkPromises, ...linkPromises]);
 
       // Stay一覧を再取得（現在のスケジュールに紐づいているもののみ）
       const listRes = await authenticatedFetch(getApiUrl(`/stay?schedule_id=${schedule.id}`));
       if (listRes.ok) {
         const list: StaySummary[] = await listRes.json();
-        setStaySummaries(list);
-        // 現在のスケジュールに紐づいているStayのIDのみを選択状態に反映
+        // 再取得したデータで完全に置き換え（ユーザーが選択したIDのみを表示）
         const linkedIds = list.map((s) => s.id);
-        setSelectedStayIds(stayIds.filter((id) => linkedIds.includes(id)));
+        const finalSelectedIds = stayIds.filter((id) => linkedIds.includes(id));
+        // ユーザーが選択したIDに含まれるもののみを表示
+        const filteredList = list.filter((s) => stayIds.includes(s.id));
+        setStaySummaries(filteredList);
+        setSelectedStayIds(finalSelectedIds);
       }
     } catch (error) {
       console.error("Error linking stays:", error);

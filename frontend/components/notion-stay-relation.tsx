@@ -159,10 +159,8 @@ export function NotionStayRelation({
         style={styles.selectButton}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={[styles.selectText, selectedStays.length === 0 && styles.placeholder]}>
-          {selectedStays.length > 0
-            ? `${selectedStays.length}件選択中`
-            : placeholder}
+        <Text style={[styles.selectText, styles.placeholder]}>
+          {placeholder}
         </Text>
       </TouchableOpacity>
 
@@ -186,7 +184,12 @@ export function NotionStayRelation({
             onStartShouldSetResponder={() => true}
             onTouchEnd={(e) => e.stopPropagation()}
           >
-            <Text style={styles.modalTitle}>既存の宿泊情報を選択</Text>
+            <Text style={styles.modalTitle}>
+              既存の宿泊情報を選択
+              {selectedStays.length > 0 && (
+                <Text style={styles.selectedCount}> ({selectedStays.length}件選択中)</Text>
+              )}
+            </Text>
 
             {/* 検索バー */}
             <View
@@ -345,6 +348,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#37352f",
     marginBottom: 16,
+  },
+  selectedCount: {
+    fontSize: 18,
+    fontWeight: "400",
+    color: "#787774",
   },
   searchInput: {
     backgroundColor: "#f7f6f3",
