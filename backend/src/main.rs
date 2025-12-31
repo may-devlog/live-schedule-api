@@ -2680,21 +2680,65 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // データベースファイルの親ディレクトリが存在することを確認
     let db_parent = std::path::Path::new(&db_path).parent().unwrap();
+    println!("Database parent directory: {:?}", db_parent);
     if !db_parent.exists() {
         println!("Creating database parent directory: {:?}", db_parent);
         std::fs::create_dir_all(db_parent).map_err(|e| {
             format!("Failed to create database parent directory: {}", e)
         })?;
+        println!("✓ Database parent directory created");
+    } else {
+        println!("✓ Database parent directory exists");
+    }
+    
+    // データベースファイルのパスを確認
+    let db_file_path = std::path::Path::new(&db_path);
+    println!("Database file path: {:?}", db_file_path);
+    if db_file_path.exists() {
+        println!("✓ Database file exists");
+        match std::fs::metadata(db_file_path) {
+            Ok(metadata) => {
+                println!("✓ Database file metadata: {:?}", metadata.permissions());
+                println!("✓ Database file size: {} bytes", metadata.len());
+            }
+            Err(e) => {
+                println!("✗ Failed to get database file metadata: {}", e);
+            }
+        }
+    } else {
+        println!("⚠ Database file does not exist yet (will be created by SQLite)");
+    }
+    
+    // データベースファイルの親ディレクトリに書き込み権限があることを確認
+    let test_db_file = db_parent.join(".db_write_test");
+    match std::fs::File::create(&test_db_file) {
+        Ok(_) => {
+            println!("✓ Can create files in database parent directory");
+            let _ = std::fs::remove_file(&test_db_file);
+        }
+        Err(e) => {
+            println!("✗ Cannot create files in database parent directory: {}", e);
+            return Err(format!("Cannot create files in database parent directory: {}", e).into());
+        }
     }
     
     // データベース接続をリトライ（ボリュームマウントの完了を待つ）
     println!("=== Attempting database connection ===");
+    println!("Connection URL: {}", final_db_url);
     let pool = {
         let mut retries = 10;
         let mut last_error = None;
         
         loop {
             println!("Attempting to connect to database... ({} retries left)", retries);
+            
+            // 接続前にデータベースファイルの状態を確認
+            if db_file_path.exists() {
+                println!("Database file exists before connection attempt");
+            } else {
+                println!("Database file does not exist (SQLite will create it)");
+            }
+            
             match SqlitePoolOptions::new()
                 .max_connections(5)
                 .connect(&final_db_url)
@@ -2702,10 +2746,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             {
                 Ok(pool) => {
                     println!("✓ Database connected successfully");
+                    // 接続後にデータベースファイルの状態を確認
+                    if db_file_path.exists() {
+                        match std::fs::metadata(db_file_path) {
+                            Ok(metadata) => {
+                                println!("✓ Database file created, size: {} bytes", metadata.len());
+                            }
+                            Err(e) => {
+                                println!("⚠ Database file exists but cannot read metadata: {}", e);
+                            }
+                        }
+                    }
                     break pool;
                 }
                 Err(e) => {
                     println!("✗ Database connection failed: {:?}", e);
+                    // エラー後にデータベースファイルの状態を確認
+                    if db_file_path.exists() {
+                        println!("⚠ Database file exists after failed connection");
+                    } else {
+                        println!("⚠ Database file still does not exist after failed connection");
+                    }
                     last_error = Some(e);
                     retries -= 1;
                     if retries > 0 {
