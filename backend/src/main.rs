@@ -2920,6 +2920,76 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })))
     }
     
+    // 一時的なエンドポイント：ID 14より前のスケジュールを削除
+    // 注意: 本番環境では削除すること
+    async fn delete_old_schedules(
+        Extension(pool): Extension<Pool<Sqlite>>,
+    ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+        // DISABLE_AUTHが設定されている場合のみ実行可能
+        if std::env::var("DISABLE_AUTH").is_err() {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ErrorResponse {
+                    error: "This endpoint is only available when DISABLE_AUTH is set".to_string(),
+                }),
+            ));
+        }
+        
+        println!("[DELETE OLD] Deleting schedules with id < 15");
+        
+        // 関連するtrafficsを削除
+        let traffics_deleted = sqlx::query("DELETE FROM traffics WHERE schedule_id < 15")
+            .execute(&pool)
+            .await
+            .map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: format!("Failed to delete traffics: {}", e),
+                    }),
+                )
+            })?;
+        
+        // 関連するstaysを削除
+        let stays_deleted = sqlx::query("DELETE FROM stays WHERE schedule_id < 15")
+            .execute(&pool)
+            .await
+            .map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: format!("Failed to delete stays: {}", e),
+                    }),
+                )
+            })?;
+        
+        // スケジュールを削除
+        let schedules_deleted = sqlx::query("DELETE FROM schedules WHERE id < 15")
+            .execute(&pool)
+            .await
+            .map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: format!("Failed to delete schedules: {}", e),
+                    }),
+                )
+            })?;
+        
+        println!("[DELETE OLD] Deleted: {} schedules, {} traffics, {} stays", 
+            schedules_deleted.rows_affected(),
+            traffics_deleted.rows_affected(),
+            stays_deleted.rows_affected()
+        );
+        
+        Ok(Json(serde_json::json!({
+            "success": true,
+            "schedules_deleted": schedules_deleted.rows_affected(),
+            "traffics_deleted": traffics_deleted.rows_affected(),
+            "stays_deleted": stays_deleted.rows_affected()
+        })))
+    }
+    
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/auth/register", post(register))
@@ -2941,6 +3011,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/stay/all", get(list_all_stays))
         .route("/stay/:id", get(get_stay).put(update_stay))
         .route("/admin/import-db", post(import_database_dump)) // 一時的なエンドポイント
+        .route("/admin/delete-old-schedules", post(delete_old_schedules)) // 一時的なエンドポイント
         .layer(cors)
         .layer(Extension(pool));
 
