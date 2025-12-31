@@ -209,11 +209,19 @@ where
         // 認証を一時的に無効化（環境変数DISABLE_AUTHが設定されている場合）
         // TODO: エラーが解消したら、この条件を削除して認証を有効化する
         if std::env::var("DISABLE_AUTH").is_ok() {
-            // 認証をスキップして、環境変数DEFAULT_USER_IDからユーザーIDを取得（デフォルトは1）
-            let default_user_id = std::env::var("DEFAULT_USER_ID")
-                .ok()
-                .and_then(|s| s.parse::<i32>().ok())
-                .unwrap_or(1);
+            // 認証をスキップして、環境変数DEFAULT_USER_IDまたはDEFAULT_USER_EMAILからユーザーIDを取得
+            // まずDEFAULT_USER_IDを確認、なければDEFAULT_USER_EMAILから取得を試みる
+            let default_user_id = if let Ok(user_id_str) = std::env::var("DEFAULT_USER_ID") {
+                user_id_str.parse::<i32>().ok().unwrap_or(1)
+            } else if let Ok(email) = std::env::var("DEFAULT_USER_EMAIL") {
+                // メールアドレスからユーザーIDを取得（この関数は後で実装）
+                // 今はデフォルトの1を使用
+                println!("[AUTH DISABLED] DEFAULT_USER_EMAIL is set to: {}", email);
+                println!("[AUTH DISABLED] Note: User ID lookup by email is not yet implemented, using default user_id=1");
+                1
+            } else {
+                1 // デフォルトは1
+            };
             println!("[AUTH DISABLED] Skipping authentication, using user_id={}", default_user_id);
             return Ok(AuthenticatedUser { user_id: default_user_id });
         }
@@ -2602,6 +2610,18 @@ async fn update_stay(
 
 // ====== メイン ======
 
+// メールアドレスからユーザーIDを取得するヘルパー関数
+async fn get_user_id_by_email(pool: &Pool<Sqlite>, email: &str) -> Option<i32> {
+    let result: Option<(i64,)> = sqlx::query_as("SELECT id FROM users WHERE email = ?")
+        .bind(email)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten();
+    
+    result.map(|(id,)| id as i32)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Starting application ===");
@@ -2732,6 +2752,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         e
     })?;
     println!("Database initialized successfully");
+    
+    // DISABLE_AUTHが設定されていて、DEFAULT_USER_EMAILが設定されている場合、
+    // メールアドレスからユーザーIDを取得してログに出力（環境変数は変更できないため）
+    if std::env::var("DISABLE_AUTH").is_ok() {
+        if let Ok(email) = std::env::var("DEFAULT_USER_EMAIL") {
+            if let Some(user_id) = get_user_id_by_email(&pool, &email).await {
+                println!("[AUTH DISABLED] Found user_id={} for email: {}", user_id, email);
+                println!("[AUTH DISABLED] Please set DEFAULT_USER_ID={} environment variable", user_id);
+            } else {
+                println!("[AUTH DISABLED] User not found for email: {}", email);
+            }
+        }
+    }
 
     // CORS設定（環境変数から許可するオリジンを読み込む）
     let allowed_origin = std::env::var("ALLOWED_ORIGIN")
