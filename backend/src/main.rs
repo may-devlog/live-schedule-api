@@ -2588,10 +2588,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if !parent_dir.exists() {
             return Err(format!("Database directory does not exist after creation: {:?}", parent_dir).into());
         }
+        
+        // ディレクトリが書き込み可能かテスト
+        let test_file = parent_dir.join(".write_test");
+        match std::fs::File::create(&test_file) {
+            Ok(_) => {
+                let _ = std::fs::remove_file(&test_file);
+                println!("Directory is writable: {:?}", parent_dir);
+            }
+            Err(e) => {
+                return Err(format!("Database directory is not writable: {:?}, error: {}", parent_dir, e).into());
+            }
+        }
     }
+    
+    // データベースファイルのパスを確認
+    println!("Final database path: {}", db_path);
+    println!("Database path exists: {}", std::path::Path::new(&db_path).exists());
     
     println!("Connecting to database: {}", db_url);
     println!("Database path: {}", db_path);
+    
+    // SQLiteのURL形式を確認（sqlxはsqlite:プレフィックスを期待する場合がある）
+    let final_db_url = if db_url.starts_with("sqlite:///") {
+        // sqlite:/// を sqlite: に変換（絶対パスの場合）
+        format!("sqlite:{}", db_path)
+    } else {
+        db_url.clone()
+    };
+    println!("Final database URL: {}", final_db_url);
     
     // データベース接続をリトライ（ボリュームマウントの完了を待つ）
     let pool = {
@@ -2601,7 +2626,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         loop {
             match SqlitePoolOptions::new()
                 .max_connections(5)
-                .connect(&db_url)
+                .connect(&final_db_url)
                 .await
             {
                 Ok(pool) => {
@@ -2615,7 +2640,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("Database connection failed, retrying in 2 seconds... ({} retries left)", retries);
                         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
                     } else {
-                        let error_msg = format!("Failed to connect to database after retries: {:?}\nDatabase URL: {}\nDatabase path: {}", last_error, db_url, db_path);
+                        let error_msg = format!("Failed to connect to database after retries: {:?}\nOriginal URL: {}\nFinal URL: {}\nDatabase path: {}", last_error, db_url, final_db_url, db_path);
                         println!("{}", error_msg);
                         eprintln!("{}", error_msg);
                         return Err(error_msg.into());
