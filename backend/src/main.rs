@@ -2540,6 +2540,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // データベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
     let db_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "sqlite://data/app.db".to_string());
+    
+    // データベースファイルのディレクトリが存在するか確認し、存在しない場合は作成
+    if let Some(db_path) = db_url.strip_prefix("sqlite://") {
+        if let Some(parent) = std::path::Path::new(db_path).parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+    
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect(&db_url)
