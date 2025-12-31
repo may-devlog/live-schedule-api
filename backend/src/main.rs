@@ -1949,65 +1949,114 @@ async fn list_public_schedules(
 }
 
 // GET /public/schedules/:id - 公開されているスケジュール詳細
+// DISABLE_AUTHが設定されている場合、全てのスケジュールを返す
 async fn get_public_schedule(
     Path(id): Path<i32>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<Schedule>, StatusCode> {
-    let row: ScheduleRow = sqlx::query_as::<_, ScheduleRow>(
-        r#"
-        SELECT
-          id,
-          title,
-          "group",
-          date,
-          open,
-          start,
-          "end",
-          notes,
-          category,
-          area,
-          venue,
-          target,
-          lineup,
-          seller,
-          ticket_fee,
-          drink_fee,
-          total_fare,
-          stay_fee,
-          travel_cost,
-          total_cost,
-          status,
-          related_schedule_ids,
-          user_id,
-          is_public,
-          created_at,
-          updated_at
-        FROM schedules
-        WHERE id = ? AND is_public = 1
-        "#,
-    )
-    .bind(id)
-    .fetch_one(&pool)
-    .await
-    .map_err(|_| StatusCode::NOT_FOUND)?;
+    // DISABLE_AUTHが設定されている場合、is_publicの条件を無視
+    let row: ScheduleRow = if std::env::var("DISABLE_AUTH").is_ok() {
+        sqlx::query_as::<_, ScheduleRow>(
+            r#"
+            SELECT
+              id,
+              title,
+              "group",
+              date,
+              open,
+              start,
+              "end",
+              notes,
+              category,
+              area,
+              venue,
+              target,
+              lineup,
+              seller,
+              ticket_fee,
+              drink_fee,
+              total_fare,
+              stay_fee,
+              travel_cost,
+              total_cost,
+              status,
+              related_schedule_ids,
+              user_id,
+              is_public,
+              created_at,
+              updated_at
+            FROM schedules
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?
+    } else {
+        sqlx::query_as::<_, ScheduleRow>(
+            r#"
+            SELECT
+              id,
+              title,
+              "group",
+              date,
+              open,
+              start,
+              "end",
+              notes,
+              category,
+              area,
+              venue,
+              target,
+              lineup,
+              seller,
+              ticket_fee,
+              drink_fee,
+              total_fare,
+              stay_fee,
+              travel_cost,
+              total_cost,
+              status,
+              related_schedule_ids,
+              user_id,
+              is_public,
+              created_at,
+              updated_at
+            FROM schedules
+            WHERE id = ? AND is_public = 1
+            "#,
+        )
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?
+    };
 
     let schedule = row_to_schedule(row);
     Ok(Json(schedule))
 }
 
 // GET /public/traffic?schedule_id=... - 公開スケジュールの交通情報
+// DISABLE_AUTHが設定されている場合、全てのスケジュールの交通情報を返す
 async fn list_public_traffics(
     Query(params): Query<TrafficQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Json<Vec<Traffic>> {
-    // まず、スケジュールが公開されているかチェック
-    let schedule_exists: Option<i64> = sqlx::query_scalar(
-        "SELECT id FROM schedules WHERE id = ? AND is_public = 1",
-    )
-    .bind(params.schedule_id)
-    .fetch_optional(&pool)
-    .await
-    .expect("failed to check schedule");
+    // DISABLE_AUTHが設定されている場合、is_publicの条件を無視
+    let schedule_exists: Option<i64> = if std::env::var("DISABLE_AUTH").is_ok() {
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ?")
+            .bind(params.schedule_id)
+            .fetch_optional(&pool)
+            .await
+            .expect("failed to check schedule")
+    } else {
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND is_public = 1")
+            .bind(params.schedule_id)
+            .fetch_optional(&pool)
+            .await
+            .expect("failed to check schedule")
+    };
 
     if schedule_exists.is_none() {
         return Json(vec![]);
@@ -2044,18 +2093,25 @@ async fn list_public_traffics(
 }
 
 // GET /public/stay?schedule_id=... - 公開スケジュールの宿泊情報
+// DISABLE_AUTHが設定されている場合、全てのスケジュールの宿泊情報を返す
 async fn list_public_stays(
     Query(params): Query<StayQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Json<Vec<Stay>> {
-    // まず、スケジュールが公開されているかチェック
-    let schedule_exists: Option<i64> = sqlx::query_scalar(
-        "SELECT id FROM schedules WHERE id = ? AND is_public = 1",
-    )
-    .bind(params.schedule_id)
-    .fetch_optional(&pool)
-    .await
-    .expect("failed to check schedule");
+    // DISABLE_AUTHが設定されている場合、is_publicの条件を無視
+    let schedule_exists: Option<i64> = if std::env::var("DISABLE_AUTH").is_ok() {
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ?")
+            .bind(params.schedule_id)
+            .fetch_optional(&pool)
+            .await
+            .expect("failed to check schedule")
+    } else {
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND is_public = 1")
+            .bind(params.schedule_id)
+            .fetch_optional(&pool)
+            .await
+            .expect("failed to check schedule")
+    };
 
     if schedule_exists.is_none() {
         return Json(vec![]);
