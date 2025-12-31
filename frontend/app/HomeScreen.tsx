@@ -76,8 +76,36 @@ export default function HomeScreen() {
       const data: Schedule[] = await res.json();
       console.log("Public schedules received:", data.length, "items");
       
+      // 現在時刻をJST（日本標準時）で取得
+      // ブラウザのローカルタイムゾーンを使用（JSTに設定されている場合）
+      // または、UTC+9として明示的に計算
+      const now = new Date();
+      // JSTはUTC+9なので、UTC時刻に9時間を加算
+      const jstOffset = 9 * 60 * 60 * 1000; // ミリ秒
+      const jstNow = new Date(now.getTime() + jstOffset);
+      
+      // 未来のスケジュールのみをフィルタリング（JSTで比較）
+      // schedule.dateとschedule.startからJSTの日時を構築
+      const futureSchedules = data.filter((schedule) => {
+        if (!schedule.date) {
+          return false; // 日付がない場合は除外
+        }
+        
+        // date: "YYYY-MM-DD", start: "HH:MM" からJSTの日時を構築
+        const timeStr = schedule.start || "00:00";
+        // JSTの日時として解釈（UTC+9）
+        const jstDateTimeStr = `${schedule.date}T${timeStr}:00+09:00`;
+        const scheduleDateJST = new Date(jstDateTimeStr);
+        
+        // 現在のJST時刻と比較
+        const isFuture = scheduleDateJST > jstNow;
+        return isFuture;
+      });
+      
+      console.log("Future schedules:", futureSchedules.length, "items");
+      
       // 日付順にソート（未来のイベントを先に）
-      const sorted = data.sort((a, b) => {
+      const sorted = futureSchedules.sort((a, b) => {
         const dateA = new Date(a.datetime).getTime();
         const dateB = new Date(b.datetime).getTime();
         return dateA - dateB;
