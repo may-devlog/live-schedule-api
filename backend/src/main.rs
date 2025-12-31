@@ -2725,30 +2725,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     
     // データベース接続をリトライ（ボリュームマウントの完了を待つ）
-    // sqlxのSQLiteドライバーは複数のURL形式をサポートしているため、複数の形式を試す
+    // sqlxのSQLiteドライバーは、ローカル環境ではsqlite://data/app.db（相対パス）が動作している
+    // Fly.ioでは絶対パスが必要なので、sqlite:形式（1つのコロン）を使用する
     println!("=== Attempting database connection ===");
     println!("Connection URL: {}", final_db_url);
     
-    // 試すURL形式のリスト（絶対パスの場合）
-    let url_variants = if db_path.starts_with('/') {
-        vec![
-            format!("sqlite:{}", db_path),  // sqlite:/path/to/db.db
-            format!("sqlite://{}", db_path), // sqlite:///path/to/db.db
-            final_db_url.clone(),            // 元の形式
-        ]
+    // ローカル環境ではsqlite://data/app.dbが動作しているので、それを参考にする
+    // 絶対パスの場合、sqlite:形式（1つのコロン）が最も確実
+    let connection_url = if db_path.starts_with('/') {
+        // 絶対パスの場合、sqlite:形式を使用（ローカル環境のsqlite://data/app.dbを参考）
+        format!("sqlite:{}", db_path)
     } else {
-        vec![final_db_url.clone()]
+        // 相対パスの場合、元の形式を使用
+        final_db_url.clone()
     };
+    
+    println!("Using connection URL: {}", connection_url);
+    
+    // SQLiteがファイルを作成できるかテスト（接続前に空のファイルを作成してみる）
+    println!("Testing if SQLite can create database file...");
+    match std::fs::File::create(&db_file_path) {
+        Ok(mut file) => {
+            println!("✓ Can create database file directly");
+            // ファイルを閉じて削除（SQLiteが作成できるように）
+            drop(file);
+            if let Err(e) = std::fs::remove_file(&db_file_path) {
+                println!("⚠ Could not remove test file: {}", e);
+            }
+        }
+        Err(e) => {
+            println!("✗ Cannot create database file directly: {}", e);
+            println!("This may indicate a filesystem or permission issue");
+        }
+    }
     
     let pool = {
         let mut retries = 10;
         let mut last_error = None;
-        let mut url_index = 0;
         
         loop {
-            let current_url = &url_variants[url_index % url_variants.len()];
             println!("Attempting to connect to database... ({} retries left)", retries);
-            println!("Trying URL format {}: {}", url_index % url_variants.len() + 1, current_url);
             
             // 接続前にデータベースファイルの状態を確認
             if db_file_path.exists() {
@@ -2757,13 +2773,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Database file does not exist (SQLite will create it)");
             }
             
+            // 親ディレクトリの状態を確認
+            if let Some(parent) = db_file_path.parent() {
+                println!("Parent directory: {:?}", parent);
+                if parent.exists() {
+                    println!("✓ Parent directory exists");
+                    match std::fs::metadata(parent) {
+                        Ok(meta) => {
+                            println!("✓ Parent directory permissions: {:?}", meta.permissions());
+                        }
+                        Err(e) => {
+                            println!("✗ Cannot read parent directory metadata: {}", e);
+                        }
+                    }
+                } else {
+                    println!("✗ Parent directory does not exist");
+                }
+            }
+            
             match SqlitePoolOptions::new()
                 .max_connections(5)
-                .connect(current_url)
+                .connect(&connection_url)
                 .await
             {
                 Ok(pool) => {
-                    println!("✓ Database connected successfully with URL: {}", current_url);
+                    println!("✓ Database connected successfully with URL: {}", connection_url);
                     // 接続後にデータベースファイルの状態を確認
                     if db_file_path.exists() {
                         match std::fs::metadata(db_file_path) {
@@ -2778,7 +2812,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     break pool;
                 }
                 Err(e) => {
-                    println!("✗ Database connection failed with URL {}: {:?}", current_url, e);
+                    println!("✗ Database connection failed: {:?}", e);
                     // エラー後にデータベースファイルの状態を確認
                     if db_file_path.exists() {
                         println!("⚠ Database file exists after failed connection");
@@ -2786,25 +2820,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("⚠ Database file still does not exist after failed connection");
                     }
                     last_error = Some(e);
-                    
-                    // 次のURL形式を試す
-                    url_index += 1;
-                    if url_index >= url_variants.len() {
-                        // すべてのURL形式を試したので、リトライ回数を減らす
-                        retries -= 1;
-                        url_index = 0; // 最初の形式に戻す
-                        
-                        if retries > 0 {
-                            println!("All URL formats failed, retrying in 3 seconds...");
-                            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-                        } else {
-                            let error_msg = format!("Failed to connect to database after retries with all URL formats: {:?}\nOriginal URL: {}\nFinal URL: {}\nDatabase path: {}\nTried URLs: {:?}", last_error, db_url, final_db_url, db_path, url_variants);
-                            println!("{}", error_msg);
-                            eprintln!("{}", error_msg);
-                            return Err(error_msg.into());
-                        }
+                    retries -= 1;
+                    if retries > 0 {
+                        println!("Retrying in 3 seconds...");
+                        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
                     } else {
-                        println!("Trying next URL format...");
+                        let error_msg = format!("Failed to connect to database after retries: {:?}\nOriginal URL: {}\nConnection URL: {}\nDatabase path: {}", last_error, db_url, connection_url, db_path);
+                        println!("{}", error_msg);
+                        eprintln!("{}", error_msg);
+                        return Err(error_msg.into());
                     }
                 }
             }
