@@ -2546,16 +2546,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("DATABASE_URL from env: {:?}", std::env::var("DATABASE_URL").ok());
     
     // データベースディレクトリが存在することを確認（SQLiteのURLからパスを抽出）
+    // sqlite:/// の後の3つのスラッシュは絶対パスを示す
     let db_path = if db_url.starts_with("sqlite:///") {
-        db_url.strip_prefix("sqlite:///").unwrap()
+        // 3つのスラッシュの後のパスを取得し、絶対パスとして扱う
+        let path = db_url.strip_prefix("sqlite:///").unwrap();
+        if !path.starts_with('/') {
+            format!("/{}", path)
+        } else {
+            path.to_string()
+        }
     } else if db_url.starts_with("sqlite:") {
-        db_url.strip_prefix("sqlite:").unwrap()
+        db_url.strip_prefix("sqlite:").unwrap().to_string()
     } else {
-        &db_url
+        db_url.clone()
     };
     
     // データベースディレクトリの作成とパーミッション設定
-    if let Some(parent_dir) = std::path::Path::new(db_path).parent() {
+    if let Some(parent_dir) = std::path::Path::new(&db_path).parent() {
         println!("Checking database directory: {:?}", parent_dir);
         if !parent_dir.exists() {
             println!("Database directory does not exist, creating...");
@@ -2577,7 +2584,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     
     // データベースファイルの親ディレクトリが存在することを再確認
-    if let Some(parent_dir) = std::path::Path::new(db_path).parent() {
+    if let Some(parent_dir) = std::path::Path::new(&db_path).parent() {
         if !parent_dir.exists() {
             return Err(format!("Database directory does not exist after creation: {:?}", parent_dir).into());
         }
