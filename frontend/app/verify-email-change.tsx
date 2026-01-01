@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { getApiUrl } from '../constants/api';
+import { getApiUrl } from '../utils/api';
 
 export default function VerifyEmailChangeScreen() {
   const router = useRouter();
