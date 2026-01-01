@@ -52,7 +52,7 @@ const YEARS = [2024, 2025, 2026];
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { isAuthenticated, login, logout, email } = useAuth();
+  const { isAuthenticated, login, logout, email, changeEmail } = useAuth();
 
   const [nextSchedules, setNextSchedules] = useState<Schedule[]>([]);
   const [loadingNext, setLoadingNext] = useState(false);
@@ -61,6 +61,9 @@ export default function HomeScreen() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+  const [showChangeEmailModal, setShowChangeEmailModal] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [changeEmailLoading, setChangeEmailLoading] = useState(false);
 
   const fetchUpcoming = async () => {
     try {
@@ -192,20 +195,27 @@ export default function HomeScreen() {
           onPress={() => {
             console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
             if (isAuthenticated) {
-              // Web環境でも確実に動作するように、confirmを使用
-              if (Platform.OS === 'web' && typeof window !== 'undefined' && window.confirm) {
-                const confirmed = window.confirm(
-                  `${email || 'ログイン中'} でログイン中です。ログアウトしますか？`
+              // ログイン済みの場合、メニューを表示
+              if (Platform.OS === 'web') {
+                // Web環境では、シンプルなメニューを表示
+                const action = window.prompt(
+                  `ログイン中: ${email || 'ログイン中'}\n\n1: メールアドレス変更\n2: ログアウト\n\n番号を入力:`
                 );
-                if (confirmed) {
-                  handleLogout();
+                if (action === '1') {
+                  setShowChangeEmailModal(true);
+                } else if (action === '2') {
+                  if (window.confirm('ログアウトしますか？')) {
+                    handleLogout();
+                  }
                 }
               } else {
+                // ネイティブ環境では、Alertでメニューを表示
                 Alert.alert(
-                  "ログアウト",
-                  `${email || 'ログイン中'} でログイン中です。ログアウトしますか？`,
+                  "メニュー",
+                  `${email || 'ログイン中'} でログイン中です`,
                   [
                     { text: "キャンセル", style: "cancel" },
+                    { text: "メールアドレス変更", onPress: () => setShowChangeEmailModal(true) },
                     { text: "ログアウト", onPress: handleLogout, style: "destructive" },
                   ]
                 );
@@ -328,6 +338,62 @@ export default function HomeScreen() {
               }}
             >
               <Text style={styles.registerLinkText}>新規登録はこちら</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* メールアドレス変更モーダル */}
+      <Modal
+        visible={showChangeEmailModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowChangeEmailModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>メールアドレス変更</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowChangeEmailModal(false);
+                  setNewEmail("");
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Text style={{ fontSize: 24 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ marginBottom: 8, color: "#666" }}>
+              現在のメールアドレス: {email}
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="新しいメールアドレス"
+              value={newEmail}
+              onChangeText={setNewEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
+
+            <Text style={{ marginTop: 8, marginBottom: 16, fontSize: 12, color: "#666" }}>
+              新しいメールアドレスに確認メールを送信します。
+              メール内のリンクをクリックしてメールアドレスを変更してください。
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.loginSubmitButton, changeEmailLoading && styles.loginSubmitButtonDisabled]}
+              onPress={handleChangeEmail}
+              disabled={changeEmailLoading}
+            >
+              {changeEmailLoading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.loginSubmitButtonText}>メール送信</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>

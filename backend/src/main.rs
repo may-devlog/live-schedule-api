@@ -51,6 +51,16 @@ struct ResetPasswordRequest {
     new_password: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct ChangeEmailRequest {
+    new_email: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct VerifyEmailChangeRequest {
+    token: String,
+}
+
 #[derive(Debug, Serialize)]
 struct AuthResponse {
     token: Option<String>, // メール未確認の場合はNone
@@ -84,6 +94,9 @@ struct UserRow {
     verification_token: Option<String>,
     password_reset_token: Option<String>,
     password_reset_expires: Option<String>,
+    email_change_token: Option<String>,
+    email_change_expires: Option<String>,
+    new_email: Option<String>,
     created_at: Option<String>,
     updated_at: Option<String>,
 }
@@ -138,6 +151,24 @@ async fn send_password_reset_email(email: &str, token: &str) {
     println!("本文:");
     println!("以下のURLをクリックしてパスワードをリセットしてください:");
     println!("{}", reset_url);
+    println!("このリンクは24時間有効です。");
+    println!("===========================");
+    
+    // 本番環境では実際のSMTPサーバーに送信
+}
+
+async fn send_email_change_verification_email(new_email: &str, token: &str) {
+    let base_url = get_base_url();
+    let verification_url = format!("{}/verify-email-change?token={}", base_url, urlencoding::encode(token));
+    
+    // 開発環境ではコンソールに出力
+    println!("=== メール送信（開発環境） ===");
+    println!("宛先: {}", new_email);
+    println!("件名: メールアドレス変更の確認");
+    println!("本文:");
+    println!("メールアドレスの変更をリクエストしました。");
+    println!("以下のURLをクリックしてメールアドレスを変更してください:");
+    println!("{}", verification_url);
     println!("このリンクは24時間有効です。");
     println!("===========================");
     
@@ -593,7 +624,7 @@ async fn register(
 
     // 既存ユーザーのチェック
     let existing_user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, created_at, updated_at FROM users WHERE email = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ?",
     )
     .bind(&payload.email)
     .fetch_optional(&pool)
@@ -682,7 +713,7 @@ async fn login(
 ) -> Result<Json<AuthResponse>, (StatusCode, Json<ErrorResponse>)> {
     // ユーザーを検索
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, created_at, updated_at FROM users WHERE email = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ?",
     )
     .bind(&payload.email)
     .fetch_optional(&pool)
@@ -748,7 +779,7 @@ async fn verify_email(
 ) -> Result<Json<VerifyEmailResponse>, (StatusCode, Json<ErrorResponse>)> {
     // トークンでユーザーを検索
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, created_at, updated_at FROM users WHERE verification_token = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE verification_token = ?",
     )
     .bind(&payload.token)
     .fetch_optional(&pool)
@@ -808,7 +839,7 @@ async fn request_password_reset(
 ) -> Result<Json<PasswordResetResponse>, (StatusCode, Json<ErrorResponse>)> {
     // ユーザーを検索
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, created_at, updated_at FROM users WHERE email = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ?",
     )
     .bind(&payload.email)
     .fetch_optional(&pool)
@@ -875,7 +906,7 @@ async fn reset_password(
 ) -> Result<Json<PasswordResetResponse>, (StatusCode, Json<ErrorResponse>)> {
     // トークンでユーザーを検索
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, created_at, updated_at FROM users WHERE password_reset_token = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE password_reset_token = ?",
     )
     .bind(&payload.token)
     .fetch_optional(&pool)
@@ -953,6 +984,208 @@ async fn reset_password(
     Ok(Json(PasswordResetResponse {
         success: true,
         message: "パスワードのリセットが完了しました".to_string(),
+    }))
+}
+
+// POST /auth/change-email - メールアドレス変更リクエスト
+async fn change_email_request(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<ChangeEmailRequest>,
+) -> Result<Json<PasswordResetResponse>, (StatusCode, Json<ErrorResponse>)> {
+    // 新しいメールアドレスのバリデーション
+    if !payload.new_email.contains('@') {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "有効なメールアドレスを入力してください".to_string(),
+            }),
+        ));
+    }
+
+    // 既に使用されているメールアドレスかチェック
+    let existing_user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ?",
+    )
+    .bind(&payload.new_email)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    if existing_user.is_some() {
+        return Err((
+            StatusCode::CONFLICT,
+            Json(ErrorResponse {
+                error: "このメールアドレスは既に使用されています".to_string(),
+            }),
+        ));
+    }
+
+    // ユーザーが存在するか確認（メールアドレス変更の権限チェック）
+    let _user_exists: Option<i64> = sqlx::query_scalar("SELECT id FROM users WHERE id = ?")
+        .bind(user.user_id as i64)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            )
+        })?;
+
+    if _user_exists.is_none() {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "ユーザーが見つかりません".to_string(),
+            }),
+        ));
+    }
+
+    // 変更トークンを生成
+    let change_token = generate_token();
+    let expires_at = Utc::now()
+        .checked_add_signed(chrono::Duration::hours(24))
+        .expect("valid timestamp")
+        .to_rfc3339();
+    let now = Utc::now().to_rfc3339();
+
+    // トークンを保存
+    sqlx::query(
+        "UPDATE users SET email_change_token = ?, email_change_expires = ?, new_email = ?, updated_at = ? WHERE id = ?",
+    )
+    .bind(&change_token)
+    .bind(&expires_at)
+    .bind(&payload.new_email)
+    .bind(&now)
+    .bind(user.user_id as i64)
+    .execute(&pool)
+    .await
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Failed to save change token".to_string(),
+            }),
+        )
+    })?;
+
+    // メール送信
+    send_email_change_verification_email(&payload.new_email, &change_token).await;
+
+    Ok(Json(PasswordResetResponse {
+        success: true,
+        message: "メールアドレス変更確認用のメールを送信しました".to_string(),
+    }))
+}
+
+// POST /auth/verify-email-change - メールアドレス変更確認
+async fn verify_email_change(
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<VerifyEmailChangeRequest>,
+) -> Result<Json<VerifyEmailResponse>, (StatusCode, Json<ErrorResponse>)> {
+    // トークンでユーザーを検索
+    let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email_change_token = ?",
+    )
+    .bind(&payload.token)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    let user = user.ok_or((
+        StatusCode::NOT_FOUND,
+        Json(ErrorResponse {
+            error: "無効な確認トークンです".to_string(),
+        }),
+    ))?;
+
+    // トークンの有効期限をチェック
+    if let Some(expires_str) = &user.email_change_expires {
+        if let Ok(expires) = expires_str.parse::<DateTime<Utc>>() {
+            if expires < Utc::now() {
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    Json(ErrorResponse {
+                        error: "確認トークンの有効期限が切れています".to_string(),
+                    }),
+                ));
+            }
+        }
+    }
+
+    // 新しいメールアドレスが設定されているかチェック
+    let new_email = user.new_email.ok_or((
+        StatusCode::BAD_REQUEST,
+        Json(ErrorResponse {
+            error: "新しいメールアドレスが設定されていません".to_string(),
+        }),
+    ))?;
+
+    // 既に使用されているメールアドレスかチェック
+    let existing_user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ? AND id != ?",
+    )
+    .bind(&new_email)
+    .bind(user.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    if existing_user.is_some() {
+        return Err((
+            StatusCode::CONFLICT,
+            Json(ErrorResponse {
+                error: "このメールアドレスは既に使用されています".to_string(),
+            }),
+        ));
+    }
+
+    // メールアドレスを更新
+    let now = Utc::now().to_rfc3339();
+    sqlx::query(
+        "UPDATE users SET email = ?, email_change_token = NULL, email_change_expires = NULL, new_email = NULL, updated_at = ? WHERE id = ?",
+    )
+    .bind(&new_email)
+    .bind(&now)
+    .bind(user.id)
+    .execute(&pool)
+    .await
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Failed to update email".to_string(),
+            }),
+        )
+    })?;
+
+    Ok(Json(VerifyEmailResponse {
+        success: true,
+        message: "メールアドレスの変更が完了しました".to_string(),
     }))
 }
 
@@ -3001,6 +3234,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/auth/verify-email", post(verify_email))
         .route("/auth/request-password-reset", post(request_password_reset))
         .route("/auth/reset-password", post(reset_password))
+        .route("/auth/change-email", post(change_email_request))
+        .route("/auth/verify-email-change", post(verify_email_change))
         .route("/public/schedules", get(list_public_schedules))
         .route("/public/schedules/:id", get(get_public_schedule))
         .route("/public/traffic", get(list_public_traffics))
@@ -3057,6 +3292,9 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       verification_token    TEXT,
       password_reset_token  TEXT,
       password_reset_expires TEXT,
+      email_change_token    TEXT,
+      email_change_expires  TEXT,
+      new_email             TEXT,
       created_at            TEXT,
       updated_at            TEXT
     );
@@ -3107,6 +3345,16 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
                     .execute(pool)
                     .await;
                 let _ = sqlx::query("ALTER TABLE users ADD COLUMN password_reset_expires TEXT")
+                    .execute(pool)
+                    .await;
+                // メールアドレス変更用のカラムを追加（既に存在する場合はエラーを無視）
+                let _ = sqlx::query("ALTER TABLE users ADD COLUMN email_change_token TEXT")
+                    .execute(pool)
+                    .await;
+                let _ = sqlx::query("ALTER TABLE users ADD COLUMN email_change_expires TEXT")
+                    .execute(pool)
+                    .await;
+                let _ = sqlx::query("ALTER TABLE users ADD COLUMN new_email TEXT")
                     .execute(pool)
                     .await;
             }

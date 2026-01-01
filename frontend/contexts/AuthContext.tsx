@@ -16,6 +16,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<AuthResponse>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  changeEmail: (newEmail: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -145,6 +146,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const changeEmail = async (newEmail: string) => {
+    try {
+      const res = await authenticatedFetch(`${API_BASE}/auth/change-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_email: newEmail }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Change email failed' }));
+        throw new Error(errorData.error || 'メールアドレス変更に失敗しました');
+      }
+
+      const data = await res.json();
+      return data;
+    } catch (error: any) {
+      throw error;
+    }
+  };
+
+  const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const headers = new Headers(options.headers);
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    return fetch(url, {
+      ...options,
+      headers,
+    });
+  };
+
   const value: AuthContextType = {
     token,
     email,
@@ -153,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     register,
     logout,
+    changeEmail,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
