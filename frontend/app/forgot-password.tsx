@@ -245,12 +245,19 @@ export default function ForgotPasswordScreen() {
           style={styles.input}
           placeholder="メールアドレス"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(text) => {
+            setEmail(text);
+            setError(null); // 入力時にエラーをクリア
+          }}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
           editable={!loading}
         />
+
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
