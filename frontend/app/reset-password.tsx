@@ -107,6 +107,27 @@ export default function ResetPasswordScreen() {
     );
   }
 
+  if (success) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.form}>
+          <Text style={styles.successIcon}>✓</Text>
+          <Text style={styles.title}>パスワードリセット完了</Text>
+          <Text style={styles.successMessage}>
+            パスワードのリセットが完了しました。
+            {'\n'}3秒後にログイン画面に移動します。
+          </Text>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => router.replace('/login')}
+          >
+            <Text style={styles.buttonText}>ログイン画面へ</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.form}>
@@ -254,6 +275,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     marginBottom: 8,
+  },
+  successIcon: {
+    fontSize: 64,
+    color: '#4CAF50',
+    marginBottom: 16,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  successMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+    color: '#666666',
+    lineHeight: 24,
   },
   button: {
     backgroundColor: '#007AFF',
