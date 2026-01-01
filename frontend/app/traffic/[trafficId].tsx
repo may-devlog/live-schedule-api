@@ -23,10 +23,12 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { NotionTag } from "../../components/notion-tag";
 import { NotionProperty, NotionPropertyBlock } from "../../components/notion-property";
 import { getOptionColor } from "../../utils/get-option-color";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function TrafficDetailScreen() {
   const { trafficId } = useLocalSearchParams<{ trafficId: string }>();
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [traffic, setTraffic] = useState<Traffic | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,20 +114,22 @@ export default function TrafficDetailScreen() {
           <Text style={styles.mainTitle} numberOfLines={2}>
             {title}
           </Text>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={styles.duplicateButton}
-              onPress={handleDuplicate}
-            >
-              <Text style={styles.duplicateButtonText}>複製</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEdit}
-            >
-              <Text style={styles.editButtonText}>編集</Text>
-            </TouchableOpacity>
-          </View>
+          {isAuthenticated && (
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={styles.duplicateButton}
+                onPress={handleDuplicate}
+              >
+                <Text style={styles.duplicateButtonText}>複製</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={handleEdit}
+              >
+                <Text style={styles.editButtonText}>編集</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* [Traffic Info] */}

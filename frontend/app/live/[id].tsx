@@ -796,24 +796,26 @@ export default function DetailScreen() {
               );
             })
           )}
-          <View style={styles.addLinksContainer}>
-            <TouchableOpacity
-              style={styles.addLink}
-              onPress={handleAddTraffic}
-            >
-              <Text style={styles.addLinkText}>+ 新規ページを追加</Text>
-            </TouchableOpacity>
-            <View style={styles.relationLinkButton}>
-              <NotionTrafficRelation
-                label=""
-                placeholder="↗ 既存データにリンク"
-                currentScheduleId={schedule?.id || 0}
-                value={selectedTrafficIds}
-                onValueChange={handleLinkTraffics}
-                hideSelectedCards={true}
-              />
+          {isAuthenticated && (
+            <View style={styles.addLinksContainer}>
+              <TouchableOpacity
+                style={styles.addLink}
+                onPress={handleAddTraffic}
+              >
+                <Text style={styles.addLinkText}>+ 新規ページを追加</Text>
+              </TouchableOpacity>
+              <View style={styles.relationLinkButton}>
+                <NotionTrafficRelation
+                  label=""
+                  placeholder="↗ 既存データにリンク"
+                  currentScheduleId={schedule?.id || 0}
+                  value={selectedTrafficIds}
+                  onValueChange={handleLinkTraffics}
+                  hideSelectedCards={true}
+                />
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
         {/* [Stay] */}
@@ -852,24 +854,26 @@ export default function DetailScreen() {
               );
             })
           )}
-          <View style={styles.addLinksContainer}>
-            <TouchableOpacity
-              style={styles.addLink}
-              onPress={handleAddStay}
-            >
-              <Text style={styles.addLinkText}>+ 新規ページを追加</Text>
-            </TouchableOpacity>
-            <View style={styles.relationLinkButton}>
-              <NotionStayRelation
-                label=""
-                placeholder="↗ 既存データにリンク"
-                currentScheduleId={schedule?.id || 0}
-                value={selectedStayIds}
-                onValueChange={handleLinkStays}
-                hideSelectedCards={true}
-              />
+          {isAuthenticated && (
+            <View style={styles.addLinksContainer}>
+              <TouchableOpacity
+                style={styles.addLink}
+                onPress={handleAddStay}
+              >
+                <Text style={styles.addLinkText}>+ 新規ページを追加</Text>
+              </TouchableOpacity>
+              <View style={styles.relationLinkButton}>
+                <NotionStayRelation
+                  label=""
+                  placeholder="↗ 既存データにリンク"
+                  currentScheduleId={schedule?.id || 0}
+                  value={selectedStayIds}
+                  onValueChange={handleLinkStays}
+                  hideSelectedCards={true}
+                />
+              </View>
             </View>
-          </View>
+          )}
         </View>
       </ScrollView>
     </View>

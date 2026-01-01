@@ -19,10 +19,12 @@ type Stay = {
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../components/notion-property";
 import { NotionTag } from "../../components/notion-tag";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function StayDetailScreen() {
   const { stayId } = useLocalSearchParams<{ stayId: string }>();
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
   const [stay, setStay] = useState<Stay | null>(null);
   const [loading, setLoading] = useState(false);
@@ -98,20 +100,22 @@ export default function StayDetailScreen() {
           <Text style={styles.mainTitle} numberOfLines={2}>
             {stay.hotel_name}
           </Text>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={styles.duplicateButton}
-              onPress={handleDuplicate}
-            >
-              <Text style={styles.duplicateButtonText}>複製</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEdit}
-            >
-              <Text style={styles.editButtonText}>編集</Text>
-            </TouchableOpacity>
-          </View>
+          {isAuthenticated && (
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={styles.duplicateButton}
+                onPress={handleDuplicate}
+              >
+                <Text style={styles.duplicateButtonText}>複製</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={handleEdit}
+              >
+                <Text style={styles.editButtonText}>編集</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* [Stay Info] */}
