@@ -3,10 +3,12 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getApiUrl } from '../utils/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function VerifyEmailChangeScreen() {
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token?: string }>();
+  const { updateEmail } = useAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
 
@@ -31,6 +33,11 @@ export default function VerifyEmailChangeScreen() {
           setStatus('error');
           setMessage(data.error || 'メールアドレス変更に失敗しました');
           return;
+        }
+
+        // 新しいメールアドレスをAuthContextに反映
+        if (data.new_email) {
+          await updateEmail(data.new_email);
         }
 
         setStatus('success');

@@ -17,6 +17,7 @@ interface AuthContextType {
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   changeEmail: (newEmail: string) => Promise<void>;
+  updateEmail: (newEmail: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -197,6 +198,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateEmail = async (newEmail: string) => {
+    try {
+      // メールアドレスをlocalStorageに保存
+      await AsyncStorage.setItem(EMAIL_KEY, newEmail);
+      setEmail(newEmail);
+    } catch (error) {
+      console.error('Failed to update email:', error);
+    }
+  };
+
   const value: AuthContextType = {
     token,
     email,
@@ -206,6 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     changeEmail,
+    updateEmail,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

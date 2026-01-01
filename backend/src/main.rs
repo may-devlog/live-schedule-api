@@ -75,6 +75,13 @@ struct VerifyEmailResponse {
 }
 
 #[derive(Debug, Serialize)]
+struct VerifyEmailChangeResponse {
+    success: bool,
+    message: String,
+    new_email: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
 struct PasswordResetResponse {
     success: bool,
     message: String,
@@ -1183,9 +1190,10 @@ async fn verify_email_change(
         )
     })?;
 
-    Ok(Json(VerifyEmailResponse {
+    Ok(Json(VerifyEmailChangeResponse {
         success: true,
         message: "メールアドレスの変更が完了しました".to_string(),
+        new_email: Some(new_email.clone()),
     }))
 }
 
