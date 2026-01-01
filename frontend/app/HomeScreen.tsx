@@ -61,6 +61,7 @@ export default function HomeScreen() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [showChangeEmailModal, setShowChangeEmailModal] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [changeEmailLoading, setChangeEmailLoading] = useState(false);
@@ -149,25 +150,30 @@ export default function HomeScreen() {
 
   const handleLogin = async () => {
     if (!loginEmail.trim() || !loginPassword.trim()) {
-      Alert.alert("エラー", "メールアドレスとパスワードを入力してください");
+      setLoginError("メールアドレスとパスワードを入力してください");
       return;
     }
 
     try {
       setLoginLoading(true);
+      setLoginError(null);
       const result = await login(loginEmail.trim(), loginPassword);
       if (!result.email_verified) {
-        Alert.alert(
-          "メール確認が必要です",
-          "メールアドレスの確認が完了していません。登録時に送信されたメールを確認してください。"
-        );
+        setLoginError("メールアドレスの確認が完了していません。登録時に送信されたメールを確認してください。");
         return;
       }
       setShowLoginModal(false);
       setLoginEmail("");
       setLoginPassword("");
+      setLoginError(null);
     } catch (error: any) {
-      Alert.alert("ログインエラー", error.message || "ログインに失敗しました");
+      // セキュリティ上の理由から、どちらが間違っているかわからないメッセージに統一
+      const errorMessage = error.message || "ログインに失敗しました";
+      if (errorMessage.includes("メールアドレス") || errorMessage.includes("パスワード")) {
+        setLoginError("メールアドレスまたはパスワードが正しくありません");
+      } else {
+        setLoginError(errorMessage);
+      }
     } finally {
       setLoginLoading(false);
     }
@@ -340,7 +346,10 @@ export default function HomeScreen() {
               style={styles.input}
               placeholder="メールアドレス"
               value={loginEmail}
-              onChangeText={setLoginEmail}
+              onChangeText={(text) => {
+                setLoginEmail(text);
+                setLoginError(null); // 入力時にエラーをクリア
+              }}
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
@@ -350,10 +359,17 @@ export default function HomeScreen() {
               style={styles.input}
               placeholder="パスワード"
               value={loginPassword}
-              onChangeText={setLoginPassword}
+              onChangeText={(text) => {
+                setLoginPassword(text);
+                setLoginError(null); // 入力時にエラーをクリア
+              }}
               secureTextEntry
               autoComplete="password"
             />
+
+            {loginError && (
+              <Text style={styles.loginErrorText}>{loginError}</Text>
+            )}
 
             <TouchableOpacity
               style={[styles.loginSubmitButton, loginLoading && styles.loginSubmitButtonDisabled]}
@@ -687,5 +703,11 @@ const styles = StyleSheet.create({
   },
   menuButtonTextDanger: {
     color: "#d93025",
+  },
+  loginErrorText: {
+    color: "#d93025",
+    fontSize: 14,
+    marginTop: 8,
+    marginBottom: 8,
   },
 });

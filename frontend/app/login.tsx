@@ -19,30 +19,23 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { login, register } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('エラー', 'メールアドレスとパスワードを入力してください');
+      setError('メールアドレスとパスワードを入力してください');
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
       if (isLogin) {
         const result = await login(email.trim(), password);
         if (!result.email_verified) {
-          Alert.alert(
-            'メール確認が必要です',
-            'メールアドレスの確認が完了していません。登録時に送信されたメールを確認してください。',
-            [
-              {
-                text: 'OK',
-                onPress: () => router.push('/verify-email'),
-              },
-            ]
-          );
+          setError('メールアドレスの確認が完了していません。登録時に送信されたメールを確認してください。');
           return;
         }
         router.replace('/(tabs)');
@@ -83,16 +76,12 @@ export default function LoginScreen() {
       console.error('[LoginScreen] Error message:', error?.message);
       console.error('[LoginScreen] Error stack:', error?.stack);
       
+      // セキュリティ上の理由から、どちらが間違っているかわからないメッセージに統一
       const errorMessage = error?.message || '認証に失敗しました';
-      console.log('[LoginScreen] Showing error alert:', errorMessage);
-      
-      // Web環境ではwindow.alertを使用
-      if (Platform.OS === 'web') {
-        if (typeof window !== 'undefined') {
-          window.alert(`エラー\n\n${errorMessage}`);
-        }
+      if (errorMessage.includes('メールアドレス') || errorMessage.includes('パスワード')) {
+        setError('メールアドレスまたはパスワードが正しくありません');
       } else {
-        Alert.alert('エラー', errorMessage);
+        setError(errorMessage);
       }
     } finally {
       console.log('[LoginScreen] Setting loading to false');
@@ -115,7 +104,10 @@ export default function LoginScreen() {
           style={styles.input}
           placeholder="メールアドレス"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(text) => {
+            setEmail(text);
+            setError(null); // 入力時にエラーをクリア
+          }}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
@@ -127,7 +119,10 @@ export default function LoginScreen() {
             style={styles.passwordInput}
             placeholder="パスワード"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              setError(null); // 入力時にエラーをクリア
+            }}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoCorrect={false}
@@ -143,6 +138,10 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -272,6 +271,12 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     textAlign: 'center',
     fontSize: 14,
+  },
+  errorText: {
+    color: '#d93025',
+    fontSize: 14,
+    marginTop: 8,
+    marginBottom: 8,
   },
 });
 
