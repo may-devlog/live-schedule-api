@@ -734,24 +734,26 @@ export default function DetailScreen() {
               })}
             </View>
           )}
-          <View style={styles.addLinksContainer}>
-            <TouchableOpacity
-              style={styles.addLink}
-              onPress={() => router.push(`/new?copyFrom=${id}`)}
-            >
-              <Text style={styles.addLinkText}>+ 新規ページを追加</Text>
-            </TouchableOpacity>
-            <View style={styles.relationLinkButton}>
-              <NotionRelation
-                label=""
-                value={relatedIds}
-                onValueChange={handleLinkRelatedSchedule}
-                currentScheduleId={schedule?.id}
-                placeholder="↗ 既存データにリンク"
-                hideSelectedCards={true}
-              />
+          {isAuthenticated && (
+            <View style={styles.addLinksContainer}>
+              <TouchableOpacity
+                style={styles.addLink}
+                onPress={() => router.push(`/new?copyFrom=${id}`)}
+              >
+                <Text style={styles.addLinkText}>+ 新規ページを追加</Text>
+              </TouchableOpacity>
+              <View style={styles.relationLinkButton}>
+                <NotionRelation
+                  label=""
+                  value={relatedIds}
+                  onValueChange={handleLinkRelatedSchedule}
+                  currentScheduleId={schedule?.id}
+                  placeholder="↗ 既存データにリンク"
+                  hideSelectedCards={true}
+                />
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
         {/* [Traffic] */}
