@@ -20,6 +20,7 @@ import {
   saveSelectOptions,
 } from "../../utils/select-options-storage";
 import { useEffect } from "react";
+import { HomeButton } from "../../components/HomeButton";
 
 const STAY_STATUSES_KEY = "@select_options:stay_statuses" as const;
 

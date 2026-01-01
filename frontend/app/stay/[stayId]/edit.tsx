@@ -16,6 +16,7 @@ import { authenticatedFetch, getApiUrl } from "../../../utils/api";
 import { NotionSelect } from "../../../components/notion-select";
 import { NotionDatePicker } from "../../../components/notion-date-picker";
 import type { SelectOption } from "../../../types/select-option";
+import { HomeButton } from "../../../components/HomeButton";
 
 type Stay = {
   id: number;
