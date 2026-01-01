@@ -27,6 +27,41 @@ export default function YearScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+const fetchAvailableYears = async () => {
+  try {
+    // 公開スケジュールAPIから全データを取得して年を抽出
+    const url = getApiUrl("/public/schedules");
+    const res = await fetch(url);
+    if (!res.ok) return;
+
+    const data: Schedule[] = await res.json();
+    
+    // データから存在する年を抽出
+    const years = new Set<number>();
+    data.forEach((schedule) => {
+      if (schedule.date) {
+        // dateは"YYYY-MM-DD"形式
+        const year = parseInt(schedule.date.substring(0, 4), 10);
+        if (!isNaN(year)) {
+          years.add(year);
+        }
+      } else if (schedule.datetime) {
+        // datetimeから年を抽出
+        const date = new Date(schedule.datetime);
+        const year = date.getUTCFullYear();
+        if (!isNaN(year)) {
+          years.add(year);
+        }
+      }
+    });
+    // 年を降順でソート（新しい年から）
+    const sortedYears = Array.from(years).sort((a, b) => b - a);
+    setAvailableYears(sortedYears);
+  } catch (e: any) {
+    console.error("ERROR FETCHING AVAILABLE YEARS:", e);
+  }
+};
+
 const fetchYear = async (y: string) => {
   try {
     setLoading(true);
@@ -47,6 +82,11 @@ const fetchYear = async (y: string) => {
     setLoading(false);
   }
 };
+
+  // 利用可能な年を取得
+  useEffect(() => {
+    fetchAvailableYears();
+  }, []);
 
   // currentYear が変わるたびにその年を再取得
   useEffect(() => {
@@ -74,7 +114,7 @@ const fetchYear = async (y: string) => {
 
       {/* 年ボタン */}
       <View style={styles.yearSelector}>
-        {YEARS.map((y) => (
+        {availableYears.map((y) => (
           <TouchableOpacity
             key={y}
             style={[
