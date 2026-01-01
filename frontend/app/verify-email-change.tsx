@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 export default function VerifyEmailChangeScreen() {
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token?: string }>();
-  const { updateEmail } = useAuth();
+  const { updateEmail, reloadAuth } = useAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
 
@@ -37,7 +37,11 @@ export default function VerifyEmailChangeScreen() {
 
         // 新しいメールアドレスをAuthContextに反映
         if (data.new_email) {
+          console.log('[VerifyEmailChange] Updating email to:', data.new_email);
           await updateEmail(data.new_email);
+          // 認証情報を再読み込みして確実に状態を更新
+          await reloadAuth();
+          console.log('[VerifyEmailChange] Email updated successfully');
         }
 
         setStatus('success');

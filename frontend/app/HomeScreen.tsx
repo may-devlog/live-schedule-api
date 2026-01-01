@@ -241,6 +241,11 @@ export default function HomeScreen() {
     fetchUpcoming();
   }, []);
 
+  // メールアドレスが変更された時に再レンダリングされるようにする
+  useEffect(() => {
+    console.log('[HomeScreen] Email changed to:', email);
+  }, [email]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>

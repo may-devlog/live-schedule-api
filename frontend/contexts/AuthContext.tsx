@@ -18,6 +18,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   changeEmail: (newEmail: string) => Promise<void>;
   updateEmail: (newEmail: string) => Promise<void>;
+  reloadAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -200,12 +201,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateEmail = async (newEmail: string) => {
     try {
+      console.log('[AuthContext] updateEmail called with:', newEmail);
       // メールアドレスをlocalStorageに保存
       await AsyncStorage.setItem(EMAIL_KEY, newEmail);
       setEmail(newEmail);
+      console.log('[AuthContext] Email updated to:', newEmail);
     } catch (error) {
       console.error('Failed to update email:', error);
     }
+  };
+
+  const reloadAuth = async () => {
+    await loadAuth();
   };
 
   const value: AuthContextType = {
@@ -218,6 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     changeEmail,
     updateEmail,
+    reloadAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
