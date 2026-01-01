@@ -190,15 +190,26 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.loginButton}
           onPress={() => {
+            console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
             if (isAuthenticated) {
-              Alert.alert(
-                "ログアウト",
-                `${email} でログイン中です。ログアウトしますか？`,
-                [
-                  { text: "キャンセル", style: "cancel" },
-                  { text: "ログアウト", onPress: handleLogout, style: "destructive" },
-                ]
-              );
+              // Web環境でも確実に動作するように、confirmを使用
+              if (Platform.OS === 'web' && typeof window !== 'undefined' && window.confirm) {
+                const confirmed = window.confirm(
+                  `${email || 'ログイン中'} でログイン中です。ログアウトしますか？`
+                );
+                if (confirmed) {
+                  handleLogout();
+                }
+              } else {
+                Alert.alert(
+                  "ログアウト",
+                  `${email || 'ログイン中'} でログイン中です。ログアウトしますか？`,
+                  [
+                    { text: "キャンセル", style: "cancel" },
+                    { text: "ログアウト", onPress: handleLogout, style: "destructive" },
+                  ]
+                );
+              }
             } else {
               setShowLoginModal(true);
             }
