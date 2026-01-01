@@ -4,7 +4,7 @@ export function maskHotelName(hotelName: string, isAuthenticated: boolean): stri
     return hotelName;
   }
   
-  // 非ログイン状態の場合、すべての文字を「*」で置き換える
-  return '*'.repeat(hotelName.length);
+  // 非ログイン状態の場合、文字数が分からないように固定のマスク表示にする
+  return '***';
 }
 
