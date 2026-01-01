@@ -105,7 +105,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 const SELLER_COLORS: Record<string, string> = {
   "チケットぴあ": "#BFDBFE", // blue (チケットぴあの公式ロゴの青)
   "イープラス": "#F9D5E5", // pink (イープラスの公式ロゴのピンク)
-  "ローソンチケット": "#A7F3D0", // teal (ローソンチケットの公式ロゴの水色)
+  "ローソンチケット": "#CCFBF1", // teal (ローソンチケットの公式ロゴの淡い水色)
   "その他": "#E5E7EB", // gray (薄いグレー)
 };
 
