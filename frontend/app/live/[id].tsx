@@ -21,7 +21,6 @@ import { getOptionColor } from "../../utils/get-option-color";
 import { loadSelectOptions } from "../../utils/select-options-storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "../../components/PageHeader";
-import { HomeButton } from "../../components/HomeButton";
 
 type TrafficSummary = {
   id: number;
