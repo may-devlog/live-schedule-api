@@ -48,13 +48,12 @@ export type Schedule = {
 
 import { getApiUrl } from "../utils/api";
 
-const YEARS = [2024, 2025, 2026];
-
 export default function HomeScreen() {
   const router = useRouter();
   const { isAuthenticated, login, logout, email, changeEmail } = useAuth();
 
   const [nextSchedules, setNextSchedules] = useState<Schedule[]>([]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [loadingNext, setLoadingNext] = useState(false);
   const [errorNext, setErrorNext] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -80,6 +79,28 @@ export default function HomeScreen() {
       }
       const data: Schedule[] = await res.json();
       console.log("Public schedules received:", data.length, "items");
+      
+      // データから存在する年を抽出
+      const years = new Set<number>();
+      data.forEach((schedule) => {
+        if (schedule.date) {
+          // dateは"YYYY-MM-DD"形式
+          const year = parseInt(schedule.date.substring(0, 4), 10);
+          if (!isNaN(year)) {
+            years.add(year);
+          }
+        } else if (schedule.datetime) {
+          // datetimeから年を抽出
+          const date = new Date(schedule.datetime);
+          const year = date.getUTCFullYear();
+          if (!isNaN(year)) {
+            years.add(year);
+          }
+        }
+      });
+      // 年を降順でソート（新しい年から）
+      const sortedYears = Array.from(years).sort((a, b) => b - a);
+      setAvailableYears(sortedYears);
       
       // 現在時刻をJST（日本標準時）で取得
       // 現在のUTC時刻を取得
@@ -312,7 +333,7 @@ export default function HomeScreen() {
 
       <Text style={styles.sectionTitle}>Years</Text>
       <View style={styles.yearListColumn}>
-        {YEARS.map((year) => (
+        {availableYears.map((year) => (
           <TouchableOpacity
             key={year}
             style={styles.yearRow}
@@ -322,6 +343,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
       </View>
+      <View style={styles.bottomSpacer} />
 
       {/* ログインモーダル */}
       <Modal
