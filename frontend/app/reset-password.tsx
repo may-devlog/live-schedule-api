@@ -20,6 +20,7 @@ export default function ResetPasswordScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const resetToken = params.token || '';
 
   const handleResetPassword = async () => {
@@ -74,12 +75,11 @@ export default function ResetPasswordScreen() {
       const data = await res.json();
       console.log('[ResetPassword] Success:', data);
       
-      Alert.alert('完了', data.message || 'パスワードのリセットが完了しました', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/login'),
-        },
-      ]);
+      setSuccess(true);
+      // 3秒後にログイン画面に遷移
+      setTimeout(() => {
+        router.replace('/login');
+      }, 3000);
     } catch (error: any) {
       console.error('[ResetPassword] Error:', error);
       setError(error.message || 'パスワードリセットに失敗しました');
