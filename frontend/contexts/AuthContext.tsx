@@ -162,7 +162,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[AuthContext] changeEmail response headers:', Object.fromEntries(res.headers.entries()));
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Change email failed' }));
+        let errorData;
+        try {
+          const text = await res.text();
+          console.error('[AuthContext] changeEmail error response text:', text);
+          errorData = JSON.parse(text);
+        } catch (parseError) {
+          console.error('[AuthContext] Failed to parse error response:', parseError);
+          errorData = { error: `メールアドレス変更に失敗しました (status: ${res.status})` };
+        }
         console.error('[AuthContext] changeEmail error:', errorData);
         throw new Error(errorData.error || 'メールアドレス変更に失敗しました');
       }
