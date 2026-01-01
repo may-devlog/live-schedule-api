@@ -24,13 +24,15 @@ import { NotionTag } from "../../components/notion-tag";
 import { NotionProperty, NotionPropertyBlock } from "../../components/notion-property";
 import { getOptionColor } from "../../utils/get-option-color";
 import { useAuth } from "@/contexts/AuthContext";
-import { HomeButton } from "../../components/HomeButton";
+import { PageHeader } from "../../components/PageHeader";
+import type { Schedule } from "../HomeScreen";
 
 export default function TrafficDetailScreen() {
   const { trafficId } = useLocalSearchParams<{ trafficId: string }>();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const [traffic, setTraffic] = useState<Traffic | null>(null);
+  const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transportationColor, setTransportationColor] = useState<string | null>(null);
@@ -61,6 +63,19 @@ export default function TrafficDetailScreen() {
         }
         const data: Traffic = await res.json();
         setTraffic(data);
+        
+        // スケジュール情報を取得
+        if (data.schedule_id) {
+          try {
+            const scheduleRes = await authenticatedFetch(getApiUrl(`/schedules/${data.schedule_id}`));
+            if (scheduleRes.ok) {
+              const scheduleData: Schedule = await scheduleRes.json();
+              setSchedule(scheduleData);
+            }
+          } catch (e) {
+            console.error("Failed to fetch schedule:", e);
+          }
+        }
         
         // Transportationの色情報を取得
         if (data.transportation) {
@@ -109,9 +124,7 @@ export default function TrafficDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <HomeButton />
-      </View>
+      <PageHeader scheduleTitle={schedule?.title || null} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* タイトル */}
         <View style={styles.titleHeader}>
@@ -199,14 +212,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 48,
-    paddingBottom: 16,
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e9e9e7",
   },
   scrollContent: {
     padding: 24,

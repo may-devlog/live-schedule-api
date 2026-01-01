@@ -20,7 +20,8 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../components/notion-property";
 import { NotionTag } from "../../components/notion-tag";
 import { useAuth } from "@/contexts/AuthContext";
-import { HomeButton } from "../../components/HomeButton";
+import { PageHeader } from "../../components/PageHeader";
+import type { Schedule } from "../HomeScreen";
 
 export default function StayDetailScreen() {
   const { stayId } = useLocalSearchParams<{ stayId: string }>();
@@ -28,6 +29,7 @@ export default function StayDetailScreen() {
   const { isAuthenticated } = useAuth();
 
   const [stay, setStay] = useState<Stay | null>(null);
+  const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,6 +59,19 @@ export default function StayDetailScreen() {
         }
         const data: Stay = await res.json();
         setStay(data);
+        
+        // スケジュール情報を取得
+        if (data.schedule_id) {
+          try {
+            const scheduleRes = await authenticatedFetch(getApiUrl(`/schedules/${data.schedule_id}`));
+            if (scheduleRes.ok) {
+              const scheduleData: Schedule = await scheduleRes.json();
+              setSchedule(scheduleData);
+            }
+          } catch (e) {
+            console.error("Failed to fetch schedule:", e);
+          }
+        }
       } catch (e: any) {
         setError(e.message ?? "Unknown error");
       } finally {
@@ -95,9 +110,7 @@ export default function StayDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <HomeButton />
-      </View>
+      <PageHeader scheduleTitle={schedule?.title || null} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* タイトル */}
         <View style={styles.titleHeader}>
@@ -174,14 +187,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 48,
-    paddingBottom: 16,
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e9e9e7",
   },
   scrollContent: {
     padding: 24,
