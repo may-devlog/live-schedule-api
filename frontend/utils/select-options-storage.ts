@@ -30,7 +30,7 @@ const DEFAULT_AREAS = [
   "熊本", "大分", "宮崎", "鹿児島", "沖縄"
 ];
 const DEFAULT_TARGETS = ["Artist A"];
-const DEFAULT_SELLERS = ["チケットぴあ", "イープラス", "ローソンチケット", "その他"];
+const DEFAULT_SELLERS = ["チケットぴあ", "イープラス", "ローチケ", "その他"];
 const DEFAULT_STATUSES = ["Canceled", "Pending", "Keep", "Done"];
 const DEFAULT_TRANSPORTATIONS = ["🚄 新幹線", "✈️ 飛行機", "🚃 在来線", "🚌 バス", "🚗 車", "🚕 タクシー", "その他"];
 
@@ -83,11 +83,32 @@ export async function loadSelectOptions(
           }));
         }
         // 既存のSelectOption配列の場合、SELLERSの場合は色を再計算
+        // また、「ローソンチケット」を「ローチケ」に変換
         if (key === "SELLERS") {
-          return (parsed as SelectOption[]).map((opt) => ({
-            ...opt,
-            color: opt.color || getDefaultColorForLabel(opt.label, false, false, true),
-          }));
+          const updatedOptions = (parsed as SelectOption[]).map((opt) => {
+            // 「ローソンチケット」を「ローチケ」に変換
+            let label = opt.label;
+            if (label === "ローソンチケット") {
+              label = "ローチケ";
+            }
+            return {
+              ...opt,
+              label,
+              color: opt.color || getDefaultColorForLabel(label, false, false, true),
+            };
+          });
+          // 重複を除去（変換後のラベルで）
+          const uniqueOptions = Array.from(
+            new Map(updatedOptions.map(opt => [opt.label, opt])).values()
+          );
+          // 変更があった場合は保存
+          const hasChanges = parsed.some((opt: SelectOption, idx: number) => 
+            opt.label !== uniqueOptions[idx]?.label
+          ) || uniqueOptions.length !== parsed.length;
+          if (hasChanges) {
+            await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(uniqueOptions));
+          }
+          return uniqueOptions;
         }
         // 既存のSelectOption配列の場合、TARGETSの場合は「Artist A」が含まれていない場合は追加
         // また、「Band B」「Band C」を「Artist B」「Artist C」に変換
