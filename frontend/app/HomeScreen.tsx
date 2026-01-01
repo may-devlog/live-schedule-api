@@ -226,13 +226,14 @@ export default function HomeScreen() {
             if (isAuthenticated) {
               // ログイン済みの場合、メニューを表示
               if (Platform.OS === 'web') {
-                // Web環境では、シンプルなメニューを表示
-                const action = window.prompt(
-                  `ログイン中: ${email || 'ログイン中'}\n\n1: メールアドレス変更\n2: ログアウト\n\n番号を入力:`
+                // Web環境では、confirmでメニューを表示
+                const changeEmail = window.confirm(
+                  `${email || 'ログイン中'} でログイン中です\n\nメールアドレスを変更しますか？\n（「キャンセル」を選択するとログアウトの確認が表示されます）`
                 );
-                if (action === '1') {
+                if (changeEmail) {
                   setShowChangeEmailModal(true);
-                } else if (action === '2') {
+                } else {
+                  // ログアウトの確認
                   if (window.confirm('ログアウトしますか？')) {
                     handleLogout();
                   }
