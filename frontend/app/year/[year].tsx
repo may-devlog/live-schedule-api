@@ -13,8 +13,6 @@ import {
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
 
-const YEARS = [2024, 2025, 2026];
-
 export default function YearScreen() {
   const params = useLocalSearchParams<{ year: string }>();
   const router = useRouter();
@@ -24,6 +22,7 @@ export default function YearScreen() {
   );
 
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
