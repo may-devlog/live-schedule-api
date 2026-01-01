@@ -860,12 +860,14 @@ async fn request_password_reset(
         )
     })?;
 
-    // ユーザーが存在しない場合でも、セキュリティのため成功を返す
+    // ユーザーが存在しない場合はエラーを返す
     if user.is_none() {
-        return Ok(Json(PasswordResetResponse {
-            success: true,
-            message: "パスワードリセット用のメールを送信しました（該当するメールアドレスが登録されている場合）".to_string(),
-        }));
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "このメールアドレスは登録されていません".to_string(),
+            }),
+        ));
     }
 
     let user = user.unwrap();

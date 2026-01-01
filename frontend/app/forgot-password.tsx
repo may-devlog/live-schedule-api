@@ -36,7 +36,13 @@ export default function ForgotPasswordScreen() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Request failed' }));
+        let errorData;
+        try {
+          const text = await res.text();
+          errorData = JSON.parse(text);
+        } catch (parseError) {
+          errorData = { error: 'リセット要求に失敗しました' };
+        }
         throw new Error(errorData.error || 'リセット要求に失敗しました');
       }
 
