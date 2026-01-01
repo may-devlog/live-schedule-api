@@ -19,6 +19,7 @@ export default function ForgotPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [requested, setRequested] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [resetToken, setResetToken] = useState(params.token || '');
 
   const handleRequestReset = async () => {
@@ -28,13 +29,14 @@ export default function ForgotPasswordScreen() {
     
     if (!email.trim()) {
       console.log('[ForgotPassword] Email is empty');
-      Alert.alert('エラー', 'メールアドレスを入力してください');
+      setError('メールアドレスを入力してください');
       return;
     }
 
     try {
       console.log('[ForgotPassword] Setting loading to true');
       setLoading(true);
+      setError(null); // エラーをクリア
       
       const url = `${API_BASE}/auth/request-password-reset`;
       console.log('[ForgotPassword] Request URL:', url);
@@ -78,8 +80,8 @@ export default function ForgotPasswordScreen() {
         
         console.error('[ForgotPassword] Error data:', errorData);
         
-        // エラーメッセージを表示（requestedをtrueにしない）
-        Alert.alert('エラー', errorData.error || 'リセット要求に失敗しました');
+        // エラーメッセージを画面に表示（requestedをtrueにしない）
+        setError(errorData.error || 'リセット要求に失敗しました');
         setLoading(false);
         return; // ここで処理を終了
       }
@@ -100,9 +102,9 @@ export default function ForgotPasswordScreen() {
       
       // ネットワークエラーの場合
       if (error?.name === 'TypeError' && error?.message?.includes('fetch')) {
-        Alert.alert('エラー', 'ネットワークエラーが発生しました。サーバーに接続できません。');
+        setError('ネットワークエラーが発生しました。サーバーに接続できません。');
       } else {
-        Alert.alert('エラー', error?.message || 'リセット要求に失敗しました');
+        setError(error?.message || 'リセット要求に失敗しました');
       }
     } finally {
       console.log('[ForgotPassword] Setting loading to false');
