@@ -64,6 +64,7 @@ export default function HomeScreen() {
   const [showChangeEmailModal, setShowChangeEmailModal] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [changeEmailLoading, setChangeEmailLoading] = useState(false);
+  const [showUserMenuModal, setShowUserMenuModal] = useState(false);
 
   const fetchUpcoming = async () => {
     try {
@@ -224,32 +225,8 @@ export default function HomeScreen() {
           onPress={() => {
             console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
             if (isAuthenticated) {
-              // ログイン済みの場合、メニューを表示
-              if (Platform.OS === 'web') {
-                // Web環境では、confirmでメニューを表示
-                const changeEmail = window.confirm(
-                  `${email || 'ログイン中'} でログイン中です\n\nメールアドレスを変更しますか？\n（「キャンセル」を選択するとログアウトの確認が表示されます）`
-                );
-                if (changeEmail) {
-                  setShowChangeEmailModal(true);
-                } else {
-                  // ログアウトの確認
-                  if (window.confirm('ログアウトしますか？')) {
-                    handleLogout();
-                  }
-                }
-              } else {
-                // ネイティブ環境では、Alertでメニューを表示
-                Alert.alert(
-                  "メニュー",
-                  `${email || 'ログイン中'} でログイン中です`,
-                  [
-                    { text: "キャンセル", style: "cancel" },
-                    { text: "メールアドレス変更", onPress: () => setShowChangeEmailModal(true) },
-                    { text: "ログアウト", onPress: handleLogout, style: "destructive" },
-                  ]
-                );
-              }
+              // ログイン済みの場合、メニューモーダルを表示
+              setShowUserMenuModal(true);
             } else {
               setShowLoginModal(true);
             }
@@ -424,6 +401,65 @@ export default function HomeScreen() {
               ) : (
                 <Text style={styles.loginSubmitButtonText}>メール送信</Text>
               )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ユーザーメニューモーダル */}
+      <Modal
+        visible={showUserMenuModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowUserMenuModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>メニュー</Text>
+              <TouchableOpacity
+                onPress={() => setShowUserMenuModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={{ fontSize: 24 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ marginBottom: 16, color: "#666" }}>
+              {email || 'ログイン中'} でログイン中です
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.menuButton, { marginBottom: 12 }]}
+              onPress={() => {
+                setShowUserMenuModal(false);
+                setShowChangeEmailModal(true);
+              }}
+            >
+              <Text style={styles.menuButtonText}>📧 メールアドレス変更</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuButton, styles.menuButtonDanger]}
+              onPress={() => {
+                setShowUserMenuModal(false);
+                if (Platform.OS === 'web' && typeof window !== 'undefined' && window.confirm) {
+                  if (window.confirm('ログアウトしますか？')) {
+                    handleLogout();
+                  }
+                } else {
+                  Alert.alert(
+                    "ログアウト",
+                    "ログアウトしますか？",
+                    [
+                      { text: "キャンセル", style: "cancel" },
+                      { text: "ログアウト", onPress: handleLogout, style: "destructive" },
+                    ]
+                  );
+                }
+              }}
+            >
+              <Text style={[styles.menuButtonText, styles.menuButtonTextDanger]}>🚪 ログアウト</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -604,5 +640,22 @@ const styles = StyleSheet.create({
     color: "#37352f",
     fontSize: 14,
     textDecorationLine: "underline",
+  },
+  menuButton: {
+    backgroundColor: "#f5f5f5",
+    padding: 16,
+    borderRadius: 4,
+    alignItems: "center",
+  },
+  menuButtonDanger: {
+    backgroundColor: "#fff5f5",
+  },
+  menuButtonText: {
+    color: "#37352f",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  menuButtonTextDanger: {
+    color: "#d93025",
   },
 });
