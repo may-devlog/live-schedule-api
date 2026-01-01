@@ -182,6 +182,35 @@ export default function HomeScreen() {
     }
   };
 
+  const handleChangeEmail = async () => {
+    if (!newEmail || !newEmail.includes('@')) {
+      Alert.alert("エラー", "有効なメールアドレスを入力してください");
+      return;
+    }
+
+    try {
+      setChangeEmailLoading(true);
+      await changeEmail(newEmail);
+      Alert.alert(
+        "メール送信完了",
+        "新しいメールアドレスに確認メールを送信しました。メール内のリンクをクリックしてメールアドレスを変更してください。",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              setShowChangeEmailModal(false);
+              setNewEmail("");
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert("エラー", error.message || "メールアドレス変更に失敗しました");
+    } finally {
+      setChangeEmailLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchUpcoming();
   }, []);
