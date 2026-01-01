@@ -217,8 +217,12 @@ export default function EditStayScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Edit Stay</Text>
+    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <View style={styles.header}>
+        <HomeButton />
+      </View>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Edit Stay</Text>
 
       <NotionDatePicker
         label="Check-in"
@@ -296,13 +300,22 @@ export default function EditStayScreen() {
           {submitting ? "Updating..." : "Update"}
         </Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  header: {
+    paddingHorizontal: 24,
     paddingTop: 48,
+    paddingBottom: 16,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+  },
+  container: {
+    paddingTop: 24,
     paddingHorizontal: 24,
     paddingBottom: 32,
     backgroundColor: "#ffffff",

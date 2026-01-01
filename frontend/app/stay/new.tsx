@@ -198,10 +198,14 @@ export default function NewStayScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>
-        {copyFrom ? "Duplicate Stay" : "New Stay"}
-      </Text>
+    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <View style={styles.header}>
+        <HomeButton />
+      </View>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>
+          {copyFrom ? "Duplicate Stay" : "New Stay"}
+        </Text>
 
       <Text style={styles.label}>Schedule ID</Text>
       <Text style={styles.value}>{scheduleId ?? "-"}</Text>
@@ -282,13 +286,22 @@ export default function NewStayScreen() {
           {submitting ? "Saving..." : "Save"}
         </Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  header: {
+    paddingHorizontal: 24,
     paddingTop: 48,
+    paddingBottom: 16,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+  },
+  container: {
+    paddingTop: 24,
     paddingHorizontal: 24,
     paddingBottom: 32,
     backgroundColor: "#ffffff",
