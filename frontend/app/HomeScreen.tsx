@@ -384,13 +384,14 @@ export default function HomeScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.registerLink}
+              style={styles.forgotPasswordLink}
               onPress={() => {
                 setShowLoginModal(false);
-                router.push("/login");
+                router.push("/forgot-password");
               }}
+              disabled={loginLoading}
             >
-              <Text style={styles.registerLinkText}>新規登録はこちら</Text>
+              <Text style={styles.forgotPasswordLinkText}>パスワードを忘れた場合</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -678,12 +679,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  registerLink: {
+  forgotPasswordLink: {
     marginTop: 16,
     alignItems: "center",
   },
-  registerLinkText: {
-    color: "#37352f",
+  forgotPasswordLinkText: {
+    color: "#007AFF",
     fontSize: 14,
     textDecorationLine: "underline",
   },
