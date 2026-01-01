@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
+import { HomeButton } from "../../components/HomeButton";
 
 export default function YearScreen() {
   const params = useLocalSearchParams<{ year: string }>();
@@ -106,13 +107,18 @@ const fetchYear = async (y: string) => {
 
   return (
     <View style={styles.container}>
-      {/* ナビゲーションバーのタイトル */}
-      <Stack.Screen options={{ title: `Year ${currentYear ?? ""}` }} />
+      {/* ナビゲーションバーのタイトルを非表示 */}
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      <View style={styles.header}>
+        <HomeButton />
+      </View>
 
-      <Text style={styles.title}>Year {currentYear}</Text>
+      <View style={styles.content}>
+        <Text style={styles.title}>Year {currentYear}</Text>
 
-      {/* 年ボタン */}
-      <View style={styles.yearSelector}>
+        {/* 年ボタン */}
+        <View style={styles.yearSelector}>
         {availableYears.map((y) => (
           <TouchableOpacity
             key={y}
@@ -164,6 +170,7 @@ const fetchYear = async (y: string) => {
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
       )}
+      </View>
     </View>
   );
 }
@@ -188,12 +195,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 16,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+  },
+  content: {
     padding: 24,
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
   },
   title: {
+    paddingHorizontal: 24,
     fontSize: 40,
     fontWeight: "700",
     color: "#37352f",

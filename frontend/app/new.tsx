@@ -23,6 +23,7 @@ import {
   saveSelectOptions,
 } from "../utils/select-options-storage";
 import { useAuth } from "@/contexts/AuthContext";
+import { HomeButton } from "../components/HomeButton";
 
 export default function NewScheduleScreen() {
   const router = useRouter();
@@ -272,10 +273,14 @@ export default function NewScheduleScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>
-        {copyFrom ? "Duplicate Live" : "New Live"}
-      </Text>
+    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <View style={styles.header}>
+        <HomeButton />
+      </View>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>
+          {copyFrom ? "Duplicate Live" : "New Live"}
+        </Text>
 
       {/* Text型 */}
       <Text style={styles.label}>
@@ -438,13 +443,22 @@ export default function NewScheduleScreen() {
           {submitting ? "Saving..." : "Save"}
         </Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  header: {
+    paddingHorizontal: 24,
     paddingTop: 48,
+    paddingBottom: 16,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+  },
+  container: {
+    paddingTop: 24,
     paddingHorizontal: 24,
     paddingBottom: 32,
     backgroundColor: "#ffffff",

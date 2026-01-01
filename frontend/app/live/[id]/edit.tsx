@@ -24,6 +24,7 @@ import {
   loadSelectOptions,
   saveSelectOptions,
 } from "../../../utils/select-options-storage";
+import { HomeButton } from "../../../components/HomeButton";
 
 export default function EditScheduleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -283,7 +284,11 @@ export default function EditScheduleScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <View style={styles.header}>
+        <HomeButton />
+      </View>
+      <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Edit Live</Text>
 
       {/* Text型 */}
@@ -458,12 +463,21 @@ export default function EditScheduleScreen() {
         </Text>
       </TouchableOpacity>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  header: {
+    paddingHorizontal: 24,
     paddingTop: 48,
+    paddingBottom: 16,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+  },
+  container: {
+    paddingTop: 24,
     paddingHorizontal: 24,
     paddingBottom: 32,
     backgroundColor: "#ffffff",

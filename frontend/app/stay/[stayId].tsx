@@ -20,6 +20,7 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../components/notion-property";
 import { NotionTag } from "../../components/notion-tag";
 import { useAuth } from "@/contexts/AuthContext";
+import { HomeButton } from "../../components/HomeButton";
 
 export default function StayDetailScreen() {
   const { stayId } = useLocalSearchParams<{ stayId: string }>();
@@ -94,6 +95,9 @@ export default function StayDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <HomeButton />
+      </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* タイトル */}
         <View style={styles.titleHeader}>
@@ -170,6 +174,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 16,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
   },
   scrollContent: {
     padding: 24,
