@@ -352,5 +352,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
   },
+  errorText: {
+    color: '#d93025',
+    fontSize: 14,
+    marginTop: 8,
+    marginBottom: 8,
+  },
 });
 
