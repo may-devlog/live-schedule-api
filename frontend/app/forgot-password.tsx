@@ -29,8 +29,12 @@ export default function ForgotPasswordScreen() {
 
     try {
       setLoading(true);
-      console.log('[ForgotPassword] Sending request to:', `${API_BASE}/auth/request-password-reset`);
-      console.log('[ForgotPassword] Email:', email.trim());
+      // 強制的にコンソールに出力（キャッシュの問題を回避）
+      if (typeof window !== 'undefined' && window.console) {
+        window.console.log('[ForgotPassword] Starting request reset');
+        window.console.log('[ForgotPassword] API_BASE:', API_BASE);
+        window.console.log('[ForgotPassword] Email:', email.trim());
+      }
       
       const res = await fetch(`${API_BASE}/auth/request-password-reset`, {
         method: 'POST',
@@ -38,30 +42,61 @@ export default function ForgotPasswordScreen() {
         body: JSON.stringify({ email: email.trim() }),
       });
 
-      console.log('[ForgotPassword] Response status:', res.status);
-      console.log('[ForgotPassword] Response ok:', res.ok);
-
-      if (!res.ok) {
-        let errorData;
-        try {
-          const text = await res.text();
-          console.error('[ForgotPassword] Error response text:', text);
-          errorData = JSON.parse(text);
-        } catch (parseError) {
-          console.error('[ForgotPassword] Failed to parse error response:', parseError);
-          errorData = { error: `リセット要求に失敗しました (status: ${res.status})` };
-        }
-        console.error('[ForgotPassword] Error data:', errorData);
-        throw new Error(errorData.error || 'リセット要求に失敗しました');
+      // レスポンスのステータスを確認
+      const status = res.status;
+      const isOk = res.ok;
+      
+      if (typeof window !== 'undefined' && window.console) {
+        window.console.log('[ForgotPassword] Response status:', status);
+        window.console.log('[ForgotPassword] Response ok:', isOk);
       }
 
+      if (!isOk) {
+        // エラーレスポンスの場合
+        let errorText = '';
+        try {
+          errorText = await res.text();
+          if (typeof window !== 'undefined' && window.console) {
+            window.console.error('[ForgotPassword] Error response text:', errorText);
+          }
+        } catch (textError) {
+          if (typeof window !== 'undefined' && window.console) {
+            window.console.error('[ForgotPassword] Failed to read error text:', textError);
+          }
+        }
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (parseError) {
+          errorData = { error: `リセット要求に失敗しました (status: ${status})` };
+        }
+        
+        if (typeof window !== 'undefined' && window.console) {
+          window.console.error('[ForgotPassword] Error data:', errorData);
+        }
+        
+        // エラーメッセージを表示（requestedをtrueにしない）
+        Alert.alert('エラー', errorData.error || 'リセット要求に失敗しました');
+        return; // ここで処理を終了
+      }
+
+      // 成功レスポンスの場合
       const data = await res.json();
-      console.log('[ForgotPassword] Success data:', data);
+      if (typeof window !== 'undefined' && window.console) {
+        window.console.log('[ForgotPassword] Success data:', data);
+      }
+      
+      // 成功時のみrequestedをtrueにする
       setRequested(true);
       Alert.alert('送信完了', data.message || 'パスワードリセット用のメールを送信しました');
     } catch (error: any) {
-      console.error('[ForgotPassword] Exception:', error);
-      console.error('[ForgotPassword] Error message:', error.message);
+      if (typeof window !== 'undefined' && window.console) {
+        window.console.error('[ForgotPassword] Exception:', error);
+        window.console.error('[ForgotPassword] Error message:', error.message);
+        window.console.error('[ForgotPassword] Error stack:', error.stack);
+      }
+      // エラー時はrequestedをtrueにしない
       Alert.alert('エラー', error.message || 'リセット要求に失敗しました');
     } finally {
       setLoading(false);
