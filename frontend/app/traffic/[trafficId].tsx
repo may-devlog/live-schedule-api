@@ -67,13 +67,17 @@ export default function TrafficDetailScreen() {
         // スケジュール情報を取得
         if (data.schedule_id) {
           try {
-            const scheduleRes = await authenticatedFetch(getApiUrl(`/schedules/${data.schedule_id}`));
+            // 公開APIを使用（認証不要）
+            const scheduleRes = await fetch(getApiUrl(`/public/schedules/${data.schedule_id}`));
             if (scheduleRes.ok) {
               const scheduleData: Schedule = await scheduleRes.json();
               setSchedule(scheduleData);
+              console.log("[TrafficDetail] Schedule loaded:", scheduleData.title);
+            } else {
+              console.error("[TrafficDetail] Failed to fetch schedule, status:", scheduleRes.status);
             }
           } catch (e) {
-            console.error("Failed to fetch schedule:", e);
+            console.error("[TrafficDetail] Failed to fetch schedule:", e);
           }
         }
         

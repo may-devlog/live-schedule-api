@@ -20,6 +20,7 @@ import { getOptionColor } from "../../utils/get-option-color";
 // アイコンは絵文字を使用（フォントに依存しない）
 import { loadSelectOptions } from "../../utils/select-options-storage";
 import { useAuth } from "@/contexts/AuthContext";
+import { PageHeader } from "../../components/PageHeader";
 import { HomeButton } from "../../components/HomeButton";
 
 type TrafficSummary = {
@@ -569,9 +570,7 @@ export default function DetailScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <HomeButton />
-      </View>
+      <PageHeader showBackButton={true} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* タイトル */}
         <View style={styles.titleHeader}>
