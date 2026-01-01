@@ -148,20 +148,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const changeEmail = async (newEmail: string) => {
     try {
+      console.log('[AuthContext] changeEmail called with:', newEmail);
+      console.log('[AuthContext] API_BASE:', API_BASE);
+      console.log('[AuthContext] token exists:', !!token);
+      
       const res = await authenticatedFetch(`${API_BASE}/auth/change-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ new_email: newEmail }),
       });
 
+      console.log('[AuthContext] changeEmail response status:', res.status);
+      console.log('[AuthContext] changeEmail response headers:', Object.fromEntries(res.headers.entries()));
+
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'Change email failed' }));
+        console.error('[AuthContext] changeEmail error:', errorData);
         throw new Error(errorData.error || 'メールアドレス変更に失敗しました');
       }
 
       const data = await res.json();
+      console.log('[AuthContext] changeEmail success:', data);
       return data;
     } catch (error: any) {
+      console.error('[AuthContext] changeEmail exception:', error);
+      console.error('[AuthContext] Error type:', error.constructor.name);
+      console.error('[AuthContext] Error message:', error.message);
       throw error;
     }
   };

@@ -184,29 +184,54 @@ export default function HomeScreen() {
   };
 
   const handleChangeEmail = async () => {
+    console.log("[CHANGE EMAIL] Starting email change process");
+    console.log("[CHANGE EMAIL] New email:", newEmail);
+    
     if (!newEmail || !newEmail.includes('@')) {
-      Alert.alert("エラー", "有効なメールアドレスを入力してください");
+      console.log("[CHANGE EMAIL] Invalid email format");
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.alert) {
+        window.alert("有効なメールアドレスを入力してください");
+      } else {
+        Alert.alert("エラー", "有効なメールアドレスを入力してください");
+      }
       return;
     }
 
     try {
       setChangeEmailLoading(true);
-      await changeEmail(newEmail);
-      Alert.alert(
-        "メール送信完了",
-        "新しいメールアドレスに確認メールを送信しました。メール内のリンクをクリックしてメールアドレスを変更してください。",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              setShowChangeEmailModal(false);
-              setNewEmail("");
+      console.log("[CHANGE EMAIL] Calling changeEmail function");
+      const result = await changeEmail(newEmail);
+      console.log("[CHANGE EMAIL] Success:", result);
+      
+      const successMessage = "新しいメールアドレスに確認メールを送信しました。メール内のリンクをクリックしてメールアドレスを変更してください。";
+      
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.alert) {
+        window.alert(successMessage);
+        setShowChangeEmailModal(false);
+        setNewEmail("");
+      } else {
+        Alert.alert(
+          "メール送信完了",
+          successMessage,
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                setShowChangeEmailModal(false);
+                setNewEmail("");
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
     } catch (error: any) {
-      Alert.alert("エラー", error.message || "メールアドレス変更に失敗しました");
+      console.error("[CHANGE EMAIL] Error:", error);
+      const errorMessage = error.message || "メールアドレス変更に失敗しました";
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.alert) {
+        window.alert(`エラー: ${errorMessage}`);
+      } else {
+        Alert.alert("エラー", errorMessage);
+      }
     } finally {
       setChangeEmailLoading(false);
     }
