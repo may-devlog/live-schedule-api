@@ -22,83 +22,90 @@ export default function ForgotPasswordScreen() {
   const [resetToken, setResetToken] = useState(params.token || '');
 
   const handleRequestReset = async () => {
+    console.log('[ForgotPassword] handleRequestReset called');
+    console.log('[ForgotPassword] Email value:', email);
+    console.log('[ForgotPassword] Email trimmed:', email.trim());
+    
     if (!email.trim()) {
+      console.log('[ForgotPassword] Email is empty');
       Alert.alert('エラー', 'メールアドレスを入力してください');
       return;
     }
 
     try {
+      console.log('[ForgotPassword] Setting loading to true');
       setLoading(true);
-      // 強制的にコンソールに出力（キャッシュの問題を回避）
-      if (typeof window !== 'undefined' && window.console) {
-        window.console.log('[ForgotPassword] Starting request reset');
-        window.console.log('[ForgotPassword] API_BASE:', API_BASE);
-        window.console.log('[ForgotPassword] Email:', email.trim());
-      }
       
-      const res = await fetch(`${API_BASE}/auth/request-password-reset`, {
+      const url = `${API_BASE}/auth/request-password-reset`;
+      console.log('[ForgotPassword] Request URL:', url);
+      console.log('[ForgotPassword] API_BASE:', API_BASE);
+      console.log('[ForgotPassword] Request body:', JSON.stringify({ email: email.trim() }));
+      
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
       });
+      
+      console.log('[ForgotPassword] Fetch completed');
 
       // レスポンスのステータスを確認
       const status = res.status;
       const isOk = res.ok;
       
-      if (typeof window !== 'undefined' && window.console) {
-        window.console.log('[ForgotPassword] Response status:', status);
-        window.console.log('[ForgotPassword] Response ok:', isOk);
-      }
+      console.log('[ForgotPassword] Response status:', status);
+      console.log('[ForgotPassword] Response ok:', isOk);
+      console.log('[ForgotPassword] Response headers:', Object.fromEntries(res.headers.entries()));
 
       if (!isOk) {
         // エラーレスポンスの場合
+        console.log('[ForgotPassword] Response is not OK, reading error text');
         let errorText = '';
         try {
           errorText = await res.text();
-          if (typeof window !== 'undefined' && window.console) {
-            window.console.error('[ForgotPassword] Error response text:', errorText);
-          }
+          console.error('[ForgotPassword] Error response text:', errorText);
         } catch (textError) {
-          if (typeof window !== 'undefined' && window.console) {
-            window.console.error('[ForgotPassword] Failed to read error text:', textError);
-          }
+          console.error('[ForgotPassword] Failed to read error text:', textError);
         }
         
         let errorData;
         try {
           errorData = JSON.parse(errorText);
         } catch (parseError) {
+          console.error('[ForgotPassword] Failed to parse error JSON:', parseError);
           errorData = { error: `リセット要求に失敗しました (status: ${status})` };
         }
         
-        if (typeof window !== 'undefined' && window.console) {
-          window.console.error('[ForgotPassword] Error data:', errorData);
-        }
+        console.error('[ForgotPassword] Error data:', errorData);
         
         // エラーメッセージを表示（requestedをtrueにしない）
         Alert.alert('エラー', errorData.error || 'リセット要求に失敗しました');
+        setLoading(false);
         return; // ここで処理を終了
       }
 
       // 成功レスポンスの場合
+      console.log('[ForgotPassword] Response is OK, parsing JSON');
       const data = await res.json();
-      if (typeof window !== 'undefined' && window.console) {
-        window.console.log('[ForgotPassword] Success data:', data);
-      }
+      console.log('[ForgotPassword] Success data:', data);
       
       // 成功時のみrequestedをtrueにする
       setRequested(true);
       Alert.alert('送信完了', data.message || 'パスワードリセット用のメールを送信しました');
     } catch (error: any) {
-      if (typeof window !== 'undefined' && window.console) {
-        window.console.error('[ForgotPassword] Exception:', error);
-        window.console.error('[ForgotPassword] Error message:', error.message);
-        window.console.error('[ForgotPassword] Error stack:', error.stack);
+      console.error('[ForgotPassword] Exception caught:', error);
+      console.error('[ForgotPassword] Error name:', error?.name);
+      console.error('[ForgotPassword] Error message:', error?.message);
+      console.error('[ForgotPassword] Error stack:', error?.stack);
+      
+      // ネットワークエラーの場合
+      if (error?.name === 'TypeError' && error?.message?.includes('fetch')) {
+        Alert.alert('エラー', 'ネットワークエラーが発生しました。サーバーに接続できません。');
+      } else {
+        Alert.alert('エラー', error?.message || 'リセット要求に失敗しました');
       }
-      // エラー時はrequestedをtrueにしない
-      Alert.alert('エラー', error.message || 'リセット要求に失敗しました');
     } finally {
+      console.log('[ForgotPassword] Setting loading to false');
       setLoading(false);
     }
   };
@@ -245,7 +252,12 @@ export default function ForgotPasswordScreen() {
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleRequestReset}
+          onPress={() => {
+            console.log('[ForgotPassword] Button pressed');
+            console.log('[ForgotPassword] Email:', email);
+            console.log('[ForgotPassword] Loading:', loading);
+            handleRequestReset();
+          }}
           disabled={loading}
         >
           {loading ? (
