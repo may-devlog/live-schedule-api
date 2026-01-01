@@ -101,26 +101,37 @@ const CATEGORY_COLORS: Record<string, string> = {
   "その他": "#E5E7EB", // gray (薄いグレー)
 };
 
+// Sellerごとの色マッピング（公式ロゴの色をイメージ）
+const SELLER_COLORS: Record<string, string> = {
+  "チケットぴあ": "#BFDBFE", // blue (チケットぴあの公式ロゴの青)
+  "イープラス": "#F9D5E5", // pink (イープラスの公式ロゴのピンク)
+  "ローソンチケット": "#A7F3D0", // teal (ローソンチケットの公式ロゴの水色)
+  "その他": "#E5E7EB", // gray (薄いグレー)
+};
+
 // 選択肢を文字列配列からSelectOption配列に変換
 export function stringArrayToOptions(
   strings: string[],
   colorMap?: Record<string, string>,
   isPrefecture: boolean = false,
-  isCategory: boolean = false
+  isCategory: boolean = false,
+  isSeller: boolean = false
 ): SelectOption[] {
   return strings.map((str) => ({
     label: str,
-    color: colorMap?.[str] || getDefaultColorForLabel(str, isPrefecture, isCategory),
+    color: colorMap?.[str] || getDefaultColorForLabel(str, isPrefecture, isCategory, isSeller),
   }));
 }
 
 // ラベルからデフォルト色を生成
 // isPrefectureがtrueの場合、都道府県として地方ごとに同じ色を割り当て
 // isCategoryがtrueの場合、カテゴリとして特定の色を割り当て
+// isSellerがtrueの場合、Sellerとして特定の色を割り当て
 export function getDefaultColorForLabel(
   label: string,
   isPrefecture: boolean = false,
-  isCategory: boolean = false
+  isCategory: boolean = false,
+  isSeller: boolean = false
 ): string {
   if (isPrefecture) {
     const region = PREFECTURE_REGIONS[label];
@@ -135,7 +146,13 @@ export function getDefaultColorForLabel(
     }
   }
   
-  // 都道府県でもカテゴリでもない場合、またはマッピングにない場合はハッシュベースで色を決定
+  if (isSeller) {
+    if (SELLER_COLORS[label]) {
+      return SELLER_COLORS[label];
+    }
+  }
+  
+  // 都道府県でもカテゴリでもSellerでもない場合、またはマッピングにない場合はハッシュベースで色を決定
   const hash = label.split("").reduce((acc, char) => {
     return char.charCodeAt(0) + ((acc << 5) - acc);
   }, 0);

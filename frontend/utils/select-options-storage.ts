@@ -47,9 +47,11 @@ export async function loadSelectOptions(
         if (typeof parsed[0] === "string") {
           // AREASの場合は都道府県として扱う
           // CATEGORIESの場合はカテゴリとして扱う
+          // SELLERSの場合はSellerとして扱う
           const isPrefecture = key === "AREAS";
           const isCategory = key === "CATEGORIES";
-          return stringArrayToOptions(parsed, undefined, isPrefecture, isCategory);
+          const isSeller = key === "SELLERS";
+          return stringArrayToOptions(parsed, undefined, isPrefecture, isCategory, isSeller);
         }
         // 既存のSelectOption配列の場合、AREASの場合は色を再計算し、不足している都道府県を追加
         if (key === "AREAS") {
@@ -77,7 +79,14 @@ export async function loadSelectOptions(
         if (key === "CATEGORIES") {
           return (parsed as SelectOption[]).map((opt) => ({
             ...opt,
-            color: opt.color || getDefaultColorForLabel(opt.label, false, true),
+            color: opt.color || getDefaultColorForLabel(opt.label, false, true, false),
+          }));
+        }
+        // 既存のSelectOption配列の場合、SELLERSの場合は色を再計算
+        if (key === "SELLERS") {
+          return (parsed as SelectOption[]).map((opt) => ({
+            ...opt,
+            color: opt.color || getDefaultColorForLabel(opt.label, false, false, true),
           }));
         }
         // 既存のSelectOption配列の場合、TARGETSの場合は「Artist A」が含まれていない場合は追加
@@ -91,7 +100,7 @@ export async function loadSelectOptions(
             return {
               ...opt,
               label,
-              color: opt.color || getDefaultColorForLabel(label, false, false),
+              color: opt.color || getDefaultColorForLabel(label, false, false, false),
             };
           });
           // 重複を除去（変換後のラベルで）
@@ -107,6 +116,7 @@ export async function loadSelectOptions(
             const missingOptions = stringArrayToOptions(
               missingTargets,
               undefined,
+              false,
               false,
               false
             );
@@ -149,10 +159,12 @@ export async function loadSelectOptions(
   };
   // AREASの場合は都道府県として扱う
   // CATEGORIESの場合はカテゴリとして扱う
+  // SELLERSの場合はSellerとして扱う
   // TRANSPORTATIONSの場合はデフォルトで薄いグレーに（カスタマイズ可能）
   const isPrefecture = key === "AREAS";
   const isCategory = key === "CATEGORIES";
-  const options = stringArrayToOptions(defaults[key], undefined, isPrefecture, isCategory);
+  const isSeller = key === "SELLERS";
+  const options = stringArrayToOptions(defaults[key], undefined, isPrefecture, isCategory, isSeller);
   if (key === "TRANSPORTATIONS") {
     return options.map((opt) => ({
       ...opt,
