@@ -791,7 +791,6 @@ export default function DetailScreen() {
                     )}
                   </View>
                   <View style={styles.cardRow}>
-                    <Text style={{ fontSize: 16, marginRight: 8 }}>📄</Text>
                     <Text style={styles.cardDetail}>{detailWithNotes}</Text>
                   </View>
                 </TouchableOpacity>
@@ -849,7 +848,6 @@ export default function DetailScreen() {
                     <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
                   </View>
                   <View style={styles.cardRow}>
-                    <Text style={{ fontSize: 16, marginRight: 8 }}>📄</Text>
                     <Text style={styles.cardDetail}>{stay.hotel_name}</Text>
                   </View>
                 </TouchableOpacity>
