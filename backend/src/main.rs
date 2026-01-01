@@ -1099,7 +1099,7 @@ async fn change_email_request(
 async fn verify_email_change(
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<VerifyEmailChangeRequest>,
-) -> Result<Json<VerifyEmailResponse>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<VerifyEmailChangeResponse>, (StatusCode, Json<ErrorResponse>)> {
     // トークンでユーザーを検索
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
         "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email_change_token = ?",
