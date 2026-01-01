@@ -11,6 +11,8 @@ import {
   Platform,
 } from "react-native";
 import { authenticatedFetch, getApiUrl } from "../utils/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { maskHotelName } from "../utils/mask-hotel-name";
 
 type Stay = {
   id: number;
@@ -42,6 +44,7 @@ export function NotionStayRelation({
   onValueChange,
   hideSelectedCards = false,
 }: NotionStayRelationProps) {
+  const { isAuthenticated } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [allStays, setAllStays] = useState<Stay[]>([]);
   const [loading, setLoading] = useState(false);
@@ -138,7 +141,7 @@ export function NotionStayRelation({
                 <View style={styles.cardContent}>
                   <Text style={styles.cardDateTime}>{dateTimeText}</Text>
                   <Text style={styles.cardTitle} numberOfLines={1}>
-                    {stay.hotel_name}
+                    {maskHotelName(stay.hotel_name, isAuthenticated)}
                   </Text>
                   <Text style={styles.cardFee}>¥{stay.fee.toLocaleString()}</Text>
                 </View>
@@ -233,7 +236,7 @@ export function NotionStayRelation({
                       <View style={styles.optionContent}>
                         <Text style={styles.optionDate}>{dateTimeText}</Text>
                         <Text style={styles.optionTitle} numberOfLines={1}>
-                          {stay.hotel_name}
+                          {maskHotelName(stay.hotel_name, isAuthenticated)}
                         </Text>
                         <Text style={styles.optionSubtitle}>
                           ¥{stay.fee.toLocaleString()}

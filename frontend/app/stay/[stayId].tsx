@@ -22,6 +22,7 @@ import { NotionTag } from "../../components/notion-tag";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "../../components/PageHeader";
 import type { Schedule } from "../HomeScreen";
+import { maskHotelName } from "../../utils/mask-hotel-name";
 
 export default function StayDetailScreen() {
   const { stayId } = useLocalSearchParams<{ stayId: string }>();
@@ -119,7 +120,7 @@ export default function StayDetailScreen() {
         {/* タイトル */}
         <View style={styles.titleHeader}>
           <Text style={styles.mainTitle} numberOfLines={2}>
-            {stay.hotel_name}
+            {maskHotelName(stay.hotel_name, isAuthenticated)}
           </Text>
           {isAuthenticated && (
             <View style={styles.actionButtons}>

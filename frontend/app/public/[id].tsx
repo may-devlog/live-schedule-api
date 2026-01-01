@@ -14,6 +14,7 @@ import { NotionTag } from "../../components/notion-tag";
 import { getOptionColor } from "../../utils/get-option-color";
 import { loadSelectOptions } from "../../utils/select-options-storage";
 import type { Schedule } from "../HomeScreen";
+import { maskHotelName } from "../../utils/mask-hotel-name";
 
 type TrafficSummary = {
   id: number;
@@ -385,7 +386,7 @@ export default function PublicDetailScreen() {
                 />
                 <NotionProperty
                   label="Hotel Name"
-                  value={stay.hotel_name}
+                  value={maskHotelName(stay.hotel_name, false)}
                 />
                 <NotionProperty
                   label="Fee"

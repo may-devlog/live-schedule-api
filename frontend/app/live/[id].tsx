@@ -21,6 +21,7 @@ import { getOptionColor } from "../../utils/get-option-color";
 import { loadSelectOptions } from "../../utils/select-options-storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "../../components/PageHeader";
+import { maskHotelName } from "../../utils/mask-hotel-name";
 
 type TrafficSummary = {
   id: number;
@@ -850,7 +851,7 @@ export default function DetailScreen() {
                     <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
                   </View>
                   <View style={styles.cardRow}>
-                    <Text style={styles.cardDetail}>{stay.hotel_name}</Text>
+                    <Text style={styles.cardDetail}>{maskHotelName(stay.hotel_name, isAuthenticated)}</Text>
                   </View>
                 </TouchableOpacity>
               );
