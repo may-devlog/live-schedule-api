@@ -172,9 +172,8 @@ export default function HomeScreen() {
   const handleLogout = async () => {
     try {
       await logout();
-      // ログアウト成功時にメッセージを表示（オプション）
-      // Alert.alert("ログアウト", "ログアウトしました");
-      // ログアウト後、状態が更新されるため、自動的に鍵マークに変わる
+      // ログアウト成功：状態が更新されるため、自動的に鍵マークに変わる
+      // isAuthenticatedは!!tokenで判定されるため、tokenがnullになれば自動的にfalseになる
     } catch (error: any) {
       Alert.alert("エラー", "ログアウトに失敗しました");
     }
