@@ -33,8 +33,9 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
   const firstDay = new Date(year, month, 1);
   // 月の最後の日
   const lastDay = new Date(year, month + 1, 0);
-  // 月の最初の日の曜日（0=日曜日, 6=土曜日）
-  const startDayOfWeek = firstDay.getDay();
+  // 月の最初の日の曜日（月曜始まり: 0=月曜日, 6=日曜日）
+  // getDay()は日曜=0, 月曜=1なので、月曜=0になるように変換: (getDay() + 6) % 7
+  const startDayOfWeek = (firstDay.getDay() + 6) % 7;
 
   // カレンダーに表示する日付の配列を生成
   const daysInMonth = lastDay.getDate();
