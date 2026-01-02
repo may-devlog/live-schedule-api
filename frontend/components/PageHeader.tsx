@@ -5,9 +5,10 @@ import { useRouter } from 'expo-router';
 type PageHeaderProps = {
   scheduleTitle?: string | null;
   showBackButton?: boolean;
+  homePath?: string; // カスタムホームパス（指定しない場合は '/'）
 };
 
-export function PageHeader({ scheduleTitle, showBackButton = true }: PageHeaderProps) {
+export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: PageHeaderProps) {
   const router = useRouter();
 
   return (
@@ -23,7 +24,7 @@ export function PageHeader({ scheduleTitle, showBackButton = true }: PageHeaderP
         )}
         <TouchableOpacity
           style={styles.homeButton}
-          onPress={() => router.push('/')}
+          onPress={() => router.push(homePath || '/')}
         >
           <Text style={styles.homeButtonText}>🏠 ホーム</Text>
         </TouchableOpacity>

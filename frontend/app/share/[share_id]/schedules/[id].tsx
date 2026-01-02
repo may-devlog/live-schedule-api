@@ -281,7 +281,7 @@ export default function SharedScheduleDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader showBackButton={true} />
+      <PageHeader showBackButton={true} homePath={`/share/${share_id}`} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* タイトル */}
         <View style={styles.titleHeader}>
