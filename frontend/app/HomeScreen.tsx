@@ -154,7 +154,8 @@ export default function HomeScreen() {
         return dateA - dateB;
       });
       
-      setNextSchedules(sorted);
+      // 直近3件のみを表示
+      setNextSchedules(sorted.slice(0, 3));
     } catch (e: any) {
       console.error("Error fetching schedules:", e);
       setErrorNext(e.message ?? "Unknown error");
@@ -282,9 +283,9 @@ export default function HomeScreen() {
   return (
     <>
     <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
-      <View style={styles.container}>
+    <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Live SCHEDULE</Text>
+      <Text style={styles.title}>Live SCHEDULE</Text>
           <TouchableOpacity
             style={styles.loginButton}
             onPress={() => {
@@ -304,9 +305,9 @@ export default function HomeScreen() {
         </View>
 
         {isAuthenticated && (
-          <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
-            <Text style={styles.newButtonText}>+ New Live</Text>
-          </TouchableOpacity>
+      <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
+        <Text style={styles.newButtonText}>+ New Live</Text>
+      </TouchableOpacity>
         )}
 
         {/* カレンダー */}
@@ -543,8 +544,8 @@ export default function HomeScreen() {
             >
               <Text style={[styles.menuButtonText, styles.menuButtonTextDanger]}>🚪 ログアウト</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+      </View>
+    </View>
       </Modal>
     </>
   );
