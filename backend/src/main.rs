@@ -14,7 +14,8 @@ use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::{Pool, Sqlite};
 use std::net::SocketAddr;
 use tower_http::cors::{Any, AllowOrigin, CorsLayer};
-use reqwest;
+use resend_rs::types::CreateEmailBaseOptions;
+use resend_rs::Resend;
 
 // ====== 認証関連の型定義 ======
 
