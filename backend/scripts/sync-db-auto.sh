@@ -154,25 +154,60 @@ EOF
 
 function auto_sync_loop() {
     local direction=$1  # "from" or "to"
+    local background=$2  # "true" or "false"
     
-    echo "自動同期を開始します（方向: $direction, 間隔: ${SYNC_INTERVAL}秒）"
-    echo "停止するには Ctrl+C を押してください"
-    echo ""
-    
-    while true; do
-        if [ "$direction" = "from" ]; then
-            sync_from_production
-        else
-            sync_to_production
-        fi
+    if [ "$background" = "true" ]; then
+        # バックグラウンドで実行
+        echo "自動同期をバックグラウンドで開始します（方向: $direction, 間隔: ${SYNC_INTERVAL}秒）"
+        echo "ログファイル: data/sync-${direction}.log"
+        echo "停止するには: pkill -f 'sync-db-auto.sh auto-${direction}'"
+        echo ""
         
-        if [ $? -eq 0 ]; then
-            show_stats "$LOCAL_DB"
-        fi
+        # ログディレクトリを作成
+        mkdir -p data
         
-        echo "[$(date +'%Y-%m-%d %H:%M:%S')] 次の同期まで ${SYNC_INTERVAL}秒待機中..."
-        sleep "$SYNC_INTERVAL"
-    done
+        # バックグラウンドで実行し、ログをファイルに出力
+        nohup bash -c "
+            while true; do
+                if [ \"$direction\" = \"from\" ]; then
+                    sync_from_production >> data/sync-${direction}.log 2>&1
+                else
+                    sync_to_production >> data/sync-${direction}.log 2>&1
+                fi
+                
+                if [ \$? -eq 0 ]; then
+                    show_stats \"$LOCAL_DB\" >> data/sync-${direction}.log 2>&1
+                fi
+                
+                echo \"[$(date +'%Y-%m-%d %H:%M:%S')] 次の同期まで ${SYNC_INTERVAL}秒待機中...\" >> data/sync-${direction}.log
+                sleep $SYNC_INTERVAL
+            done
+        " > /dev/null 2>&1 &
+        
+        echo "✓ バックグラウンドプロセスを開始しました（PID: $!）"
+        echo "ログを確認: tail -f data/sync-${direction}.log"
+        return 0
+    else
+        # フォアグラウンドで実行
+        echo "自動同期を開始します（方向: $direction, 間隔: ${SYNC_INTERVAL}秒）"
+        echo "停止するには Ctrl+C を押してください"
+        echo ""
+        
+        while true; do
+            if [ "$direction" = "from" ]; then
+                sync_from_production
+            else
+                sync_to_production
+            fi
+            
+            if [ $? -eq 0 ]; then
+                show_stats "$LOCAL_DB"
+            fi
+            
+            echo "[$(date +'%Y-%m-%d %H:%M:%S')] 次の同期まで ${SYNC_INTERVAL}秒待機中..."
+            sleep "$SYNC_INTERVAL"
+        done
+    fi
 }
 
 function show_help() {
@@ -183,34 +218,85 @@ function show_help() {
     echo "  upload            - ローカルのデータベースを本番環境にアップロード（1回のみ）"
     echo "  auto-from         - 本番環境からローカルへ自動同期（継続実行）"
     echo "  auto-to           - ローカルから本番環境へ自動同期（継続実行）"
+    echo "  stop              - 実行中の自動同期を停止"
+    echo "  status            - 自動同期の実行状態を確認"
     echo "  stats             - ローカルデータベースの統計を表示"
     echo "  stats-remote      - 本番環境データベースの統計を表示"
     echo "  integrity         - ローカルデータベースの整合性をチェック"
     echo ""
     echo "オプション:"
     echo "  --interval SECONDS - 自動同期の間隔を設定（デフォルト: 60秒）"
+    echo "  --background       - バックグラウンドで実行（ターミナルを閉じても継続）"
     echo ""
     echo "例:"
     echo "  $0 download                    # 本番環境 → ローカル（1回）"
     echo "  $0 upload                      # ローカル → 本番環境（1回）"
-    echo "  $0 auto-from                   # 本番環境 → ローカル（自動、60秒間隔）"
+    echo "  $0 auto-from                   # 本番環境 → ローカル（自動、フォアグラウンド）"
+    echo "  $0 auto-from --background      # 本番環境 → ローカル（自動、バックグラウンド）"
     echo "  $0 auto-from --interval 300    # 本番環境 → ローカル（自動、5分間隔）"
+    echo "  $0 stop                        # 実行中の自動同期を停止"
+    echo "  $0 status                      # 自動同期の状態を確認"
     echo "  $0 stats                       # ローカルデータベースの統計"
 }
 
 # オプション解析
 SYNC_INTERVAL=60
+BACKGROUND=false
 while [[ $# -gt 0 ]]; do
     case $1 in
         --interval)
             SYNC_INTERVAL="$2"
             shift 2
             ;;
+        --background)
+            BACKGROUND=true
+            shift
+            ;;
         *)
             break
             ;;
     esac
 done
+
+function stop_sync() {
+    echo "実行中の自動同期プロセスを検索中..."
+    PIDS=$(pgrep -f "sync-db-auto.sh auto-")
+    if [ -z "$PIDS" ]; then
+        echo "実行中の自動同期プロセスは見つかりませんでした"
+        return 0
+    fi
+    
+    echo "以下のプロセスを停止します:"
+    ps -p "$PIDS" -o pid,command
+    echo ""
+    echo "停止しますか？ (y/N)"
+    read -r response
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        pkill -f "sync-db-auto.sh auto-"
+        echo "✓ 自動同期プロセスを停止しました"
+    else
+        echo "停止をキャンセルしました"
+    fi
+}
+
+function show_status() {
+    echo "自動同期プロセスの状態:"
+    PIDS=$(pgrep -f "sync-db-auto.sh auto-")
+    if [ -z "$PIDS" ]; then
+        echo "実行中の自動同期プロセスはありません"
+    else
+        echo "実行中のプロセス:"
+        ps -p "$PIDS" -o pid,etime,command
+        echo ""
+        echo "ログファイル:"
+        if [ -f "data/sync-from.log" ]; then
+            echo "  data/sync-from.log (最終更新: $(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" data/sync-from.log 2>/dev/null || stat -c "%y" data/sync-from.log 2>/dev/null))"
+        fi
+        if [ -f "data/sync-to.log" ]; then
+            echo "  data/sync-to.log (最終更新: $(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" data/sync-to.log 2>/dev/null || stat -c "%y" data/sync-to.log 2>/dev/null))"
+        fi
+    fi
+}
 
 case "$1" in
     download)
@@ -235,10 +321,16 @@ case "$1" in
         sync_to_production
         ;;
     auto-from)
-        auto_sync_loop "from"
+        auto_sync_loop "from" "$BACKGROUND"
         ;;
     auto-to)
-        auto_sync_loop "to"
+        auto_sync_loop "to" "$BACKGROUND"
+        ;;
+    stop)
+        stop_sync
+        ;;
+    status)
+        show_status
         ;;
     stats)
         show_stats "$LOCAL_DB"
