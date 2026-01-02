@@ -49,7 +49,7 @@ export default function NewScheduleScreen() {
   useEffect(() => {
     const loadOptions = async () => {
       // データベースから直接選択肢を読み込む（認証されていない場合でも試行）
-      const loadFromDatabase = async (optionType: string): Promise<SelectOption[]> => {
+      const loadFromDatabase = async (optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES"): Promise<SelectOption[]> => {
         try {
           const res = await authenticatedFetch(getApiUrl(`/select-options/${optionType.toLowerCase()}`));
           if (res.ok) {
@@ -62,7 +62,7 @@ export default function NewScheduleScreen() {
           console.log(`[New] Failed to load ${optionType} from database, trying local storage:`, error);
         }
         // データベースから読み込めない場合は、ローカルストレージから読み込む
-        return await loadSelectOptions(optionType as keyof typeof import("../utils/select-options-storage").STORAGE_KEYS);
+        return await loadSelectOptions(optionType);
       };
 
       const [cats, areasData, targetsData, sellersData, statusesData] =
