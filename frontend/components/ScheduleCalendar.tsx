@@ -150,13 +150,13 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
 
       {/* 曜日ヘッダー */}
       <View style={styles.weekdayHeader}>
-        {["日", "月", "火", "水", "木", "金", "土"].map((day, index) => (
+        {["月", "火", "水", "木", "金", "土", "日"].map((day, index) => (
           <View key={index} style={styles.weekday}>
             <Text
               style={[
                 styles.weekdayText,
-                index === 0 && styles.sundayText,
-                index === 6 && styles.saturdayText,
+                index === 5 && styles.saturdayText,
+                index === 6 && styles.sundayText,
               ]}
             >
               {day}
