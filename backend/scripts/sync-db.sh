@@ -48,8 +48,10 @@ function upload_db() {
     
     # 本番環境のデータベースをバックアップ
     echo "本番環境のデータベースをバックアップ中..."
+    BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
     flyctl sftp shell --app "$APP_NAME" <<EOF
-get $REMOTE_DB /tmp/app.db.backup.$(date +%Y%m%d_%H%M%S)
+get $REMOTE_DB /tmp/app.db.backup.$BACKUP_TIMESTAMP
+rm $REMOTE_DB
 put $LOCAL_DB $REMOTE_DB
 EOF
     
