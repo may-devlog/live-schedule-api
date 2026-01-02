@@ -13,10 +13,24 @@ import { getApiUrl } from '../../utils/api';
 import { ScheduleCalendar } from '../../components/ScheduleCalendar';
 import type { Schedule } from '../HomeScreen';
 
+function formatDateTimeUTC(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) {
+    return iso;
+  }
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const hours = String(d.getUTCHours() + 0).padStart(2, "0");
+  const minutes = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
 export default function SharedScheduleScreen() {
   const router = useRouter();
   const { share_id } = useLocalSearchParams<{ share_id: string }>();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [nextSchedules, setNextSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
@@ -55,11 +69,41 @@ export default function SharedScheduleScreen() {
       console.log('[SharedScheduleScreen] Received schedules:', data.length);
       setSchedules(data);
       
+      // 未来のスケジュールをフィルタリング（JSTで比較）
+      const nowUTC = new Date();
+      const jstOffset = 9 * 60 * 60 * 1000; // JSTはUTC+9
+      const utcTime = nowUTC.getTime();
+      const jstNow = new Date(utcTime + jstOffset);
+      
+      const futureSchedules = data.filter((schedule) => {
+        if (!schedule.datetime) {
+          return false;
+        }
+        const scheduleDateUTC = new Date(schedule.datetime);
+        const scheduleUtcTime = scheduleDateUTC.getTime();
+        const scheduleDateJST = new Date(scheduleUtcTime + jstOffset);
+        return scheduleDateJST.getTime() > jstNow.getTime();
+      });
+      
+      // 未来のスケジュールを日時順にソートして、最初の3件を取得
+      futureSchedules.sort((a, b) => {
+        const dateA = a.datetime ? new Date(a.datetime).getTime() : 0;
+        const dateB = b.datetime ? new Date(b.datetime).getTime() : 0;
+        return dateA - dateB;
+      });
+      setNextSchedules(futureSchedules.slice(0, 3));
+      
       // 年を抽出してソート
       const years = new Set<number>();
       data.forEach((schedule) => {
         if (schedule.date) {
           const year = parseInt(schedule.date.split('-')[0]);
+          if (!isNaN(year)) {
+            years.add(year);
+          }
+        } else if (schedule.datetime) {
+          const date = new Date(schedule.datetime);
+          const year = date.getUTCFullYear();
           if (!isNaN(year)) {
             years.add(year);
           }
@@ -106,70 +150,60 @@ export default function SharedScheduleScreen() {
   }
 
   return (
-    <ScrollView style={styles.scrollContainer}>
+    <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>共有スケジュール</Text>
-          <TouchableOpacity
-            style={styles.homeButton}
-            onPress={() => router.push('/')}
-          >
-            <Text style={styles.homeButtonText}>🏠</Text>
-          </TouchableOpacity>
+          <Text style={styles.title}>SCHEDULES</Text>
         </View>
 
+        {/* カレンダー */}
         {schedules.length > 0 && (
           <ScheduleCalendar schedules={schedules} />
         )}
 
-        {availableYears.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>YEARS</Text>
-            {availableYears.map((year) => (
+        <Text style={styles.sectionTitle}>NEXT</Text>
+        {loading && <ActivityIndicator color="#333333" />}
+        {error && <Text style={styles.errorText}>Error: {error}</Text>}
+        {!loading && !error && nextSchedules.length === 0 && (
+          <Text style={styles.emptyText}>No upcoming schedules</Text>
+        )}
+        {!loading && !error && nextSchedules.length > 0 && (
+          <FlatList
+            data={nextSchedules}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
               <TouchableOpacity
-                key={year}
-                style={styles.yearRow}
-                onPress={() => router.push(`/year/${year}`)}
+                style={styles.card}
+                onPress={() => handleSchedulePress(item)}
               >
-                <Text style={styles.yearRowText}>{year}</Text>
+                <Text style={styles.cardDate}>
+                  {formatDateTimeUTC(item.datetime)}
+                </Text>
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <Text style={styles.cardSub}>
+                  {item.area} / {item.venue}
+                </Text>
               </TouchableOpacity>
-            ))}
-          </View>
+            )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
         )}
 
-        {schedules.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ALL SCHEDULES</Text>
-            <FlatList
-              data={schedules}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.card}
-                  onPress={() => handleSchedulePress(item)}
-                >
-                  <Text style={styles.cardDate}>
-                    {item.date ? item.date : '日付未設定'}
-                  </Text>
-                  <Text style={styles.cardTitle}>{item.title}</Text>
-                  {item.group && item.group !== item.title && (
-                    <Text style={styles.cardSub}>{item.group}</Text>
-                  )}
-                  {item.venue && (
-                    <Text style={styles.cardSub}>会場: {item.venue}</Text>
-                  )}
-                </TouchableOpacity>
-              )}
-              scrollEnabled={false}
-            />
-          </View>
-        )}
-
-        {schedules.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>共有されているスケジュールはありません</Text>
-          </View>
-        )}
+        <Text style={styles.sectionTitle}>Years</Text>
+        <View style={styles.yearListColumn}>
+          {availableYears.map((year) => (
+            <TouchableOpacity
+              key={year}
+              style={styles.yearRow}
+              onPress={() => router.push(`/year/${year}`)}
+            >
+              <Text style={styles.yearRowText}>{year}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.bottomSpacer} />
       </View>
     </ScrollView>
   );
@@ -180,6 +214,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   container: {
     paddingTop: 48,
     paddingHorizontal: 24,
@@ -187,7 +224,6 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: 'center',
     width: '100%',
-    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
@@ -199,12 +235,6 @@ const styles = StyleSheet.create({
     fontSize: 40,
     fontWeight: '700',
     color: '#37352f',
-  },
-  homeButton: {
-    padding: 8,
-  },
-  homeButtonText: {
-    fontSize: 24,
   },
   loadingContainer: {
     flex: 1,
@@ -240,16 +270,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  section: {
-    marginTop: 32,
-  },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#37352f',
+    marginTop: 32,
     marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  yearListColumn: {
+    flexDirection: 'column',
   },
   yearRow: {
     paddingVertical: 12,
@@ -260,6 +291,22 @@ const styles = StyleSheet.create({
     color: '#37352f',
     fontSize: 16,
     fontWeight: '500',
+  },
+  separator: {
+    height: 0,
+  },
+  errorText: {
+    color: '#d93025',
+    marginVertical: 8,
+    fontSize: 14,
+  },
+  emptyText: {
+    color: '#787774',
+    fontSize: 14,
+    marginVertical: 8,
+  },
+  bottomSpacer: {
+    height: 32,
   },
   card: {
     padding: 16,
@@ -286,14 +333,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#787774',
     marginTop: 4,
-  },
-  emptyContainer: {
-    paddingVertical: 48,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#787774',
-    fontSize: 14,
   },
 });
 
