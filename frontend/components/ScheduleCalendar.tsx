@@ -10,10 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import type { Schedule } from "../app/HomeScreen";
 
-const { width } = Dimensions.get("window");
-// コンテナのパディング（左右16pxずつ）を考慮
-const CONTAINER_PADDING = 32;
-const DAY_WIDTH = (width - CONTAINER_PADDING) / 7;
+// カレンダーの幅計算はスタイル内で行う
 
 interface ScheduleCalendarProps {
   schedules: Schedule[];
@@ -229,9 +226,10 @@ const styles = StyleSheet.create({
   weekdayHeader: {
     flexDirection: "row",
     marginBottom: 8,
+    width: "100%",
   },
   weekday: {
-    width: DAY_WIDTH,
+    flex: 1,
     alignItems: "center",
     paddingVertical: 8,
   },
@@ -252,13 +250,13 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   dayCell: {
-    width: DAY_WIDTH,
-    height: DAY_WIDTH,
-    minHeight: DAY_WIDTH,
+    width: "14.285%", // 100% / 7 ≈ 14.285%
+    aspectRatio: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 4,
     position: "relative",
+    minHeight: 50,
   },
   todayCell: {
     backgroundColor: "#e3f2fd",

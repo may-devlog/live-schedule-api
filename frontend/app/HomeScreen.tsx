@@ -11,6 +11,7 @@ import {
   TextInput,
   Alert,
   Platform,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
@@ -279,35 +280,36 @@ export default function HomeScreen() {
   }, [email]);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Live SCHEDULE</Text>
-        <TouchableOpacity
-          style={styles.loginButton}
-          onPress={() => {
-            console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
-            if (isAuthenticated) {
-              // ログイン済みの場合、メニューモーダルを表示
-              setShowUserMenuModal(true);
-            } else {
-              setShowLoginModal(true);
-            }
-          }}
-        >
-          <Text style={{ fontSize: 24 }}>
-            {isAuthenticated ? "👤" : "🔐"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+    <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Live SCHEDULE</Text>
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={() => {
+              console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
+              if (isAuthenticated) {
+                // ログイン済みの場合、メニューモーダルを表示
+                setShowUserMenuModal(true);
+              } else {
+                setShowLoginModal(true);
+              }
+            }}
+          >
+            <Text style={{ fontSize: 24 }}>
+              {isAuthenticated ? "👤" : "🔐"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      {isAuthenticated && (
-        <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
-          <Text style={styles.newButtonText}>+ New Live</Text>
-        </TouchableOpacity>
-      )}
+        {isAuthenticated && (
+          <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
+            <Text style={styles.newButtonText}>+ New Live</Text>
+          </TouchableOpacity>
+        )}
 
-      {/* カレンダー */}
-      <ScheduleCalendar schedules={allSchedules} />
+        {/* カレンダー */}
+        <ScheduleCalendar schedules={allSchedules} />
 
       <Text style={styles.sectionTitle}>NEXT</Text>
       {loadingNext && <ActivityIndicator color="#333333" />}
@@ -352,6 +354,7 @@ export default function HomeScreen() {
         ))}
       </View>
       <View style={styles.bottomSpacer} />
+      </View>
 
       {/* ログインモーダル */}
       <Modal
@@ -559,8 +562,14 @@ function formatDateTimeUTC(iso: string): string {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollContainer: {
     flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  container: {
     paddingTop: 48,
     paddingHorizontal: 24,
     backgroundColor: "#ffffff",
