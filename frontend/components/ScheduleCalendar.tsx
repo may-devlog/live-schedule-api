@@ -57,8 +57,11 @@ function isHoliday(year: number, month: number, day: number): boolean {
   
   // 成人の日（1月第2月曜日）
   if (month === 0) {
-    const firstMonday = (8 - new Date(year, 0, 1).getDay()) % 7 || 7;
-    if (day === firstMonday + 7) return true;
+    const firstDayOfWeek = new Date(year, 0, 1).getDay();
+    // 最初の月曜日を計算: 月曜日=1なので、1日の曜日から逆算
+    const firstMonday = firstDayOfWeek === 0 ? 2 : (9 - firstDayOfWeek) % 7 || 7;
+    const secondMonday = firstMonday + 7;
+    if (day === secondMonday) return true;
   }
   
   // 海の日（7月第3月曜日、2020年は7月23日、2021年は7月22日）
@@ -66,23 +69,29 @@ function isHoliday(year: number, month: number, day: number): boolean {
     if (year === 2020 && day === 23) return true;
     if (year === 2021 && day === 22) return true;
     if (year >= 2022) {
-      const firstMonday = (8 - new Date(year, 6, 1).getDay()) % 7 || 7;
-      if (day === firstMonday + 14) return true;
+      const firstDayOfWeek = new Date(year, 6, 1).getDay();
+      const firstMonday = firstDayOfWeek === 0 ? 2 : (9 - firstDayOfWeek) % 7 || 7;
+      const thirdMonday = firstMonday + 14;
+      if (day === thirdMonday) return true;
     }
   }
   
   // 敬老の日（9月第3月曜日）
   if (month === 8) {
-    const firstMonday = (8 - new Date(year, 8, 1).getDay()) % 7 || 7;
-    if (day === firstMonday + 14) return true;
+    const firstDayOfWeek = new Date(year, 8, 1).getDay();
+    const firstMonday = firstDayOfWeek === 0 ? 2 : (9 - firstDayOfWeek) % 7 || 7;
+    const thirdMonday = firstMonday + 14;
+    if (day === thirdMonday) return true;
   }
   
   // スポーツの日（10月第2月曜日、2020年は7月24日、2021年は7月23日）
   if (year === 2020 && month === 6 && day === 24) return true;
   if (year === 2021 && month === 6 && day === 23) return true;
   if (year >= 2022 && month === 9) {
-    const firstMonday = (8 - new Date(year, 9, 1).getDay()) % 7 || 7;
-    if (day === firstMonday + 7) return true;
+    const firstDayOfWeek = new Date(year, 9, 1).getDay();
+    const firstMonday = firstDayOfWeek === 0 ? 2 : (9 - firstDayOfWeek) % 7 || 7;
+    const secondMonday = firstMonday + 7;
+    if (day === secondMonday) return true;
   }
   
   return false;
