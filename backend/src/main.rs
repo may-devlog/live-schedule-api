@@ -199,11 +199,23 @@ async fn send_verification_email(email: &str, token: &str) {
 }
 
 async fn send_password_reset_email(email: &str, token: &str, api_key: &str) -> Result<()> {
-    let frontend_url = get_frontend_url();
+    // FRONTEND_URLを直接確認（確実に使用するため）
+    let frontend_url = std::env::var("FRONTEND_URL")
+        .unwrap_or_else(|_| {
+            eprintln!("[EMAIL] ERROR: FRONTEND_URL not set! Falling back to BASE_URL");
+            get_base_url()
+        });
+    
+    // URLの末尾にスラッシュがある場合は削除
+    let frontend_url = frontend_url.trim_end_matches('/');
+    
     let reset_url = format!("{}/reset-password?token={}", frontend_url, urlencoding::encode(token));
     
-    eprintln!("[EMAIL] Frontend URL: {}", frontend_url);
+    eprintln!("[EMAIL] ===== PASSWORD RESET EMAIL =====");
+    eprintln!("[EMAIL] FRONTEND_URL from env: {}", std::env::var("FRONTEND_URL").unwrap_or_else(|_| "NOT SET".to_string()));
+    eprintln!("[EMAIL] Using frontend URL: {}", frontend_url);
     eprintln!("[EMAIL] Reset URL: {}", reset_url);
+    eprintln!("[EMAIL] ================================");
     
     let email_body = format!(
         r#"<p>以下のURLをクリックしてパスワードをリセットしてください:</p><p><a href="{}">{}</a></p><p>このリンクは24時間有効です。</p>"#,
