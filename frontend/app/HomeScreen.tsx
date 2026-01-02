@@ -70,12 +70,19 @@ export default function HomeScreen() {
 
   const fetchSharingStatus = async () => {
     try {
-      const res = await authenticatedFetch(getApiUrl("/auth/sharing-status"));
+      const url = getApiUrl("/auth/sharing-status");
+      console.log("[FetchSharingStatus] Fetching from:", url);
+      const res = await authenticatedFetch(url);
+      console.log("[FetchSharingStatus] Response status:", res.status);
       if (res.ok) {
         const data = await res.json();
+        console.log("[FetchSharingStatus] Response data:", data);
         setSharingEnabled(data.sharing_enabled);
         setShareId(data.share_id);
         setSharingUrl(data.sharing_url);
+      } else {
+        const errorText = await res.text();
+        console.error("[FetchSharingStatus] Error response:", errorText);
       }
     } catch (error) {
       console.error("[HomeScreen] Failed to fetch sharing status:", error);
@@ -83,22 +90,41 @@ export default function HomeScreen() {
   };
 
   const handleToggleSharing = async () => {
+    console.log("[ToggleSharing] Starting toggle, current state:", sharingEnabled);
     try {
-      const res = await authenticatedFetch(getApiUrl("/auth/toggle-sharing"), {
+      const url = getApiUrl("/auth/toggle-sharing");
+      console.log("[ToggleSharing] URL:", url);
+      const requestBody = JSON.stringify({ enabled: !sharingEnabled });
+      console.log("[ToggleSharing] Request body:", requestBody);
+      
+      const res = await authenticatedFetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: !sharingEnabled }),
+        body: requestBody,
       });
+      
+      console.log("[ToggleSharing] Response status:", res.status);
+      
       if (res.ok) {
         const data = await res.json();
+        console.log("[ToggleSharing] Response data:", data);
         setSharingEnabled(data.sharing_enabled);
         await fetchSharingStatus(); // URLを更新
+        console.log("[ToggleSharing] Successfully toggled to:", data.sharing_enabled);
       } else {
-        const errorData = await res.json();
+        const errorText = await res.text();
+        console.error("[ToggleSharing] Error response:", errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          errorData = { error: `サーバーエラー (${res.status})` };
+        }
         Alert.alert("エラー", errorData.error || "共有化の切り替えに失敗しました");
       }
     } catch (error: any) {
-      Alert.alert("エラー", "共有化の切り替えに失敗しました");
+      console.error("[ToggleSharing] Exception:", error);
+      Alert.alert("エラー", error?.message || "共有化の切り替えに失敗しました");
     }
   };
 
@@ -945,9 +971,12 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     backgroundColor: "#e9e9e7",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 4,
+    minWidth: 60,
+    alignItems: "center",
+    justifyContent: "center",
   },
   toggleButtonActive: {
     backgroundColor: "#007AFF",
