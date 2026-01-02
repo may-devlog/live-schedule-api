@@ -22,8 +22,13 @@ export default function SharedScheduleScreen() {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   useEffect(() => {
+    console.log('[SharedScheduleScreen] share_id:', share_id);
     if (share_id) {
       fetchSchedules();
+    } else {
+      console.error('[SharedScheduleScreen] share_id is missing');
+      setError('共有IDが指定されていません');
+      setLoading(false);
     }
   }, [share_id]);
 
@@ -31,12 +36,23 @@ export default function SharedScheduleScreen() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(getApiUrl(`/share/${share_id}`));
+      const url = getApiUrl(`/share/${share_id}`);
+      console.log('[SharedScheduleScreen] Fetching from:', url);
+      const res = await fetch(url);
+      console.log('[SharedScheduleScreen] Response status:', res.status);
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: '共有ページの取得に失敗しました' }));
+        const errorText = await res.text();
+        console.error('[SharedScheduleScreen] Error response:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          errorData = { error: `サーバーエラー (${res.status})` };
+        }
         throw new Error(errorData.error || '共有ページの取得に失敗しました');
       }
       const data: Schedule[] = await res.json();
+      console.log('[SharedScheduleScreen] Received schedules:', data.length);
       setSchedules(data);
       
       // 年を抽出してソート
@@ -102,7 +118,9 @@ export default function SharedScheduleScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScheduleCalendar allSchedules={schedules} />
+        {schedules.length > 0 && (
+          <ScheduleCalendar schedules={schedules} />
+        )}
 
         {availableYears.length > 0 && (
           <View style={styles.section}>
