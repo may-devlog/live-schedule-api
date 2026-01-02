@@ -653,13 +653,16 @@ export default function HomeScreen() {
               <Text style={styles.menuButtonText}>🆔 ユーザーID変更</Text>
             </TouchableOpacity>
 
-            <View style={[styles.menuButton, { marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+            <View style={[styles.menuButton, { marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 }]}>
               <Text style={styles.menuButtonText}>🔗 共有化</Text>
               <TouchableOpacity
                 onPress={handleToggleSharing}
                 style={[styles.toggleButton, sharingEnabled && styles.toggleButtonActive]}
+                activeOpacity={0.7}
               >
-                <Text style={styles.toggleButtonText}>{sharingEnabled ? 'ON' : 'OFF'}</Text>
+                <Text style={[styles.toggleButtonText, sharingEnabled && { color: '#ffffff' }]}>
+                  {sharingEnabled ? 'ON' : 'OFF'}
+                </Text>
               </TouchableOpacity>
             </View>
 
