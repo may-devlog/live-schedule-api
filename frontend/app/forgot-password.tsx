@@ -62,30 +62,55 @@ export default function ForgotPasswordScreen() {
       if (!isOk) {
         // エラーレスポンスの場合
         console.log('[ForgotPassword] Response is not OK, reading error text');
+        console.log('[ForgotPassword] Status code:', status);
         let errorText = '';
+        let errorData;
+        
         try {
           errorText = await res.text();
-          console.error('[ForgotPassword] Error response text:', errorText);
+          console.error('[ForgotPassword] Error response text (raw):', errorText);
+          console.error('[ForgotPassword] Error response text length:', errorText.length);
+          
+          // 空文字列の場合はデフォルトメッセージを使用
+          if (!errorText || errorText.trim() === '') {
+            console.error('[ForgotPassword] Error response is empty, using default message');
+            errorData = { error: 'このメールアドレスは登録されていません' };
+          } else {
+            try {
+              errorData = JSON.parse(errorText);
+              console.error('[ForgotPassword] Parsed error data:', errorData);
+            } catch (parseError) {
+              console.error('[ForgotPassword] Failed to parse error JSON:', parseError);
+              console.error('[ForgotPassword] Error text that failed to parse:', errorText);
+              // JSONパースに失敗した場合でも、ステータスコードに基づいてメッセージを決定
+              if (status === 404) {
+                errorData = { error: 'このメールアドレスは登録されていません' };
+              } else {
+                errorData = { error: `リセット要求に失敗しました (status: ${status})` };
+              }
+            }
+          }
         } catch (textError) {
           console.error('[ForgotPassword] Failed to read error text:', textError);
+          // テキスト読み取りに失敗した場合でも、ステータスコードに基づいてメッセージを決定
+          if (status === 404) {
+            errorData = { error: 'このメールアドレスは登録されていません' };
+          } else {
+            errorData = { error: `リセット要求に失敗しました (status: ${status})` };
+          }
         }
         
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch (parseError) {
-          console.error('[ForgotPassword] Failed to parse error JSON:', parseError);
-          errorData = { error: `リセット要求に失敗しました (status: ${status})` };
-        }
-        
-        console.error('[ForgotPassword] Error data:', errorData);
+        console.error('[ForgotPassword] Final error data:', errorData);
         
         // エラーメッセージを画面に表示（requestedをtrueにしない）
-        const errorMessage = errorData.error || 'リセット要求に失敗しました';
+        const errorMessage = errorData?.error || 'リセット要求に失敗しました';
         console.error('[ForgotPassword] Setting error message:', errorMessage);
+        console.error('[ForgotPassword] About to call setError with:', errorMessage);
         setError(errorMessage);
+        console.error('[ForgotPassword] setError called');
         setRequested(false); // 明示的にfalseに設定
         setLoading(false);
+        console.error('[ForgotPassword] Returning early due to error');
         return; // ここで処理を終了
       }
 
