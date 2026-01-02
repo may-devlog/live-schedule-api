@@ -192,8 +192,8 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
                 style={[
                   styles.dayText,
                   isToday && styles.todayText,
-                  index % 7 === 0 && styles.sundayText,
-                  index % 7 === 6 && styles.saturdayText,
+                  index % 7 === 5 && styles.saturdayText,
+                  index % 7 === 6 && styles.sundayText,
                   hasSchedule && styles.hasScheduleText,
                 ]}
               >
