@@ -1624,16 +1624,7 @@ async fn create_schedule(
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<NewSchedule>,
 ) -> Result<(StatusCode, Json<Schedule>), (StatusCode, Json<ErrorResponse>)> {
-    // 必須項目のバリデーション
-    if payload.target.is_none() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-                error: "Targetは必須項目です".to_string(),
-            }),
-        ));
-    }
-    
+    // 必須項目のバリデーション（targetはNULL許可）
     let now = Utc::now().to_rfc3339();
     let is_public = payload.is_public.unwrap_or(false) as i32;
     let result = sqlx::query(
@@ -3613,6 +3604,22 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     let _ = sqlx::query("ALTER TABLE schedules ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0")
         .execute(pool)
         .await;
+
+    // targetカラムがNULL許可であることを確認（既存のデータベース用マイグレーション）
+    // SQLiteではALTER TABLE MODIFY COLUMNがサポートされていないため、
+    // 既存のテーブルを再作成する必要があるが、データ損失を避けるため、
+    // ここでは空文字列をNULLに変換する処理のみ実行
+    // 注意: targetカラムは既にTEXT（NULL許可）として定義されているため、
+    // 既存のデータベースでも問題なく動作するはずですが、念のため空文字列をNULLに変換
+    let _ = sqlx::query(
+        r#"
+        UPDATE schedules 
+        SET target = NULL 
+        WHERE target = ''
+        "#
+    )
+    .execute(pool)
+    .await;
 
     Ok(())
 }
