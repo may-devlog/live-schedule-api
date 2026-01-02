@@ -88,46 +88,34 @@ export default function PublicDetailScreen() {
         const targets = await loadSelectOptions("TARGETS");
         const targetOptionLabels = targets.map(opt => opt.label);
         
-        // Target: 選択肢に存在する場合はそのまま使用、存在しない場合はスケジュールの値を表示
+        // Target: 選択肢に存在する場合のみ表示
         let targetColor: string = "#E5E7EB"; // デフォルト色
-        if (found.target) {
-          if (targetOptionLabels.includes(found.target)) {
-            // 選択肢に存在する場合は色情報を取得
-            const targetOption = targets.find(opt => opt.label === found.target);
-            if (targetOption) {
-              targetColor = targetOption.color || "#E5E7EB";
-            }
-          } else {
-            // 選択肢に存在しない場合でも、スケジュールの値を表示
-            targetColor = "#E5E7EB"; // デフォルト色
+        if (found.target && targetOptionLabels.includes(found.target)) {
+          // 選択肢に存在する場合は色情報を取得
+          const targetOption = targets.find(opt => opt.label === found.target);
+          if (targetOption) {
+            targetColor = targetOption.color || "#E5E7EB";
           }
         }
         setTargetColor(targetColor);
         
-        // Lineup: カンマ区切りの値を既存の選択肢でフィルタリング
-        // 選択肢に存在しない場合でも、スケジュールの値を表示
+        // Lineup: 選択肢に存在する値のみ表示
         let validLineupOptions: Array<{ label: string; color: string }> = [];
         if (found.lineup) {
           const lineupValues = found.lineup.split(",").map(v => v.trim()).filter(v => v);
           
-          // 選択肢に存在する値と存在しない値を分けて処理
+          // 選択肢に存在する値のみ処理
           validLineupOptions = await Promise.all(
-            lineupValues.map(async (label) => {
-              if (targetOptionLabels.includes(label)) {
+            lineupValues
+              .filter(label => targetOptionLabels.includes(label))
+              .map(async (label) => {
                 // 選択肢に存在する場合は色情報を取得
                 const option = targets.find(opt => opt.label === label);
                 return {
                   label,
                   color: option?.color || "#E5E7EB"
                 };
-              } else {
-                // 選択肢に存在しない場合でも表示（デフォルト色）
-                return {
-                  label,
-                  color: "#E5E7EB"
-                };
-              }
-            })
+              })
           );
         }
         setLineupOptions(validLineupOptions);
