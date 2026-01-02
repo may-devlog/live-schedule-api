@@ -368,6 +368,7 @@ where
         if std::env::var("DISABLE_AUTH").is_ok() {
             // 認証をスキップして、環境変数DEFAULT_USER_IDまたはDEFAULT_USER_EMAILからユーザーIDを取得
             // まずDEFAULT_USER_IDを確認、なければDEFAULT_USER_EMAILから取得を試みる
+            // どちらも設定されていない場合は、デフォルトの1を使用（データベースから取得は後で実装）
             let default_user_id = if let Ok(user_id_str) = std::env::var("DEFAULT_USER_ID") {
                 user_id_str.parse::<i32>().ok().unwrap_or(1)
             } else if let Ok(email) = std::env::var("DEFAULT_USER_EMAIL") {
@@ -3239,6 +3240,17 @@ async fn save_select_options(
 async fn get_user_id_by_email(pool: &Pool<Sqlite>, email: &str) -> Option<i32> {
     let result: Option<(i64,)> = sqlx::query_as("SELECT id FROM users WHERE email = ?")
         .bind(email)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten();
+    
+    result.map(|(id,)| id as i32)
+}
+
+// データベースから最初のユーザーIDを取得するヘルパー関数
+async fn get_first_user_id(pool: &Pool<Sqlite>) -> Option<i32> {
+    let result: Option<(i64,)> = sqlx::query_as("SELECT id FROM users ORDER BY id LIMIT 1")
         .fetch_optional(pool)
         .await
         .ok()
