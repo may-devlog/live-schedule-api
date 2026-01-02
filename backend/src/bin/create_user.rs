@@ -19,11 +19,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let email = &args[1];
     let password = &args[2];
     
-    // データベースに接続
-    let db_url = "sqlite://data/app.db";
+    // データベースに接続（環境変数から読み込む、未設定の場合はデフォルト値）
+    let db_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "sqlite://data/app.db".to_string());
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
-        .connect(db_url)
+        .connect(&db_url)
         .await?;
     
     // 既存のユーザーをチェック
