@@ -3071,14 +3071,39 @@ async fn get_select_options(
     Path(option_type): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<ErrorResponse>)> {
+    // DISABLE_AUTHが有効な場合、データベースから実際のユーザーIDを取得
+    let actual_user_id = if std::env::var("DISABLE_AUTH").is_ok() {
+        // 環境変数DEFAULT_USER_IDが設定されている場合はそれを使用
+        if let Ok(user_id_str) = std::env::var("DEFAULT_USER_ID") {
+            user_id_str.parse::<i32>().ok().unwrap_or(user.user_id)
+        } else if let Ok(email) = std::env::var("DEFAULT_USER_EMAIL") {
+            // メールアドレスからユーザーIDを取得
+            if let Some(user_id) = get_user_id_by_email(&pool, &email).await {
+                user_id
+            } else {
+                // メールアドレスが見つからない場合、データベースから最初のユーザーIDを取得
+                get_first_user_id(&pool).await.unwrap_or(user.user_id)
+            }
+        } else {
+            // 環境変数が設定されていない場合、データベースから最初のユーザーIDを取得
+            get_first_user_id(&pool).await.unwrap_or(user.user_id)
+        }
+    } else {
+        user.user_id
+    };
+    
+    eprintln!("[GetSelectOptions] User ID (i32): {}, Actual User ID: {}, Option Type: {}", 
+        user.user_id, actual_user_id, option_type);
+    
     let row: Option<(String,)> = sqlx::query_as::<_, (String,)>(
         "SELECT options_json FROM select_options WHERE user_id = ? AND option_type = ?"
     )
-    .bind(user.user_id)
+    .bind(actual_user_id as i64)
     .bind(&option_type)
     .fetch_optional(&pool)
     .await
-    .map_err(|_| {
+    .map_err(|e| {
+        eprintln!("[GetSelectOptions] Database error: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
