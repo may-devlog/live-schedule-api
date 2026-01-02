@@ -232,6 +232,16 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
               </TouchableOpacity>
             </View>
 
+            {/* 新規作成ボタン */}
+            <TouchableOpacity
+              style={styles.newScheduleButton}
+              onPress={handleNewSchedule}
+            >
+              <Text style={styles.newScheduleButtonText}>➕ New Live</Text>
+            </TouchableOpacity>
+
+            <View style={styles.scheduleListSeparator} />
+
             <FlatList
               data={selectedDateSchedules}
               keyExtractor={(item) => item.id.toString()}
