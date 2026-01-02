@@ -386,7 +386,7 @@ export function NotionMultiSelect({
                 <Text style={styles.confirmButtonText}>決定</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
     </View>
