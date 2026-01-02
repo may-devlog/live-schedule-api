@@ -3217,6 +3217,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
+    
+    // RESEND_API_KEYの確認（起動時にログ出力）
+    match std::env::var("RESEND_API_KEY") {
+        Ok(api_key) => {
+            eprintln!("[STARTUP] RESEND_API_KEY is set (length: {} characters)", api_key.len());
+            eprintln!("[STARTUP] Email sending will use Resend API");
+        }
+        Err(_) => {
+            eprintln!("[STARTUP] WARNING: RESEND_API_KEY is NOT set");
+            eprintln!("[STARTUP] Email sending will use development mode (console output)");
+        }
+    }
 
     // CORS設定（環境変数から許可するオリジンを読み込む）
     let allowed_origin = std::env::var("ALLOWED_ORIGIN")
