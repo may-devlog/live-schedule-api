@@ -286,6 +286,12 @@ export default function EditScheduleScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
       <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>← 戻る</Text>
+        </TouchableOpacity>
         <HomeButton />
       </View>
       <ScrollView contentContainerStyle={styles.container}>
@@ -469,12 +475,28 @@ export default function EditScheduleScreen() {
 
 const styles = StyleSheet.create({
   header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     paddingHorizontal: 24,
     paddingTop: 48,
     paddingBottom: 16,
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e9e9e7",
+  },
+  backButton: {
+    backgroundColor: "#f7f6f3",
+    borderWidth: 1,
+    borderColor: "#e9e9e7",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 3,
+  },
+  backButtonText: {
+    color: "#37352f",
+    fontSize: 14,
+    fontWeight: "600",
   },
   container: {
     paddingTop: 24,

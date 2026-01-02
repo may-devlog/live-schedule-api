@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Modal,
+  FlatList,
 } from "react-native";
 import { useRouter } from "expo-router";
 import type { Schedule } from "../app/HomeScreen";
@@ -19,6 +21,9 @@ interface ScheduleCalendarProps {
 export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedDateSchedules, setSelectedDateSchedules] = useState<Schedule[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
   // 現在の月の最初の日と最後の日を取得
   const year = currentDate.getFullYear();
@@ -74,11 +79,35 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
     const dateString = getDateString(day);
     const daySchedules = schedulesByDate[dateString] || [];
 
-    if (daySchedules.length > 0) {
-      // その日にスケジュールがある場合、最初のスケジュールの詳細ページに遷移
-      // 複数のスケジュールがある場合は最初のものに遷移
-      router.push(`/live/${daySchedules[0].id}`);
+    if (daySchedules.length === 0) {
+      return;
     }
+
+    if (daySchedules.length === 1) {
+      // スケジュールが1件のみの場合は直接詳細ページに遷移
+      router.push(`/live/${daySchedules[0].id}`);
+    } else {
+      // 複数のスケジュールがある場合はモーダルでリストを表示
+      setSelectedDateSchedules(daySchedules);
+      setSelectedDate(dateString);
+      setShowScheduleModal(true);
+    }
+  };
+
+  // スケジュールを選択したときの処理
+  const handleSelectSchedule = (scheduleId: number) => {
+    setShowScheduleModal(false);
+    router.push(`/live/${scheduleId}`);
+  };
+
+  // 日付をフォーマット（表示用）
+  const formatDateForDisplay = (dateString: string) => {
+    const date = new Date(dateString + "T00:00:00");
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+    const weekday = weekdays[date.getDay()];
+    return `${month}月${day}日(${weekday})`;
   };
 
   // 前の月に移動
@@ -179,6 +208,52 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
           );
         })}
       </View>
+
+      {/* 複数スケジュール選択モーダル */}
+      <Modal
+        visible={showScheduleModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowScheduleModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {selectedDate && formatDateForDisplay(selectedDate)}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowScheduleModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={selectedDateSchedules}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.scheduleItem}
+                  onPress={() => handleSelectSchedule(item.id)}
+                >
+                  <Text style={styles.scheduleItemTime}>
+                    {item.start ? item.start : item.open || "時間未設定"}
+                  </Text>
+                  <Text style={styles.scheduleItemTitle} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.scheduleItemVenue} numberOfLines={1}>
+                    {item.area} / {item.venue}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={styles.scheduleItemSeparator} />}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -294,6 +369,72 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontWeight: "bold",
     lineHeight: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "80%",
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#37352f",
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    backgroundColor: "#f5f5f5",
+  },
+  modalCloseButtonText: {
+    fontSize: 20,
+    color: "#666",
+    fontWeight: "bold",
+  },
+  scheduleItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#ffffff",
+  },
+  scheduleItemTime: {
+    fontSize: 12,
+    color: "#787774",
+    marginBottom: 4,
+    fontWeight: "500",
+  },
+  scheduleItemTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#37352f",
+    marginBottom: 4,
+  },
+  scheduleItemVenue: {
+    fontSize: 14,
+    color: "#787774",
+  },
+  scheduleItemSeparator: {
+    height: 1,
+    backgroundColor: "#e9e9e7",
+    marginHorizontal: 20,
   },
 });
 
