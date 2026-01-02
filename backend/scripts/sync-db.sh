@@ -49,17 +49,37 @@ function upload_db() {
     # 本番環境のデータベースをバックアップ
     echo "本番環境のデータベースをバックアップ中..."
     BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    
+    # バックアップを取得
     flyctl sftp shell --app "$APP_NAME" <<EOF
 get $REMOTE_DB /tmp/app.db.backup.$BACKUP_TIMESTAMP
-rm $REMOTE_DB
+EOF
+    
+    if [ $? -ne 0 ]; then
+        echo "警告: バックアップの取得に失敗しましたが、続行します..."
+    fi
+    
+    # アプリケーションを停止してからデータベースをアップロード
+    echo "アプリケーションを停止中..."
+    flyctl apps suspend "$APP_NAME" || echo "警告: アプリケーションの停止に失敗しましたが、続行します..."
+    
+    sleep 2
+    
+    # データベースをアップロード（既存ファイルを上書き）
+    echo "データベースをアップロード中..."
+    flyctl sftp shell --app "$APP_NAME" <<EOF
 put $LOCAL_DB $REMOTE_DB
 EOF
     
     if [ $? -eq 0 ]; then
         echo "✓ データベースのアップロードが完了しました"
-        echo "  本番環境のアプリケーションを再起動してください: flyctl apps restart $APP_NAME"
+        echo "アプリケーションを再起動中..."
+        flyctl apps resume "$APP_NAME" || flyctl apps restart "$APP_NAME"
+        echo "✓ 完了しました"
     else
         echo "✗ データベースのアップロードに失敗しました"
+        echo "アプリケーションを再起動中..."
+        flyctl apps resume "$APP_NAME" || flyctl apps restart "$APP_NAME"
         exit 1
     fi
 }
