@@ -994,6 +994,7 @@ async fn request_password_reset(
         eprintln!("[PASSWORD_RESET] User not found for email: {}", payload.email);
         eprintln!("[PASSWORD_RESET] Returning 404 NOT_FOUND for unregistered email: {}", payload.email);
         eprintln!("[PASSWORD_RESET] ===== Request END (404) =====");
+        // 明示的にContent-Typeヘッダーを設定してJSONレスポンスを返す
         return Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
