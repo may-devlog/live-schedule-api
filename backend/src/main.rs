@@ -1005,32 +1005,36 @@ async fn request_password_reset(
         )
     })?;
 
-    // メール送信
+    // メール送信をバックグラウンドで実行（レスポンスを先に返す）
     println!("[PASSWORD_RESET] Sending password reset email to: {}", user.email);
     println!("[PASSWORD_RESET] Reset token generated: {}", reset_token);
-    eprintln!("[PASSWORD_RESET] About to call send_password_reset_email");
-    let api_key = std::env::var("RESEND_API_KEY")
-        .map_err(|_| {
+    eprintln!("[PASSWORD_RESET] About to call send_password_reset_email in background");
+    
+    // APIキーを取得（エラー時は早期リターン）
+    let api_key = match std::env::var("RESEND_API_KEY") {
+        Ok(key) => key,
+        Err(_) => {
             eprintln!("[PASSWORD_RESET] RESEND_API_KEY not found");
-            (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
                     error: "メール送信の設定が正しくありません".to_string(),
                 }),
-            )
-        })?;
+            ));
+        }
+    };
     
-    send_password_reset_email(&user.email, &reset_token, &api_key).await
-        .map_err(|e| {
-            eprintln!("[PASSWORD_RESET] Failed to send password reset email: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: "メールの送信に失敗しました".to_string(),
-                }),
-            )
-        })?;
-    eprintln!("[PASSWORD_RESET] send_password_reset_email completed");
+    // バックグラウンドタスクとしてメール送信を実行
+    let email = user.email.clone();
+    let token = reset_token.clone();
+    tokio::spawn(async move {
+        if let Err(e) = send_password_reset_email(&email, &token, &api_key).await {
+            eprintln!("[PASSWORD_RESET] Failed to send password reset email in background: {:?}", e);
+        } else {
+            eprintln!("[PASSWORD_RESET] Password reset email sent successfully in background");
+        }
+    });
+    eprintln!("[PASSWORD_RESET] Email sending task spawned, returning response immediately");
 
     Ok(Json(PasswordResetResponse {
         success: true,
