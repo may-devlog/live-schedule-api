@@ -123,6 +123,15 @@ fn get_base_url() -> String {
         .unwrap_or_else(|_| "http://localhost:8081".to_string())
 }
 
+// フロントエンドURL（環境変数から読み込む、未設定の場合はBASE_URLを使用）
+fn get_frontend_url() -> String {
+    std::env::var("FRONTEND_URL")
+        .unwrap_or_else(|_| {
+            // FRONTEND_URLが未設定の場合はBASE_URLを使用（後方互換性のため）
+            get_base_url()
+        })
+}
+
 // ====== 認証ヘルパー関数 ======
 
 // ランダムなトークンを生成
@@ -183,8 +192,8 @@ async fn send_verification_email(email: &str, token: &str) {
 }
 
 async fn send_password_reset_email(email: &str, token: &str, api_key: &str) -> Result<()> {
-    let base_url = get_base_url();
-    let reset_url = format!("{}/reset-password?token={}", base_url, urlencoding::encode(token));
+    let frontend_url = get_frontend_url();
+    let reset_url = format!("{}/reset-password?token={}", frontend_url, urlencoding::encode(token));
     
     let email_body = format!(
         r#"<p>以下のURLをクリックしてパスワードをリセットしてください:</p><p><a href="{}">{}</a></p><p>このリンクは24時間有効です。</p>"#,
