@@ -127,8 +127,7 @@ export async function loadSelectOptions(
           }
           return uniqueOptions;
         }
-        // 既存のSelectOption配列の場合、TARGETSの場合は「Artist A」が含まれていない場合は追加
-        // また、「Band B」「Band C」を「Artist B」「Artist C」に変換
+        // 既存のSelectOption配列の場合、TARGETSの場合は「Band B」「Band C」を「Artist B」「Artist C」に変換
         if (key === "TARGETS") {
           const existingOptions = (parsed as SelectOption[]).map((opt) => {
             // Band B, Band CをArtist B, Artist Cに変換
@@ -145,24 +144,6 @@ export async function loadSelectOptions(
           const uniqueOptions = Array.from(
             new Map(existingOptions.map(opt => [opt.label, opt])).values()
           );
-          const existingLabels = new Set(uniqueOptions.map((opt) => opt.label));
-          const defaultTargets = ["Artist A"];
-          const missingTargets = defaultTargets.filter(
-            (target) => !existingLabels.has(target)
-          );
-          if (missingTargets.length > 0) {
-            const missingOptions = stringArrayToOptions(
-              missingTargets,
-              undefined,
-              false,
-              false,
-              false
-            );
-            // 変更があった場合は保存
-            const updatedOptions = [...missingOptions, ...uniqueOptions];
-            await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(updatedOptions));
-            return updatedOptions;
-          }
           // 変更があった場合は保存（Band B/Cの変換があった場合）
           const hasChanges = parsed.some((opt: SelectOption, idx: number) => 
             opt.label !== uniqueOptions[idx]?.label
