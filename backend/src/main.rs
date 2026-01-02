@@ -3207,13 +3207,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // DISABLE_AUTHが設定されていて、DEFAULT_USER_EMAILが設定されている場合、
     // メールアドレスからユーザーIDを取得してログに出力（環境変数は変更できないため）
+    // 注意: このログは開発環境用なので、本番環境では出力しない
     if std::env::var("DISABLE_AUTH").is_ok() {
         if let Ok(email) = std::env::var("DEFAULT_USER_EMAIL") {
-            if let Some(user_id) = get_user_id_by_email(&pool, &email).await {
-                println!("[AUTH DISABLED] Found user_id={} for email: {}", user_id, email);
-                println!("[AUTH DISABLED] Please set DEFAULT_USER_ID={} environment variable", user_id);
-            } else {
-                println!("[AUTH DISABLED] User not found for email: {}", email);
+            // 本番環境ではこのログを出力しない（古いメールアドレスが表示されるのを防ぐ）
+            if std::env::var("RESEND_API_KEY").is_err() {
+                // 開発環境のみログ出力
+                if let Some(user_id) = get_user_id_by_email(&pool, &email).await {
+                    println!("[AUTH DISABLED] Found user_id={} for email: {}", user_id, email);
+                    println!("[AUTH DISABLED] Please set DEFAULT_USER_ID={} environment variable", user_id);
+                } else {
+                    println!("[AUTH DISABLED] User not found for email: {}", email);
+                }
             }
         }
     }
