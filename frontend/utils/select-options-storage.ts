@@ -6,6 +6,7 @@ import {
   optionsToStringArray,
   getDefaultColorForLabel,
 } from "../types/select-option";
+import { authenticatedFetch, getApiUrl } from "./api";
 
 const STORAGE_KEYS = {
   CATEGORIES: "@select_options:categories",
@@ -34,11 +35,27 @@ const DEFAULT_SELLERS = ["チケットぴあ", "イープラス", "ローチケ"
 const DEFAULT_STATUSES = ["Canceled", "Pending", "Keep", "Done"];
 const DEFAULT_TRANSPORTATIONS = ["🚄 新幹線", "✈️ 飛行機", "🚃 在来線", "🚌 バス", "🚗 車", "🚕 タクシー", "その他"];
 
-// 選択肢を読み込む
+// 選択肢を読み込む（データベース優先、フォールバックはローカルストレージ）
 export async function loadSelectOptions(
   key: keyof typeof STORAGE_KEYS
 ): Promise<SelectOption[]> {
   try {
+    // まずデータベースから読み込む
+    try {
+      const res = await authenticatedFetch(getApiUrl(`/select-options/${key.toLowerCase()}`));
+      if (res.ok) {
+        const options: SelectOption[] = await res.json();
+        if (options.length > 0) {
+          // データベースに保存されている場合は、ローカルストレージにも保存（キャッシュ）
+          await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(options));
+          return options;
+        }
+      }
+    } catch (error) {
+      console.log(`[SelectOptions] Failed to load from database, falling back to local storage:`, error);
+    }
+
+    // データベースにない場合は、ローカルストレージから読み込む
     const stored = await AsyncStorage.getItem(STORAGE_KEYS[key]);
     if (stored) {
       const parsed = JSON.parse(stored);
@@ -195,12 +212,27 @@ export async function loadSelectOptions(
   return options;
 }
 
-// 選択肢を保存する
+// 選択肢を保存する（データベースとローカルストレージの両方に保存）
 export async function saveSelectOptions(
   key: keyof typeof STORAGE_KEYS,
   options: SelectOption[]
 ): Promise<void> {
   try {
+    // まずデータベースに保存
+    try {
+      const res = await authenticatedFetch(getApiUrl(`/select-options/${key.toLowerCase()}`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ options }),
+      });
+      if (!res.ok) {
+        console.error(`[SelectOptions] Failed to save to database:`, await res.text());
+      }
+    } catch (error) {
+      console.error(`[SelectOptions] Failed to save to database:`, error);
+    }
+
+    // ローカルストレージにも保存（キャッシュ）
     await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(options));
   } catch (error) {
     console.error(`Error saving ${key}:`, error);

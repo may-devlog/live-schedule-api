@@ -3043,6 +3043,102 @@ async fn update_stay(
     Ok(Json(row_to_stay(row)))
 }
 
+// ====== 選択肢管理 ======
+
+#[derive(Deserialize)]
+struct SelectOptionsRequest {
+    options: Vec<serde_json::Value>,
+}
+
+// GET /select-options/:type - 選択肢を取得
+async fn get_select_options(
+    user: AuthenticatedUser,
+    Path(option_type): Path<String>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<ErrorResponse>)> {
+    let row: Option<(String,)> = sqlx::query_as::<_, (String,)>(
+        "SELECT options_json FROM select_options WHERE user_id = ? AND option_type = ?"
+    )
+    .bind(user.user_id)
+    .bind(&option_type)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    if let Some((options_json,)) = row {
+        let options: Vec<serde_json::Value> = serde_json::from_str(&options_json)
+            .map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: "Failed to parse options".to_string(),
+                    }),
+                )
+            })?;
+        Ok(Json(options))
+    } else {
+        // データベースに保存されていない場合は空配列を返す
+        Ok(Json(vec![]))
+    }
+}
+
+// POST /select-options/:type - 選択肢を保存
+async fn save_select_options(
+    user: AuthenticatedUser,
+    Path(option_type): Path<String>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<SelectOptionsRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let options_json = serde_json::to_string(&payload.options)
+        .map_err(|_| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: "Invalid options format".to_string(),
+                }),
+            )
+        })?;
+
+    let now = Utc::now().to_rfc3339();
+
+    // INSERT OR REPLACEを使用して、既存のレコードがあれば更新、なければ挿入
+    sqlx::query(
+        r#"
+        INSERT INTO select_options (user_id, option_type, options_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(user_id, option_type) DO UPDATE SET
+          options_json = ?,
+          updated_at = ?
+        "#
+    )
+    .bind(user.user_id)
+    .bind(&option_type)
+    .bind(&options_json)
+    .bind(&now)
+    .bind(&now)
+    .bind(&options_json)
+    .bind(&now)
+    .execute(&pool)
+    .await
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Failed to save options".to_string(),
+            }),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({ "success": true })))
+}
+
 // ====== メイン ======
 
 // メールアドレスからユーザーIDを取得するヘルパー関数
@@ -3403,6 +3499,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/stay/:id", get(get_stay).put(update_stay))
         .route("/admin/import-db", post(import_database_dump)) // 一時的なエンドポイント
         .route("/admin/delete-old-schedules", post(delete_old_schedules)) // 一時的なエンドポイント
+        .route("/select-options/:type", get(get_select_options).post(save_select_options))
         .layer(cors)
         .layer(Extension(pool));
 
@@ -3590,10 +3687,24 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     );
     "#;
 
+    let create_select_options = r#"
+    CREATE TABLE IF NOT EXISTS select_options (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id      INTEGER NOT NULL,
+      option_type  TEXT NOT NULL,
+      options_json TEXT NOT NULL,
+      created_at   TEXT,
+      updated_at   TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      UNIQUE(user_id, option_type)
+    );
+    "#;
+
     sqlx::query(create_users).execute(pool).await?;
     sqlx::query(create_schedules).execute(pool).await?;
     sqlx::query(create_traffics).execute(pool).await?;
     sqlx::query(create_stays).execute(pool).await?;
+    sqlx::query(create_select_options).execute(pool).await?;
 
     // 既存のschedulesテーブルにuser_idとis_publicカラムを追加（マイグレーション）
     // SQLiteではALTER TABLE ADD COLUMNがサポートされているが、既に存在する場合はエラーになる
