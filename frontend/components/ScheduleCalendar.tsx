@@ -84,7 +84,7 @@ function isHoliday(year: number, month: number, day: number): boolean {
   return false;
 }
 
-export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
+export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress }: ScheduleCalendarProps) {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -311,15 +311,18 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
               </TouchableOpacity>
             </View>
 
-            {/* 新規作成ボタン */}
-            <TouchableOpacity
-              style={styles.newScheduleButton}
-              onPress={handleNewSchedule}
-            >
-              <Text style={styles.newScheduleButtonText}>➕ New Live</Text>
-            </TouchableOpacity>
-
-            <View style={styles.scheduleListSeparator} />
+            {/* 新規作成ボタン（共有ページでは非表示） */}
+            {!isPublic && (
+              <>
+                <TouchableOpacity
+                  style={styles.newScheduleButton}
+                  onPress={handleNewSchedule}
+                >
+                  <Text style={styles.newScheduleButtonText}>➕ New Live</Text>
+                </TouchableOpacity>
+                <View style={styles.scheduleListSeparator} />
+              </>
+            )}
 
             <FlatList
               data={selectedDateSchedules}
