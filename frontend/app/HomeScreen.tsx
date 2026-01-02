@@ -544,7 +544,8 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+      </View>
+    </ScrollView>
   );
 }
 
