@@ -240,11 +240,13 @@ export function NotionMultiSelect({
           activeOpacity={1}
           onPress={() => setShowModal(false)}
         >
-          <View 
-            style={styles.modalContent} 
-            onStartShouldSetResponder={() => true}
-            onResponderTerminationRequest={() => false}
-            onTouchEnd={(e) => e.stopPropagation()}
+          <TouchableOpacity
+            style={styles.modalContent}
+            activeOpacity={1}
+            onPress={(e) => {
+              // モーダルコンテンツ内のクリックでモーダルが閉じないようにする
+              e.stopPropagation();
+            }}
           >
             <Text style={styles.modalTitle}>{label}</Text>
 
