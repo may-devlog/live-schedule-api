@@ -3118,8 +3118,12 @@ async fn save_select_options(
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<SelectOptionsRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    eprintln!("[SaveSelectOptions] User ID: {}, Option Type: {}, Options Count: {}", 
+        user.user_id, option_type, payload.options.len());
+    
     let options_json = serde_json::to_string(&payload.options)
-        .map_err(|_| {
+        .map_err(|e| {
+            eprintln!("[SaveSelectOptions] Failed to serialize options: {}", e);
             (
                 StatusCode::BAD_REQUEST,
                 Json(ErrorResponse {
@@ -3128,10 +3132,12 @@ async fn save_select_options(
             )
         })?;
 
+    eprintln!("[SaveSelectOptions] Options JSON: {}", options_json);
+
     let now = Utc::now().to_rfc3339();
 
     // INSERT OR REPLACEを使用して、既存のレコードがあれば更新、なければ挿入
-    sqlx::query(
+    let result = sqlx::query(
         r#"
         INSERT INTO select_options (user_id, option_type, options_json, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?)
@@ -3149,14 +3155,17 @@ async fn save_select_options(
     .bind(&now)
     .execute(&pool)
     .await
-    .map_err(|_| {
+    .map_err(|e| {
+        eprintln!("[SaveSelectOptions] Database error: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "Failed to save options".to_string(),
+                error: format!("Failed to save options: {}", e),
             }),
         )
     })?;
+
+    eprintln!("[SaveSelectOptions] Successfully saved. Rows affected: {}", result.rows_affected());
 
     Ok(Json(serde_json::json!({ "success": true })))
 }
