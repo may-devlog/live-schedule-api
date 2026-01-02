@@ -240,7 +240,12 @@ export function NotionMultiSelect({
           activeOpacity={1}
           onPress={() => setShowModal(false)}
         >
-          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+          <View 
+            style={styles.modalContent} 
+            onStartShouldSetResponder={() => true}
+            onResponderTerminationRequest={() => false}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
             <Text style={styles.modalTitle}>{label}</Text>
 
             {editingOptionIndex !== null ? (
