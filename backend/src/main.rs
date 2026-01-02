@@ -191,17 +191,29 @@ async fn send_password_reset_email(email: &str, token: &str, api_key: &str) -> R
         reset_url, reset_url
     );
     
+    eprintln!("[EMAIL] Creating Resend client with API key length: {}", api_key.len());
     let resend = Resend::new(api_key);
     let from = "onboarding@resend.dev";
     let to = [email];
     let subject = "パスワードリセット";
     
+    eprintln!("[EMAIL] Preparing email: from={}, to={:?}, subject={}", from, to, subject);
     let email = CreateEmailBaseOptions::new(from, to, subject)
         .with_html(&email_body);
     
-    let _email = resend.emails.send(email).await?;
+    eprintln!("[EMAIL] Sending email via Resend API...");
+    let email_result = resend.emails.send(email).await;
     
-    Ok(())
+    match email_result {
+        Ok(result) => {
+            eprintln!("[EMAIL] Email sent successfully: {:?}", result);
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("[EMAIL] Failed to send email: {:?}", e);
+            Err(e)
+        }
+    }
 }
 
 async fn send_email_change_verification_email(new_email: &str, token: &str) {
