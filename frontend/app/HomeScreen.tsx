@@ -401,7 +401,7 @@ export default function HomeScreen() {
     <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
     <View style={styles.container}>
         <View style={styles.header}>
-      <Text style={styles.title}>Live SCHEDULE</Text>
+      <Text style={styles.title}>SCHEDULES</Text>
           <TouchableOpacity
             style={styles.loginButton}
             onPress={() => {
