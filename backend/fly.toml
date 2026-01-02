@@ -3,6 +3,7 @@ app = "live-schedule-api"
 primary_region = "nrt"  # 東京リージョン
 
 [build]
+  dockerfile = "Dockerfile"
 
 [env]
   PORT = "3000"
