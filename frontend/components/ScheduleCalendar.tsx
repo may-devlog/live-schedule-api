@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   },
   todayCell: {
     backgroundColor: "#e3f2fd",
-    borderRadius: DAY_WIDTH / 2,
+    borderRadius: 25, // 円形にするための固定値
   },
   hasScheduleCell: {
     backgroundColor: "#f5f5f5",
