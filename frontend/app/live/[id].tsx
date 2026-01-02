@@ -107,15 +107,29 @@ export default function DetailScreen() {
         }
         
         // TargetとLineupの選択肢を読み込んでフィルタリング
-        const targets = await loadSelectOptions("TARGETS");
+        // データベースから選択肢を読み込む（認証されていない場合でも試行）
+        let targets: Array<{ label: string; color: string }> = [];
+        try {
+          const res = await authenticatedFetch(getApiUrl("/select-options/targets"));
+          if (res.ok) {
+            const options: Array<{ label: string; color: string }> = await res.json();
+            targets = options;
+          }
+        } catch (error) {
+          console.log("[LiveDetail] Failed to load select options from database, trying local storage:", error);
+          // データベースから読み込めない場合は、ローカルストレージから読み込む
+          const localTargets = await loadSelectOptions("TARGETS");
+          targets = localTargets;
+        }
+        
         const targetOptionLabels = targets.map(opt => opt.label);
         console.log("Target options:", targetOptionLabels);
         console.log("Found target:", found.target);
         
-        // Target: 選択肢に存在する場合のみ表示
+        // Target: データベースに保存されている値があれば表示（選択肢に存在しない場合でも表示）
         let validTarget: string | null = null;
         let targetColor: string = "#E5E7EB"; // デフォルト色
-        if (found.target && targetOptionLabels.includes(found.target)) {
+        if (found.target) {
           // 選択肢に存在する場合は色情報を取得
           const targetOption = targets.find(opt => opt.label === found.target);
           if (targetOption) {
@@ -127,7 +141,7 @@ export default function DetailScreen() {
         setFilteredTarget(validTarget);
         setTargetColor(targetColor);
         
-        // Lineup: 選択肢に存在する値のみ表示
+        // Lineup: データベースに保存されている値があれば表示（選択肢に存在しない場合でも表示）
         const lineupOptionLabels = targets.map(opt => opt.label); // LineupもTargetと同じ選択肢を使用
         let validLineup: string | null = null;
         let validLineupOptions: Array<{ label: string; color: string }> = [];
@@ -136,19 +150,15 @@ export default function DetailScreen() {
           console.log("Lineup values:", lineupValues);
           console.log("Lineup options:", lineupOptionLabels);
           
-          // 選択肢に存在する値のみ処理
-          validLineupOptions = await Promise.all(
-            lineupValues
-              .filter(label => lineupOptionLabels.includes(label))
-              .map(async (label) => {
-                // 選択肢に存在する場合は色情報を取得
-                const option = targets.find(opt => opt.label === label);
-                return {
-                  label,
-                  color: option?.color || "#E5E7EB"
-                };
-              })
-          );
+          // データベースに保存されている値すべてを表示（選択肢に存在しない場合でも表示）
+          validLineupOptions = lineupValues.map((label) => {
+            // 選択肢に存在する場合は色情報を取得
+            const option = targets.find(opt => opt.label === label);
+            return {
+              label,
+              color: option?.color || "#E5E7EB"
+            };
+          });
           console.log("Valid lineup values:", validLineupOptions);
           if (validLineupOptions.length > 0) {
             validLineup = validLineupOptions.map(opt => opt.label).join(", ");
