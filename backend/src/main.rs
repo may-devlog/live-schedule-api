@@ -3111,9 +3111,28 @@ async fn save_select_options(
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<SelectOptionsRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
-    let user_id_i64 = user.user_id as i64;
+    // DISABLE_AUTHが有効な場合、データベースから実際のユーザーIDを取得
+    let actual_user_id = if std::env::var("DISABLE_AUTH").is_ok() {
+        // 環境変数DEFAULT_USER_IDが設定されている場合はそれを使用
+        if let Ok(user_id_str) = std::env::var("DEFAULT_USER_ID") {
+            user_id_str.parse::<i32>().ok().unwrap_or(user.user_id)
+        } else if let Ok(email) = std::env::var("DEFAULT_USER_EMAIL") {
+            // メールアドレスからユーザーIDを取得
+            get_user_id_by_email(&pool, &email).await.unwrap_or_else(|| {
+                // メールアドレスが見つからない場合、データベースから最初のユーザーIDを取得
+                get_first_user_id(&pool).await.unwrap_or(user.user_id)
+            })
+        } else {
+            // 環境変数が設定されていない場合、データベースから最初のユーザーIDを取得
+            get_first_user_id(&pool).await.unwrap_or(user.user_id)
+        }
+    } else {
+        user.user_id
+    };
+    
+    let user_id_i64 = actual_user_id as i64;
     eprintln!("[SaveSelectOptions] User ID (i32): {}, User ID (i64): {}, Option Type: {}, Options Count: {}", 
-        user.user_id, user_id_i64, option_type, payload.options.len());
+        actual_user_id, user_id_i64, option_type, payload.options.len());
     
     let options_json = serde_json::to_string(&payload.options)
         .map_err(|e| {
@@ -3157,7 +3176,7 @@ async fn save_select_options(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse {
-                error: format!("User ID {} does not exist", user.user_id),
+                error: format!("User ID {} does not exist", actual_user_id),
             }),
         ));
     }
