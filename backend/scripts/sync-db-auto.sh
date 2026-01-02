@@ -9,8 +9,28 @@ LOCAL_DB="data/app.db"
 REMOTE_DB="/app/data/app.db"
 SYNC_INTERVAL=60  # 同期間隔（秒）
 
+function check_server_running() {
+    # ポート3000または8081でサーバーが動いているかチェック
+    if lsof -ti:3000 > /dev/null 2>&1 || lsof -ti:8081 > /dev/null 2>&1; then
+        echo "警告: ローカルサーバーが実行中の可能性があります"
+        echo "データベース同期中はサーバーを停止することを推奨します"
+        echo "続行しますか？ (y/N)"
+        read -r response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            echo "同期をキャンセルしました"
+            return 1
+        fi
+    fi
+    return 0
+}
+
 function sync_from_production() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] 本番環境からデータベースをダウンロード中..."
+    
+    # サーバーが実行中かチェック
+    if ! check_server_running; then
+        return 1
+    fi
     
     # バックアップを作成
     if [ -f "$LOCAL_DB" ]; then
@@ -40,6 +60,11 @@ EOF
 
 function sync_to_production() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] ローカルのデータベースを本番環境にアップロード中..."
+    
+    # サーバーが実行中かチェック（アップロード時は警告のみ）
+    if lsof -ti:3000 > /dev/null 2>&1 || lsof -ti:8081 > /dev/null 2>&1; then
+        echo "注意: ローカルサーバーが実行中です。データの整合性を保つため、サーバーを停止してから同期することを推奨します"
+    fi
     
     # 本番環境のデータベースをバックアップ
     BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
