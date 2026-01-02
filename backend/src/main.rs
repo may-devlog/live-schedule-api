@@ -14,6 +14,7 @@ use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::{Pool, Sqlite};
 use std::net::SocketAddr;
 use tower_http::cors::{Any, AllowOrigin, CorsLayer};
+use reqwest;
 
 // ====== 認証関連の型定義 ======
 
@@ -129,57 +130,228 @@ fn generate_token() -> String {
     hex::encode(bytes)
 }
 
-// メール送信（開発環境ではコンソールに出力）
+// メール送信（開発環境ではコンソールに出力、本番環境ではResendを使用）
 async fn send_verification_email(email: &str, token: &str) {
     let base_url = get_base_url();
     let verification_url = format!("{}/verify-email?token={}", base_url, urlencoding::encode(token));
     
-    // 開発環境ではコンソールに出力
-    println!("=== メール送信（開発環境） ===");
-    println!("宛先: {}", email);
-    println!("件名: メールアドレスの確認");
-    println!("本文:");
-    println!("以下のURLをクリックしてメールアドレスを確認してください:");
-    println!("{}", verification_url);
-    println!("===========================");
-    
-    // 本番環境では実際のSMTPサーバーに送信
-    // 環境変数からSMTP設定を読み込んで送信
+    // 環境変数からResend APIキーを取得
+    if let Ok(api_key) = std::env::var("RESEND_API_KEY") {
+        // 本番環境: Resend APIを使用
+        let email_body = format!(
+            r#"
+            <p>以下のURLをクリックしてメールアドレスを確認してください:</p>
+            <p><a href="{}">{}</a></p>
+            <p>このリンクは24時間有効です。</p>
+            "#,
+            verification_url, verification_url
+        );
+        
+        let client = reqwest::Client::new();
+        let response = client
+            .post("https://api.resend.com/emails")
+            .header("Authorization", format!("Bearer {}", api_key))
+            .header("Content-Type", "application/json")
+            .json(&serde_json::json!({
+                "from": "onboarding@resend.dev",
+                "to": email,
+                "subject": "メールアドレスの確認",
+                "html": email_body
+            }))
+            .send()
+            .await;
+        
+        match response {
+            Ok(res) => {
+                if res.status().is_success() {
+                    println!("[EMAIL] Verification email sent successfully to {}", email);
+                } else {
+                    let error_text = res.text().await.unwrap_or_default();
+                    eprintln!("[EMAIL] Failed to send verification email: {}", error_text);
+                    // フォールバック: コンソールに出力
+                    println!("=== メール送信（フォールバック） ===");
+                    println!("宛先: {}", email);
+                    println!("件名: メールアドレスの確認");
+                    println!("本文:");
+                    println!("以下のURLをクリックしてメールアドレスを確認してください:");
+                    println!("{}", verification_url);
+                    println!("===========================");
+                }
+            }
+            Err(e) => {
+                eprintln!("[EMAIL] Error sending verification email: {}", e);
+                // フォールバック: コンソールに出力
+                println!("=== メール送信（フォールバック） ===");
+                println!("宛先: {}", email);
+                println!("件名: メールアドレスの確認");
+                println!("本文:");
+                println!("以下のURLをクリックしてメールアドレスを確認してください:");
+                println!("{}", verification_url);
+                println!("===========================");
+            }
+        }
+    } else {
+        // 開発環境: コンソールに出力
+        println!("=== メール送信（開発環境） ===");
+        println!("宛先: {}", email);
+        println!("件名: メールアドレスの確認");
+        println!("本文:");
+        println!("以下のURLをクリックしてメールアドレスを確認してください:");
+        println!("{}", verification_url);
+        println!("===========================");
+    }
 }
 
 async fn send_password_reset_email(email: &str, token: &str) {
     let base_url = get_base_url();
     let reset_url = format!("{}/reset-password?token={}", base_url, urlencoding::encode(token));
     
-    // 開発環境ではコンソールに出力
-    println!("=== メール送信（開発環境） ===");
-    println!("宛先: {}", email);
-    println!("件名: パスワードリセット");
-    println!("本文:");
-    println!("以下のURLをクリックしてパスワードをリセットしてください:");
-    println!("{}", reset_url);
-    println!("このリンクは24時間有効です。");
-    println!("===========================");
-    
-    // 本番環境では実際のSMTPサーバーに送信
+    // 環境変数からResend APIキーを取得
+    if let Ok(api_key) = std::env::var("RESEND_API_KEY") {
+        // 本番環境: Resend APIを使用
+        let email_body = format!(
+            r#"
+            <p>以下のURLをクリックしてパスワードをリセットしてください:</p>
+            <p><a href="{}">{}</a></p>
+            <p>このリンクは24時間有効です。</p>
+            "#,
+            reset_url, reset_url
+        );
+        
+        let client = reqwest::Client::new();
+        let response = client
+            .post("https://api.resend.com/emails")
+            .header("Authorization", format!("Bearer {}", api_key))
+            .header("Content-Type", "application/json")
+            .json(&serde_json::json!({
+                "from": "onboarding@resend.dev",
+                "to": email,
+                "subject": "パスワードリセット",
+                "html": email_body
+            }))
+            .send()
+            .await;
+        
+        match response {
+            Ok(res) => {
+                if res.status().is_success() {
+                    println!("[EMAIL] Password reset email sent successfully to {}", email);
+                } else {
+                    let error_text = res.text().await.unwrap_or_default();
+                    eprintln!("[EMAIL] Failed to send password reset email: {}", error_text);
+                    // フォールバック: コンソールに出力
+                    println!("=== メール送信（フォールバック） ===");
+                    println!("宛先: {}", email);
+                    println!("件名: パスワードリセット");
+                    println!("本文:");
+                    println!("以下のURLをクリックしてパスワードをリセットしてください:");
+                    println!("{}", reset_url);
+                    println!("このリンクは24時間有効です。");
+                    println!("===========================");
+                }
+            }
+            Err(e) => {
+                eprintln!("[EMAIL] Error sending password reset email: {}", e);
+                // フォールバック: コンソールに出力
+                println!("=== メール送信（フォールバック） ===");
+                println!("宛先: {}", email);
+                println!("件名: パスワードリセット");
+                println!("本文:");
+                println!("以下のURLをクリックしてパスワードをリセットしてください:");
+                println!("{}", reset_url);
+                println!("このリンクは24時間有効です。");
+                println!("===========================");
+            }
+        }
+    } else {
+        // 開発環境: コンソールに出力
+        println!("=== メール送信（開発環境） ===");
+        println!("宛先: {}", email);
+        println!("件名: パスワードリセット");
+        println!("本文:");
+        println!("以下のURLをクリックしてパスワードをリセットしてください:");
+        println!("{}", reset_url);
+        println!("このリンクは24時間有効です。");
+        println!("===========================");
+    }
 }
 
 async fn send_email_change_verification_email(new_email: &str, token: &str) {
     let base_url = get_base_url();
     let verification_url = format!("{}/verify-email-change?token={}", base_url, urlencoding::encode(token));
     
-    // 開発環境ではコンソールに出力
-    println!("=== メール送信（開発環境） ===");
-    println!("宛先: {}", new_email);
-    println!("件名: メールアドレス変更の確認");
-    println!("本文:");
-    println!("メールアドレスの変更をリクエストしました。");
-    println!("以下のURLをクリックしてメールアドレスを変更してください:");
-    println!("{}", verification_url);
-    println!("このリンクは24時間有効です。");
-    println!("===========================");
-    
-    // 本番環境では実際のSMTPサーバーに送信
+    // 環境変数からResend APIキーを取得
+    if let Ok(api_key) = std::env::var("RESEND_API_KEY") {
+        // 本番環境: Resend APIを使用
+        let email_body = format!(
+            r#"
+            <p>メールアドレスの変更をリクエストしました。</p>
+            <p>以下のURLをクリックしてメールアドレスを変更してください:</p>
+            <p><a href="{}">{}</a></p>
+            <p>このリンクは24時間有効です。</p>
+            "#,
+            verification_url, verification_url
+        );
+        
+        let client = reqwest::Client::new();
+        let response = client
+            .post("https://api.resend.com/emails")
+            .header("Authorization", format!("Bearer {}", api_key))
+            .header("Content-Type", "application/json")
+            .json(&serde_json::json!({
+                "from": "onboarding@resend.dev",
+                "to": new_email,
+                "subject": "メールアドレス変更の確認",
+                "html": email_body
+            }))
+            .send()
+            .await;
+        
+        match response {
+            Ok(res) => {
+                if res.status().is_success() {
+                    println!("[EMAIL] Email change verification email sent successfully to {}", new_email);
+                } else {
+                    let error_text = res.text().await.unwrap_or_default();
+                    eprintln!("[EMAIL] Failed to send email change verification email: {}", error_text);
+                    // フォールバック: コンソールに出力
+                    println!("=== メール送信（フォールバック） ===");
+                    println!("宛先: {}", new_email);
+                    println!("件名: メールアドレス変更の確認");
+                    println!("本文:");
+                    println!("メールアドレスの変更をリクエストしました。");
+                    println!("以下のURLをクリックしてメールアドレスを変更してください:");
+                    println!("{}", verification_url);
+                    println!("このリンクは24時間有効です。");
+                    println!("===========================");
+                }
+            }
+            Err(e) => {
+                eprintln!("[EMAIL] Error sending email change verification email: {}", e);
+                // フォールバック: コンソールに出力
+                println!("=== メール送信（フォールバック） ===");
+                println!("宛先: {}", new_email);
+                println!("件名: メールアドレス変更の確認");
+                println!("本文:");
+                println!("メールアドレスの変更をリクエストしました。");
+                println!("以下のURLをクリックしてメールアドレスを変更してください:");
+                println!("{}", verification_url);
+                println!("このリンクは24時間有効です。");
+                println!("===========================");
+            }
+        }
+    } else {
+        // 開発環境: コンソールに出力
+        println!("=== メール送信（開発環境） ===");
+        println!("宛先: {}", new_email);
+        println!("件名: メールアドレス変更の確認");
+        println!("本文:");
+        println!("メールアドレスの変更をリクエストしました。");
+        println!("以下のURLをクリックしてメールアドレスを変更してください:");
+        println!("{}", verification_url);
+        println!("このリンクは24時間有効です。");
+        println!("===========================");
+    }
 }
 
 fn create_token(user_id: i32) -> String {
