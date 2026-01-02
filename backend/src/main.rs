@@ -16,6 +16,7 @@ use std::net::SocketAddr;
 use tower_http::cors::{Any, AllowOrigin, CorsLayer};
 use resend_rs::types::CreateEmailBaseOptions;
 use resend_rs::Resend;
+use reqwest;
 
 // ====== 認証関連の型定義 ======
 
@@ -140,47 +141,24 @@ async fn send_verification_email(email: &str, token: &str) {
     if let Ok(api_key) = std::env::var("RESEND_API_KEY") {
         // 本番環境: Resend APIを使用
         let email_body = format!(
-            r#"
-            <p>以下のURLをクリックしてメールアドレスを確認してください:</p>
-            <p><a href="{}">{}</a></p>
-            <p>このリンクは24時間有効です。</p>
-            "#,
+            r#"<p>以下のURLをクリックしてメールアドレスを確認してください:</p><p><a href="{}">{}</a></p><p>このリンクは24時間有効です。</p>"#,
             verification_url, verification_url
         );
         
-        let client = reqwest::Client::new();
-        let response = client
-            .post("https://api.resend.com/emails")
-            .header("Authorization", format!("Bearer {}", api_key))
-            .header("Content-Type", "application/json")
-            .json(&serde_json::json!({
-                "from": "onboarding@resend.dev",
-                "to": [email],
-                "subject": "メールアドレスの確認",
-                "html": email_body
-            }))
-            .send()
-            .await;
+        let resend = Resend::new(&api_key);
+        let from = "onboarding@resend.dev";
+        let to = [email];
+        let subject = "メールアドレスの確認";
         
-        match response {
-            Ok(res) => {
-                if res.status().is_success() {
-                    println!("[EMAIL] Verification email sent successfully to {}", email);
-                } else {
-                    let error_text = res.text().await.unwrap_or_default();
-                    eprintln!("[EMAIL] Failed to send verification email: {}", error_text);
-                    // フォールバック: コンソールに出力
-                    println!("=== メール送信（フォールバック） ===");
-                    println!("宛先: {}", email);
-                    println!("件名: メールアドレスの確認");
-                    println!("本文:");
-                    println!("以下のURLをクリックしてメールアドレスを確認してください:");
-                    println!("{}", verification_url);
-                    println!("===========================");
-                }
+        let email_options = CreateEmailBaseOptions::new(from, to, subject)
+            .with_html(&email_body);
+        
+        match resend.emails.send(email_options).await {
+            Ok(result) => {
+                println!("[EMAIL] Verification email sent successfully to {}: {:?}", email, result);
             }
             Err(e) => {
-                eprintln!("[EMAIL] Error sending verification email: {}", e);
+                eprintln!("[EMAIL] Failed to send verification email to {}: {:?}", email, e);
                 // フォールバック: コンソールに出力
                 println!("=== メール送信（フォールバック） ===");
                 println!("宛先: {}", email);
@@ -220,44 +198,20 @@ async fn send_password_reset_email(email: &str, token: &str) {
             reset_url, reset_url
         );
         
-        let client = reqwest::Client::new();
-        let response = client
-            .post("https://api.resend.com/emails")
-            .header("Authorization", format!("Bearer {}", api_key))
-            .header("Content-Type", "application/json")
-            .json(&serde_json::json!({
-                "from": "onboarding@resend.dev",
-                "to": [email],
-                "subject": "パスワードリセット",
-                "html": email_body
-            }))
-            .send()
-            .await;
+        let resend = Resend::new(&api_key);
+        let from = "onboarding@resend.dev";
+        let to = [email];
+        let subject = "パスワードリセット";
         
-        match response {
-            Ok(res) => {
-                let status = res.status();
-                println!("[EMAIL] Resend API response status: {}", status);
-                
-                if status.is_success() {
-                    let response_body = res.text().await.unwrap_or_default();
-                    println!("[EMAIL] Password reset email sent successfully to {}: {}", email, response_body);
-                } else {
-                    let error_text = res.text().await.unwrap_or_default();
-                    eprintln!("[EMAIL] Failed to send password reset email to {}: status={}, error={}", email, status, error_text);
-                    // フォールバック: コンソールに出力
-                    println!("=== メール送信（フォールバック） ===");
-                    println!("宛先: {}", email);
-                    println!("件名: パスワードリセット");
-                    println!("本文:");
-                    println!("以下のURLをクリックしてパスワードをリセットしてください:");
-                    println!("{}", reset_url);
-                    println!("このリンクは24時間有効です。");
-                    println!("===========================");
-                }
+        let email_options = CreateEmailBaseOptions::new(from, to, subject)
+            .with_html(&email_body);
+        
+        match resend.emails.send(email_options).await {
+            Ok(result) => {
+                println!("[EMAIL] Password reset email sent successfully to {}: {:?}", email, result);
             }
             Err(e) => {
-                eprintln!("[EMAIL] Error sending password reset email to {}: {:?}", email, e);
+                eprintln!("[EMAIL] Failed to send password reset email to {}: {:?}", email, e);
                 // フォールバック: コンソールに出力
                 println!("=== メール送信（フォールバック） ===");
                 println!("宛先: {}", email);
@@ -296,41 +250,20 @@ async fn send_email_change_verification_email(new_email: &str, token: &str) {
             verification_url, verification_url
         );
         
-        let client = reqwest::Client::new();
-        let response = client
-            .post("https://api.resend.com/emails")
-            .header("Authorization", format!("Bearer {}", api_key))
-            .header("Content-Type", "application/json")
-            .json(&serde_json::json!({
-                "from": "onboarding@resend.dev",
-                "to": [new_email],
-                "subject": "メールアドレス変更の確認",
-                "html": email_body
-            }))
-            .send()
-            .await;
+        let resend = Resend::new(&api_key);
+        let from = "onboarding@resend.dev";
+        let to = [new_email];
+        let subject = "メールアドレス変更の確認";
         
-        match response {
-            Ok(res) => {
-                if res.status().is_success() {
-                    println!("[EMAIL] Email change verification email sent successfully to {}", new_email);
-                } else {
-                    let error_text = res.text().await.unwrap_or_default();
-                    eprintln!("[EMAIL] Failed to send email change verification email: {}", error_text);
-                    // フォールバック: コンソールに出力
-                    println!("=== メール送信（フォールバック） ===");
-                    println!("宛先: {}", new_email);
-                    println!("件名: メールアドレス変更の確認");
-                    println!("本文:");
-                    println!("メールアドレスの変更をリクエストしました。");
-                    println!("以下のURLをクリックしてメールアドレスを変更してください:");
-                    println!("{}", verification_url);
-                    println!("このリンクは24時間有効です。");
-                    println!("===========================");
-                }
+        let email_options = CreateEmailBaseOptions::new(from, to, subject)
+            .with_html(&email_body);
+        
+        match resend.emails.send(email_options).await {
+            Ok(result) => {
+                println!("[EMAIL] Email change verification email sent successfully to {}: {:?}", new_email, result);
             }
             Err(e) => {
-                eprintln!("[EMAIL] Error sending email change verification email: {}", e);
+                eprintln!("[EMAIL] Failed to send email change verification email to {}: {:?}", new_email, e);
                 // フォールバック: コンソールに出力
                 println!("=== メール送信（フォールバック） ===");
                 println!("宛先: {}", new_email);
