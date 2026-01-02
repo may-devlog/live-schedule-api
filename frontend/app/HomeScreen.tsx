@@ -280,6 +280,7 @@ export default function HomeScreen() {
   }, [email]);
 
   return (
+    <>
     <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
       <View style={styles.container}>
         <View style={styles.header}>
@@ -545,6 +546,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+    </>
   );
 }
 
