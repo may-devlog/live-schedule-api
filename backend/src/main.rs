@@ -1861,15 +1861,7 @@ async fn update_schedule(
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<NewSchedule>,
 ) -> Result<Json<Schedule>, (StatusCode, Json<ErrorResponse>)> {
-    // 必須項目のバリデーション
-    if payload.target.is_none() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-                error: "Targetは必須項目です".to_string(),
-            }),
-        ));
-    }
+    // 必須項目のバリデーション（targetはNULL許可）
     
     // スケジュールが存在し、ユーザーが所有しているかチェック
     let existing: Option<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
