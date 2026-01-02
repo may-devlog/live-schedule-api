@@ -110,6 +110,13 @@ export default function NewScheduleScreen() {
     loadScheduleForCopy();
   }, [copyFrom]);
 
+  // URLパラメータから日付を設定（copyFromがない場合のみ）
+  useEffect(() => {
+    if (!copyFrom && date) {
+      setDate(date);
+    }
+  }, [date, copyFrom]);
+
   // 選択肢の変更を保存
   const handleCategoriesChange = async (newCategories: SelectOption[]) => {
     setCategories(newCategories);
