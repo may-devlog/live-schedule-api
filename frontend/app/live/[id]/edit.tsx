@@ -423,7 +423,6 @@ export default function EditScheduleScreen() {
         options={targets}
         onValueChange={setTarget}
         placeholder="選択してください"
-        required={true}
       />
 
       <NotionMultiSelect
