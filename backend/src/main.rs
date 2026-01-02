@@ -3118,10 +3118,12 @@ async fn save_select_options(
             user_id_str.parse::<i32>().ok().unwrap_or(user.user_id)
         } else if let Ok(email) = std::env::var("DEFAULT_USER_EMAIL") {
             // メールアドレスからユーザーIDを取得
-            get_user_id_by_email(&pool, &email).await.unwrap_or_else(|| {
+            if let Some(user_id) = get_user_id_by_email(&pool, &email).await {
+                user_id
+            } else {
                 // メールアドレスが見つからない場合、データベースから最初のユーザーIDを取得
                 get_first_user_id(&pool).await.unwrap_or(user.user_id)
-            })
+            }
         } else {
             // 環境変数が設定されていない場合、データベースから最初のユーザーIDを取得
             get_first_user_id(&pool).await.unwrap_or(user.user_id)
