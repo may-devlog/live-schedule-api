@@ -193,53 +193,38 @@ export async function loadSelectOptions(
   return options;
 }
 
-// 選択肢を保存する（データベースとローカルストレージの両方に保存）
+// 選択肢を保存する（データベースに保存し、成功した場合のみローカルストレージにも保存）
 export async function saveSelectOptions(
   key: keyof typeof STORAGE_KEYS,
   options: SelectOption[]
 ): Promise<void> {
-  try {
-    // まずデータベースに保存
-    try {
-      const url = getApiUrl(`/select-options/${key.toLowerCase()}`);
-      const payload = { options };
-      console.log(`[SelectOptions] Saving ${key} to database:`, url);
-      console.log(`[SelectOptions] Payload:`, JSON.stringify(payload, null, 2));
-      
-      const res = await authenticatedFetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      
-      console.log(`[SelectOptions] Response status:`, res.status);
-      console.log(`[SelectOptions] Response headers:`, Object.fromEntries(res.headers.entries()));
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`[SelectOptions] Failed to save ${key} to database:`, res.status, errorText);
-        // エラーが発生してもローカルストレージには保存する（フォールバック）
-        throw new Error(`Failed to save ${key} to database: ${res.status} ${errorText}`);
-      } else {
-        const result = await res.json();
-        console.log(`[SelectOptions] Successfully saved ${key} to database:`, result);
-      }
-    } catch (error) {
-      console.error(`[SelectOptions] Exception while saving ${key} to database:`, error);
-      if (error instanceof Error) {
-        console.error(`[SelectOptions] Error message:`, error.message);
-        console.error(`[SelectOptions] Error stack:`, error.stack);
-      }
-      // エラーが発生してもローカルストレージには保存する（フォールバック）
-      throw error; // エラーを再スローして呼び出し元に通知
-    }
-
-    // ローカルストレージにも保存（キャッシュ）
-    await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(options));
-    console.log(`[SelectOptions] Saved ${key} to local storage`);
-  } catch (error) {
-    console.error(`[SelectOptions] Error saving ${key}:`, error);
-    throw error; // エラーを再スローして呼び出し元に通知
+  // まずデータベースに保存
+  const url = getApiUrl(`/select-options/${key.toLowerCase()}`);
+  const payload = { options };
+  console.log(`[SelectOptions] Saving ${key} to database:`, url);
+  console.log(`[SelectOptions] Payload:`, JSON.stringify(payload, null, 2));
+  
+  const res = await authenticatedFetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  
+  console.log(`[SelectOptions] Response status:`, res.status);
+  console.log(`[SelectOptions] Response headers:`, Object.fromEntries(res.headers.entries()));
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`[SelectOptions] Failed to save ${key} to database:`, res.status, errorText);
+    throw new Error(`Failed to save ${key} to database: ${res.status} ${errorText}`);
   }
+  
+  // データベースへの保存が成功した場合のみ、ローカルストレージにも保存（キャッシュ）
+  const result = await res.json();
+  console.log(`[SelectOptions] Successfully saved ${key} to database:`, result);
+  
+  // データベースへの保存が成功した場合のみ、ローカルストレージにも保存
+  await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(options));
+  console.log(`[SelectOptions] Saved ${key} to local storage`);
 }
 

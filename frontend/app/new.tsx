@@ -119,30 +119,55 @@ export default function NewScheduleScreen() {
 
   // 選択肢の変更を保存
   const handleCategoriesChange = async (newCategories: SelectOption[]) => {
-    setCategories(newCategories);
-    await saveSelectOptions("CATEGORIES", newCategories);
+    try {
+      await saveSelectOptions("CATEGORIES", newCategories);
+      setCategories(newCategories);
+    } catch (error) {
+      console.error("Failed to save categories:", error);
+      Alert.alert("エラー", "選択肢の保存に失敗しました。もう一度お試しください。");
+    }
   };
 
   const handleAreasChange = async (newAreas: SelectOption[]) => {
-    setAreas(newAreas);
-    await saveSelectOptions("AREAS", newAreas);
+    try {
+      await saveSelectOptions("AREAS", newAreas);
+      setAreas(newAreas);
+    } catch (error) {
+      console.error("Failed to save areas:", error);
+      Alert.alert("エラー", "選択肢の保存に失敗しました。もう一度お試しください。");
+    }
   };
 
   const handleLineupOptionsChange = async (newLineupOptions: SelectOption[]) => {
     // Lineupの選択肢をTARGETSとして保存
-    setLineupOptions(newLineupOptions);
-    setTargets(newLineupOptions); // Targetも同じ選択肢を使用
-    await saveSelectOptions("TARGETS", newLineupOptions);
+    try {
+      await saveSelectOptions("TARGETS", newLineupOptions);
+      setLineupOptions(newLineupOptions);
+      setTargets(newLineupOptions); // Targetも同じ選択肢を使用
+    } catch (error) {
+      console.error("Failed to save lineup options:", error);
+      Alert.alert("エラー", "選択肢の保存に失敗しました。もう一度お試しください。");
+    }
   };
 
   const handleSellersChange = async (newSellers: SelectOption[]) => {
-    setSellers(newSellers);
-    await saveSelectOptions("SELLERS", newSellers);
+    try {
+      await saveSelectOptions("SELLERS", newSellers);
+      setSellers(newSellers);
+    } catch (error) {
+      console.error("Failed to save sellers:", error);
+      Alert.alert("エラー", "選択肢の保存に失敗しました。もう一度お試しください。");
+    }
   };
 
   const handleStatusesChange = async (newStatuses: SelectOption[]) => {
-    setStatuses(newStatuses);
-    await saveSelectOptions("STATUSES", newStatuses);
+    try {
+      await saveSelectOptions("STATUSES", newStatuses);
+      setStatuses(newStatuses);
+    } catch (error) {
+      console.error("Failed to save statuses:", error);
+      Alert.alert("エラー", "選択肢の保存に失敗しました。もう一度お試しください。");
+    }
   };
 
   // 必須
