@@ -972,7 +972,7 @@ async fn request_password_reset(
     eprintln!("[PASSWORD_RESET] Request received for email: {}", payload.email);
     
     // ユーザーを検索
-    eprintln!("[PASSWORD_RESET] Querying database for user...");
+    eprintln!("[PASSWORD_RESET] Querying database for user with email: {}", payload.email);
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
         "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ?",
     )
@@ -1004,6 +1004,10 @@ async fn request_password_reset(
 
     let user = user.unwrap();
     eprintln!("[PASSWORD_RESET] User found: id={}, email={}", user.id, user.email);
+    
+    // データベースに保存されているメールアドレスを確認
+    eprintln!("[PASSWORD_RESET] Database email: {}", user.email);
+    eprintln!("[PASSWORD_RESET] Request email: {}", payload.email);
 
     // リセットトークンを生成
     let reset_token = generate_token();
