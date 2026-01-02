@@ -47,7 +47,7 @@ export type Schedule = {
   is_public?: boolean;
 };
 
-import { getApiUrl } from "../utils/api";
+import { authenticatedFetch, getApiUrl } from "../utils/api";
 import { ScheduleCalendar } from "../components/ScheduleCalendar";
 
 export default function HomeScreen() {
