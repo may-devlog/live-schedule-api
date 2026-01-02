@@ -209,12 +209,11 @@ async fn send_password_reset_email(email: &str, token: &str) {
     // 環境変数からResend APIキーを取得
     if let Ok(api_key) = std::env::var("RESEND_API_KEY") {
         // 本番環境: Resend APIを使用
+        println!("[EMAIL] Attempting to send password reset email to {}", email);
+        println!("[EMAIL] Reset URL: {}", reset_url);
+        
         let email_body = format!(
-            r#"
-            <p>以下のURLをクリックしてパスワードをリセットしてください:</p>
-            <p><a href="{}">{}</a></p>
-            <p>このリンクは24時間有効です。</p>
-            "#,
+            r#"<p>以下のURLをクリックしてパスワードをリセットしてください:</p><p><a href="{}">{}</a></p><p>このリンクは24時間有効です。</p>"#,
             reset_url, reset_url
         );
         
@@ -225,7 +224,7 @@ async fn send_password_reset_email(email: &str, token: &str) {
             .header("Content-Type", "application/json")
             .json(&serde_json::json!({
                 "from": "onboarding@resend.dev",
-                "to": email,
+                "to": [email],
                 "subject": "パスワードリセット",
                 "html": email_body
             }))
@@ -234,11 +233,15 @@ async fn send_password_reset_email(email: &str, token: &str) {
         
         match response {
             Ok(res) => {
-                if res.status().is_success() {
-                    println!("[EMAIL] Password reset email sent successfully to {}", email);
+                let status = res.status();
+                println!("[EMAIL] Resend API response status: {}", status);
+                
+                if status.is_success() {
+                    let response_body = res.text().await.unwrap_or_default();
+                    println!("[EMAIL] Password reset email sent successfully to {}: {}", email, response_body);
                 } else {
                     let error_text = res.text().await.unwrap_or_default();
-                    eprintln!("[EMAIL] Failed to send password reset email: {}", error_text);
+                    eprintln!("[EMAIL] Failed to send password reset email to {}: status={}, error={}", email, status, error_text);
                     // フォールバック: コンソールに出力
                     println!("=== メール送信（フォールバック） ===");
                     println!("宛先: {}", email);
@@ -251,7 +254,7 @@ async fn send_password_reset_email(email: &str, token: &str) {
                 }
             }
             Err(e) => {
-                eprintln!("[EMAIL] Error sending password reset email: {}", e);
+                eprintln!("[EMAIL] Error sending password reset email to {}: {:?}", email, e);
                 // フォールバック: コンソールに出力
                 println!("=== メール送信（フォールバック） ===");
                 println!("宛先: {}", email);
