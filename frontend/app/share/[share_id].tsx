@@ -118,8 +118,8 @@ export default function SharedScheduleScreen() {
     }
   };
 
-  const handleSchedulePress = (schedule: Schedule) => {
-    router.push(`/public/${schedule.id}`);
+  const handleSchedulePress = (scheduleId: number) => {
+    router.push(`/share/${share_id}/schedules/${scheduleId}`);
   };
 
   if (loading) {
@@ -158,7 +158,11 @@ export default function SharedScheduleScreen() {
 
         {/* カレンダー */}
         {schedules.length > 0 && (
-          <ScheduleCalendar schedules={schedules} />
+          <ScheduleCalendar 
+            schedules={schedules} 
+            isPublic={true}
+            onSchedulePress={handleSchedulePress}
+          />
         )}
 
         <Text style={styles.sectionTitle}>NEXT</Text>

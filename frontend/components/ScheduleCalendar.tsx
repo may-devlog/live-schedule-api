@@ -16,6 +16,8 @@ import type { Schedule } from "../app/HomeScreen";
 
 interface ScheduleCalendarProps {
   schedules: Schedule[];
+  isPublic?: boolean; // 共有ページ用：trueの場合は新規作成や編集を無効化
+  onSchedulePress?: (scheduleId: number) => void; // スケジュールクリック時のカスタムハンドラ
 }
 
 // 祝日を判定する関数
@@ -150,15 +152,27 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
       setSelectedDate(dateString);
       setShowScheduleModal(true);
     } else {
-      // スケジュールがない場合は新規作成画面に遷移（日付を設定）
-      router.push(`/new?date=${dateString}`);
+      // スケジュールがない場合
+      if (isPublic) {
+        // 共有ページの場合は何もしない
+        return;
+      } else {
+        // 通常の場合は新規作成画面に遷移（日付を設定）
+        router.push(`/new?date=${dateString}`);
+      }
     }
   };
 
   // スケジュールを選択したときの処理
   const handleSelectSchedule = (scheduleId: number) => {
     setShowScheduleModal(false);
-    router.push(`/live/${scheduleId}`);
+    if (onSchedulePress) {
+      onSchedulePress(scheduleId);
+    } else if (isPublic) {
+      router.push(`/public/${scheduleId}`);
+    } else {
+      router.push(`/live/${scheduleId}`);
+    }
   };
 
   // 新規作成ボタンをクリックしたときの処理
