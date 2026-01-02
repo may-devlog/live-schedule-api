@@ -240,11 +240,12 @@ export function NotionMultiSelect({
           activeOpacity={1}
           onPress={() => setShowModal(false)}
         >
-          <TouchableOpacity
+          <View
             style={styles.modalContent}
-            activeOpacity={1}
-            onPress={(e) => {
-              // モーダルコンテンツ内のクリックでモーダルが閉じないようにする
+            onStartShouldSetResponder={() => true}
+            onResponderTerminationRequest={() => false}
+            onTouchEnd={(e) => {
+              // モーダルコンテンツ内のタッチでモーダルが閉じないようにする
               e.stopPropagation();
             }}
           >
@@ -259,26 +260,57 @@ export function NotionMultiSelect({
                   onChangeText={setNewOptionText}
                   placeholder="選択肢名"
                   placeholderTextColor="#9b9a97"
+                  onFocus={(e) => {
+                    // フォーカス時にイベント伝播を停止
+                    if (e && e.nativeEvent) {
+                      e.stopPropagation();
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    // タッチ開始時にイベント伝播を停止
+                    if (e && e.nativeEvent) {
+                      e.stopPropagation();
+                    }
+                  }}
                 />
-                <ColorPicker
-                  value={newOptionColor}
-                  onValueChange={setNewOptionColor}
-                  label="色"
-                />
+                <View
+                  onTouchStart={(e) => {
+                    // ColorPickerのタッチでモーダルが閉じないようにする
+                    if (e && e.nativeEvent) {
+                      e.stopPropagation();
+                    }
+                  }}
+                >
+                  <ColorPicker
+                    value={newOptionColor}
+                    onValueChange={setNewOptionColor}
+                    label="色"
+                  />
+                </View>
                 <View style={styles.editActions}>
                   <TouchableOpacity
                     style={[
                       styles.updateButton,
                       !newOptionText.trim() && styles.updateButtonDisabled,
                     ]}
-                    onPress={handleUpdateOption}
+                    onPress={(e) => {
+                      // 更新ボタンのクリックでモーダルが閉じないようにする
+                      if (e && e.nativeEvent) {
+                        e.stopPropagation();
+                      }
+                      handleUpdateOption();
+                    }}
                     disabled={!newOptionText.trim()}
                   >
                     <Text style={styles.updateButtonText}>更新</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.cancelButton}
-                    onPress={() => {
+                    onPress={(e) => {
+                      // キャンセルボタンのクリックでモーダルが閉じないようにする
+                      if (e && e.nativeEvent) {
+                        e.stopPropagation();
+                      }
                       setEditingOptionIndex(null);
                       setNewOptionText("");
                       setNewOptionColor(getDefaultColorForLabel(""));
@@ -386,7 +418,7 @@ export function NotionMultiSelect({
                 <Text style={styles.confirmButtonText}>決定</Text>
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          </View>
         </TouchableOpacity>
       </Modal>
     </View>
