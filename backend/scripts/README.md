@@ -63,6 +63,40 @@ bash backend/scripts/sync-db-auto.sh integrity
 - アップロード時は本番環境のアプリケーションが一時的に停止します
 - 同期前に自動的にバックアップが作成されます
 
+## download-db-for-browser.sh（本番データベースを閲覧用にダウンロード）
+
+本番データベースをダウンロードして、SQLite閲覧アプリ（TablePlus、DB Browser for SQLiteなど）で開くためのスクリプトです。
+
+### データベースの場所
+
+- **本番環境（Fly.io）**: `/app/data/app.db`（Fly.ioサーバー上）
+- **ローカル環境**: `backend/data/app.db`（ローカル）
+- **ダウンロード先**: `backend/data/production.db`（ローカルのデータベースは上書きされません）
+
+### 使用方法
+
+```bash
+cd backend
+bash scripts/download-db-for-browser.sh
+```
+
+### 推奨アプリ
+
+1. **TablePlus**（無料版あり）: https://tableplus.com/
+   - モダンで美しいUI
+   - 複数のデータベースタイプに対応
+   - おすすめ！
+
+2. **DB Browser for SQLite**: https://sqlitebrowser.org/
+   - シンプルで使いやすい
+   - 無料
+
+### 注意事項
+
+- ローカルのデータベース（`data/app.db`）は変更されません
+- 本番データベースは`data/production.db`として別ファイルで保存されます
+- データを編集しても、本番環境には反映されません（読み取り専用として使用）
+
 ## パスワードの更新
 
 ### 方法1: create_userバイナリを使用（推奨）
