@@ -111,11 +111,30 @@ export default function DetailScreen() {
         const targetOptionLabels = targets.map(opt => opt.label);
         console.log("Target options:", targetOptionLabels);
         console.log("Found target:", found.target);
-        const validTarget = found.target && targetOptionLabels.includes(found.target) ? found.target : null;
+        
+        // Target: 選択肢に存在する場合はそのまま使用、存在しない場合はスケジュールの値を表示
+        let validTarget: string | null = null;
+        let targetColor: string = "#E5E7EB"; // デフォルト色
+        if (found.target) {
+          if (targetOptionLabels.includes(found.target)) {
+            // 選択肢に存在する場合は色情報を取得
+            const targetOption = targets.find(opt => opt.label === found.target);
+            if (targetOption) {
+              targetColor = targetOption.color || "#E5E7EB";
+            }
+            validTarget = found.target;
+          } else {
+            // 選択肢に存在しない場合でも、スケジュールの値を表示
+            validTarget = found.target;
+            targetColor = "#E5E7EB"; // デフォルト色
+          }
+        }
         console.log("Valid target:", validTarget);
         setFilteredTarget(validTarget);
+        setTargetColor(targetColor);
         
         // Lineup: カンマ区切りの値を既存の選択肢でフィルタリング
+        // 選択肢に存在しない場合でも、スケジュールの値を表示
         const lineupOptionLabels = targets.map(opt => opt.label); // LineupもTargetと同じ選択肢を使用
         let validLineup: string | null = null;
         let validLineupOptions: Array<{ label: string; color: string }> = [];
@@ -123,8 +142,27 @@ export default function DetailScreen() {
           const lineupValues = found.lineup.split(",").map(v => v.trim()).filter(v => v);
           console.log("Lineup values:", lineupValues);
           console.log("Lineup options:", lineupOptionLabels);
-          const validLineupValues = lineupValues.filter(v => lineupOptionLabels.includes(v));
-          console.log("Valid lineup values:", validLineupValues);
+          
+          // 選択肢に存在する値と存在しない値を分けて処理
+          validLineupOptions = await Promise.all(
+            lineupValues.map(async (label) => {
+              if (lineupOptionLabels.includes(label)) {
+                // 選択肢に存在する場合は色情報を取得
+                const option = targets.find(opt => opt.label === label);
+                return {
+                  label,
+                  color: option?.color || "#E5E7EB"
+                };
+              } else {
+                // 選択肢に存在しない場合でも表示（デフォルト色）
+                return {
+                  label,
+                  color: "#E5E7EB"
+                };
+              }
+            })
+          );
+          console.log("Valid lineup values:", validLineupOptions);
           if (validLineupValues.length > 0) {
             validLineup = validLineupValues.join(", ");
             // 選択肢の色情報を取得
@@ -574,8 +612,8 @@ export default function DetailScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* タイトル */}
         <View style={styles.titleHeader}>
-          <Text style={styles.mainTitle} numberOfLines={2}>
-            {schedule.title}
+        <Text style={styles.mainTitle} numberOfLines={2}>
+          {schedule.title}
           </Text>
           {isAuthenticated && (
             <View style={styles.actionButtons}>
@@ -682,11 +720,11 @@ export default function DetailScreen() {
             value={formatCurrency(schedule.total_cost)}
           />
           <NotionProperty label="Status">
-            {schedule.status ? (
+          {schedule.status ? (
               <NotionTag label={schedule.status} color={statusColor || undefined} />
-            ) : (
+          ) : (
               <Text style={styles.emptyValue}>-</Text>
-            )}
+          )}
           </NotionProperty>
         </NotionPropertyBlock>
 
@@ -699,8 +737,8 @@ export default function DetailScreen() {
             <Text style={styles.emptyValue}>関連スケジュールがありません</Text>
           ) : (
             <View style={styles.relationContainer}>
-              {relatedIds.map((rid) => {
-                const related = allSchedules.find((s) => s.id === rid);
+        {relatedIds.map((rid) => {
+          const related = allSchedules.find((s) => s.id === rid);
                 if (!related) {
                   return (
                     <TouchableOpacity
@@ -712,10 +750,10 @@ export default function DetailScreen() {
                   );
                 }
 
-                return (
-                  <TouchableOpacity
-                    key={rid}
-                    onPress={() => router.push(`/live/${rid}`)}
+          return (
+            <TouchableOpacity
+              key={rid}
+              onPress={() => router.push(`/live/${rid}`)}
                     style={styles.relationCard}
                   >
                     <View style={styles.relationCardContent}>
@@ -732,9 +770,9 @@ export default function DetailScreen() {
                         />
                       )}
                     </View>
-                  </TouchableOpacity>
-                );
-              })}
+            </TouchableOpacity>
+          );
+        })}
             </View>
           )}
           {isAuthenticated && (
@@ -762,7 +800,7 @@ export default function DetailScreen() {
         {/* [Traffic] */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Traffic</Text>
+        <Text style={styles.sectionTitle}>Traffic</Text>
           </View>
           {trafficSummaries.length === 0 ? (
             <Text style={styles.emptyValue}>交通情報がありません</Text>
@@ -775,12 +813,12 @@ export default function DetailScreen() {
                 ? `${detailText} (${traffic.notes})`
                 : detailText;
               
-              return (
-                <TouchableOpacity
+          return (
+            <TouchableOpacity
                   key={traffic.id}
                   style={styles.trafficCard}
                   onPress={() => router.push(`/traffic/${traffic.id}`)}
-                >
+            >
                   <View style={styles.cardRow}>
                     <Text style={styles.cardDate}>{traffic.date}</Text>
                     <Text style={styles.cardPrice}>{formatCurrency(traffic.fare)}</Text>
@@ -796,8 +834,8 @@ export default function DetailScreen() {
                   <View style={styles.cardRow}>
                     <Text style={styles.cardDetail}>{detailWithNotes}</Text>
                   </View>
-                </TouchableOpacity>
-              );
+            </TouchableOpacity>
+          );
             })
           )}
           {isAuthenticated && (
@@ -825,7 +863,7 @@ export default function DetailScreen() {
         {/* [Stay] */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Stay</Text>
+        <Text style={styles.sectionTitle}>Stay</Text>
           </View>
           {staySummaries.length === 0 ? (
             <Text style={styles.emptyValue}>宿泊情報がありません</Text>
@@ -853,18 +891,18 @@ export default function DetailScreen() {
                   <View style={styles.cardRow}>
                     <Text style={styles.cardDetail}>{maskHotelName(stay.hotel_name, isAuthenticated)}</Text>
                   </View>
-                </TouchableOpacity>
+        </TouchableOpacity>
               );
             })
-          )}
+        )}
           {isAuthenticated && (
             <View style={styles.addLinksContainer}>
-              <TouchableOpacity
+          <TouchableOpacity
                 style={styles.addLink}
                 onPress={handleAddStay}
-              >
+          >
                 <Text style={styles.addLinkText}>+ 新規ページを追加</Text>
-              </TouchableOpacity>
+          </TouchableOpacity>
               <View style={styles.relationLinkButton}>
                 <NotionStayRelation
                   label=""
