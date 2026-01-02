@@ -79,20 +79,14 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
     const dateString = getDateString(day);
     const daySchedules = schedulesByDate[dateString] || [];
 
-    if (daySchedules.length === 0) {
-      // スケジュールがない場合は新規作成画面に遷移（日付を設定）
-      router.push(`/new?date=${dateString}`);
-      return;
-    }
-
-    if (daySchedules.length === 1) {
-      // スケジュールが1件のみの場合は直接詳細ページに遷移
-      router.push(`/live/${daySchedules[0].id}`);
-    } else {
-      // 複数のスケジュールがある場合はモーダルでリストを表示
+    // スケジュールがある場合はモーダルでリストを表示（1件でも複数件でも）
+    if (daySchedules.length > 0) {
       setSelectedDateSchedules(daySchedules);
       setSelectedDate(dateString);
       setShowScheduleModal(true);
+    } else {
+      // スケジュールがない場合は新規作成画面に遷移（日付を設定）
+      router.push(`/new?date=${dateString}`);
     }
   };
 
@@ -100,6 +94,12 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
   const handleSelectSchedule = (scheduleId: number) => {
     setShowScheduleModal(false);
     router.push(`/live/${scheduleId}`);
+  };
+
+  // 新規作成ボタンをクリックしたときの処理
+  const handleNewSchedule = () => {
+    setShowScheduleModal(false);
+    router.push(`/new?date=${selectedDate}`);
   };
 
   // 日付をフォーマット（表示用）
@@ -437,6 +437,27 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#e9e9e7",
     marginHorizontal: 20,
+  },
+  newScheduleButton: {
+    marginHorizontal: 20,
+    marginVertical: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  newScheduleButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  scheduleListSeparator: {
+    height: 1,
+    backgroundColor: "#e9e9e7",
+    marginHorizontal: 20,
+    marginVertical: 8,
   },
 });
 
