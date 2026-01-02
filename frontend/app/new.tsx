@@ -27,7 +27,7 @@ import { HomeButton } from "../components/HomeButton";
 
 export default function NewScheduleScreen() {
   const router = useRouter();
-  const { copyFrom } = useLocalSearchParams<{ copyFrom?: string }>();
+  const { copyFrom, date } = useLocalSearchParams<{ copyFrom?: string; date?: string }>();
   const { isAuthenticated } = useAuth();
 
   // 未ログインの場合はログイン画面にリダイレクト
@@ -145,8 +145,8 @@ export default function NewScheduleScreen() {
   const [area, setArea] = useState<string | null>(null);
   const [venue, setVenue] = useState("");
 
-  // 任意
-  const [date, setDate] = useState<string | null>(null);
+  // 任意（URLパラメータから初期値を設定）
+  const [date, setDate] = useState<string | null>(date || null);
   const [openTime, setOpenTime] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);

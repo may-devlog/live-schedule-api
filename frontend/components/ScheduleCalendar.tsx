@@ -80,6 +80,8 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
     const daySchedules = schedulesByDate[dateString] || [];
 
     if (daySchedules.length === 0) {
+      // スケジュールがない場合は新規作成画面に遷移（日付を設定）
+      router.push(`/new?date=${dateString}`);
       return;
     }
 
