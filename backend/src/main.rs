@@ -154,7 +154,7 @@ async fn send_verification_email(email: &str, token: &str) {
             .header("Content-Type", "application/json")
             .json(&serde_json::json!({
                 "from": "onboarding@resend.dev",
-                "to": email,
+                "to": [email],
                 "subject": "メールアドレスの確認",
                 "html": email_body
             }))
@@ -192,6 +192,7 @@ async fn send_verification_email(email: &str, token: &str) {
         }
     } else {
         // 開発環境: コンソールに出力
+        println!("[EMAIL] RESEND_API_KEY not found, using development mode (console output)");
         println!("=== メール送信（開発環境） ===");
         println!("宛先: {}", email);
         println!("件名: メールアドレスの確認");
@@ -209,6 +210,7 @@ async fn send_password_reset_email(email: &str, token: &str) {
     // 環境変数からResend APIキーを取得
     if let Ok(api_key) = std::env::var("RESEND_API_KEY") {
         // 本番環境: Resend APIを使用
+        println!("[EMAIL] RESEND_API_KEY found, using Resend API");
         println!("[EMAIL] Attempting to send password reset email to {}", email);
         println!("[EMAIL] Reset URL: {}", reset_url);
         
@@ -268,6 +270,7 @@ async fn send_password_reset_email(email: &str, token: &str) {
         }
     } else {
         // 開発環境: コンソールに出力
+        println!("[EMAIL] RESEND_API_KEY not found, using development mode (console output)");
         println!("=== メール送信（開発環境） ===");
         println!("宛先: {}", email);
         println!("件名: パスワードリセット");
@@ -286,13 +289,9 @@ async fn send_email_change_verification_email(new_email: &str, token: &str) {
     // 環境変数からResend APIキーを取得
     if let Ok(api_key) = std::env::var("RESEND_API_KEY") {
         // 本番環境: Resend APIを使用
+        println!("[EMAIL] RESEND_API_KEY found, using Resend API");
         let email_body = format!(
-            r#"
-            <p>メールアドレスの変更をリクエストしました。</p>
-            <p>以下のURLをクリックしてメールアドレスを変更してください:</p>
-            <p><a href="{}">{}</a></p>
-            <p>このリンクは24時間有効です。</p>
-            "#,
+            r#"<p>メールアドレスの変更をリクエストしました。</p><p>以下のURLをクリックしてメールアドレスを変更してください:</p><p><a href="{}">{}</a></p><p>このリンクは24時間有効です。</p>"#,
             verification_url, verification_url
         );
         
@@ -303,7 +302,7 @@ async fn send_email_change_verification_email(new_email: &str, token: &str) {
             .header("Content-Type", "application/json")
             .json(&serde_json::json!({
                 "from": "onboarding@resend.dev",
-                "to": new_email,
+                "to": [new_email],
                 "subject": "メールアドレス変更の確認",
                 "html": email_body
             }))
@@ -345,6 +344,7 @@ async fn send_email_change_verification_email(new_email: &str, token: &str) {
         }
     } else {
         // 開発環境: コンソールに出力
+        println!("[EMAIL] RESEND_API_KEY not found, using development mode (console output)");
         println!("=== メール送信（開発環境） ===");
         println!("宛先: {}", new_email);
         println!("件名: メールアドレス変更の確認");
