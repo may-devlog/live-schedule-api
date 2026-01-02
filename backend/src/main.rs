@@ -125,14 +125,18 @@ fn get_base_url() -> String {
 
 // フロントエンドURL（環境変数から読み込む、未設定の場合はBASE_URLを使用）
 fn get_frontend_url() -> String {
-    let frontend_url = std::env::var("FRONTEND_URL")
-        .unwrap_or_else(|_| {
+    match std::env::var("FRONTEND_URL") {
+        Ok(url) => {
+            eprintln!("[FRONTEND_URL] Using FRONTEND_URL from environment: {}", url);
+            url
+        }
+        Err(_) => {
             // FRONTEND_URLが未設定の場合はBASE_URLを使用（後方互換性のため）
-            eprintln!("[FRONTEND_URL] FRONTEND_URL not set, falling back to BASE_URL");
-            get_base_url()
-        });
-    eprintln!("[FRONTEND_URL] Using frontend URL: {}", frontend_url);
-    frontend_url
+            let base_url = get_base_url();
+            eprintln!("[FRONTEND_URL] WARNING: FRONTEND_URL not set, falling back to BASE_URL: {}", base_url);
+            base_url
+        }
+    }
 }
 
 // ====== 認証ヘルパー関数 ======
