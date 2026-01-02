@@ -3789,7 +3789,6 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       options_json TEXT NOT NULL,
       created_at   TEXT,
       updated_at   TEXT,
-      FOREIGN KEY (user_id) REFERENCES users(id),
       UNIQUE(user_id, option_type)
     );
     "#;
