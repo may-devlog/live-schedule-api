@@ -3798,6 +3798,22 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     sqlx::query(create_traffics).execute(pool).await?;
     sqlx::query(create_stays).execute(pool).await?;
     sqlx::query(create_select_options).execute(pool).await?;
+    
+    // 既存のselect_optionsテーブルからFOREIGN KEY制約を削除（マイグレーション）
+    // SQLiteではALTER TABLEでFOREIGN KEY制約を削除できないため、
+    // データが空の場合は、テーブルを削除して再作成（FOREIGN KEY制約なし）
+    let select_options_count: Option<(i64,)> = sqlx::query_as("SELECT COUNT(*) FROM select_options")
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten();
+    
+    if select_options_count.map(|(count,)| count) == Some(0) {
+        // データが空の場合は、テーブルを削除して再作成（FOREIGN KEY制約なし）
+        let _ = sqlx::query("DROP TABLE IF EXISTS select_options").execute(pool).await;
+        sqlx::query(create_select_options).execute(pool).await?;
+        eprintln!("[Migration] Recreated select_options table without FOREIGN KEY constraint");
+    }
 
     // 既存のschedulesテーブルにuser_idとis_publicカラムを追加（マイグレーション）
     // SQLiteではALTER TABLE ADD COLUMNがサポートされているが、既に存在する場合はエラーになる
