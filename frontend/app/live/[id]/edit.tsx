@@ -37,25 +37,32 @@ export default function EditScheduleScreen() {
   const [lineupOptions, setLineupOptions] = useState<SelectOption[]>([]);
   const [sellers, setSellers] = useState<SelectOption[]>([]);
   const [statuses, setStatuses] = useState<SelectOption[]>([]);
+  const [optionsLoaded, setOptionsLoaded] = useState(false);
 
   // 選択肢を読み込む
   useEffect(() => {
     const loadOptions = async () => {
-      const [cats, areasData, targetsData, sellersData, statusesData] =
-        await Promise.all([
-          loadSelectOptions("CATEGORIES"),
-          loadSelectOptions("AREAS"),
-          loadSelectOptions("TARGETS"),
-          loadSelectOptions("SELLERS"),
-          loadSelectOptions("STATUSES"),
-        ]);
-      setCategories(cats);
-      setAreas(areasData);
-      // Lineupの選択肢をTargetで使用（Lineup側から編集）
-      setLineupOptions(targetsData);
-      setTargets(targetsData); // TargetはLineupの選択肢を読み込む（編集不可）
-      setSellers(sellersData);
-      setStatuses(statusesData);
+      try {
+        const [cats, areasData, targetsData, sellersData, statusesData] =
+          await Promise.all([
+            loadSelectOptions("CATEGORIES"),
+            loadSelectOptions("AREAS"),
+            loadSelectOptions("TARGETS"),
+            loadSelectOptions("SELLERS"),
+            loadSelectOptions("STATUSES"),
+          ]);
+        setCategories(cats);
+        setAreas(areasData);
+        // Lineupの選択肢をTargetで使用（Lineup側から編集）
+        setLineupOptions(targetsData);
+        setTargets(targetsData); // TargetはLineupの選択肢を読み込む（編集不可）
+        setSellers(sellersData);
+        setStatuses(statusesData);
+      } catch (error) {
+        console.error("Error loading select options:", error);
+      } finally {
+        setOptionsLoaded(true);
+      }
     };
     loadOptions();
   }, []);
@@ -118,8 +125,8 @@ export default function EditScheduleScreen() {
   // 既存データを読み込む
   useEffect(() => {
     if (!id) return;
-    // 選択肢が読み込まれるまで待つ
-    if (targets.length === 0 || lineupOptions.length === 0) return;
+    // 選択肢の読み込みが完了するまで待つ（空でもOK）
+    if (!optionsLoaded) return;
 
     const fetchSchedule = async () => {
       try {
@@ -146,23 +153,21 @@ export default function EditScheduleScreen() {
         setNotes(found.notes || "");
         setCategory(found.category || null);
         
-        // Target: 既存の選択肢に存在するかチェック
+        // Target: 既存の選択肢に存在する場合はそのまま使用、存在しない場合でもスケジュールの値を表示
         const targetOptionLabels = targets.map(opt => opt.label);
         console.log("Edit - Target options:", targetOptionLabels);
         console.log("Edit - Found target:", found.target);
-        const validTarget = found.target && targetOptionLabels.includes(found.target) ? found.target : null;
+        // 選択肢に存在する場合はそのまま使用、存在しない場合でもスケジュールの値を表示
+        const validTarget = found.target || null;
         console.log("Edit - Valid target:", validTarget);
         setTarget(validTarget);
         
-        // Lineup: カンマ区切りの値を既存の選択肢でフィルタリング
+        // Lineup: カンマ区切りの値をそのまま表示（選択肢に存在しない場合でも表示）
         const lineupOptionLabels = lineupOptions.map(opt => opt.label);
         console.log("Edit - Lineup options:", lineupOptionLabels);
         if (found.lineup) {
-          const lineupValues = found.lineup.split(",").map(v => v.trim()).filter(v => v);
-          console.log("Edit - Lineup values:", lineupValues);
-          const validLineupValues = lineupValues.filter(v => lineupOptionLabels.includes(v));
-          console.log("Edit - Valid lineup values:", validLineupValues);
-          setLineup(validLineupValues.length > 0 ? validLineupValues.join(", ") : "");
+          // 選択肢に存在しない場合でも、スケジュールの値をそのまま表示
+          setLineup(found.lineup);
         } else {
           setLineup("");
         }
@@ -183,7 +188,7 @@ export default function EditScheduleScreen() {
     };
 
     fetchSchedule();
-  }, [id, router, targets, lineupOptions]);
+  }, [id, router, optionsLoaded, targets, lineupOptions]);
 
   const handleSubmit = async () => {
     if (!id) return;
