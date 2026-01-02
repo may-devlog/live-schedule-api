@@ -3128,6 +3128,31 @@ async fn save_select_options(
 
     let now = Utc::now().to_rfc3339();
 
+    // ユーザーIDが存在するか確認
+    let user_id_exists: Option<(i64,)> = sqlx::query_as("SELECT id FROM users WHERE id = ?")
+        .bind(user.user_id as i64)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| {
+            eprintln!("[SaveSelectOptions] Failed to check user existence: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            )
+        })?;
+    
+    if user_id_exists.is_none() {
+        eprintln!("[SaveSelectOptions] User ID {} does not exist in users table", user.user_id);
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: format!("User ID {} does not exist", user.user_id),
+            }),
+        ));
+    }
+    
     // INSERT OR REPLACEを使用して、既存のレコードがあれば更新、なければ挿入
     let result = sqlx::query(
         r#"
@@ -3138,7 +3163,7 @@ async fn save_select_options(
           updated_at = ?
         "#
     )
-    .bind(user.user_id)
+    .bind(user.user_id as i64)
     .bind(&option_type)
     .bind(&options_json)
     .bind(&now)
