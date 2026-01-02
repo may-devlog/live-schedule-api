@@ -15,7 +15,7 @@ use sqlx::{Pool, Sqlite};
 use std::net::SocketAddr;
 use tower_http::cors::{Any, AllowOrigin, CorsLayer};
 use resend_rs::types::CreateEmailBaseOptions;
-use resend_rs::Resend;
+use resend_rs::{Resend, Result};
 use reqwest;
 
 // ====== 認証関連の型定義 ======
@@ -182,7 +182,7 @@ async fn send_verification_email(email: &str, token: &str) {
     }
 }
 
-async fn send_password_reset_email(email: &str, token: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn send_password_reset_email(email: &str, token: &str, api_key: &str) -> Result<()> {
     let base_url = get_base_url();
     let reset_url = format!("{}/reset-password?token={}", base_url, urlencoding::encode(token));
     
@@ -191,19 +191,15 @@ async fn send_password_reset_email(email: &str, token: &str) -> Result<(), Box<d
         reset_url, reset_url
     );
     
-    // 環境変数からResend APIキーを取得
-    let api_key = std::env::var("RESEND_API_KEY")
-        .map_err(|_| "RESEND_API_KEY environment variable is not set")?;
-    
-    let resend = Resend::new(&api_key);
+    let resend = Resend::new(api_key);
     let from = "onboarding@resend.dev";
     let to = [email];
     let subject = "パスワードリセット";
     
-    let email_options = CreateEmailBaseOptions::new(from, to, subject)
+    let email = CreateEmailBaseOptions::new(from, to, subject)
         .with_html(&email_body);
     
-    resend.emails.send(email_options).await?;
+    let _email = resend.emails.send(email).await?;
     
     Ok(())
 }
@@ -1001,7 +997,18 @@ async fn request_password_reset(
     println!("[PASSWORD_RESET] Sending password reset email to: {}", user.email);
     println!("[PASSWORD_RESET] Reset token generated: {}", reset_token);
     eprintln!("[PASSWORD_RESET] About to call send_password_reset_email");
-    send_password_reset_email(&user.email, &reset_token).await
+    let api_key = std::env::var("RESEND_API_KEY")
+        .map_err(|_| {
+            eprintln!("[PASSWORD_RESET] RESEND_API_KEY not found");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "メール送信の設定が正しくありません".to_string(),
+                }),
+            )
+        })?;
+    
+    send_password_reset_email(&user.email, &reset_token, &api_key).await
         .map_err(|e| {
             eprintln!("[PASSWORD_RESET] Failed to send password reset email: {:?}", e);
             (
@@ -1010,8 +1017,7 @@ async fn request_password_reset(
                     error: "メールの送信に失敗しました".to_string(),
                 }),
             )
-        )
-    })?;
+        })?;
     eprintln!("[PASSWORD_RESET] send_password_reset_email completed");
 
     Ok(Json(PasswordResetResponse {
