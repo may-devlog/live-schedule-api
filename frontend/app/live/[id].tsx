@@ -163,15 +163,8 @@ export default function DetailScreen() {
             })
           );
           console.log("Valid lineup values:", validLineupOptions);
-          if (validLineupValues.length > 0) {
-            validLineup = validLineupValues.join(", ");
-            // 選択肢の色情報を取得
-            validLineupOptions = await Promise.all(
-              validLineupValues.map(async (label) => {
-                const color = await getOptionColor(label, "TARGETS");
-                return { label, color };
-              })
-            );
+          if (validLineupOptions.length > 0) {
+            validLineup = validLineupOptions.map(opt => opt.label).join(", ");
           }
         }
         setFilteredLineup(validLineup);
