@@ -47,12 +47,14 @@ export type Schedule = {
 };
 
 import { getApiUrl } from "../utils/api";
+import { ScheduleCalendar } from "../components/ScheduleCalendar";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { isAuthenticated, login, logout, email, changeEmail } = useAuth();
 
   const [nextSchedules, setNextSchedules] = useState<Schedule[]>([]);
+  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [loadingNext, setLoadingNext] = useState(false);
   const [errorNext, setErrorNext] = useState<string | null>(null);
@@ -79,6 +81,9 @@ export default function HomeScreen() {
       }
       const data: Schedule[] = await res.json();
       console.log("Public schedules received:", data.length, "items");
+      
+      // 全スケジュールを保存（カレンダー用）
+      setAllSchedules(data);
       
       // データから存在する年を抽出
       const years = new Set<number>();
@@ -300,6 +305,9 @@ export default function HomeScreen() {
           <Text style={styles.newButtonText}>+ New Live</Text>
         </TouchableOpacity>
       )}
+
+      {/* カレンダー */}
+      <ScheduleCalendar schedules={allSchedules} />
 
       <Text style={styles.sectionTitle}>NEXT</Text>
       {loadingNext && <ActivityIndicator color="#333333" />}
