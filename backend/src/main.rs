@@ -3206,7 +3206,7 @@ async fn save_select_options(
     
     let result = if existing.is_some() {
         // 既存のレコードを更新
-        eprintln!("[SaveSelectOptions] Updating existing record for user_id: {}, option_type: {}", user_id_i64, option_type);
+        eprintln!("[SaveSelectOptions] Updating existing record for user_id: {}, option_type: {}", actual_user_id, option_type);
         sqlx::query(
             r#"
             UPDATE select_options
