@@ -3110,8 +3110,9 @@ async fn save_select_options(
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<SelectOptionsRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
-    eprintln!("[SaveSelectOptions] User ID: {}, Option Type: {}, Options Count: {}", 
-        user.user_id, option_type, payload.options.len());
+    let user_id_i64 = user.user_id as i64;
+    eprintln!("[SaveSelectOptions] User ID (i32): {}, User ID (i64): {}, Option Type: {}, Options Count: {}", 
+        user.user_id, user_id_i64, option_type, payload.options.len());
     
     let options_json = serde_json::to_string(&payload.options)
         .map_err(|e| {
@@ -3129,8 +3130,9 @@ async fn save_select_options(
     let now = Utc::now().to_rfc3339();
 
     // ユーザーIDが存在するか確認
+    eprintln!("[SaveSelectOptions] Checking if user_id {} exists in users table", user_id_i64);
     let user_id_exists: Option<(i64,)> = sqlx::query_as("SELECT id FROM users WHERE id = ?")
-        .bind(user.user_id as i64)
+        .bind(user_id_i64)
         .fetch_optional(&pool)
         .await
         .map_err(|e| {
@@ -3144,7 +3146,13 @@ async fn save_select_options(
         })?;
     
     if user_id_exists.is_none() {
-        eprintln!("[SaveSelectOptions] User ID {} does not exist in users table", user.user_id);
+        eprintln!("[SaveSelectOptions] User ID {} does not exist in users table", user_id_i64);
+        // すべてのユーザーIDを確認
+        let all_users: Vec<(i64, String)> = sqlx::query_as("SELECT id, email FROM users")
+            .fetch_all(&pool)
+            .await
+            .unwrap_or_default();
+        eprintln!("[SaveSelectOptions] All users in database: {:?}", all_users);
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse {
@@ -3153,11 +3161,14 @@ async fn save_select_options(
         ));
     }
     
+    eprintln!("[SaveSelectOptions] User ID {} exists in users table", user_id_i64);
+    
     // 既存のレコードを確認
+    eprintln!("[SaveSelectOptions] Checking for existing record: user_id={}, option_type={}", user_id_i64, option_type);
     let existing: Option<(i64,)> = sqlx::query_as(
         "SELECT id FROM select_options WHERE user_id = ? AND option_type = ?"
     )
-    .bind(user.user_id as i64)
+    .bind(user_id_i64)
     .bind(&option_type)
     .fetch_optional(&pool)
     .await
@@ -3171,9 +3182,11 @@ async fn save_select_options(
         )
     })?;
     
+    eprintln!("[SaveSelectOptions] Existing record check result: {:?}", existing);
+    
     let result = if existing.is_some() {
         // 既存のレコードを更新
-        eprintln!("[SaveSelectOptions] Updating existing record for user_id: {}, option_type: {}", user.user_id, option_type);
+        eprintln!("[SaveSelectOptions] Updating existing record for user_id: {}, option_type: {}", user_id_i64, option_type);
         sqlx::query(
             r#"
             UPDATE select_options
@@ -3184,20 +3197,20 @@ async fn save_select_options(
         )
         .bind(&options_json)
         .bind(&now)
-        .bind(user.user_id as i64)
+        .bind(user_id_i64)
         .bind(&option_type)
         .execute(&pool)
         .await
     } else {
         // 新しいレコードを挿入
-        eprintln!("[SaveSelectOptions] Inserting new record for user_id: {}, option_type: {}", user.user_id, option_type);
+        eprintln!("[SaveSelectOptions] Inserting new record for user_id: {}, option_type: {}", user_id_i64, option_type);
         sqlx::query(
             r#"
             INSERT INTO select_options (user_id, option_type, options_json, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?)
             "#
         )
-        .bind(user.user_id as i64)
+        .bind(user_id_i64)
         .bind(&option_type)
         .bind(&options_json)
         .bind(&now)
