@@ -18,6 +18,76 @@ interface ScheduleCalendarProps {
   schedules: Schedule[];
 }
 
+// 祝日を判定する関数
+function isHoliday(year: number, month: number, day: number): boolean {
+  const date = new Date(year, month, day);
+  const dayOfWeek = date.getDay();
+  
+  // 固定祝日
+  // 元日
+  if (month === 0 && day === 1) return true;
+  // 建国記念の日
+  if (month === 1 && day === 11) return true;
+  // 昭和の日
+  if (month === 3 && day === 29) return true;
+  // 憲法記念日
+  if (month === 4 && day === 3) return true;
+  // みどりの日
+  if (month === 4 && day === 4) return true;
+  // こどもの日
+  if (month === 4 && day === 5) return true;
+  // 山の日（2020年以降）
+  if (month === 7 && day === 11 && year >= 2020) return true;
+  // 文化の日
+  if (month === 10 && day === 3) return true;
+  // 勤労感謝の日
+  if (month === 10 && day === 23) return true;
+  
+  // 天皇誕生日（2020年以降は2月23日、それ以前は12月23日）
+  if (year >= 2020 && month === 1 && day === 23) return true;
+  if (year < 2020 && month === 11 && day === 23) return true;
+  
+  // 春分の日を計算
+  const springEquinox = Math.floor(20.8431 + 0.242194 * (year - 1980)) - Math.floor((year - 1980) / 4);
+  if (month === 2 && day === springEquinox) return true;
+  
+  // 秋分の日を計算
+  const autumnEquinox = Math.floor(23.2488 + 0.242194 * (year - 1980)) - Math.floor((year - 1980) / 4);
+  if (month === 8 && day === autumnEquinox) return true;
+  
+  // 成人の日（1月第2月曜日）
+  if (month === 0) {
+    const firstMonday = (8 - new Date(year, 0, 1).getDay()) % 7 || 7;
+    if (day === firstMonday + 7) return true;
+  }
+  
+  // 海の日（7月第3月曜日、2020年は7月23日、2021年は7月22日）
+  if (month === 6) {
+    if (year === 2020 && day === 23) return true;
+    if (year === 2021 && day === 22) return true;
+    if (year >= 2022) {
+      const firstMonday = (8 - new Date(year, 6, 1).getDay()) % 7 || 7;
+      if (day === firstMonday + 14) return true;
+    }
+  }
+  
+  // 敬老の日（9月第3月曜日）
+  if (month === 8) {
+    const firstMonday = (8 - new Date(year, 8, 1).getDay()) % 7 || 7;
+    if (day === firstMonday + 14) return true;
+  }
+  
+  // スポーツの日（10月第2月曜日、2020年は7月24日、2021年は7月23日）
+  if (year === 2020 && month === 6 && day === 24) return true;
+  if (year === 2021 && month === 6 && day === 23) return true;
+  if (year >= 2022 && month === 9) {
+    const firstMonday = (8 - new Date(year, 9, 1).getDay()) % 7 || 7;
+    if (day === firstMonday + 7) return true;
+  }
+  
+  return false;
+}
+
 export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -177,6 +247,7 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
           const daySchedules = schedulesByDate[dateString] || [];
           const isToday = todayDay === day;
           const hasSchedule = daySchedules.length > 0;
+          const isHolidayDay = isHoliday(year, month, day);
 
           return (
             <TouchableOpacity
@@ -192,9 +263,8 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
               <Text
                 style={[
                   styles.dayText,
-                  isToday && styles.todayText,
                   index % 7 === 5 && styles.saturdayText,
-                  index % 7 === 6 && styles.sundayText,
+                  (index % 7 === 6 || isHolidayDay) && styles.sundayText,
                   hasSchedule && styles.hasScheduleText,
                 ]}
               >
@@ -354,10 +424,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
     fontWeight: "500",
-  },
-  todayText: {
-    color: "#1976d2",
-    fontWeight: "bold",
   },
   hasScheduleText: {
     fontWeight: "600",
