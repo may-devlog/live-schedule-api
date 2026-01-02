@@ -61,7 +61,13 @@ EOF
     
     # アプリケーションを停止してからデータベースをアップロード
     echo "アプリケーションを停止中..."
-    flyctl apps suspend "$APP_NAME" || echo "警告: アプリケーションの停止に失敗しましたが、続行します..."
+    flyctl scale count 0 -a "$APP_NAME" --yes || echo "警告: アプリケーションの停止に失敗しましたが、続行します..."
+    
+    sleep 5
+    
+    # SSH経由で既存のデータベースファイルを削除
+    echo "既存のデータベースファイルを削除中..."
+    flyctl ssh console -a "$APP_NAME" -C "rm -f $REMOTE_DB" || echo "警告: ファイルの削除に失敗しましたが、続行します..."
     
     sleep 2
     
@@ -74,12 +80,12 @@ EOF
     if [ $? -eq 0 ]; then
         echo "✓ データベースのアップロードが完了しました"
         echo "アプリケーションを再起動中..."
-        flyctl apps resume "$APP_NAME" || flyctl apps restart "$APP_NAME"
+        flyctl scale count 1 -a "$APP_NAME" --yes
         echo "✓ 完了しました"
     else
         echo "✗ データベースのアップロードに失敗しました"
         echo "アプリケーションを再起動中..."
-        flyctl apps resume "$APP_NAME" || flyctl apps restart "$APP_NAME"
+        flyctl scale count 1 -a "$APP_NAME" --yes
         exit 1
     fi
 }
