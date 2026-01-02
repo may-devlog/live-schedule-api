@@ -195,6 +195,9 @@ async fn send_password_reset_email(email: &str, token: &str, api_key: &str) -> R
     let frontend_url = get_frontend_url();
     let reset_url = format!("{}/reset-password?token={}", frontend_url, urlencoding::encode(token));
     
+    eprintln!("[EMAIL] Frontend URL: {}", frontend_url);
+    eprintln!("[EMAIL] Reset URL: {}", reset_url);
+    
     let email_body = format!(
         r#"<p>以下のURLをクリックしてパスワードをリセットしてください:</p><p><a href="{}">{}</a></p><p>このリンクは24時間有効です。</p>"#,
         reset_url, reset_url
