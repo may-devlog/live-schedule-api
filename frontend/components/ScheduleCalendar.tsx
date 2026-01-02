@@ -11,7 +11,9 @@ import { useRouter } from "expo-router";
 import type { Schedule } from "../app/HomeScreen";
 
 const { width } = Dimensions.get("window");
-const DAY_WIDTH = width / 7;
+// コンテナのパディング（左右16pxずつ）を考慮
+const CONTAINER_PADDING = 32;
+const DAY_WIDTH = (width - CONTAINER_PADDING) / 7;
 
 interface ScheduleCalendarProps {
   schedules: Schedule[];
@@ -136,55 +138,53 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
       </View>
 
       {/* カレンダーグリッド */}
-      <ScrollView style={styles.calendarGrid}>
-        <View style={styles.calendarRow}>
-          {calendarDays.map((day, index) => {
-            if (day === null) {
-              return <View key={index} style={styles.dayCell} />;
-            }
+      <View style={styles.calendarGrid}>
+        {calendarDays.map((day, index) => {
+          if (day === null) {
+            return <View key={index} style={styles.dayCell} />;
+          }
 
-            const dateString = getDateString(day);
-            const daySchedules = schedulesByDate[dateString] || [];
-            const isToday = todayDay === day;
-            const hasSchedule = daySchedules.length > 0;
+          const dateString = getDateString(day);
+          const daySchedules = schedulesByDate[dateString] || [];
+          const isToday = todayDay === day;
+          const hasSchedule = daySchedules.length > 0;
 
-            return (
-              <TouchableOpacity
-                key={index}
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.dayCell,
+                isToday && styles.todayCell,
+                hasSchedule && styles.hasScheduleCell,
+              ]}
+              onPress={() => handleDatePress(day)}
+              activeOpacity={0.7}
+            >
+              <Text
                 style={[
-                  styles.dayCell,
-                  isToday && styles.todayCell,
-                  hasSchedule && styles.hasScheduleCell,
+                  styles.dayText,
+                  isToday && styles.todayText,
+                  index % 7 === 0 && styles.sundayText,
+                  index % 7 === 6 && styles.saturdayText,
+                  hasSchedule && styles.hasScheduleText,
                 ]}
-                onPress={() => handleDatePress(day)}
-                activeOpacity={0.7}
               >
-                <Text
-                  style={[
-                    styles.dayText,
-                    isToday && styles.todayText,
-                    index % 7 === 0 && styles.sundayText,
-                    index % 7 === 6 && styles.saturdayText,
-                    hasSchedule && styles.hasScheduleText,
-                  ]}
-                >
-                  {day}
-                </Text>
-                {hasSchedule && (
-                  <View style={styles.scheduleIndicator}>
-                    <View style={styles.scheduleDot} />
-                    {daySchedules.length > 1 && (
-                      <Text style={styles.scheduleCount}>
-                        {daySchedules.length}
-                      </Text>
-                    )}
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
+                {day}
+              </Text>
+              {hasSchedule && (
+                <View style={styles.scheduleIndicator}>
+                  <View style={styles.scheduleDot} />
+                  {daySchedules.length > 1 && (
+                    <Text style={styles.scheduleCount}>
+                      {daySchedules.length}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -247,15 +247,14 @@ const styles = StyleSheet.create({
     color: "#1976d2",
   },
   calendarGrid: {
-    maxHeight: 400,
-  },
-  calendarRow: {
     flexDirection: "row",
     flexWrap: "wrap",
+    width: "100%",
   },
   dayCell: {
     width: DAY_WIDTH,
     height: DAY_WIDTH,
+    minHeight: DAY_WIDTH,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 4,
