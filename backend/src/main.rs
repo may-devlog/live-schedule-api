@@ -182,74 +182,30 @@ async fn send_verification_email(email: &str, token: &str) {
     }
 }
 
-async fn send_password_reset_email(email: &str, token: &str) {
-    eprintln!("[EMAIL] ===== send_password_reset_email START =====");
-    eprintln!("[EMAIL] send_password_reset_email called for: {}", email);
+async fn send_password_reset_email(email: &str, token: &str) -> Result<(), Box<dyn std::error::Error>> {
     let base_url = get_base_url();
-    eprintln!("[EMAIL] Base URL: {}", base_url);
     let reset_url = format!("{}/reset-password?token={}", base_url, urlencoding::encode(token));
-    eprintln!("[EMAIL] Reset URL: {}", reset_url);
+    
+    let email_body = format!(
+        r#"<p>以下のURLをクリックしてパスワードをリセットしてください:</p><p><a href="{}">{}</a></p><p>このリンクは24時間有効です。</p>"#,
+        reset_url, reset_url
+    );
     
     // 環境変数からResend APIキーを取得
-    eprintln!("[EMAIL] Checking for RESEND_API_KEY...");
-    match std::env::var("RESEND_API_KEY") {
-        Ok(api_key) => {
-            // 本番環境: Resend APIを使用
-            eprintln!("[EMAIL] RESEND_API_KEY found, using Resend API");
-            eprintln!("[EMAIL] API key length: {} characters", api_key.len());
-            eprintln!("[EMAIL] Attempting to send password reset email to {}", email);
-        
-        let email_body = format!(
-            r#"<p>以下のURLをクリックしてパスワードをリセットしてください:</p><p><a href="{}">{}</a></p><p>このリンクは24時間有効です。</p>"#,
-            reset_url, reset_url
-        );
-        
-            let resend = Resend::new(&api_key);
-            eprintln!("[EMAIL] Resend client created");
-            let from = "onboarding@resend.dev";
-            let to = [email];
-            let subject = "パスワードリセット";
-            
-            eprintln!("[EMAIL] Creating email options: from={}, to={:?}, subject={}", from, to, subject);
-            let email_options = CreateEmailBaseOptions::new(from, to, subject)
-                .with_html(&email_body);
-            eprintln!("[EMAIL] Email options created, sending...");
-            
-            match resend.emails.send(email_options).await {
-                Ok(result) => {
-                    eprintln!("[EMAIL] Password reset email sent successfully to {}: {:?}", email, result);
-                    eprintln!("[EMAIL] ===== send_password_reset_email SUCCESS =====");
-                }
-                Err(e) => {
-                    eprintln!("[EMAIL] Failed to send password reset email to {}: {:?}", email, e);
-                    // フォールバック: コンソールに出力
-                    eprintln!("=== メール送信（フォールバック） ===");
-                    eprintln!("宛先: {}", email);
-                    eprintln!("件名: パスワードリセット");
-                    eprintln!("本文:");
-                    eprintln!("以下のURLをクリックしてパスワードをリセットしてください:");
-                    eprintln!("{}", reset_url);
-                    eprintln!("このリンクは24時間有効です。");
-                    eprintln!("===========================");
-                    eprintln!("[EMAIL] ===== send_password_reset_email FAILED =====");
-                }
-            }
-        }
-        Err(e) => {
-            // 開発環境: コンソールに出力
-            eprintln!("[EMAIL] RESEND_API_KEY not found: {:?}", e);
-            eprintln!("[EMAIL] RESEND_API_KEY not found, using development mode (console output)");
-            eprintln!("=== メール送信（開発環境） ===");
-            eprintln!("宛先: {}", email);
-            eprintln!("件名: パスワードリセット");
-            eprintln!("本文:");
-            eprintln!("以下のURLをクリックしてパスワードをリセットしてください:");
-            eprintln!("{}", reset_url);
-            eprintln!("このリンクは24時間有効です。");
-            eprintln!("===========================");
-            eprintln!("[EMAIL] ===== send_password_reset_email END (dev mode) =====");
-        }
-    }
+    let api_key = std::env::var("RESEND_API_KEY")
+        .map_err(|_| "RESEND_API_KEY environment variable is not set")?;
+    
+    let resend = Resend::new(&api_key);
+    let from = "onboarding@resend.dev";
+    let to = [email];
+    let subject = "パスワードリセット";
+    
+    let email_options = CreateEmailBaseOptions::new(from, to, subject)
+        .with_html(&email_body);
+    
+    resend.emails.send(email_options).await?;
+    
+    Ok(())
 }
 
 async fn send_email_change_verification_email(new_email: &str, token: &str) {
@@ -1045,9 +1001,18 @@ async fn request_password_reset(
     println!("[PASSWORD_RESET] Sending password reset email to: {}", user.email);
     println!("[PASSWORD_RESET] Reset token generated: {}", reset_token);
     eprintln!("[PASSWORD_RESET] About to call send_password_reset_email");
-    send_password_reset_email(&user.email, &reset_token).await;
+    send_password_reset_email(&user.email, &reset_token).await
+        .map_err(|e| {
+            eprintln!("[PASSWORD_RESET] Failed to send password reset email: {:?}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "メールの送信に失敗しました".to_string(),
+                }),
+            )
+        )
+    })?;
     eprintln!("[PASSWORD_RESET] send_password_reset_email completed");
-    println!("[PASSWORD_RESET] Password reset email function completed");
 
     Ok(Json(PasswordResetResponse {
         success: true,
