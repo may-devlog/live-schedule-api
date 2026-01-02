@@ -27,7 +27,7 @@ import { HomeButton } from "../components/HomeButton";
 
 export default function NewScheduleScreen() {
   const router = useRouter();
-  const { copyFrom, date } = useLocalSearchParams<{ copyFrom?: string; date?: string }>();
+  const { copyFrom, date: initialDate } = useLocalSearchParams<{ copyFrom?: string; date?: string }>();
   const { isAuthenticated } = useAuth();
 
   // 未ログインの場合はログイン画面にリダイレクト
@@ -112,10 +112,10 @@ export default function NewScheduleScreen() {
 
   // URLパラメータから日付を設定（copyFromがない場合のみ）
   useEffect(() => {
-    if (!copyFrom && date) {
-      setDate(date);
+    if (!copyFrom && initialDate) {
+      setDate(initialDate);
     }
-  }, [date, copyFrom]);
+  }, [initialDate, copyFrom]);
 
   // 選択肢の変更を保存
   const handleCategoriesChange = async (newCategories: SelectOption[]) => {
@@ -153,7 +153,7 @@ export default function NewScheduleScreen() {
   const [venue, setVenue] = useState("");
 
   // 任意（URLパラメータから初期値を設定）
-  const [date, setDate] = useState<string | null>(date || null);
+  const [date, setDate] = useState<string | null>(initialDate || null);
   const [openTime, setOpenTime] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
