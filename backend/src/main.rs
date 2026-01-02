@@ -183,19 +183,21 @@ async fn send_verification_email(email: &str, token: &str) {
 }
 
 async fn send_password_reset_email(email: &str, token: &str) {
-    println!("[EMAIL] send_password_reset_email called for: {}", email);
+    eprintln!("[EMAIL] ===== send_password_reset_email START =====");
+    eprintln!("[EMAIL] send_password_reset_email called for: {}", email);
     let base_url = get_base_url();
-    println!("[EMAIL] Base URL: {}", base_url);
+    eprintln!("[EMAIL] Base URL: {}", base_url);
     let reset_url = format!("{}/reset-password?token={}", base_url, urlencoding::encode(token));
-    println!("[EMAIL] Reset URL: {}", reset_url);
+    eprintln!("[EMAIL] Reset URL: {}", reset_url);
     
     // 環境変数からResend APIキーを取得
+    eprintln!("[EMAIL] Checking for RESEND_API_KEY...");
     match std::env::var("RESEND_API_KEY") {
         Ok(api_key) => {
             // 本番環境: Resend APIを使用
-            println!("[EMAIL] RESEND_API_KEY found, using Resend API");
-            println!("[EMAIL] API key length: {} characters", api_key.len());
-            println!("[EMAIL] Attempting to send password reset email to {}", email);
+            eprintln!("[EMAIL] RESEND_API_KEY found, using Resend API");
+            eprintln!("[EMAIL] API key length: {} characters", api_key.len());
+            eprintln!("[EMAIL] Attempting to send password reset email to {}", email);
         
         let email_body = format!(
             r#"<p>以下のURLをクリックしてパスワードをリセットしてください:</p><p><a href="{}">{}</a></p><p>このリンクは24時間有効です。</p>"#,
@@ -203,46 +205,50 @@ async fn send_password_reset_email(email: &str, token: &str) {
         );
         
             let resend = Resend::new(&api_key);
-            println!("[EMAIL] Resend client created");
+            eprintln!("[EMAIL] Resend client created");
             let from = "onboarding@resend.dev";
             let to = [email];
             let subject = "パスワードリセット";
             
-            println!("[EMAIL] Creating email options: from={}, to={:?}, subject={}", from, to, subject);
+            eprintln!("[EMAIL] Creating email options: from={}, to={:?}, subject={}", from, to, subject);
             let email_options = CreateEmailBaseOptions::new(from, to, subject)
                 .with_html(&email_body);
-            println!("[EMAIL] Email options created, sending...");
+            eprintln!("[EMAIL] Email options created, sending...");
             
             match resend.emails.send(email_options).await {
                 Ok(result) => {
-                    println!("[EMAIL] Password reset email sent successfully to {}: {:?}", email, result);
+                    eprintln!("[EMAIL] Password reset email sent successfully to {}: {:?}", email, result);
+                    eprintln!("[EMAIL] ===== send_password_reset_email SUCCESS =====");
                 }
                 Err(e) => {
                     eprintln!("[EMAIL] Failed to send password reset email to {}: {:?}", email, e);
                     // フォールバック: コンソールに出力
-                    println!("=== メール送信（フォールバック） ===");
-                    println!("宛先: {}", email);
-                    println!("件名: パスワードリセット");
-                    println!("本文:");
-                    println!("以下のURLをクリックしてパスワードをリセットしてください:");
-                    println!("{}", reset_url);
-                    println!("このリンクは24時間有効です。");
-                    println!("===========================");
+                    eprintln!("=== メール送信（フォールバック） ===");
+                    eprintln!("宛先: {}", email);
+                    eprintln!("件名: パスワードリセット");
+                    eprintln!("本文:");
+                    eprintln!("以下のURLをクリックしてパスワードをリセットしてください:");
+                    eprintln!("{}", reset_url);
+                    eprintln!("このリンクは24時間有効です。");
+                    eprintln!("===========================");
+                    eprintln!("[EMAIL] ===== send_password_reset_email FAILED =====");
                 }
             }
         }
         Err(e) => {
             // 開発環境: コンソールに出力
             eprintln!("[EMAIL] RESEND_API_KEY not found: {:?}", e);
-            println!("[EMAIL] RESEND_API_KEY not found, using development mode (console output)");
-        println!("=== メール送信（開発環境） ===");
-        println!("宛先: {}", email);
-        println!("件名: パスワードリセット");
-        println!("本文:");
-        println!("以下のURLをクリックしてパスワードをリセットしてください:");
-        println!("{}", reset_url);
-        println!("このリンクは24時間有効です。");
-        println!("===========================");
+            eprintln!("[EMAIL] RESEND_API_KEY not found, using development mode (console output)");
+            eprintln!("=== メール送信（開発環境） ===");
+            eprintln!("宛先: {}", email);
+            eprintln!("件名: パスワードリセット");
+            eprintln!("本文:");
+            eprintln!("以下のURLをクリックしてパスワードをリセットしてください:");
+            eprintln!("{}", reset_url);
+            eprintln!("このリンクは24時間有効です。");
+            eprintln!("===========================");
+            eprintln!("[EMAIL] ===== send_password_reset_email END (dev mode) =====");
+        }
     }
 }
 
@@ -962,9 +968,11 @@ async fn request_password_reset(
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<RequestPasswordResetRequest>,
 ) -> Result<Json<PasswordResetResponse>, (StatusCode, Json<ErrorResponse>)> {
-    println!("[PASSWORD_RESET] Request received for email: {}", payload.email);
+    eprintln!("[PASSWORD_RESET] ===== Request received =====");
+    eprintln!("[PASSWORD_RESET] Request received for email: {}", payload.email);
     
     // ユーザーを検索
+    eprintln!("[PASSWORD_RESET] Querying database for user...");
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
         "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ?",
     )
@@ -983,8 +991,9 @@ async fn request_password_reset(
 
     // ユーザーが存在しない場合はエラーを返す
     if user.is_none() {
-        println!("[PASSWORD_RESET] User not found for email: {}", payload.email);
+        eprintln!("[PASSWORD_RESET] User not found for email: {}", payload.email);
         eprintln!("[PASSWORD_RESET] Returning 404 NOT_FOUND for unregistered email: {}", payload.email);
+        eprintln!("[PASSWORD_RESET] ===== Request END (404) =====");
         return Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
@@ -994,7 +1003,7 @@ async fn request_password_reset(
     }
 
     let user = user.unwrap();
-    println!("[PASSWORD_RESET] User found: id={}, email={}", user.id, user.email);
+    eprintln!("[PASSWORD_RESET] User found: id={}, email={}", user.id, user.email);
 
     // リセットトークンを生成
     let reset_token = generate_token();
@@ -1026,7 +1035,9 @@ async fn request_password_reset(
     // メール送信
     println!("[PASSWORD_RESET] Sending password reset email to: {}", user.email);
     println!("[PASSWORD_RESET] Reset token generated: {}", reset_token);
+    eprintln!("[PASSWORD_RESET] About to call send_password_reset_email");
     send_password_reset_email(&user.email, &reset_token).await;
+    eprintln!("[PASSWORD_RESET] send_password_reset_email completed");
     println!("[PASSWORD_RESET] Password reset email function completed");
 
     Ok(Json(PasswordResetResponse {
