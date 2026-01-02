@@ -20,9 +20,6 @@ interface ScheduleCalendarProps {
 
 // 祝日を判定する関数
 function isHoliday(year: number, month: number, day: number): boolean {
-  const date = new Date(year, month, day);
-  const dayOfWeek = date.getDay();
-  
   // 固定祝日
   // 元日
   if (month === 0 && day === 1) return true;
@@ -55,44 +52,32 @@ function isHoliday(year: number, month: number, day: number): boolean {
   const autumnEquinox = Math.floor(23.2488 + 0.242194 * (year - 1980)) - Math.floor((year - 1980) / 4);
   if (month === 8 && day === autumnEquinox) return true;
   
+  // 第N月曜日を計算するヘルパー関数
+  const getNthMonday = (year: number, month: number, n: number): number => {
+    const firstDayOfWeek = new Date(year, month, 1).getDay();
+    // 月曜日=1, 日曜日=0なので、最初の月曜日を計算
+    // 1日が月曜日(1)なら1、火曜日(2)なら7、水曜日(3)なら6、...、日曜日(0)なら2
+    const firstMonday = firstDayOfWeek === 0 ? 2 : firstDayOfWeek === 1 ? 1 : (9 - firstDayOfWeek);
+    return firstMonday + (n - 1) * 7;
+  };
+  
   // 成人の日（1月第2月曜日）
-  if (month === 0) {
-    const firstDayOfWeek = new Date(year, 0, 1).getDay();
-    // 最初の月曜日を計算: 月曜日=1なので、1日の曜日から逆算
-    const firstMonday = firstDayOfWeek === 0 ? 2 : (9 - firstDayOfWeek) % 7 || 7;
-    const secondMonday = firstMonday + 7;
-    if (day === secondMonday) return true;
-  }
+  if (month === 0 && day === getNthMonday(year, 0, 2)) return true;
   
   // 海の日（7月第3月曜日、2020年は7月23日、2021年は7月22日）
   if (month === 6) {
     if (year === 2020 && day === 23) return true;
     if (year === 2021 && day === 22) return true;
-    if (year >= 2022) {
-      const firstDayOfWeek = new Date(year, 6, 1).getDay();
-      const firstMonday = firstDayOfWeek === 0 ? 2 : (9 - firstDayOfWeek) % 7 || 7;
-      const thirdMonday = firstMonday + 14;
-      if (day === thirdMonday) return true;
-    }
+    if (year >= 2022 && day === getNthMonday(year, 6, 3)) return true;
   }
   
   // 敬老の日（9月第3月曜日）
-  if (month === 8) {
-    const firstDayOfWeek = new Date(year, 8, 1).getDay();
-    const firstMonday = firstDayOfWeek === 0 ? 2 : (9 - firstDayOfWeek) % 7 || 7;
-    const thirdMonday = firstMonday + 14;
-    if (day === thirdMonday) return true;
-  }
+  if (month === 8 && day === getNthMonday(year, 8, 3)) return true;
   
   // スポーツの日（10月第2月曜日、2020年は7月24日、2021年は7月23日）
   if (year === 2020 && month === 6 && day === 24) return true;
   if (year === 2021 && month === 6 && day === 23) return true;
-  if (year >= 2022 && month === 9) {
-    const firstDayOfWeek = new Date(year, 9, 1).getDay();
-    const firstMonday = firstDayOfWeek === 0 ? 2 : (9 - firstDayOfWeek) % 7 || 7;
-    const secondMonday = firstMonday + 7;
-    if (day === secondMonday) return true;
-  }
+  if (year >= 2022 && month === 9 && day === getNthMonday(year, 9, 2)) return true;
   
   return false;
 }
