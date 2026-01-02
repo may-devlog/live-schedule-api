@@ -54,12 +54,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { isAuthenticated, login, logout, email, changeEmail } = useAuth();
   
-  // ログイン必須化：未ログイン時はログイン画面にリダイレクト
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace('/login');
-    }
-  }, [isAuthenticated, router]);
+  // ログイン必須化は index.tsx で処理するため、ここでは削除
 
   // 共有化状態の取得
   useEffect(() => {
