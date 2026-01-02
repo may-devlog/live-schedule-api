@@ -30,7 +30,7 @@ const DEFAULT_AREAS = [
   "徳島", "香川", "愛媛", "高知", "福岡", "佐賀", "長崎",
   "熊本", "大分", "宮崎", "鹿児島", "沖縄"
 ];
-const DEFAULT_TARGETS = ["Artist A"];
+const DEFAULT_TARGETS: string[] = [];
 const DEFAULT_SELLERS = ["チケットぴあ", "イープラス", "ローチケ", "その他"];
 const DEFAULT_STATUSES = ["Canceled", "Pending", "Keep", "Done"];
 const DEFAULT_TRANSPORTATIONS = ["🚄 新幹線", "✈️ 飛行機", "🚃 在来線", "🚌 バス", "🚗 車", "🚕 タクシー", "その他"];
