@@ -81,7 +81,10 @@ export default function ForgotPasswordScreen() {
         console.error('[ForgotPassword] Error data:', errorData);
         
         // エラーメッセージを画面に表示（requestedをtrueにしない）
-        setError(errorData.error || 'リセット要求に失敗しました');
+        const errorMessage = errorData.error || 'リセット要求に失敗しました';
+        console.error('[ForgotPassword] Setting error message:', errorMessage);
+        setError(errorMessage);
+        setRequested(false); // 明示的にfalseに設定
         setLoading(false);
         return; // ここで処理を終了
       }
