@@ -13,57 +13,59 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 // アイコンは絵文字を使用（フォントに依存しない）
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [shareId, setShareId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login } = useAuth();
+  const { register } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async () => {
-    if (!email.trim() || !password.trim()) {
-      setError('メールアドレスとパスワードを入力してください');
+    if (!email.trim() || !password.trim() || !shareId.trim()) {
+      setError('メールアドレス、パスワード、ユーザーIDを入力してください');
+      return;
+    }
+
+    // ユーザーIDのバリデーション
+    if (shareId.length < 3 || shareId.length > 20) {
+      setError('ユーザーIDは3文字以上20文字以下で入力してください');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(shareId)) {
+      setError('ユーザーIDは英数字、ハイフン、アンダースコアのみ使用できます');
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
-      const result = await login(email.trim(), password);
-      if (!result.email_verified) {
-        setError('メールアドレスの確認が完了していません。登録時に送信されたメールを確認してください。');
-        return;
-      }
-      router.replace('/(tabs)');
+      await register(email.trim(), password, shareId.trim());
+      Alert.alert(
+        '登録完了',
+        '登録が完了しました。メールアドレス確認のメールを送信しました。メールを確認してください。',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/login'),
+          },
+        ]
+      );
     } catch (error: any) {
-      console.error('[LoginScreen] Auth error:', error);
-      console.error('[LoginScreen] Error type:', error?.constructor?.name);
-      console.error('[LoginScreen] Error message:', error?.message);
-      console.error('[LoginScreen] Error stack:', error?.stack);
-      
-      // セキュリティ上の理由から、どちらが間違っているかわからないメッセージに統一
-      const errorMessage = error?.message || '認証に失敗しました';
-      if (errorMessage.includes('メールアドレス') || errorMessage.includes('パスワード')) {
-        setError('メールアドレスまたはパスワードが正しくありません');
-      } else {
-        setError(errorMessage);
-      }
+      console.error('[RegisterScreen] Registration error:', error);
+      setError(error?.message || '登録に失敗しました');
     } finally {
-      console.log('[LoginScreen] Setting loading to false');
       setLoading(false);
     }
-  };
-
-  const handleForgotPassword = () => {
-    router.push('/forgot-password');
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.form}>
-        <Text style={styles.title}>ログイン</Text>
+        <Text style={styles.title}>新規登録</Text>
 
         <TextInput
           style={styles.input}
@@ -71,9 +73,22 @@ export default function LoginScreen() {
           value={email}
           onChangeText={(text) => {
             setEmail(text);
-            setError(null); // 入力時にエラーをクリア
+            setError(null);
           }}
           keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          editable={!loading}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="ユーザーID（3-20文字、英数字・ハイフン・アンダースコア）"
+          value={shareId}
+          onChangeText={(text) => {
+            setShareId(text);
+            setError(null);
+          }}
           autoCapitalize="none"
           autoCorrect={false}
           editable={!loading}
@@ -86,7 +101,7 @@ export default function LoginScreen() {
             value={password}
             onChangeText={(text) => {
               setPassword(text);
-              setError(null); // 入力時にエラーをクリア
+              setError(null);
             }}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
@@ -116,27 +131,17 @@ export default function LoginScreen() {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>ログイン</Text>
+            <Text style={styles.buttonText}>登録</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.forgotPasswordButton}
-          onPress={handleForgotPassword}
+          style={styles.backButton}
+          onPress={() => router.back()}
           disabled={loading}
         >
-          <Text style={styles.forgotPasswordText}>
-            パスワードを忘れた場合
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.registerButton}
-          onPress={() => router.push('/register')}
-          disabled={loading}
-        >
-          <Text style={styles.registerButtonText}>
-            新規登録
+          <Text style={styles.backButtonText}>
+            ログイン画面に戻る
           </Text>
         </TouchableOpacity>
       </View>
@@ -213,24 +218,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  forgotPasswordButton: {
-    marginTop: 8,
+  backButton: {
+    marginTop: 16,
     padding: 8,
   },
-  forgotPasswordText: {
+  backButtonText: {
     color: '#007AFF',
     textAlign: 'center',
     fontSize: 14,
-  },
-  registerButton: {
-    marginTop: 8,
-    padding: 8,
-  },
-  registerButtonText: {
-    color: '#007AFF',
-    textAlign: 'center',
-    fontSize: 14,
-    fontWeight: '600',
   },
   errorText: {
     color: '#d93025',

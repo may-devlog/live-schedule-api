@@ -138,3 +138,4 @@ git push
 2. CORS設定を確認（`ALLOWED_ORIGIN`が正しく設定されているか）
 
 
+

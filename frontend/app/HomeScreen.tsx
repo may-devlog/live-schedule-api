@@ -53,6 +53,95 @@ import { ScheduleCalendar } from "../components/ScheduleCalendar";
 export default function HomeScreen() {
   const router = useRouter();
   const { isAuthenticated, login, logout, email, changeEmail } = useAuth();
+  
+  // ログイン必須化：未ログイン時はログイン画面にリダイレクト
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  // 共有化状態の取得
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchSharingStatus();
+    }
+  }, [isAuthenticated]);
+
+  const fetchSharingStatus = async () => {
+    try {
+      const res = await authenticatedFetch(getApiUrl("/auth/sharing-status"));
+      if (res.ok) {
+        const data = await res.json();
+        setSharingEnabled(data.sharing_enabled);
+        setShareId(data.share_id);
+        setSharingUrl(data.sharing_url);
+      }
+    } catch (error) {
+      console.error("[HomeScreen] Failed to fetch sharing status:", error);
+    }
+  };
+
+  const handleToggleSharing = async () => {
+    try {
+      const res = await authenticatedFetch(getApiUrl("/auth/toggle-sharing"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: !sharingEnabled }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSharingEnabled(data.sharing_enabled);
+        await fetchSharingStatus(); // URLを更新
+      } else {
+        const errorData = await res.json();
+        Alert.alert("エラー", errorData.error || "共有化の切り替えに失敗しました");
+      }
+    } catch (error: any) {
+      Alert.alert("エラー", "共有化の切り替えに失敗しました");
+    }
+  };
+
+  const handleChangeShareId = async () => {
+    if (!newShareId.trim()) {
+      Alert.alert("エラー", "ユーザーIDを入力してください");
+      return;
+    }
+
+    if (newShareId.length < 3 || newShareId.length > 20) {
+      Alert.alert("エラー", "ユーザーIDは3文字以上20文字以下で入力してください");
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(newShareId)) {
+      Alert.alert("エラー", "ユーザーIDは英数字、ハイフン、アンダースコアのみ使用できます");
+      return;
+    }
+
+    try {
+      setChangeShareIdLoading(true);
+      const res = await authenticatedFetch(getApiUrl("/auth/change-share-id"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ share_id: newShareId.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setShareId(data.share_id);
+        setShowChangeShareIdModal(false);
+        setNewShareId("");
+        await fetchSharingStatus(); // URLを更新
+        Alert.alert("成功", "ユーザーIDが変更されました");
+      } else {
+        const errorData = await res.json();
+        Alert.alert("エラー", errorData.error || "ユーザーIDの変更に失敗しました");
+      }
+    } catch (error: any) {
+      Alert.alert("エラー", "ユーザーIDの変更に失敗しました");
+    } finally {
+      setChangeShareIdLoading(false);
+    }
+  };
 
   const [nextSchedules, setNextSchedules] = useState<Schedule[]>([]);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
@@ -68,6 +157,12 @@ export default function HomeScreen() {
   const [newEmail, setNewEmail] = useState("");
   const [changeEmailLoading, setChangeEmailLoading] = useState(false);
   const [showUserMenuModal, setShowUserMenuModal] = useState(false);
+  const [sharingEnabled, setSharingEnabled] = useState(false);
+  const [shareId, setShareId] = useState<string | null>(null);
+  const [sharingUrl, setSharingUrl] = useState<string | null>(null);
+  const [showChangeShareIdModal, setShowChangeShareIdModal] = useState(false);
+  const [newShareId, setNewShareId] = useState("");
+  const [changeShareIdLoading, setChangeShareIdLoading] = useState(false);
 
   const fetchUpcoming = async () => {
     try {
@@ -523,6 +618,44 @@ export default function HomeScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              style={[styles.menuButton, { marginBottom: 12 }]}
+              onPress={() => {
+                setShowUserMenuModal(false);
+                setShowChangeShareIdModal(true);
+              }}
+            >
+              <Text style={styles.menuButtonText}>🆔 ユーザーID変更</Text>
+            </TouchableOpacity>
+
+            <View style={[styles.menuButton, { marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+              <Text style={styles.menuButtonText}>🔗 共有化</Text>
+              <TouchableOpacity
+                onPress={handleToggleSharing}
+                style={[styles.toggleButton, sharingEnabled && styles.toggleButtonActive]}
+              >
+                <Text style={styles.toggleButtonText}>{sharingEnabled ? 'ON' : 'OFF'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {sharingUrl && sharingEnabled && (
+              <View style={styles.sharingUrlContainer}>
+                <Text style={styles.sharingUrlLabel}>共有URL:</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (Platform.OS === 'web' && typeof window !== 'undefined' && navigator.clipboard) {
+                      navigator.clipboard.writeText(sharingUrl);
+                      Alert.alert("コピーしました", sharingUrl);
+                    } else {
+                      Alert.alert("共有URL", sharingUrl);
+                    }
+                  }}
+                >
+                  <Text style={styles.sharingUrlText} numberOfLines={1}>{sharingUrl}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity
               style={[styles.menuButton, styles.menuButtonDanger]}
               onPress={() => {
                 setShowUserMenuModal(false);
@@ -546,6 +679,60 @@ export default function HomeScreen() {
             </TouchableOpacity>
       </View>
     </View>
+      </Modal>
+
+      {/* ユーザーID変更モーダル */}
+      <Modal
+        visible={showChangeShareIdModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowChangeShareIdModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>ユーザーID変更</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowChangeShareIdModal(false);
+                  setNewShareId("");
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Text style={{ fontSize: 24 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ marginBottom: 8, color: "#666" }}>
+              現在のユーザーID: {shareId || '未設定'}
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="新しいユーザーID（3-20文字、英数字・ハイフン・アンダースコア）"
+              value={newShareId}
+              onChangeText={setNewShareId}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <Text style={{ marginTop: 8, marginBottom: 16, fontSize: 12, color: "#666" }}>
+              ユーザーIDは共有URLに使用されます。変更すると共有URLも変更されます。
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.loginSubmitButton, changeShareIdLoading && styles.loginSubmitButtonDisabled]}
+              onPress={handleChangeShareId}
+              disabled={changeShareIdLoading}
+            >
+              {changeShareIdLoading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.loginSubmitButtonText}>変更</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </>
   );
@@ -755,5 +942,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     marginBottom: 8,
+  },
+  toggleButton: {
+    backgroundColor: "#e9e9e7",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  toggleButtonActive: {
+    backgroundColor: "#007AFF",
+  },
+  toggleButtonText: {
+    color: "#37352f",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  sharingUrlContainer: {
+    marginTop: 12,
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 4,
+  },
+  sharingUrlLabel: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 4,
+  },
+  sharingUrlText: {
+    fontSize: 12,
+    color: "#007AFF",
+    textDecorationLine: "underline",
   },
 });

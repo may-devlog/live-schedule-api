@@ -35,6 +35,7 @@ struct LoginRequest {
 struct RegisterRequest {
     email: String,
     password: String,
+    share_id: Option<String>, // ユーザーID（オプション、初回登録時）
 }
 
 #[derive(Debug, Deserialize)]
@@ -61,6 +62,16 @@ struct ChangeEmailRequest {
 #[derive(Debug, Deserialize)]
 struct VerifyEmailChangeRequest {
     token: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ChangeShareIdRequest {
+    share_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ToggleSharingRequest {
+    enabled: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -107,6 +118,8 @@ struct UserRow {
     email_change_token: Option<String>,
     email_change_expires: Option<String>,
     new_email: Option<String>,
+    share_id: Option<String>,
+    sharing_enabled: i32, // 0/1
     created_at: Option<String>,
     updated_at: Option<String>,
 }
@@ -748,11 +761,78 @@ async fn register(
         ));
     }
     
+    // share_idのバリデーション
+    let share_id = if let Some(ref sid) = payload.share_id {
+        let sid = sid.trim();
+        if sid.is_empty() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: "ユーザーIDは必須です".to_string(),
+                }),
+            ));
+        }
+        
+        // ユーザーIDの形式チェック（英数字、ハイフン、アンダースコアのみ、3-20文字）
+        if sid.len() < 3 || sid.len() > 20 {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: "ユーザーIDは3文字以上20文字以下で入力してください".to_string(),
+                }),
+            ));
+        }
+        
+        if !sid.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: "ユーザーIDは英数字、ハイフン、アンダースコアのみ使用できます".to_string(),
+                }),
+            ));
+        }
+        
+        // ユニーク性チェック
+        let existing_share_id: Option<(i64,)> = sqlx::query_as(
+            "SELECT id FROM users WHERE share_id = ?"
+        )
+        .bind(sid)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| {
+            println!("[REGISTER] Failed to check share_id uniqueness: {:?}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            )
+        })?;
+        
+        if existing_share_id.is_some() {
+            return Err((
+                StatusCode::CONFLICT,
+                Json(ErrorResponse {
+                    error: "このユーザーIDは既に使用されています".to_string(),
+                }),
+            ));
+        }
+        
+        Some(sid.to_string())
+    } else {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "ユーザーIDは必須です".to_string(),
+            }),
+        ));
+    };
+    
     println!("[REGISTER] Validation passed");
 
     // 既存ユーザーのチェック
     let existing_user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, share_id, sharing_enabled, created_at, updated_at FROM users WHERE email = ?",
     )
     .bind(&payload.email)
     .fetch_optional(&pool)
@@ -800,11 +880,12 @@ async fn register(
     // ユーザーを作成（メール未確認状態）
     println!("[REGISTER] Inserting user into database...");
     let _result = sqlx::query(
-        "INSERT INTO users (email, password_hash, email_verified, verification_token, created_at, updated_at) VALUES (?, ?, 0, ?, ?, ?)",
+        "INSERT INTO users (email, password_hash, email_verified, verification_token, share_id, sharing_enabled, created_at, updated_at) VALUES (?, ?, 0, ?, ?, 0, ?, ?)",
     )
     .bind(&payload.email)
     .bind(&password_hash)
     .bind(&verification_token)
+    .bind(&share_id)
     .bind(&now)
     .bind(&now)
     .execute(&pool)
@@ -842,7 +923,7 @@ async fn login(
     // ユーザーを検索
     eprintln!("[LOGIN] Attempting to login with email: {}", payload.email);
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, share_id, sharing_enabled, created_at, updated_at FROM users WHERE email = ?",
     )
     .bind(&payload.email)
     .fetch_optional(&pool)
@@ -911,7 +992,7 @@ async fn verify_email(
 ) -> Result<Json<VerifyEmailResponse>, (StatusCode, Json<ErrorResponse>)> {
     // トークンでユーザーを検索
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE verification_token = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, share_id, sharing_enabled, created_at, updated_at FROM users WHERE verification_token = ?",
     )
     .bind(&payload.token)
     .fetch_optional(&pool)
@@ -975,7 +1056,7 @@ async fn request_password_reset(
     // ユーザーを検索
     eprintln!("[PASSWORD_RESET] Querying database for user with email: {}", payload.email);
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, share_id, sharing_enabled, created_at, updated_at FROM users WHERE email = ?",
     )
     .bind(&payload.email)
     .fetch_optional(&pool)
@@ -1082,7 +1163,7 @@ async fn reset_password(
 ) -> Result<Json<PasswordResetResponse>, (StatusCode, Json<ErrorResponse>)> {
     // トークンでユーザーを検索
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE password_reset_token = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, share_id, sharing_enabled, created_at, updated_at FROM users WHERE password_reset_token = ?",
     )
     .bind(&payload.token)
     .fetch_optional(&pool)
@@ -1181,7 +1262,7 @@ async fn change_email_request(
 
     // 既に使用されているメールアドレスかチェック
     let existing_user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, share_id, sharing_enabled, created_at, updated_at FROM users WHERE email = ?",
     )
     .bind(&payload.new_email)
     .fetch_optional(&pool)
@@ -1271,7 +1352,7 @@ async fn verify_email_change(
 ) -> Result<Json<VerifyEmailChangeResponse>, (StatusCode, Json<ErrorResponse>)> {
     // トークンでユーザーを検索
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email_change_token = ?",
+        "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, share_id, sharing_enabled, created_at, updated_at FROM users WHERE email_change_token = ?",
     )
     .bind(&payload.token)
     .fetch_optional(&pool)
@@ -1364,6 +1445,401 @@ async fn verify_email_change(
         message: "メールアドレスの変更が完了しました".to_string(),
         new_email: Some(new_email.clone()),
     }))
+}
+
+// POST /auth/change-share-id - ユーザーID変更
+async fn change_share_id(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<ChangeShareIdRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let share_id = payload.share_id.trim();
+    
+    // バリデーション
+    if share_id.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "ユーザーIDは必須です".to_string(),
+            }),
+        ));
+    }
+    
+    if share_id.len() < 3 || share_id.len() > 20 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "ユーザーIDは3文字以上20文字以下で入力してください".to_string(),
+            }),
+        ));
+    }
+    
+    if !share_id.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "ユーザーIDは英数字、ハイフン、アンダースコアのみ使用できます".to_string(),
+            }),
+        ));
+    }
+    
+    // ユニーク性チェック（自分自身のshare_idは除外）
+    let existing: Option<(i64,)> = sqlx::query_as(
+        "SELECT id FROM users WHERE share_id = ? AND id != ?"
+    )
+    .bind(&share_id)
+    .bind(user.user_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[ChangeShareId] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+    
+    if existing.is_some() {
+        return Err((
+            StatusCode::CONFLICT,
+            Json(ErrorResponse {
+                error: "このユーザーIDは既に使用されています".to_string(),
+            }),
+        ));
+    }
+    
+    // ユーザーIDを更新
+    let now = Utc::now().to_rfc3339();
+    sqlx::query(
+        "UPDATE users SET share_id = ?, updated_at = ? WHERE id = ?"
+    )
+    .bind(&share_id)
+    .bind(&now)
+    .bind(user.user_id as i64)
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[ChangeShareId] Failed to update share_id: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Failed to update share_id".to_string(),
+            }),
+        )
+    })?;
+    
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "message": "ユーザーIDが変更されました",
+        "share_id": share_id
+    })))
+}
+
+// POST /auth/toggle-sharing - 共有化のON/OFF切り替え
+async fn toggle_sharing(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<ToggleSharingRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    // share_idが設定されているか確認
+    let user_row: Option<(Option<String>,)> = sqlx::query_as(
+        "SELECT share_id FROM users WHERE id = ?"
+    )
+    .bind(user.user_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[ToggleSharing] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+    
+    if let Some((share_id,)) = user_row {
+        if share_id.is_none() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: "ユーザーIDが設定されていません。まずユーザーIDを設定してください".to_string(),
+                }),
+            ));
+        }
+    } else {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "ユーザーが見つかりません".to_string(),
+            }),
+        ));
+    }
+    
+    // 共有化フラグを更新
+    let now = Utc::now().to_rfc3339();
+    let sharing_enabled = if payload.enabled { 1 } else { 0 };
+    sqlx::query(
+        "UPDATE users SET sharing_enabled = ?, updated_at = ? WHERE id = ?"
+    )
+    .bind(sharing_enabled)
+    .bind(&now)
+    .bind(user.user_id as i64)
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[ToggleSharing] Failed to update sharing_enabled: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Failed to update sharing status".to_string(),
+            }),
+        )
+    })?;
+    
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "sharing_enabled": payload.enabled
+    })))
+}
+
+// GET /auth/sharing-status - 共有化の状態とURL取得
+async fn get_sharing_status(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let row: Option<(Option<String>, i32)> = sqlx::query_as(
+        "SELECT share_id, sharing_enabled FROM users WHERE id = ?"
+    )
+    .bind(user.user_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[GetSharingStatus] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+    
+    if let Some((share_id, sharing_enabled)) = row {
+        let sharing_url = if let Some(ref sid) = share_id {
+            let frontend_url = std::env::var("FRONTEND_URL")
+                .unwrap_or_else(|_| "https://live-schedule-api.pages.dev".to_string());
+            Some(format!("{}/share/{}", frontend_url.trim_end_matches('/'), sid))
+        } else {
+            None
+        };
+        
+        Ok(Json(serde_json::json!({
+            "share_id": share_id,
+            "sharing_enabled": sharing_enabled != 0,
+            "sharing_url": sharing_url
+        })))
+    } else {
+        Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "ユーザーが見つかりません".to_string(),
+            }),
+        ))
+    }
+}
+
+// GET /share/:share_id - 共有ページ用のスケジュール一覧取得
+async fn get_shared_schedules(
+    Path(share_id): Path<String>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Vec<Schedule>>, (StatusCode, Json<ErrorResponse>)> {
+    // share_idからユーザーIDを取得
+    let user_row: Option<(i64, i32)> = sqlx::query_as(
+        "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
+    )
+    .bind(&share_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[GetSharedSchedules] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+    
+    if let Some((user_id, sharing_enabled)) = user_row {
+        if sharing_enabled == 0 {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ErrorResponse {
+                    error: "このユーザーのスケジュールは共有されていません".to_string(),
+                }),
+            ));
+        }
+        
+        // 共有されているスケジュールを取得（is_public = 1 のみ）
+        let rows: Vec<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
+            r#"
+            SELECT
+              id,
+              title,
+              "group",
+              date,
+              open,
+              start,
+              "end",
+              notes,
+              category,
+              area,
+              venue,
+              target,
+              lineup,
+              seller,
+              ticket_fee,
+              drink_fee,
+              total_fare,
+              stay_fee,
+              travel_cost,
+              total_cost,
+              status,
+              related_schedule_ids,
+              user_id,
+              is_public,
+              created_at,
+              updated_at
+            FROM schedules
+            WHERE user_id = ? AND is_public = 1
+            ORDER BY date ASC, start ASC
+            "#
+        )
+        .bind(user_id)
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| {
+            eprintln!("[GetSharedSchedules] Failed to fetch schedules: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            )
+        })?;
+        
+        let schedules: Vec<Schedule> = rows.into_iter().map(|row| row_to_schedule(row)).collect();
+        Ok(Json(schedules))
+    } else {
+        Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "ユーザーが見つかりません".to_string(),
+            }),
+        ))
+    }
+}
+
+// GET /share/:share_id/schedules/:id - 共有ページ用のスケジュール詳細取得
+async fn get_shared_schedule(
+    Path((share_id, id)): Path<(String, i32)>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Schedule>, (StatusCode, Json<ErrorResponse>)> {
+    // share_idからユーザーIDを取得
+    let user_row: Option<(i64, i32)> = sqlx::query_as(
+        "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
+    )
+    .bind(&share_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[GetSharedSchedule] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+    
+    if let Some((user_id, sharing_enabled)) = user_row {
+        if sharing_enabled == 0 {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ErrorResponse {
+                    error: "このユーザーのスケジュールは共有されていません".to_string(),
+                }),
+            ));
+        }
+        
+        // 共有されているスケジュールを取得（is_public = 1 のみ）
+        let row: Option<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
+            r#"
+            SELECT
+              id,
+              title,
+              "group",
+              date,
+              open,
+              start,
+              "end",
+              notes,
+              category,
+              area,
+              venue,
+              target,
+              lineup,
+              seller,
+              ticket_fee,
+              drink_fee,
+              total_fare,
+              stay_fee,
+              travel_cost,
+              total_cost,
+              status,
+              related_schedule_ids,
+              user_id,
+              is_public,
+              created_at,
+              updated_at
+            FROM schedules
+            WHERE id = ? AND user_id = ? AND is_public = 1
+            "#
+        )
+        .bind(id)
+        .bind(user_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| {
+            eprintln!("[GetSharedSchedule] Failed to fetch schedule: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            )
+        })?;
+        
+        if let Some(schedule_row) = row {
+            Ok(Json(row_to_schedule(schedule_row)))
+        } else {
+            Err((
+                StatusCode::NOT_FOUND,
+                Json(ErrorResponse {
+                    error: "スケジュールが見つかりません".to_string(),
+                }),
+            ))
+        }
+    } else {
+        Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "ユーザーが見つかりません".to_string(),
+            }),
+        ))
+    }
 }
 
 // GET /schedules?year=2025 など
@@ -3636,6 +4112,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/auth/reset-password", post(reset_password))
         .route("/auth/change-email", post(change_email_request))
         .route("/auth/verify-email-change", post(verify_email_change))
+        .route("/auth/change-share-id", post(change_share_id))
+        .route("/auth/toggle-sharing", post(toggle_sharing))
+        .route("/auth/sharing-status", get(get_sharing_status))
+        .route("/share/:share_id", get(get_shared_schedules))
+        .route("/share/:share_id/schedules/:id", get(get_shared_schedule))
         .route("/public/schedules", get(list_public_schedules))
         .route("/public/schedules/:id", get(get_public_schedule))
         .route("/public/traffic", get(list_public_traffics))
@@ -3696,6 +4177,8 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       email_change_token    TEXT,
       email_change_expires  TEXT,
       new_email             TEXT,
+      share_id              TEXT UNIQUE,
+      sharing_enabled       INTEGER NOT NULL DEFAULT 0,
       created_at            TEXT,
       updated_at            TEXT
     );
@@ -3880,6 +4363,14 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await;
     let _ = sqlx::query("ALTER TABLE schedules ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0")
+        .execute(pool)
+        .await;
+    
+    // 既存のusersテーブルにshare_idとsharing_enabledカラムを追加（マイグレーション）
+    let _ = sqlx::query("ALTER TABLE users ADD COLUMN share_id TEXT UNIQUE")
+        .execute(pool)
+        .await;
+    let _ = sqlx::query("ALTER TABLE users ADD COLUMN sharing_enabled INTEGER NOT NULL DEFAULT 0")
         .execute(pool)
         .await;
 

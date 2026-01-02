@@ -14,7 +14,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<AuthResponse>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, shareId: string) => Promise<void>;
   logout: () => Promise<void>;
   changeEmail: (newEmail: string) => Promise<void>;
   updateEmail: (newEmail: string) => Promise<void>;
@@ -83,12 +83,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string) => {
+  const register = async (email: string, password: string, shareId: string) => {
     try {
-      console.log('[AuthContext] Registering user with email:', email);
+      console.log('[AuthContext] Registering user with email:', email, 'shareId:', shareId);
       console.log('[AuthContext] API_BASE:', API_BASE);
       
-      const requestBody = JSON.stringify({ email, password });
+      const requestBody = JSON.stringify({ email, password, share_id: shareId });
       console.log('[AuthContext] Request body:', requestBody);
       
       const res = await fetch(`${API_BASE}/auth/register`, {
