@@ -843,20 +843,24 @@ async fn login(
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, (StatusCode, Json<ErrorResponse>)> {
     // ユーザーを検索
+    eprintln!("[LOGIN] Attempting to login with email: {}", payload.email);
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
         "SELECT id, email, password_hash, email_verified, verification_token, password_reset_token, password_reset_expires, email_change_token, email_change_expires, new_email, created_at, updated_at FROM users WHERE email = ?",
     )
     .bind(&payload.email)
     .fetch_optional(&pool)
     .await
-    .map_err(|_| {
+    .map_err(|e| {
+        eprintln!("[LOGIN] Database error: {:?}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "Database error".to_string(),
+                error: format!("Database error: {}", e),
             }),
         )
     })?;
+    
+    eprintln!("[LOGIN] User lookup result: {:?}", user.as_ref().map(|u| (u.id, &u.email)));
 
     let user = user.ok_or((
         StatusCode::UNAUTHORIZED,
