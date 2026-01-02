@@ -16,7 +16,6 @@ use std::net::SocketAddr;
 use tower_http::cors::{Any, AllowOrigin, CorsLayer};
 use resend_rs::types::CreateEmailBaseOptions;
 use resend_rs::{Resend, Result};
-use reqwest;
 
 // ====== 認証関連の型定義 ======
 
@@ -96,6 +95,7 @@ struct ErrorResponse {
 }
 
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)] // 一部のフィールドは将来使用する可能性があるため
 struct UserRow {
     id: i64,
     email: String,
@@ -407,6 +407,7 @@ struct Schedule {
 // ====== Schedule 行定義（DB 用） ======
 
 #[derive(sqlx::FromRow)]
+#[allow(dead_code)] // 一部のフィールドは将来使用する可能性があるため
 struct ScheduleRow {
     id: i64,
     title: String,
@@ -1797,7 +1798,7 @@ async fn create_schedule(
             .ok()
             .flatten();
             
-            if let Some(mut related) = related_row {
+            if let Some(related) = related_row {
                 // 既存のrelated_schedule_idsを取得
                 let mut related_ids_vec: Vec<i32> = related.related_schedule_ids
                     .as_ref()
@@ -2207,16 +2208,6 @@ async fn list_public_schedules(
     Query(params): Query<ScheduleQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Json<Vec<Schedule>> {
-    // DISABLE_AUTHが設定されている場合、DEFAULT_USER_IDのスケジュールも取得
-    let default_user_id = if std::env::var("DISABLE_AUTH").is_ok() {
-        std::env::var("DEFAULT_USER_ID")
-            .ok()
-            .and_then(|s| s.parse::<i64>().ok())
-            .unwrap_or(1) // デフォルトは1
-    } else {
-        -1 // 認証が有効な場合は使用しない
-    };
-    
     // DISABLE_AUTHが設定されている場合、全てのスケジュールを取得（ユーザーIDによるフィルタリングなし）
     let rows: Vec<ScheduleRow> = if std::env::var("DISABLE_AUTH").is_ok() {
         // 認証が無効化されている場合、全てのスケジュールを返す
