@@ -244,9 +244,23 @@ export function NotionMultiSelect({
             style={styles.modalContent}
             onStartShouldSetResponder={() => true}
             onResponderTerminationRequest={() => false}
+            onTouchStart={(e) => {
+              // モーダルコンテンツ内のタッチでモーダルが閉じないようにする
+              if (e && e.nativeEvent) {
+                e.stopPropagation();
+              }
+            }}
             onTouchEnd={(e) => {
               // モーダルコンテンツ内のタッチでモーダルが閉じないようにする
-              e.stopPropagation();
+              if (e && e.nativeEvent) {
+                e.stopPropagation();
+              }
+            }}
+            onClick={(e) => {
+              // Web環境でのクリックイベント伝播を防止
+              if (e) {
+                e.stopPropagation();
+              }
             }}
           >
             <Text style={styles.modalTitle}>{label}</Text>
