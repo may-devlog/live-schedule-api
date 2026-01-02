@@ -188,9 +188,9 @@ export default function EditScheduleScreen() {
   const handleSubmit = async () => {
     if (!id) return;
 
-    // 必須項目のチェック
-    if (!title.trim() || !area || !venue.trim() || !target) {
-      Alert.alert("必須項目", "Title / Area / Venue / Target は必須です。");
+    // 必須項目のチェック（targetはNULL許可のため除外）
+    if (!title.trim() || !area || !venue.trim()) {
+      Alert.alert("必須項目", "Title / Area / Venue は必須です。");
       return;
     }
 
@@ -218,7 +218,7 @@ export default function EditScheduleScreen() {
       category: category || null,
       area: area,
       venue: venue.trim(),
-      target: target!, // 必須項目なのでnullにはならない（バリデーション済み）
+      target: target || null, // NULL許可
       lineup: lineup ? lineup.trim() : null,
       seller: seller || null,
       ticket_fee: ticketFeeNum ?? null,
@@ -230,15 +230,21 @@ export default function EditScheduleScreen() {
 
     try {
       setSubmitting(true);
+      console.log("[UPDATE] Updating schedule with payload:", payload);
+      console.log("[UPDATE] API URL:", getApiUrl(`/schedules/${id}`));
+      
       const res = await authenticatedFetch(getApiUrl(`/schedules/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
+      console.log("[UPDATE] Response status:", res.status);
+      console.log("[UPDATE] Response headers:", Object.fromEntries(res.headers.entries()));
+
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        console.log("UPDATE ERROR:", res.status, text);
+        console.error("[UPDATE] Error response:", res.status, text);
         let errorMessage = `更新に失敗しました（status: ${res.status}）`;
         try {
           const errorJson = JSON.parse(text);
@@ -247,18 +253,37 @@ export default function EditScheduleScreen() {
           }
         } catch {
           // JSONパースに失敗した場合はデフォルトメッセージを使用
+          if (text) {
+            errorMessage = text;
+          }
         }
-        Alert.alert("エラー", errorMessage);
+        if (Platform.OS === "web") {
+          window.alert(`エラー\n\n${errorMessage}`);
+        } else {
+          Alert.alert("エラー", errorMessage);
+        }
+        setSubmitting(false);
         return;
       }
 
-      const updated = await res.json();
-      // Web環境ではwindow.alertを使用
+      const updated = await res.json().catch(async (e) => {
+        console.error("[UPDATE] Failed to parse JSON response:", e);
+        const text = await res.text().catch(() => "");
+        console.error("[UPDATE] Response text:", text);
+        throw new Error("サーバーからの応答を解析できませんでした");
+      });
+      
+      console.log("[UPDATE] Success:", updated);
+      
+      // 成功メッセージを表示
+      const successMessage = "ライブ情報を更新しました";
       if (Platform.OS === "web") {
-        window.alert("更新完了\n\nライブ情報を更新しました。");
-        router.push(`/live/${id}`);
+        window.alert(successMessage);
+        setTimeout(() => {
+          router.push(`/live/${id}`);
+        }, 100);
       } else {
-        Alert.alert("更新完了", "ライブ情報を更新しました。", [
+        Alert.alert("更新完了", successMessage, [
           {
             text: "OK",
             onPress: () => {
@@ -268,8 +293,13 @@ export default function EditScheduleScreen() {
         ]);
       }
     } catch (e: any) {
-      console.log("UPDATE EXCEPTION:", e);
-      Alert.alert("エラー", "通信に失敗しました。サーバーの状態を確認してください。");
+      console.error("[UPDATE] Exception:", e);
+      const errorMessage = e.message || "通信に失敗しました。サーバーの状態を確認してください。";
+      if (Platform.OS === "web") {
+        window.alert(`エラー\n\n${errorMessage}`);
+      } else {
+        Alert.alert("エラー", errorMessage);
+      }
     } finally {
       setSubmitting(false);
     }

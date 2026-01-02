@@ -170,9 +170,9 @@ export default function NewScheduleScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    // 必須項目のチェック
-    if (!title.trim() || !area || !venue.trim() || !target) {
-      Alert.alert("必須項目", "Title / Area / Venue / Target は必須です。");
+    // 必須項目のチェック（targetはNULL許可のため除外）
+    if (!title.trim() || !area || !venue.trim()) {
+      Alert.alert("必須項目", "Title / Area / Venue は必須です。");
       return;
     }
 
@@ -200,7 +200,7 @@ export default function NewScheduleScreen() {
       category: category || null,
       area: area,
       venue: venue.trim(),
-      target: target!, // 必須項目なのでnullにはならない（バリデーション済み）
+      target: target || null, // NULL許可
       lineup: lineup ? lineup.trim() : null,
       seller: seller || null,
       ticket_fee: ticketFeeNum ?? null,
@@ -212,17 +212,21 @@ export default function NewScheduleScreen() {
 
     try {
       setSubmitting(true);
-      console.log("Creating schedule with payload:", payload);
+      console.log("[CREATE] Creating schedule with payload:", payload);
+      console.log("[CREATE] API URL:", getApiUrl("/schedules"));
+      
       const res = await authenticatedFetch(getApiUrl("/schedules"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      console.log("CREATE RESPONSE STATUS:", res.status);
+      console.log("[CREATE] Response status:", res.status);
+      console.log("[CREATE] Response headers:", Object.fromEntries(res.headers.entries()));
+      
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        console.log("CREATE ERROR:", res.status, text);
+        console.error("[CREATE] Error response:", res.status, text);
         let errorMessage = `登録に失敗しました（status: ${res.status}）`;
         try {
           const errorJson = JSON.parse(text);
@@ -231,6 +235,9 @@ export default function NewScheduleScreen() {
           }
         } catch {
           // JSONパースに失敗した場合はデフォルトメッセージを使用
+          if (text) {
+            errorMessage = text;
+          }
         }
         // Web環境ではwindow.alertを使用
         if (Platform.OS === "web") {
@@ -238,21 +245,33 @@ export default function NewScheduleScreen() {
         } else {
           Alert.alert("エラー", errorMessage);
         }
+        setSubmitting(false);
         return;
       }
 
-      const created = await res.json();
-      console.log("CREATE SUCCESS:", created);
-      // Web環境ではwindow.alertを使用
+      const created = await res.json().catch(async (e) => {
+        console.error("[CREATE] Failed to parse JSON response:", e);
+        const text = await res.text().catch(() => "");
+        console.error("[CREATE] Response text:", text);
+        throw new Error("サーバーからの応答を解析できませんでした");
+      });
+      
+      console.log("[CREATE] Success:", created);
+      
+      // 成功メッセージを表示
+      const successMessage = "予定を追加しました";
       if (Platform.OS === "web") {
-        window.alert("登録完了\n\n新しいライブを登録しました。");
-        if (created.id) {
-          router.push(`/live/${created.id}`);
-        } else {
-          router.back();
-        }
+        window.alert(successMessage);
+        // 少し待ってから遷移（アラートが閉じるのを待つ）
+        setTimeout(() => {
+          if (created.id) {
+            router.push(`/live/${created.id}`);
+          } else {
+            router.back();
+          }
+        }, 100);
       } else {
-        Alert.alert("登録完了", "新しいライブを登録しました。", [
+        Alert.alert("登録完了", successMessage, [
           {
             text: "OK",
             onPress: () => {
@@ -266,7 +285,7 @@ export default function NewScheduleScreen() {
         ]);
       }
     } catch (e: any) {
-      console.log("CREATE EXCEPTION:", e);
+      console.error("[CREATE] Exception:", e);
       const errorMessage = e.message || "通信に失敗しました。サーバーの状態を確認してください。";
       // Web環境ではwindow.alertを使用
       if (Platform.OS === "web") {
