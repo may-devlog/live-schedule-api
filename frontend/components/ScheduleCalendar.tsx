@@ -169,13 +169,10 @@ export function ScheduleCalendar({ schedules }: ScheduleCalendarProps) {
                 {day}
               </Text>
               {hasSchedule && (
-                <View style={styles.scheduleIndicator}>
-                  <View style={styles.scheduleDot} />
-                  {daySchedules.length > 1 && (
-                    <Text style={styles.scheduleCount}>
-                      {daySchedules.length}
-                    </Text>
-                  )}
+                <View style={styles.scheduleBadge}>
+                  <Text style={styles.scheduleBadgeText}>
+                    {daySchedules.length}
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -263,7 +260,7 @@ const styles = StyleSheet.create({
     borderRadius: 25, // 円形にするための固定値
   },
   hasScheduleCell: {
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#e8f5e9", // 薄い緑色の背景
   },
   dayText: {
     fontSize: 14,
@@ -276,25 +273,27 @@ const styles = StyleSheet.create({
   },
   hasScheduleText: {
     fontWeight: "600",
+    color: "#2e7d32", // 緑色のテキスト
   },
-  scheduleIndicator: {
+  scheduleBadge: {
     position: "absolute",
-    bottom: 4,
-    flexDirection: "row",
+    top: 2,
+    right: 2,
+    backgroundColor: "#4caf50", // 緑色のバッジ
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: "#ffffff",
   },
-  scheduleDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#1976d2",
-  },
-  scheduleCount: {
-    fontSize: 8,
-    color: "#1976d2",
+  scheduleBadgeText: {
+    fontSize: 10,
+    color: "#ffffff",
     fontWeight: "bold",
-    marginLeft: 2,
+    lineHeight: 12,
   },
 });
 
