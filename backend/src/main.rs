@@ -3153,25 +3153,58 @@ async fn save_select_options(
         ));
     }
     
-    // INSERT OR REPLACEを使用して、既存のレコードがあれば更新、なければ挿入
-    let result = sqlx::query(
-        r#"
-        INSERT INTO select_options (user_id, option_type, options_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?)
-        ON CONFLICT(user_id, option_type) DO UPDATE SET
-          options_json = ?,
-          updated_at = ?
-        "#
+    // 既存のレコードを確認
+    let existing: Option<(i64,)> = sqlx::query_as(
+        "SELECT id FROM select_options WHERE user_id = ? AND option_type = ?"
     )
     .bind(user.user_id as i64)
     .bind(&option_type)
-    .bind(&options_json)
-    .bind(&now)
-    .bind(&now)
-    .bind(&options_json)
-    .bind(&now)
-    .execute(&pool)
+    .fetch_optional(&pool)
     .await
+    .map_err(|e| {
+        eprintln!("[SaveSelectOptions] Failed to check existing record: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+    
+    let result = if existing.is_some() {
+        // 既存のレコードを更新
+        eprintln!("[SaveSelectOptions] Updating existing record for user_id: {}, option_type: {}", user.user_id, option_type);
+        sqlx::query(
+            r#"
+            UPDATE select_options
+            SET options_json = ?,
+                updated_at = ?
+            WHERE user_id = ? AND option_type = ?
+            "#
+        )
+        .bind(&options_json)
+        .bind(&now)
+        .bind(user.user_id as i64)
+        .bind(&option_type)
+        .execute(&pool)
+        .await
+    } else {
+        // 新しいレコードを挿入
+        eprintln!("[SaveSelectOptions] Inserting new record for user_id: {}, option_type: {}", user.user_id, option_type);
+        sqlx::query(
+            r#"
+            INSERT INTO select_options (user_id, option_type, options_json, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            "#
+        )
+        .bind(user.user_id as i64)
+        .bind(&option_type)
+        .bind(&options_json)
+        .bind(&now)
+        .bind(&now)
+        .execute(&pool)
+        .await
+    }
     .map_err(|e| {
         eprintln!("[SaveSelectOptions] Database error: {}", e);
         (
