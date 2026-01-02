@@ -1037,6 +1037,7 @@ async fn request_password_reset(
 
     // ユーザーが存在しない場合はエラーを返す
     if user.is_none() {
+        println!("[PASSWORD_RESET] User not found for email: {}", payload.email);
         return Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
