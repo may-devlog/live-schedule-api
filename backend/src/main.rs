@@ -1024,7 +1024,10 @@ async fn request_password_reset(
     })?;
 
     // メール送信
+    println!("[PASSWORD_RESET] Sending password reset email to: {}", user.email);
+    println!("[PASSWORD_RESET] Reset token generated: {}", reset_token);
     send_password_reset_email(&user.email, &reset_token).await;
+    println!("[PASSWORD_RESET] Password reset email function completed");
 
     Ok(Json(PasswordResetResponse {
         success: true,
