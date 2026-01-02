@@ -355,8 +355,9 @@ export default function HomeScreen() {
       </View>
       <View style={styles.bottomSpacer} />
       </View>
+    </ScrollView>
 
-      {/* ログインモーダル */}
+    {/* ログインモーダル */}
       <Modal
         visible={showLoginModal}
         animationType="slide"
@@ -544,8 +545,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-      </View>
-    </ScrollView>
   );
 }
 
