@@ -42,9 +42,9 @@ export default function TrafficDetailScreen() {
   };
 
   const handleDuplicate = () => {
-    // schedule_idを取得するために既存データを取得
+    // 複製時はscheduleIdをコピーせず、空にする（後で選択可能）
     if (!traffic) return;
-    router.push(`/traffic/new?scheduleId=${traffic.schedule_id}&copyFrom=${trafficId}`);
+    router.push(`/traffic/new?copyFrom=${trafficId}`);
   };
 
   useEffect(() => {

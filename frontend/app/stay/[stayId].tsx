@@ -31,17 +31,19 @@ export default function StayDetailScreen() {
 
   const [stay, setStay] = useState<Stay | null>(null);
   const [schedule, setSchedule] = useState<Schedule | null>(null);
+  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
 
   const handleEdit = () => {
     router.push(`/stay/${stayId}/edit`);
   };
 
   const handleDuplicate = () => {
-    // schedule_idを取得するために既存データを取得
+    // 複製時はscheduleIdをコピーせず、空にする（後で選択可能）
     if (!stay) return;
-    router.push(`/stay/new?scheduleId=${stay.schedule_id}&copyFrom=${stayId}`);
+    router.push(`/stay/new?copyFrom=${stayId}`);
   };
 
   useEffect(() => {
@@ -60,6 +62,18 @@ export default function StayDetailScreen() {
         }
         const data: Stay = await res.json();
         setStay(data);
+        setSelectedScheduleId(data.schedule_id || null);
+        
+        // 全スケジュール一覧を取得（スケジュール選択用）
+        try {
+          const schedulesRes = await authenticatedFetch(getApiUrl("/schedules"));
+          if (schedulesRes.ok) {
+            const schedulesData: Schedule[] = await schedulesRes.json();
+            setAllSchedules(schedulesData);
+          }
+        } catch (e) {
+          console.error("[StayDetail] Failed to fetch schedules:", e);
+        }
         
         // スケジュール情報を取得
         if (data.schedule_id) {
