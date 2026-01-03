@@ -4255,6 +4255,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // CORS設定（環境変数から許可するオリジンを読み込む）
+    // 複数のオリジンをカンマ区切りで指定可能
     let allowed_origin = std::env::var("ALLOWED_ORIGIN")
         .unwrap_or_else(|_| "*".to_string());
     
@@ -4264,10 +4265,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .allow_methods(Any)
             .allow_headers(Any)
     } else {
-        CorsLayer::new()
-            .allow_origin(AllowOrigin::exact(HeaderValue::from_str(&allowed_origin).unwrap()))
-            .allow_methods(Any)
-            .allow_headers(Any)
+        // カンマ区切りで複数のオリジンを許可
+        let origins: Vec<HeaderValue> = allowed_origin
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| HeaderValue::from_str(s).unwrap())
+            .collect();
+        
+        if origins.is_empty() {
+            // オリジンが指定されていない場合は全て許可
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any)
+        } else if origins.len() == 1 {
+            // 単一オリジンの場合
+            CorsLayer::new()
+                .allow_origin(AllowOrigin::exact(origins[0].clone()))
+                .allow_methods(Any)
+                .allow_headers(Any)
+        } else {
+            // 複数オリジンの場合
+            CorsLayer::new()
+                .allow_origin(AllowOrigin::list(origins))
+                .allow_methods(Any)
+                .allow_headers(Any)
+        }
     };
 
     // 一時的なエンドポイント：SQLダンプを実行（データベースのコピー用）
