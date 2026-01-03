@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Platform,
 } from "react-native";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
@@ -598,38 +599,56 @@ export default function DetailScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      "削除確認",
-      "このスケジュールを削除しますか？この操作は取り消せません。",
-      [
-        {
-          text: "キャンセル",
-          style: "cancel",
-        },
-        {
-          text: "削除",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const res = await authenticatedFetch(getApiUrl(`/schedules/${id}`), {
-                method: "DELETE",
-              });
-              
-              if (!res.ok) {
-                const error = await res.json();
-                Alert.alert("エラー", error.error || "削除に失敗しました");
-                return;
-              }
-              
-              // 削除成功後、ホーム画面に戻る
-              router.replace("/");
-            } catch (error: any) {
-              Alert.alert("エラー", error.message || "削除に失敗しました");
-            }
+    const performDelete = async () => {
+      try {
+        const res = await authenticatedFetch(getApiUrl(`/schedules/${id}`), {
+          method: "DELETE",
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          const errorMessage = error.error || "削除に失敗しました";
+          if (Platform.OS === "web" && typeof window !== "undefined" && window.alert) {
+            window.alert(`エラー: ${errorMessage}`);
+          } else {
+            Alert.alert("エラー", errorMessage);
+          }
+          return;
+        }
+        
+        // 削除成功後、ホーム画面に戻る
+        router.replace("/");
+      } catch (error: any) {
+        const errorMessage = error.message || "削除に失敗しました";
+        if (Platform.OS === "web" && typeof window !== "undefined" && window.alert) {
+          window.alert(`エラー: ${errorMessage}`);
+        } else {
+          Alert.alert("エラー", errorMessage);
+        }
+      }
+    };
+
+    if (Platform.OS === "web" && typeof window !== "undefined" && window.confirm) {
+      if (window.confirm("このスケジュールを削除しますか？この操作は取り消せません。")) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        "削除確認",
+        "このスケジュールを削除しますか？この操作は取り消せません。",
+        [
+          {
+            text: "キャンセル",
+            style: "cancel",
           },
-        },
-      ]
-    );
+          {
+            text: "削除",
+            style: "destructive",
+            onPress: performDelete,
+          },
+        ]
+      );
+    }
   };
 
   return (
