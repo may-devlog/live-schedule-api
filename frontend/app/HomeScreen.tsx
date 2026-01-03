@@ -189,15 +189,19 @@ export default function HomeScreen() {
     try {
       setLoadingNext(true);
       setErrorNext(null);
-      // 公開スケジュールAPIを使用（認証不要）
-      const url = getApiUrl("/public/schedules");
-      console.log("Fetching public schedules from:", url);
-      const res = await fetch(url);
+      // ログインしている場合は認証済みAPIを使用、していない場合は公開APIを使用
+      const url = isAuthenticated 
+        ? getApiUrl("/schedules")
+        : getApiUrl("/public/schedules");
+      console.log("Fetching schedules from:", url, "isAuthenticated:", isAuthenticated);
+      const res = isAuthenticated
+        ? await authenticatedFetch(url)
+        : await fetch(url);
       if (!res.ok) {
         throw new Error(`status: ${res.status}`);
       }
       const data: Schedule[] = await res.json();
-      console.log("Public schedules received:", data.length, "items");
+      console.log("Schedules received:", data.length, "items");
       
       // 全スケジュールを保存（カレンダー用）
       setAllSchedules(data);
