@@ -202,9 +202,15 @@ export default function SharedYearScreen() {
                 <Text style={styles.cardTitle} numberOfLines={2}>
                   {item.title}
                 </Text>
-                <Text style={styles.cardSub}>
-                  {item.area} / {item.venue}
-                </Text>
+                <View style={styles.cardSubContainer}>
+                  {item.area && (
+                    <NotionTag
+                      label={item.area}
+                      color={areaColors.get(item.id) || undefined}
+                    />
+                  )}
+                  <Text style={styles.cardSub}>{item.venue}</Text>
+                </View>
               </TouchableOpacity>
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -302,10 +308,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     lineHeight: 22,
   },
+  cardSubContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
   cardSub: {
     fontSize: 14,
     color: "#787774",
-    marginTop: 4,
   },
   separator: {
     height: 0,

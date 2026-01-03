@@ -556,8 +556,15 @@ const styles = StyleSheet.create({
     color: "#37352f",
     marginBottom: 4,
   },
+  scheduleItemVenueContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
   scheduleItemVenue: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#787774",
   },
   scheduleItemSeparator: {
