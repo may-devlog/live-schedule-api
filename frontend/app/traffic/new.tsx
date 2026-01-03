@@ -79,7 +79,7 @@ export default function NewTrafficScreen() {
 
     const loadTrafficForCopy = async () => {
       try {
-        const res = await fetch(`${API_BASE}/traffic/${copyFrom}`);
+        const res = await authenticatedFetch(getApiUrl(`/traffic/${copyFrom}`));
         if (!res.ok) {
           console.warn("Traffic not found for copy:", copyFrom);
           return;
