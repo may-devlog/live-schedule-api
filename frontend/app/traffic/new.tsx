@@ -21,6 +21,8 @@ import {
 } from "../../utils/select-options-storage";
 import { useEffect } from "react";
 import { HomeButton } from "../../components/HomeButton";
+import { NotionRelation } from "../../components/notion-relation";
+import type { Schedule } from "../HomeScreen";
 
 type Traffic = {
   id: number;
@@ -39,12 +41,14 @@ type Traffic = {
 };
 
 export default function NewTrafficScreen() {
-  const { scheduleId, copyFrom } = useLocalSearchParams<{
-    scheduleId: string;
+  const { scheduleId: initialScheduleId, copyFrom } = useLocalSearchParams<{
+    scheduleId?: string;
     copyFrom?: string;
   }>();
   const router = useRouter();
 
+  const [scheduleId, setScheduleId] = useState<string | null>(initialScheduleId || null);
+  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [transportations, setTransportations] = useState<SelectOption[]>([]);
 
   useEffect(() => {
@@ -53,6 +57,20 @@ export default function NewTrafficScreen() {
       setTransportations(trans);
     };
     loadOptions();
+    
+    // 全スケジュール一覧を取得（スケジュール選択用）
+    const loadSchedules = async () => {
+      try {
+        const res = await authenticatedFetch(getApiUrl("/schedules"));
+        if (res.ok) {
+          const data: Schedule[] = await res.json();
+          setAllSchedules(data);
+        }
+      } catch (e) {
+        console.error("[NewTraffic] Failed to fetch schedules:", e);
+      }
+    };
+    loadSchedules();
   }, []);
 
   // 既存データを複製する場合の読み込み
@@ -109,8 +127,8 @@ export default function NewTrafficScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!scheduleId) {
-      Alert.alert("エラー", "scheduleId が指定されていません。");
+    if (!scheduleId || scheduleId === "undefined" || scheduleId === "null") {
+      Alert.alert("エラー", "スケジュールを選択してください。");
       return;
     }
     if (!date || !fromPlace.trim() || !toPlace.trim()) {
@@ -188,8 +206,20 @@ export default function NewTrafficScreen() {
           {copyFrom ? "Duplicate Traffic" : "New Traffic"}
         </Text>
 
-      <Text style={styles.label}>Schedule ID</Text>
-      <Text style={styles.value}>{scheduleId ?? "-"}</Text>
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Schedule</Text>
+        </View>
+        <NotionRelation
+          label=""
+          value={scheduleId ? [Number(scheduleId)] : []}
+          onValueChange={(ids) => {
+            setScheduleId(ids.length > 0 ? ids[0].toString() : null);
+          }}
+          placeholder="↗ スケジュールにリンク"
+          hideSelectedCards={false}
+        />
+      </View>
 
       <NotionDatePicker
         label="Date"
@@ -359,5 +389,20 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "600",
+  },
+  section: {
+    marginTop: 24,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#37352f",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
 });

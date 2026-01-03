@@ -72,12 +72,14 @@ type Stay = {
 };
 
 export default function NewStayScreen() {
-  const { scheduleId, copyFrom } = useLocalSearchParams<{
-    scheduleId: string;
+  const { scheduleId: initialScheduleId, copyFrom } = useLocalSearchParams<{
+    scheduleId?: string;
     copyFrom?: string;
   }>();
   const router = useRouter();
 
+  const [scheduleId, setScheduleId] = useState<string | null>(initialScheduleId || null);
+  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [statuses, setStatuses] = useState<SelectOption[]>([]);
 
   useEffect(() => {
@@ -86,6 +88,20 @@ export default function NewStayScreen() {
       setStatuses(statusesData);
     };
     loadOptions();
+    
+    // 全スケジュール一覧を取得（スケジュール選択用）
+    const loadSchedules = async () => {
+      try {
+        const res = await authenticatedFetch(getApiUrl("/schedules"));
+        if (res.ok) {
+          const data: Schedule[] = await res.json();
+          setAllSchedules(data);
+        }
+      } catch (e) {
+        console.error("[NewStay] Failed to fetch schedules:", e);
+      }
+    };
+    loadSchedules();
   }, []);
 
   // 既存データを複製する場合の読み込み
@@ -109,13 +125,17 @@ export default function NewStayScreen() {
         setDeadline(data.deadline || null);
         setPenalty(data.penalty?.toString() || "");
         setStatus(data.status || "Keep");
+        // scheduleIdも設定（もし指定されていなければ）
+        if (!scheduleId && data.schedule_id) {
+          setScheduleId(data.schedule_id.toString());
+        }
       } catch (e: any) {
         console.error("Error loading stay for copy:", e);
       }
     };
 
     loadStayForCopy();
-  }, [copyFrom]);
+  }, [copyFrom, scheduleId]);
 
   const handleStatusesChange = async (newStatuses: SelectOption[]) => {
     setStatuses(newStatuses);
@@ -133,8 +153,8 @@ export default function NewStayScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!scheduleId) {
-      Alert.alert("エラー", "scheduleId が指定されていません。");
+    if (!scheduleId || scheduleId === "undefined" || scheduleId === "null") {
+      Alert.alert("エラー", "スケジュールを選択してください。");
       return;
     }
     if (!checkIn || !checkOut || !hotelName.trim()) {
@@ -207,8 +227,20 @@ export default function NewStayScreen() {
           {copyFrom ? "Duplicate Stay" : "New Stay"}
         </Text>
 
-      <Text style={styles.label}>Schedule ID</Text>
-      <Text style={styles.value}>{scheduleId ?? "-"}</Text>
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Schedule</Text>
+        </View>
+        <NotionRelation
+          label=""
+          value={scheduleId ? [Number(scheduleId)] : []}
+          onValueChange={(ids) => {
+            setScheduleId(ids.length > 0 ? ids[0].toString() : null);
+          }}
+          placeholder="↗ スケジュールにリンク"
+          hideSelectedCards={false}
+        />
+      </View>
 
       <NotionDatePicker
         label="Check-in"
@@ -363,5 +395,20 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "600",
+  },
+  section: {
+    marginTop: 24,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#37352f",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
 });
