@@ -2178,10 +2178,10 @@ async fn create_schedule(
     )
     .bind(user.user_id)
     .bind(&payload.title)
-    .bind(&payload.group.as_ref().map(|g| {
+    .bind(&payload.group.as_ref().and_then(|g| {
         let trimmed = g.trim();
-        if trimmed.is_empty() { String::new() } else { trimmed.to_string() }
-    }).unwrap_or_default())
+        if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+    }))
     .bind(&payload.date)
     .bind(&payload.open)
     .bind(&payload.start)
@@ -2468,10 +2468,10 @@ async fn update_schedule(
         "#,
     )
     .bind(&payload.title)
-    .bind(&payload.group.as_ref().map(|g| {
+    .bind(&payload.group.as_ref().and_then(|g| {
         let trimmed = g.trim();
-        if trimmed.is_empty() { String::new() } else { trimmed.to_string() }
-    }).unwrap_or_default())
+        if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+    }))
     .bind(&payload.date)
     .bind(&payload.open)
     .bind(&payload.start)
