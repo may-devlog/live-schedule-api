@@ -23,6 +23,7 @@ import { useEffect } from "react";
 import { HomeButton } from "../../components/HomeButton";
 import { NotionRelation } from "../../components/notion-relation";
 import type { Schedule } from "../HomeScreen";
+import { PageHeader } from "../../components/PageHeader";
 
 type Traffic = {
   id: number;
@@ -221,9 +222,7 @@ export default function NewTrafficScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <View style={styles.header}>
-        <HomeButton />
-      </View>
+      <PageHeader showBackButton={true} />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>
           {copyFrom ? "Duplicate Traffic" : "New Traffic"}
