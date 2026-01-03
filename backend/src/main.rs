@@ -411,7 +411,7 @@ where
 struct Schedule {
     id: i32,
     title: String,
-    group: String, // groupがNULLの場合はtitleを使用（APIレスポンスでフォールバック）
+    group: Option<String>, // NULL許可（空欄の場合はNULLのまま）
     datetime: DateTime<Utc>, // date + start から生成（計算フィールド）
 
     // Event Info
