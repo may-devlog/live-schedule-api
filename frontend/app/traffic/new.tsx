@@ -179,11 +179,16 @@ export default function NewTrafficScreen() {
       }
 
       const created = await res.json();
-      Alert.alert("登録完了", "交通情報を登録しました。", [
+      const successMessage = copyFrom ? "交通情報を複製しました。" : "交通情報を登録しました。";
+      Alert.alert("登録完了", successMessage, [
         {
           text: "OK",
           onPress: () => {
-            router.push(`/live/${scheduleId}`);
+            if (scheduleId) {
+              router.push(`/live/${scheduleId}`);
+            } else {
+              router.push("/");
+            }
           },
         },
       ]);
