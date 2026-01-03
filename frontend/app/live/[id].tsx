@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
@@ -594,6 +595,41 @@ export default function DetailScreen() {
 
   const handleDuplicate = () => {
     router.push(`/new?copyFrom=${id}`);
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "削除確認",
+      "このスケジュールを削除しますか？この操作は取り消せません。",
+      [
+        {
+          text: "キャンセル",
+          style: "cancel",
+        },
+        {
+          text: "削除",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const res = await authenticatedFetch(getApiUrl(`/schedules/${id}`), {
+                method: "DELETE",
+              });
+              
+              if (!res.ok) {
+                const error = await res.json();
+                Alert.alert("エラー", error.error || "削除に失敗しました");
+                return;
+              }
+              
+              // 削除成功後、ホーム画面に戻る
+              router.replace("/");
+            } catch (error: any) {
+              Alert.alert("エラー", error.message || "削除に失敗しました");
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (

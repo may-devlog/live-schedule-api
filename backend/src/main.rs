@@ -2,7 +2,7 @@ use axum::{
     extract::{Extension, Path, Query},
     http::{header::AUTHORIZATION, HeaderValue, StatusCode, HeaderMap, request::Parts},
     response::Json,
-    routing::{get, post, put},
+    routing::{get, post, put, delete},
     Router,
 };
 use axum::async_trait;
@@ -1543,9 +1543,12 @@ async fn toggle_sharing(
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<ToggleSharingRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
-    // share_idが設定されているか確認
-    let user_row: Option<(Option<String>,)> = sqlx::query_as(
-        "SELECT share_id FROM users WHERE id = ?"
+    eprintln!("[ToggleSharing] Received request from user_id: {}", user.user_id);
+    eprintln!("[ToggleSharing] Request payload: enabled={}", payload.enabled);
+    
+    // まず、ユーザーが存在するか確認（全カラムを取得してデバッグ）
+    let user_row_full: Option<(i64, String, Option<String>, i32)> = sqlx::query_as(
+        "SELECT id, email, share_id, sharing_enabled FROM users WHERE id = ?"
     )
     .bind(user.user_id as i64)
     .fetch_optional(&pool)
@@ -1560,7 +1563,10 @@ async fn toggle_sharing(
         )
     })?;
     
-    if let Some((share_id,)) = user_row {
+    if let Some((id, email, share_id, sharing_enabled)) = user_row_full {
+        eprintln!("[ToggleSharing] Found user: id={}, email={}, share_id={:?}, sharing_enabled={}", 
+                 id, email, share_id, sharing_enabled);
+        
         if share_id.is_none() {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -1570,6 +1576,17 @@ async fn toggle_sharing(
             ));
         }
     } else {
+        eprintln!("[ToggleSharing] User not found with user_id: {}", user.user_id);
+        
+        // デバッグ: データベース内の全ユーザーを確認
+        let all_users: Vec<(i64, String, Option<String>)> = sqlx::query_as(
+            "SELECT id, email, share_id FROM users"
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default();
+        eprintln!("[ToggleSharing] All users in database: {:?}", all_users);
+        
         return Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
@@ -2691,6 +2708,192 @@ async fn update_schedule(
     }
     
     Ok(Json(schedule))
+}
+
+// DELETE /schedules/:id
+async fn delete_schedule(
+    Path(id): Path<i32>,
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    // スケジュールが存在し、ユーザーが所有しているかチェック
+    let existing: Option<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
+        r#"
+        SELECT
+          id,
+          title,
+          "group",
+          date,
+          open,
+          start,
+          "end",
+          notes,
+          category,
+          area,
+          venue,
+          target,
+          lineup,
+          seller,
+          ticket_fee,
+          drink_fee,
+          total_fare,
+          stay_fee,
+          travel_cost,
+          total_cost,
+          status,
+          related_schedule_ids,
+          user_id,
+          is_public,
+          created_at,
+          updated_at
+        FROM schedules
+        WHERE id = ?
+        "#,
+    )
+    .bind(id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "データベースエラーが発生しました".to_string(),
+            }),
+        )
+    })?;
+
+    let existing = existing.ok_or((
+        StatusCode::NOT_FOUND,
+        Json(ErrorResponse {
+            error: "スケジュールが見つかりませんでした".to_string(),
+        }),
+    ))?;
+    
+    if existing.user_id.map(|uid| uid as i32) != Some(user.user_id) {
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(ErrorResponse {
+                error: "このスケジュールを削除する権限がありません".to_string(),
+            }),
+        ));
+    }
+
+    // 関連スケジュールからこのスケジュールへの参照を削除
+    let related_ids: Vec<i32> = existing.related_schedule_ids
+        .as_ref()
+        .and_then(|json| serde_json::from_str::<Vec<i32>>(json).ok())
+        .unwrap_or_default();
+    
+    let now = Utc::now().to_rfc3339();
+    for related_id in related_ids {
+        let related_row: Option<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
+            r#"
+            SELECT
+              id,
+              title,
+              "group",
+              date,
+              open,
+              start,
+              "end",
+              notes,
+              category,
+              area,
+              venue,
+              target,
+              lineup,
+              seller,
+              ticket_fee,
+              drink_fee,
+              total_fare,
+              stay_fee,
+              travel_cost,
+              total_cost,
+              status,
+              related_schedule_ids,
+              user_id,
+              is_public,
+              created_at,
+              updated_at
+            FROM schedules
+            WHERE id = ?
+            "#,
+        )
+        .bind(related_id)
+        .fetch_optional(&pool)
+        .await
+        .ok()
+        .flatten();
+        
+        if let Some(related) = related_row {
+            let mut related_ids_vec: Vec<i32> = related.related_schedule_ids
+                .as_ref()
+                .and_then(|json| serde_json::from_str::<Vec<i32>>(json).ok())
+                .unwrap_or_default();
+            
+            related_ids_vec.retain(|&x| x != id);
+            let updated_json = if related_ids_vec.is_empty() {
+                None
+            } else {
+                serde_json::to_string(&related_ids_vec).ok()
+            };
+            
+            let _ = sqlx::query(
+                r#"
+                UPDATE schedules SET
+                  related_schedule_ids = ?,
+                  updated_at = ?
+                WHERE id = ?
+                "#,
+            )
+            .bind(&updated_json)
+            .bind(&now)
+            .bind(related_id)
+            .execute(&pool)
+            .await;
+        }
+    }
+
+    // 関連するtrafficsを削除
+    let _ = sqlx::query("DELETE FROM traffics WHERE schedule_id = ?")
+        .bind(id)
+        .execute(&pool)
+        .await;
+
+    // 関連するstaysを削除
+    let _ = sqlx::query("DELETE FROM stays WHERE schedule_id = ?")
+        .bind(id)
+        .execute(&pool)
+        .await;
+
+    // スケジュールを削除
+    let result = sqlx::query("DELETE FROM schedules WHERE id = ? AND user_id = ?")
+        .bind(id)
+        .bind(user.user_id)
+        .execute(&pool)
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "データベースエラーが発生しました".to_string(),
+                }),
+            )
+        })?;
+
+    if result.rows_affected() == 0 {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "スケジュールが見つかりませんでした".to_string(),
+            }),
+        ));
+    }
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "message": "スケジュールを削除しました"
+    })))
 }
 
 // GET /public/schedules - 公開されているスケジュール一覧
