@@ -19,6 +19,7 @@ type NotionRelationProps = {
   onValueChange: (ids: number[]) => void;
   currentScheduleId?: number; // 現在編集中のスケジュールID（自分自身を除外するため）
   placeholder?: string;
+  hideSelectedCards?: boolean; // 選択されたカードを非表示にするか
 };
 
 export function NotionRelation({
