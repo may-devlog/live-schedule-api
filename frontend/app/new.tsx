@@ -249,7 +249,7 @@ export default function NewScheduleScreen() {
       drink_fee: drinkFeeNum ?? null,
       status: status || "Pending",
       related_schedule_ids: relatedScheduleIds.length > 0 ? relatedScheduleIds : null,
-      is_public: false, // デフォルトは非公開
+      is_public: true, // デフォルトは公開
     };
 
     try {

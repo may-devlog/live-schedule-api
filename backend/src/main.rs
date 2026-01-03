@@ -2142,7 +2142,7 @@ async fn create_schedule(
 ) -> Result<(StatusCode, Json<Schedule>), (StatusCode, Json<ErrorResponse>)> {
     // 必須項目のバリデーション（targetはNULL許可）
     let now = Utc::now().to_rfc3339();
-    let is_public = payload.is_public.unwrap_or(false) as i32;
+    let is_public = payload.is_public.unwrap_or(true) as i32;
     let result = sqlx::query(
         r#"
         INSERT INTO schedules (
