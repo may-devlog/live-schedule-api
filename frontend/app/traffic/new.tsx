@@ -97,8 +97,7 @@ export default function NewTrafficScreen() {
         setReturnFlag(data.return_flag);
         // scheduleIdも設定（もし指定されていなければ）
         if (!scheduleId && data.schedule_id) {
-          // scheduleIdはクエリパラメータなので、URLを更新する必要がある
-          // ただし、ここでは既に設定されているのでスキップ
+          setScheduleId(data.schedule_id.toString());
         }
       } catch (e: any) {
         console.error("Error loading traffic for copy:", e);
