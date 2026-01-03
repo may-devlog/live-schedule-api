@@ -601,9 +601,12 @@ export default function DetailScreen() {
   const handleDelete = () => {
     const performDelete = async () => {
       try {
+        console.log("[DELETE] Attempting to delete schedule:", id);
         const res = await authenticatedFetch(getApiUrl(`/schedules/${id}`), {
           method: "DELETE",
         });
+        console.log("[DELETE] Response status:", res.status);
+        console.log("[DELETE] Response ok:", res.ok);
         
         if (!res.ok) {
           let errorMessage = "削除に失敗しました";
