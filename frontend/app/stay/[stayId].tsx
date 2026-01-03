@@ -193,6 +193,68 @@ export default function StayDetailScreen() {
             value={stay.status}
           />
         </NotionPropertyBlock>
+
+        {/* [Schedule Link] */}
+        {isAuthenticated && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Schedule</Text>
+            </View>
+            <NotionRelation
+              label=""
+              value={selectedScheduleId ? [selectedScheduleId] : []}
+              onValueChange={async (ids) => {
+                const newScheduleId = ids.length > 0 ? ids[0] : null;
+                setSelectedScheduleId(newScheduleId);
+                
+                // バックエンドに更新
+                if (stay) {
+                  try {
+                    const updateRes = await authenticatedFetch(getApiUrl(`/stay/${stayId}`), {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        schedule_id: newScheduleId || 0,
+                        check_in: stay.check_in,
+                        check_out: stay.check_out,
+                        hotel_name: stay.hotel_name,
+                        fee: stay.fee,
+                        breakfast_flag: stay.breakfast_flag,
+                        deadline: stay.deadline,
+                        penalty: stay.penalty,
+                        status: stay.status,
+                      }),
+                    });
+                    
+                    if (updateRes.ok) {
+                      // スケジュール情報を更新
+                      if (newScheduleId) {
+                        try {
+                          const scheduleRes = await fetch(getApiUrl(`/public/schedules/${newScheduleId}`));
+                          if (scheduleRes.ok) {
+                            const scheduleData: Schedule = await scheduleRes.json();
+                            setSchedule(scheduleData);
+                          } else {
+                            setSchedule(null);
+                          }
+                        } catch (e) {
+                          console.error("[StayDetail] Failed to fetch schedule:", e);
+                          setSchedule(null);
+                        }
+                      } else {
+                        setSchedule(null);
+                      }
+                    }
+                  } catch (e) {
+                    console.error("[StayDetail] Failed to update schedule link:", e);
+                  }
+                }
+              }}
+              placeholder="↗ スケジュールにリンク"
+              hideSelectedCards={false}
+            />
+          </View>
+        )}
       </ScrollView>
     </View>
   );
