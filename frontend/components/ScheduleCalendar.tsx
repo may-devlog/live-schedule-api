@@ -92,6 +92,7 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<Schedule[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
 
   // 現在の月の最初の日と最後の日を取得
   const year = currentDate.getFullYear();
