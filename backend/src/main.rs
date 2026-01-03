@@ -4325,7 +4325,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/public/traffic", get(list_public_traffics))
         .route("/public/stay", get(list_public_stays))
         .route("/schedules", get(list_schedules).post(create_schedule))
-        .route("/schedules/:id", put(update_schedule))
+        .route("/schedules/:id", put(update_schedule).delete(delete_schedule))
         .route("/schedules/upcoming", get(list_upcoming))
         .route("/traffic", get(list_traffics).post(create_traffic))
         .route("/traffic/all", get(list_all_traffics))
