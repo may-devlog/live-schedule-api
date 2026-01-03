@@ -26,6 +26,7 @@ import { getOptionColor } from "../../utils/get-option-color";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "../../components/PageHeader";
 import type { Schedule } from "../HomeScreen";
+import { NotionRelation } from "../../components/notion-relation";
 
 export default function TrafficDetailScreen() {
   const { trafficId } = useLocalSearchParams<{ trafficId: string }>();
@@ -33,9 +34,11 @@ export default function TrafficDetailScreen() {
   const { isAuthenticated } = useAuth();
   const [traffic, setTraffic] = useState<Traffic | null>(null);
   const [schedule, setSchedule] = useState<Schedule | null>(null);
+  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transportationColor, setTransportationColor] = useState<string | null>(null);
+  const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
 
   const handleEdit = () => {
     router.push(`/traffic/${trafficId}/edit`);
@@ -63,6 +66,18 @@ export default function TrafficDetailScreen() {
         }
         const data: Traffic = await res.json();
         setTraffic(data);
+        setSelectedScheduleId(data.schedule_id || null);
+        
+        // 全スケジュール一覧を取得（スケジュール選択用）
+        try {
+          const schedulesRes = await authenticatedFetch(getApiUrl("/schedules"));
+          if (schedulesRes.ok) {
+            const schedulesData: Schedule[] = await schedulesRes.json();
+            setAllSchedules(schedulesData);
+          }
+        } catch (e) {
+          console.error("[TrafficDetail] Failed to fetch schedules:", e);
+        }
         
         // スケジュール情報を取得
         if (data.schedule_id) {
@@ -203,6 +218,69 @@ export default function TrafficDetailScreen() {
             value={traffic.return_flag ? "Yes" : "No"}
           />
         </NotionPropertyBlock>
+
+        {/* [Schedule Link] */}
+        {isAuthenticated && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Schedule</Text>
+            </View>
+            <NotionRelation
+              label=""
+              value={selectedScheduleId ? [selectedScheduleId] : []}
+              onValueChange={async (ids) => {
+                const newScheduleId = ids.length > 0 ? ids[0] : null;
+                setSelectedScheduleId(newScheduleId);
+                
+                // バックエンドに更新
+                if (traffic) {
+                  try {
+                    const updateRes = await authenticatedFetch(getApiUrl(`/traffic/${trafficId}`), {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        schedule_id: newScheduleId || 0,
+                        date: traffic.date,
+                        order: traffic.order,
+                        transportation: traffic.transportation,
+                        from: traffic.from,
+                        to: traffic.to,
+                        notes: traffic.notes,
+                        fare: traffic.fare,
+                        miles: traffic.miles,
+                        return_flag: traffic.return_flag,
+                      }),
+                    });
+                    
+                    if (updateRes.ok) {
+                      // スケジュール情報を更新
+                      if (newScheduleId) {
+                        try {
+                          const scheduleRes = await fetch(getApiUrl(`/public/schedules/${newScheduleId}`));
+                          if (scheduleRes.ok) {
+                            const scheduleData: Schedule = await scheduleRes.json();
+                            setSchedule(scheduleData);
+                          } else {
+                            setSchedule(null);
+                          }
+                        } catch (e) {
+                          console.error("[TrafficDetail] Failed to fetch schedule:", e);
+                          setSchedule(null);
+                        }
+                      } else {
+                        setSchedule(null);
+                      }
+                    }
+                  } catch (e) {
+                    console.error("[TrafficDetail] Failed to update schedule link:", e);
+                  }
+                }
+              }}
+              placeholder="↗ スケジュールにリンク"
+              hideSelectedCards={false}
+            />
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -275,5 +353,20 @@ const styles = StyleSheet.create({
     color: "#d93025",
     marginVertical: 8,
     fontSize: 14,
+  },
+  section: {
+    marginTop: 24,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#37352f",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
 });

@@ -266,4 +266,19 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     fontSize: 14,
   },
+  section: {
+    marginTop: 24,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#37352f",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
 });
