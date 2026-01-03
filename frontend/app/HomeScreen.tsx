@@ -664,18 +664,34 @@ export default function HomeScreen() {
             {sharingUrl && sharingEnabled && (
               <View style={styles.sharingUrlContainer}>
                 <Text style={styles.sharingUrlLabel}>共有URL:</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (Platform.OS === 'web' && typeof window !== 'undefined' && navigator.clipboard) {
-                      navigator.clipboard.writeText(sharingUrl);
-                      Alert.alert("コピーしました", sharingUrl);
-                    } else {
-                      Alert.alert("共有URL", sharingUrl);
-                    }
-                  }}
-                >
-                  <Text style={styles.sharingUrlText} numberOfLines={1}>{sharingUrl}</Text>
-                </TouchableOpacity>
+                <View style={styles.sharingUrlRow}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (Platform.OS === 'web' && typeof window !== 'undefined' && navigator.clipboard) {
+                        navigator.clipboard.writeText(sharingUrl);
+                        Alert.alert("コピーしました", sharingUrl);
+                      } else {
+                        Alert.alert("共有URL", sharingUrl);
+                      }
+                    }}
+                    style={styles.sharingUrlTextContainer}
+                  >
+                    <Text style={styles.sharingUrlText} numberOfLines={1}>{sharingUrl}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (Platform.OS === 'web' && typeof window !== 'undefined' && navigator.clipboard) {
+                        navigator.clipboard.writeText(sharingUrl);
+                        Alert.alert("コピーしました", sharingUrl);
+                      } else {
+                        Alert.alert("共有URL", sharingUrl);
+                      }
+                    }}
+                    style={styles.copyButton}
+                  >
+                    <Text style={styles.copyButtonText}>📋</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
 

@@ -639,10 +639,10 @@ fn row_to_schedule(row: ScheduleRow) -> Schedule {
         Utc::now()
     };
 
-    // groupがNULLまたは空文字列の場合はtitleを使用
+    // groupがNULLの場合はそのままNULLを返す（データとして保持）
     let group = row.group_name
         .filter(|g| !g.trim().is_empty())
-        .unwrap_or_else(|| row.title.clone());
+        .map(|g| g.trim().to_string());
 
     Schedule {
         id: row.id as i32,

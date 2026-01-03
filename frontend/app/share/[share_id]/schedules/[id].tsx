@@ -292,7 +292,7 @@ export default function SharedScheduleDetailScreen() {
 
         {/* [Event Info] */}
         <NotionPropertyBlock title="Event Info">
-          <NotionProperty label="Group" value={schedule.group || schedule.title} />
+          <NotionProperty label="Group" value={schedule.group || "-"} />
           <NotionProperty
             label="Date"
             value={schedule.date ?? formatDateTimeUTC(schedule.datetime)}
