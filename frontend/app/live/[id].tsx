@@ -608,10 +608,18 @@ export default function DetailScreen() {
         if (!res.ok) {
           let errorMessage = "削除に失敗しました";
           try {
-            const error = await res.json();
-            errorMessage = error.error || errorMessage;
+            const text = await res.text();
+            if (text) {
+              try {
+                const error = JSON.parse(text);
+                errorMessage = error.error || errorMessage;
+              } catch {
+                // JSONパースに失敗した場合は、テキストをそのまま使用
+                errorMessage = text || errorMessage;
+              }
+            }
           } catch {
-            // JSONパースに失敗した場合は、ステータステキストを使用
+            // レスポンスの読み取りに失敗した場合は、ステータスコードを使用
             errorMessage = `削除に失敗しました (${res.status})`;
           }
           if (Platform.OS === "web" && typeof window !== "undefined" && window.alert) {
@@ -622,17 +630,7 @@ export default function DetailScreen() {
           return;
         }
         
-        // レスポンスが空でない場合のみJSONをパース
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          try {
-            await res.json();
-          } catch {
-            // JSONパースに失敗しても削除は成功している可能性があるので続行
-          }
-        }
-        
-        // 削除成功後、ホーム画面に戻る
+        // 削除成功後、ホーム画面に戻る（レスポンスは読み取らない）
         router.replace("/");
       } catch (error: any) {
         const errorMessage = error.message || "削除に失敗しました";
