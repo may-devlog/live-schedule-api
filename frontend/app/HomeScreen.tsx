@@ -393,7 +393,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchUpcoming();
-  }, []);
+  }, [isAuthenticated]);
 
   // メールアドレスが変更された時に再レンダリングされるようにする
   useEffect(() => {
