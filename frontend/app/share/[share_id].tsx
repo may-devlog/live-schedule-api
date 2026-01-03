@@ -199,7 +199,7 @@ export default function SharedScheduleScreen() {
             <TouchableOpacity
               key={year}
               style={styles.yearRow}
-              onPress={() => router.push(`/year/${year}`)}
+              onPress={() => router.push(`/share/${share_id}/year/${year}`)}
             >
               <Text style={styles.yearRowText}>{year}</Text>
             </TouchableOpacity>
