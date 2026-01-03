@@ -177,9 +177,11 @@ const fetchYear = async (y: string) => {
                 {formatDateTimeUTC(item.datetime)}
               </Text>
               {/* ツアー名 (Group) */}
-              <Text style={styles.cardGroup} numberOfLines={1}>
-                {item.group || "-"}
-              </Text>
+              {item.group && (
+                <Text style={styles.cardGroup} numberOfLines={1}>
+                  {item.group}
+                </Text>
+              )}
               <Text style={styles.cardTitle} numberOfLines={2}>
                 {item.title}
               </Text>
