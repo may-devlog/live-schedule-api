@@ -247,9 +247,7 @@ export default function NewStayScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <View style={styles.header}>
-        <HomeButton />
-      </View>
+      <PageHeader showBackButton={true} />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>
           {copyFrom ? "Duplicate Stay" : "New Stay"}
