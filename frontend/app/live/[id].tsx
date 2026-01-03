@@ -633,8 +633,24 @@ export default function DetailScreen() {
           return;
         }
         
-        // 削除成功後、ホーム画面に戻る（レスポンスは読み取らない）
-        router.replace("/");
+        // 削除成功メッセージを表示
+        const successMessage = "スケジュールを削除しました";
+        if (Platform.OS === "web" && typeof window !== "undefined" && window.alert) {
+          window.alert(successMessage);
+          // 少し待ってから遷移（アラートが閉じるのを待つ）
+          setTimeout(() => {
+            router.replace("/");
+          }, 100);
+        } else {
+          Alert.alert("削除完了", successMessage, [
+            {
+              text: "OK",
+              onPress: () => {
+                router.replace("/");
+              },
+            },
+          ]);
+        }
       } catch (error: any) {
         const errorMessage = error.message || "削除に失敗しました";
         if (Platform.OS === "web" && typeof window !== "undefined" && window.alert) {
