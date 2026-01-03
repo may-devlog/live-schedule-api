@@ -323,13 +323,6 @@ export default function SharedScheduleDetailScreen() {
             )}
           </NotionProperty>
           <NotionProperty label="Venue" value={schedule.venue} />
-          <NotionProperty label="Target">
-            {filteredTarget ? (
-              <NotionTag label={filteredTarget} color={targetColor || undefined} />
-            ) : (
-              <Text style={styles.emptyValue}>-</Text>
-            )}
-          </NotionProperty>
           <NotionProperty label="Lineup">
             {filteredLineupOptions.length > 0 ? (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
@@ -337,6 +330,13 @@ export default function SharedScheduleDetailScreen() {
                   <NotionTag key={opt.label} label={opt.label} color={opt.color} />
                 ))}
               </View>
+            ) : (
+              <Text style={styles.emptyValue}>-</Text>
+            )}
+          </NotionProperty>
+          <NotionProperty label="Target">
+            {filteredTarget ? (
+              <NotionTag label={filteredTarget} color={targetColor || undefined} />
             ) : (
               <Text style={styles.emptyValue}>-</Text>
             )}

@@ -238,17 +238,6 @@ export default function PublicDetailScreen() {
             />
           )}
           <NotionProperty label="Venue" value={schedule.venue} />
-          {schedule.target && (
-            <NotionProperty
-              label="Target"
-              value={
-                <NotionTag
-                  label={schedule.target}
-                  color={targetColor || undefined}
-                />
-              }
-            />
-          )}
           <NotionProperty label="Lineup">
             {lineupOptions.length > 0 ? (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
@@ -260,6 +249,17 @@ export default function PublicDetailScreen() {
               <Text style={styles.emptyValue}>-</Text>
             )}
           </NotionProperty>
+          {schedule.target && (
+            <NotionProperty
+              label="Target"
+              value={
+                <NotionTag
+                  label={schedule.target}
+                  color={targetColor || undefined}
+                />
+              }
+            />
+          )}
         </NotionPropertyBlock>
 
         <NotionPropertyBlock label="Cost">

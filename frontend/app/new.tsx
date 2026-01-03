@@ -446,14 +446,6 @@ export default function NewScheduleScreen() {
         onChangeText={setVenue}
       />
 
-      <NotionSelect
-        label="Target"
-        value={target}
-        options={targets}
-        onValueChange={setTarget}
-        placeholder="選択してください"
-      />
-
       <NotionMultiSelect
         label="Lineup"
         value={lineup}
@@ -462,6 +454,14 @@ export default function NewScheduleScreen() {
         onOptionsChange={handleLineupOptionsChange}
         placeholder="選択してください"
         sharedOptionsKey="TARGETS"
+      />
+
+      <NotionSelect
+        label="Target"
+        value={target}
+        options={targets}
+        onValueChange={setTarget}
+        placeholder="選択してください"
       />
 
       <NotionSelect
