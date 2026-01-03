@@ -655,6 +655,12 @@ export default function DetailScreen() {
               >
                 <Text style={styles.editButtonText}>編集</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={handleDelete}
+              >
+                <Text style={styles.deleteButtonText}>削除</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -1016,6 +1022,17 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   editButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  deleteButton: {
+    backgroundColor: "#d93025",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 3,
+  },
+  deleteButtonText: {
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "600",
