@@ -1012,9 +1012,25 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 4,
   },
+  sharingUrlRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  sharingUrlTextContainer: {
+    flex: 1,
+  },
   sharingUrlText: {
     fontSize: 12,
     color: "#007AFF",
     textDecorationLine: "underline",
+  },
+  copyButton: {
+    padding: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  copyButtonText: {
+    fontSize: 16,
   },
 });
