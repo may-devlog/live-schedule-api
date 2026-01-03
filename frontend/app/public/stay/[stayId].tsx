@@ -1,0 +1,191 @@
+// app/public/stay/[stayId].tsx - 公開ページ用の宿泊詳細画面（閲覧専用）
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import { getApiUrl } from "../../../utils/api";
+import { NotionProperty, NotionPropertyBlock } from "../../../components/notion-property";
+import { NotionTag } from "../../../components/notion-tag";
+import { PageHeader } from "../../../components/PageHeader";
+import type { Schedule } from "../../HomeScreen";
+import { maskHotelName } from "../../../utils/mask-hotel-name";
+
+type Stay = {
+  id: number;
+  schedule_id: number;
+  check_in: string;
+  check_out: string;
+  hotel_name: string;
+  fee: number;
+  breakfast_flag: boolean;
+  deadline?: string | null;
+  penalty?: number | null;
+  status: string;
+};
+
+export default function PublicStayDetailScreen() {
+  const { stayId } = useLocalSearchParams<{ stayId: string }>();
+  const router = useRouter();
+  const [stay, setStay] = useState<Stay | null>(null);
+  const [schedule, setSchedule] = useState<Schedule | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!stayId) return;
+
+    const fetchStay = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch(getApiUrl(`/public/stay/${stayId}`));
+        if (!res.ok) {
+          if (res.status === 404) {
+            throw new Error("Stay not found");
+          }
+          throw new Error(`status: ${res.status}`);
+        }
+        const data: Stay = await res.json();
+        setStay(data);
+        
+        // スケジュール情報を取得
+        if (data.schedule_id) {
+          try {
+            const scheduleRes = await fetch(getApiUrl(`/public/schedules/${data.schedule_id}`));
+            if (scheduleRes.ok) {
+              const scheduleData: Schedule = await scheduleRes.json();
+              setSchedule(scheduleData);
+            }
+          } catch (e) {
+            console.error("[PublicStayDetail] Failed to fetch schedule:", e);
+          }
+        }
+      } catch (e: any) {
+        setError(e.message ?? "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStay();
+  }, [stayId]);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator color="#333333" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Error: {error}</Text>
+      </View>
+    );
+  }
+
+  if (!stay) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Stay not found</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* タイトル */}
+        <View style={styles.titleHeader}>
+          <Text style={styles.mainTitle} numberOfLines={2}>
+            {maskHotelName(stay.hotel_name, false)}
+          </Text>
+        </View>
+
+        {/* [Stay Info] */}
+        <NotionPropertyBlock title="Stay Info">
+          <NotionProperty
+            label="Check-in"
+            value={stay.check_in}
+          />
+          <NotionProperty
+            label="Check-out"
+            value={stay.check_out}
+          />
+          <NotionProperty
+            label="Hotel Name"
+            value={maskHotelName(stay.hotel_name, false)}
+          />
+          <NotionProperty
+            label="Fee"
+            value={formatCurrency(stay.fee)}
+          />
+          <NotionProperty
+            label="Breakfast"
+            value={stay.breakfast_flag ? "Yes" : "No"}
+          />
+          <NotionProperty
+            label="Deadline"
+            value={
+              stay.deadline && stay.deadline.trim().length > 0
+                ? stay.deadline
+                : undefined
+            }
+          />
+          <NotionProperty
+            label="Penalty"
+            value={
+              stay.penalty !== null && stay.penalty !== undefined
+                ? `${stay.penalty}%`
+                : undefined
+            }
+          />
+          <NotionProperty
+            label="Status"
+            value={stay.status}
+          />
+        </NotionPropertyBlock>
+      </ScrollView>
+    </View>
+  );
+}
+
+function formatCurrency(value: number): string {
+  return `¥${value.toLocaleString("ja-JP")}`;
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  scrollContent: {
+    padding: 24,
+    paddingBottom: 32,
+    maxWidth: 900,
+    alignSelf: "center",
+    width: "100%",
+  },
+  titleHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
+    gap: 16,
+  },
+  mainTitle: {
+    fontSize: 40,
+    fontWeight: "700",
+    color: "#37352f",
+    lineHeight: 48,
+    flex: 1,
+  },
+  errorText: {
+    color: "#d93025",
+    marginVertical: 8,
+    fontSize: 14,
+  },
+});
+

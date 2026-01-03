@@ -3205,6 +3205,111 @@ async fn list_public_stays(
     Json(stays)
 }
 
+// GET /public/traffic/:id - 公開スケジュールの交通情報（個別）
+async fn get_public_traffic(
+    Path(id): Path<i32>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Traffic>, StatusCode> {
+    let row: Option<TrafficRow> = sqlx::query_as::<_, TrafficRow>(
+        r#"
+        SELECT
+          id,
+          schedule_id,
+          date,
+          "order",
+          transportation,
+          from_place,
+          to_place,
+          notes,
+          fare,
+          miles,
+          return_flag,
+          total_fare,
+          total_miles
+        FROM traffics
+        WHERE id = ?
+        "#,
+    )
+    .bind(id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let row = row.ok_or(StatusCode::NOT_FOUND)?;
+
+    // 関連するスケジュールが公開されているか確認
+    let schedule_is_public: Option<i64> = if std::env::var("DISABLE_AUTH").is_ok() {
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ?")
+            .bind(row.schedule_id)
+            .fetch_optional(&pool)
+            .await
+            .expect("failed to check schedule")
+    } else {
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND is_public = 1")
+            .bind(row.schedule_id)
+            .fetch_optional(&pool)
+            .await
+            .expect("failed to check schedule")
+    };
+
+    if schedule_is_public.is_none() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    Ok(Json(row_to_traffic(row)))
+}
+
+// GET /public/stay/:id - 公開スケジュールの宿泊情報（個別）
+async fn get_public_stay(
+    Path(id): Path<i32>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Stay>, StatusCode> {
+    let row: Option<StayRow> = sqlx::query_as::<_, StayRow>(
+        r#"
+        SELECT
+          id,
+          schedule_id,
+          check_in,
+          check_out,
+          hotel_name,
+          fee,
+          breakfast_flag,
+          deadline,
+          penalty,
+          status
+        FROM stays
+        WHERE id = ?
+        "#,
+    )
+    .bind(id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let row = row.ok_or(StatusCode::NOT_FOUND)?;
+
+    // 関連するスケジュールが公開されているか確認
+    let schedule_is_public: Option<i64> = if std::env::var("DISABLE_AUTH").is_ok() {
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ?")
+            .bind(row.schedule_id)
+            .fetch_optional(&pool)
+            .await
+            .expect("failed to check schedule")
+    } else {
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND is_public = 1")
+            .bind(row.schedule_id)
+            .fetch_optional(&pool)
+            .await
+            .expect("failed to check schedule")
+    };
+
+    if schedule_is_public.is_none() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    Ok(Json(row_to_stay(row)))
+}
+
 // GET /traffic?schedule_id=...
 async fn list_traffics(
     Query(params): Query<TrafficQuery>,
@@ -4323,7 +4428,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/public/schedules", get(list_public_schedules))
         .route("/public/schedules/:id", get(get_public_schedule))
         .route("/public/traffic", get(list_public_traffics))
+        .route("/public/traffic/:id", get(get_public_traffic))
         .route("/public/stay", get(list_public_stays))
+        .route("/public/stay/:id", get(get_public_stay))
         .route("/schedules", get(list_schedules).post(create_schedule))
         .route("/schedules/:id", put(update_schedule).delete(delete_schedule))
         .route("/schedules/upcoming", get(list_upcoming))
