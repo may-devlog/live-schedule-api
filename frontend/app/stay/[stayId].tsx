@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "../../components/PageHeader";
 import type { Schedule } from "../HomeScreen";
 import { maskHotelName } from "../../utils/mask-hotel-name";
+import { NotionRelation } from "../../components/notion-relation";
 
 export default function StayDetailScreen() {
   const { stayId } = useLocalSearchParams<{ stayId: string }>();
