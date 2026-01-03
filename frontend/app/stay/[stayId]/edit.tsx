@@ -11,6 +11,7 @@ import {
   ScrollView,
   Switch,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { authenticatedFetch, getApiUrl } from "../../../utils/api";
 import { NotionSelect } from "../../../components/notion-select";
@@ -187,22 +188,37 @@ export default function EditStayScreen() {
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         console.log("UPDATE STAY ERROR:", res.status, text);
-        Alert.alert("エラー", `宿泊情報の更新に失敗しました（status: ${res.status}）`);
+        const errorMessage = `宿泊情報の更新に失敗しました（status: ${res.status}）`;
+        if (Platform.OS === "web") {
+          window.alert(`エラー\n\n${errorMessage}`);
+        } else {
+          Alert.alert("エラー", errorMessage);
+        }
         return;
       }
 
       const updated = await res.json();
-      Alert.alert("更新完了", "宿泊情報を更新しました。", [
-        {
-          text: "OK",
-          onPress: () => {
-            router.push(`/stay/${stayId}`);
+      if (Platform.OS === "web") {
+        window.alert("更新完了\n\n宿泊情報を更新しました。");
+        router.push(`/stay/${stayId}`);
+      } else {
+        Alert.alert("更新完了", "宿泊情報を更新しました。", [
+          {
+            text: "OK",
+            onPress: () => {
+              router.push(`/stay/${stayId}`);
+            },
           },
-        },
-      ]);
+        ]);
+      }
     } catch (e: any) {
       console.log("UPDATE STAY EXCEPTION:", e);
-      Alert.alert("エラー", "通信に失敗しました。サーバーの状態を確認してください。");
+      const errorMessage = e.message || "通信に失敗しました。サーバーの状態を確認してください。";
+      if (Platform.OS === "web") {
+        window.alert(`エラー\n\n${errorMessage}`);
+      } else {
+        Alert.alert("エラー", errorMessage);
+      }
     } finally {
       setSubmitting(false);
     }

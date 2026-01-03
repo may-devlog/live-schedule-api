@@ -11,6 +11,7 @@ import {
   ScrollView,
   Switch,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { authenticatedFetch, getApiUrl } from "../../../utils/api";
 import { NotionSelect } from "../../../components/notion-select";
@@ -169,22 +170,37 @@ export default function EditTrafficScreen() {
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         console.log("UPDATE TRAFFIC ERROR:", res.status, text);
-        Alert.alert("エラー", `交通情報の更新に失敗しました（status: ${res.status}）`);
+        const errorMessage = `交通情報の更新に失敗しました（status: ${res.status}）`;
+        if (Platform.OS === "web") {
+          window.alert(`エラー\n\n${errorMessage}`);
+        } else {
+          Alert.alert("エラー", errorMessage);
+        }
         return;
       }
 
       const updated = await res.json();
-      Alert.alert("更新完了", "交通情報を更新しました。", [
-        {
-          text: "OK",
-          onPress: () => {
-            router.push(`/traffic/${trafficId}`);
+      if (Platform.OS === "web") {
+        window.alert("更新完了\n\n交通情報を更新しました。");
+        router.push(`/traffic/${trafficId}`);
+      } else {
+        Alert.alert("更新完了", "交通情報を更新しました。", [
+          {
+            text: "OK",
+            onPress: () => {
+              router.push(`/traffic/${trafficId}`);
+            },
           },
-        },
-      ]);
+        ]);
+      }
     } catch (e: any) {
       console.log("UPDATE TRAFFIC EXCEPTION:", e);
-      Alert.alert("エラー", "通信に失敗しました。サーバーの状態を確認してください。");
+      const errorMessage = e.message || "通信に失敗しました。サーバーの状態を確認してください。";
+      if (Platform.OS === "web") {
+        window.alert(`エラー\n\n${errorMessage}`);
+      } else {
+        Alert.alert("エラー", errorMessage);
+      }
     } finally {
       setSubmitting(false);
     }

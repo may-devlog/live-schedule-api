@@ -174,27 +174,46 @@ export default function NewTrafficScreen() {
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         console.log("CREATE TRAFFIC ERROR:", res.status, text);
-        Alert.alert("エラー", `交通の登録に失敗しました（status: ${res.status}）`);
+        const errorMessage = `交通の登録に失敗しました（status: ${res.status}）`;
+        if (Platform.OS === "web") {
+          window.alert(`エラー\n\n${errorMessage}`);
+        } else {
+          Alert.alert("エラー", errorMessage);
+        }
         return;
       }
 
       const created = await res.json();
       const successMessage = copyFrom ? "交通情報を複製しました。" : "交通情報を登録しました。";
-      Alert.alert("登録完了", successMessage, [
-        {
-          text: "OK",
-          onPress: () => {
-            if (scheduleId) {
-              router.push(`/live/${scheduleId}`);
-            } else {
-              router.push("/");
-            }
+      if (Platform.OS === "web") {
+        window.alert(`登録完了\n\n${successMessage}`);
+        if (scheduleId) {
+          router.push(`/live/${scheduleId}`);
+        } else {
+          router.push("/");
+        }
+      } else {
+        Alert.alert("登録完了", successMessage, [
+          {
+            text: "OK",
+            onPress: () => {
+              if (scheduleId) {
+                router.push(`/live/${scheduleId}`);
+              } else {
+                router.push("/");
+              }
+            },
           },
-        },
-      ]);
+        ]);
+      }
     } catch (e: any) {
       console.log("CREATE TRAFFIC EXCEPTION:", e);
-      Alert.alert("エラー", "通信に失敗しました。サーバーの状態を確認してください。");
+      const errorMessage = e.message || "通信に失敗しました。サーバーの状態を確認してください。";
+      if (Platform.OS === "web") {
+        window.alert(`エラー\n\n${errorMessage}`);
+      } else {
+        Alert.alert("エラー", errorMessage);
+      }
     } finally {
       setSubmitting(false);
     }
