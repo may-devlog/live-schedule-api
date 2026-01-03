@@ -20,7 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export type Schedule = {
   id: number;
   title: string;
-  group: string; // groupがNULLの場合はtitleが使用される（バックエンドでフォールバック）
+  group: string | null; // groupがNULLの場合はNULLのまま（表示時は"-"を表示）
   datetime: string; // date + start から生成（計算フィールド）
   date?: string | null;
   open?: string | null;
