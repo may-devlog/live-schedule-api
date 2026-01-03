@@ -454,7 +454,7 @@ export default function SharedScheduleDetailScreen() {
                 <TouchableOpacity
                   key={traffic.id}
                   style={styles.trafficCard}
-                  onPress={() => router.push(`/public/traffic/${traffic.id}`)}
+                  onPress={() => router.push(`/share/${share_id}/traffic/${traffic.id}`)}
                 >
                   <View style={styles.cardRow}>
                     <Text style={styles.cardDate}>{traffic.date}</Text>
@@ -498,7 +498,7 @@ export default function SharedScheduleDetailScreen() {
                 <TouchableOpacity
                   key={stay.id}
                   style={styles.stayCard}
-                  onPress={() => router.push(`/public/stay/${stay.id}`)}
+                  onPress={() => router.push(`/share/${share_id}/stay/${stay.id}`)}
                 >
                   <View style={styles.cardRow}>
                     <Text style={styles.cardDateTime}>{dateTimeText}</Text>

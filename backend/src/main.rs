@@ -3310,6 +3310,225 @@ async fn get_public_stay(
     Ok(Json(row_to_stay(row)))
 }
 
+// GET /share/:share_id/traffic/:id - 共有ページ用の交通情報（個別）
+async fn get_shared_traffic(
+    Path((share_id, id)): Path<(String, i32)>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Traffic>, (StatusCode, Json<ErrorResponse>)> {
+    // share_idからユーザーIDを取得
+    let user_row: Option<(i64, i32)> = sqlx::query_as(
+        "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
+    )
+    .bind(&share_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[GetSharedTraffic] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+    
+    if let Some((user_id, sharing_enabled)) = user_row {
+        if sharing_enabled == 0 {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ErrorResponse {
+                    error: "このユーザーのスケジュールは共有されていません".to_string(),
+                }),
+            ));
+        }
+        
+        // 交通情報を取得
+        let row: Option<TrafficRow> = sqlx::query_as::<_, TrafficRow>(
+            r#"
+            SELECT
+              id,
+              schedule_id,
+              date,
+              "order",
+              transportation,
+              from_place,
+              to_place,
+              notes,
+              fare,
+              miles,
+              return_flag,
+              total_fare,
+              total_miles
+            FROM traffics
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| {
+            eprintln!("[GetSharedTraffic] Database error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            )
+        })?;
+
+        let row = row.ok_or((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Traffic not found".to_string(),
+            }),
+        ))?;
+
+        // 関連するスケジュールがこのユーザーの公開スケジュールか確認
+        let schedule_is_valid: Option<i64> = sqlx::query_scalar(
+            "SELECT id FROM schedules WHERE id = ? AND user_id = ? AND is_public = 1"
+        )
+        .bind(row.schedule_id)
+        .bind(user_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| {
+            eprintln!("[GetSharedTraffic] Database error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            )
+        })?;
+
+        if schedule_is_valid.is_none() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(ErrorResponse {
+                    error: "Traffic not found".to_string(),
+                }),
+            ));
+        }
+
+        Ok(Json(row_to_traffic(row)))
+    } else {
+        Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "User not found".to_string(),
+            }),
+        ))
+    }
+}
+
+// GET /share/:share_id/stay/:id - 共有ページ用の宿泊情報（個別）
+async fn get_shared_stay(
+    Path((share_id, id)): Path<(String, i32)>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Stay>, (StatusCode, Json<ErrorResponse>)> {
+    // share_idからユーザーIDを取得
+    let user_row: Option<(i64, i32)> = sqlx::query_as(
+        "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
+    )
+    .bind(&share_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[GetSharedStay] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+    
+    if let Some((user_id, sharing_enabled)) = user_row {
+        if sharing_enabled == 0 {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ErrorResponse {
+                    error: "このユーザーのスケジュールは共有されていません".to_string(),
+                }),
+            ));
+        }
+        
+        // 宿泊情報を取得
+        let row: Option<StayRow> = sqlx::query_as::<_, StayRow>(
+            r#"
+            SELECT
+              id,
+              schedule_id,
+              check_in,
+              check_out,
+              hotel_name,
+              fee,
+              breakfast_flag,
+              deadline,
+              penalty,
+              status
+            FROM stays
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| {
+            eprintln!("[GetSharedStay] Database error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            )
+        })?;
+
+        let row = row.ok_or((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "Stay not found".to_string(),
+            }),
+        ))?;
+
+        // 関連するスケジュールがこのユーザーの公開スケジュールか確認
+        let schedule_is_valid: Option<i64> = sqlx::query_scalar(
+            "SELECT id FROM schedules WHERE id = ? AND user_id = ? AND is_public = 1"
+        )
+        .bind(row.schedule_id)
+        .bind(user_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| {
+            eprintln!("[GetSharedStay] Database error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            )
+        })?;
+
+        if schedule_is_valid.is_none() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(ErrorResponse {
+                    error: "Stay not found".to_string(),
+                }),
+            ));
+        }
+
+        Ok(Json(row_to_stay(row)))
+    } else {
+        Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "User not found".to_string(),
+            }),
+        ))
+    }
+}
+
 // GET /traffic?schedule_id=...
 async fn list_traffics(
     Query(params): Query<TrafficQuery>,
@@ -4449,6 +4668,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/auth/sharing-status", get(get_sharing_status))
         .route("/share/:share_id", get(get_shared_schedules))
         .route("/share/:share_id/schedules/:id", get(get_shared_schedule))
+        .route("/share/:share_id/traffic/:id", get(get_shared_traffic))
+        .route("/share/:share_id/stay/:id", get(get_shared_stay))
         .route("/public/schedules", get(list_public_schedules))
         .route("/public/schedules/:id", get(get_public_schedule))
         .route("/public/traffic", get(list_public_traffics))
