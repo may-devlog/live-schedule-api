@@ -157,13 +157,11 @@ export default function SharedScheduleScreen() {
         </View>
 
         {/* カレンダー */}
-        {schedules.length > 0 && (
-          <ScheduleCalendar 
-            schedules={schedules} 
-            isPublic={true}
-            onSchedulePress={handleSchedulePress}
-          />
-        )}
+        <ScheduleCalendar 
+          schedules={schedules} 
+          isPublic={true}
+          onSchedulePress={handleSchedulePress}
+        />
 
         <Text style={styles.sectionTitle}>NEXT</Text>
         {loading && <ActivityIndicator color="#333333" />}
