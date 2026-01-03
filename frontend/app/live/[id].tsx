@@ -690,7 +690,7 @@ export default function DetailScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* タイトル */}
         <View style={styles.titleHeader}>
-        <Text style={styles.mainTitle} numberOfLines={2}>
+        <Text style={styles.mainTitle}>
           {schedule.title}
           </Text>
           {isAuthenticated && (
@@ -1043,10 +1043,10 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   mainTitle: {
-    fontSize: 40,
+    fontSize: 28,
     fontWeight: "700",
     color: "#37352f",
-    lineHeight: 48,
+    lineHeight: 36,
     flex: 1,
   },
   actionButtons: {
