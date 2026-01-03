@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import type { Schedule } from "../app/HomeScreen";
+import { NotionTag } from "./notion-tag";
+import { getOptionColor } from "../utils/get-option-color";
 
 // カレンダーの幅計算はスタイル内で行う
 
@@ -122,9 +124,22 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
     const grouped: Record<string, Schedule[]> = {};
 
     schedules.forEach((schedule) => {
-      if (!schedule.date) return;
+      let dateKey: string | null = null;
+      
+      // dateフィールドがある場合はそれを使用
+      if (schedule.date) {
+        dateKey = schedule.date; // "YYYY-MM-DD"形式
+      } else if (schedule.datetime) {
+        // datetimeから日付を抽出（YYYY-MM-DD形式）
+        const date = new Date(schedule.datetime);
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+        const day = String(date.getUTCDate()).padStart(2, "0");
+        dateKey = `${year}-${month}-${day}`;
+      }
+      
+      if (!dateKey) return;
 
-      const dateKey = schedule.date; // "YYYY-MM-DD"形式
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
       }
@@ -133,6 +148,24 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
 
     return grouped;
   }, [schedules]);
+
+  // Areaの色情報を取得
+  useEffect(() => {
+    if (selectedDateSchedules.length === 0) return;
+    
+    const fetchAreaColors = async () => {
+      const colorMap = new Map<number, string>();
+      for (const schedule of selectedDateSchedules) {
+        if (schedule.area) {
+          const color = await getOptionColor(schedule.area, "AREAS");
+          colorMap.set(schedule.id, color);
+        }
+      }
+      setAreaColors(colorMap);
+    };
+    
+    fetchAreaColors();
+  }, [selectedDateSchedules]);
 
   // 日付文字列を生成（YYYY-MM-DD形式）
   const getDateString = (day: number): string => {
@@ -338,9 +371,15 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
                   <Text style={styles.scheduleItemTitle} numberOfLines={2}>
                     {item.title}
                   </Text>
-                  <Text style={styles.scheduleItemVenue} numberOfLines={1}>
-                    {item.area} / {item.venue}
-                  </Text>
+                  <View style={styles.scheduleItemVenueContainer}>
+                    {item.area && (
+                      <NotionTag
+                        label={item.area}
+                        color={areaColors.get(item.id) || undefined}
+                      />
+                    )}
+                    <Text style={styles.scheduleItemVenue}>{item.venue}</Text>
+                  </View>
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View style={styles.scheduleItemSeparator} />}

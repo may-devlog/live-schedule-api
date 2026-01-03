@@ -13,6 +13,8 @@ import {
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { HomeButton } from "../../components/HomeButton";
+import { NotionTag } from "../../components/notion-tag";
+import { getOptionColor } from "../../utils/get-option-color";
 
 export default function YearScreen() {
   const params = useLocalSearchParams<{ year: string }>();
@@ -26,6 +28,7 @@ export default function YearScreen() {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
 
 const fetchAvailableYears = async () => {
   try {
@@ -93,6 +96,24 @@ const fetchYear = async (y: string) => {
     if (!currentYear) return;
     fetchYear(currentYear);
   }, [currentYear]);
+
+  // Areaの色情報を取得
+  useEffect(() => {
+    if (schedules.length === 0) return;
+    
+    const fetchAreaColors = async () => {
+      const colorMap = new Map<number, string>();
+      for (const schedule of schedules) {
+        if (schedule.area) {
+          const color = await getOptionColor(schedule.area, "AREAS");
+          colorMap.set(schedule.id, color);
+        }
+      }
+      setAreaColors(colorMap);
+    };
+    
+    fetchAreaColors();
+  }, [schedules]);
 
   const handleSelectYear = (y: number) => {
     const yStr = String(y);
@@ -162,9 +183,15 @@ const fetchYear = async (y: string) => {
               <Text style={styles.cardTitle} numberOfLines={2}>
                 {item.title}
               </Text>
-              <Text style={styles.cardSub}>
-                {item.area} / {item.venue}
-              </Text>
+              <View style={styles.cardSubContainer}>
+                {item.area && (
+                  <NotionTag
+                    label={item.area}
+                    color={areaColors.get(item.id) || undefined}
+                  />
+                )}
+                <Text style={styles.cardSub}>{item.venue}</Text>
+              </View>
             </TouchableOpacity>
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -270,10 +297,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     lineHeight: 22,
   },
+  cardSubContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
   cardSub: {
     fontSize: 14,
     color: "#787774",
-    marginTop: 4,
   },
   separator: {
     height: 0,

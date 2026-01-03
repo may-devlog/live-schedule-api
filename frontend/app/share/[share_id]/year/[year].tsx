@@ -13,6 +13,8 @@ import {
 import type { Schedule } from "../../../HomeScreen";
 import { getApiUrl } from "../../../../utils/api";
 import { PageHeader } from "../../../../components/PageHeader";
+import { NotionTag } from "../../../../components/notion-tag";
+import { getOptionColor } from "../../../../utils/get-option-color";
 
 export default function SharedYearScreen() {
   const { share_id, year } = useLocalSearchParams<{ share_id: string; year: string }>();
@@ -23,6 +25,7 @@ export default function SharedYearScreen() {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
 
   const fetchAvailableYears = async () => {
     try {
@@ -110,6 +113,24 @@ export default function SharedYearScreen() {
     if (!currentYear || !share_id) return;
     fetchYear(currentYear);
   }, [currentYear, share_id]);
+
+  // Areaの色情報を取得
+  useEffect(() => {
+    if (schedules.length === 0) return;
+    
+    const fetchAreaColors = async () => {
+      const colorMap = new Map<number, string>();
+      for (const schedule of schedules) {
+        if (schedule.area) {
+          const color = await getOptionColor(schedule.area, "AREAS");
+          colorMap.set(schedule.id, color);
+        }
+      }
+      setAreaColors(colorMap);
+    };
+    
+    fetchAreaColors();
+  }, [schedules]);
 
   const handleSelectYear = (y: number) => {
     const yStr = String(y);
