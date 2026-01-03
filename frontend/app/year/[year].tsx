@@ -157,7 +157,7 @@ const fetchYear = async (y: string) => {
               </Text>
               {/* ツアー名 (Group) */}
               <Text style={styles.cardGroup} numberOfLines={1}>
-                {item.group || item.title}
+                {item.group || "-"}
               </Text>
               <Text style={styles.cardTitle} numberOfLines={2}>
                 {item.title}
