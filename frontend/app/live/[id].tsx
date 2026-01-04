@@ -72,6 +72,7 @@ export default function DetailScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isPulling, setIsPulling] = useState(false);
   
   // 選択肢の色情報
   const [categoryColor, setCategoryColor] = useState<string | null>(null);
@@ -710,6 +711,20 @@ export default function DetailScreen() {
         }
         scrollEnabled={true}
         nestedScrollEnabled={true}
+        onScrollBeginDrag={(e) => {
+          const { contentOffset } = e.nativeEvent;
+          if (contentOffset.y < -50) {
+            setIsPulling(true);
+          }
+        }}
+        onScrollEndDrag={(e) => {
+          const { contentOffset } = e.nativeEvent;
+          if (contentOffset.y < -100 && isPulling) {
+            onRefresh();
+          }
+          setIsPulling(false);
+        }}
+        scrollEventThrottle={16}
       >
         {/* タイトル */}
         <View style={styles.titleHeader}>

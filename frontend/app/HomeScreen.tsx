@@ -171,6 +171,8 @@ export default function HomeScreen() {
   const [loadingNext, setLoadingNext] = useState(false);
   const [errorNext, setErrorNext] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -432,6 +434,24 @@ export default function HomeScreen() {
       }
       scrollEnabled={true}
       nestedScrollEnabled={true}
+      onScrollBeginDrag={(e) => {
+        const { contentOffset } = e.nativeEvent;
+        if (contentOffset.y < -50) {
+          setIsPulling(true);
+        }
+      }}
+      onScrollEndDrag={(e) => {
+        const { contentOffset } = e.nativeEvent;
+        if (contentOffset.y < -100 && isPulling) {
+          onRefresh();
+        }
+        setIsPulling(false);
+      }}
+      onScroll={(e) => {
+        const { contentOffset } = e.nativeEvent;
+        setScrollY(contentOffset.y);
+      }}
+      scrollEventThrottle={16}
     >
     <View style={styles.container}>
         <View style={styles.header}>

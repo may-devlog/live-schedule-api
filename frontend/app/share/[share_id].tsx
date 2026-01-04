@@ -35,6 +35,7 @@ export default function SharedScheduleScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isPulling, setIsPulling] = useState(false);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   useEffect(() => {
@@ -180,6 +181,20 @@ export default function SharedScheduleScreen() {
       }
       scrollEnabled={true}
       nestedScrollEnabled={true}
+      onScrollBeginDrag={(e) => {
+        const { contentOffset } = e.nativeEvent;
+        if (contentOffset.y < -50) {
+          setIsPulling(true);
+        }
+      }}
+      onScrollEndDrag={(e) => {
+        const { contentOffset } = e.nativeEvent;
+        if (contentOffset.y < -100 && isPulling) {
+          onRefresh();
+        }
+        setIsPulling(false);
+      }}
+      scrollEventThrottle={16}
     >
       <View style={styles.container}>
         <View style={styles.header}>
