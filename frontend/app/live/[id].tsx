@@ -701,8 +701,15 @@ export default function DetailScreen() {
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+          />
         }
+        scrollEnabled={true}
+        nestedScrollEnabled={true}
       >
         {/* タイトル */}
         <View style={styles.titleHeader}>
@@ -1048,6 +1055,8 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 32,
     maxWidth: 900,
+    flexGrow: 1,
+    minHeight: '100%',
     alignSelf: "center",
     width: "100%",
   },

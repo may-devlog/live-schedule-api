@@ -171,8 +171,15 @@ export default function SharedScheduleScreen() {
       style={styles.scrollContainer} 
       contentContainerStyle={styles.scrollContent}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh}
+          tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+          colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+        />
       }
+      scrollEnabled={true}
+      nestedScrollEnabled={true}
     >
       <View style={styles.container}>
         <View style={styles.header}>
@@ -243,6 +250,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
     flexGrow: 1,
+    minHeight: '100%',
   },
   container: {
     paddingTop: 48,
