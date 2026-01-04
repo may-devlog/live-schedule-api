@@ -158,7 +158,7 @@ export default function StayDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader scheduleTitle={schedule?.title || null} />
+      <PageHeader scheduleTitle={schedule?.title || null} homePath="/" />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={

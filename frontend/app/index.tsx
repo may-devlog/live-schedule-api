@@ -5,17 +5,18 @@ import HomeScreen from './HomeScreen';
 
 export default function Index() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   
   // ログイン必須化：未ログイン時はログイン画面にリダイレクト
   useEffect(() => {
-    if (!isAuthenticated) {
+    // 認証状態の読み込みが完了してからチェック
+    if (!isLoading && !isAuthenticated) {
       router.replace('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isLoading, router]);
   
-  // 未ログイン時は何も表示しない（リダイレクト中）
-  if (!isAuthenticated) {
+  // 認証状態の読み込み中、または未ログイン時は何も表示しない（リダイレクト中）
+  if (isLoading || !isAuthenticated) {
     return null;
   }
   
