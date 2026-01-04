@@ -30,16 +30,30 @@ export function ColorPicker({
     setModalVisible(false);
   };
 
+  // 3桁のカラーコードを6桁に変換（#RGB → #RRGGBB）
+  const expandColorCode = (color: string): string => {
+    if (color.length === 4 && color.startsWith("#")) {
+      // #RGB形式を#RRGGBB形式に変換
+      const r = color[1];
+      const g = color[2];
+      const b = color[3];
+      return `#${r}${r}${g}${g}${b}${b}`.toUpperCase();
+    }
+    return color.toUpperCase();
+  };
+
   const handleCustomColorSubmit = () => {
     if (isValidColor(customColor)) {
-      onValueChange(customColor);
+      // 3桁の場合は6桁に変換
+      const expandedColor = expandColorCode(customColor);
+      onValueChange(expandedColor);
       setModalVisible(false);
     }
   };
 
   const isValidColor = (color: string): boolean => {
-    // カラーコードのバリデーション（#RRGGBB形式）
-    return /^#[0-9A-Fa-f]{6}$/.test(color);
+    // カラーコードのバリデーション（#RGBまたは#RRGGBB形式）
+    return /^#[0-9A-Fa-f]{3}$/.test(color) || /^#[0-9A-Fa-f]{6}$/.test(color);
   };
 
   return (
@@ -138,7 +152,7 @@ export function ColorPicker({
                   ]}
                   value={customColor}
                   onChangeText={setCustomColor}
-                  placeholder="#RRGGBB"
+                  placeholder="#RGB または #RRGGBB"
                   placeholderTextColor="#9b9a97"
                   maxLength={7}
                   autoCapitalize="none"
