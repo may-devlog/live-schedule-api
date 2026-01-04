@@ -228,6 +228,25 @@ export function NotionSelect({
           <View
             style={styles.modalContent}
             onStartShouldSetResponder={() => true}
+            onResponderTerminationRequest={() => false}
+            onTouchStart={(e) => {
+              // モーダルコンテンツ内のタッチでモーダルが閉じないようにする
+              if (e && e.nativeEvent) {
+                e.stopPropagation();
+              }
+            }}
+            onTouchEnd={(e) => {
+              // モーダルコンテンツ内のタッチでモーダルが閉じないようにする
+              if (e && e.nativeEvent) {
+                e.stopPropagation();
+              }
+            }}
+            onClick={(e) => {
+              // Web環境でのクリックイベント伝播を防止
+              if (e) {
+                e.stopPropagation();
+              }
+            }}
           >
             <Text style={styles.modalTitle}>{label}</Text>
             <ScrollView style={styles.optionsList}>
@@ -285,12 +304,33 @@ export function NotionSelect({
                   onChangeText={setNewOptionText}
                   placeholder="選択肢名"
                   placeholderTextColor="#9b9a97"
+                  onFocus={(e) => {
+                    // フォーカス時にイベント伝播を停止
+                    if (e && e.nativeEvent) {
+                      e.stopPropagation();
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    // タッチ開始時にイベント伝播を停止
+                    if (e && e.nativeEvent) {
+                      e.stopPropagation();
+                    }
+                  }}
                 />
-                <ColorPicker
-                  value={newOptionColor}
-                  onValueChange={setNewOptionColor}
-                  label="色"
-                />
+                <View
+                  onTouchStart={(e) => {
+                    // ColorPickerのタッチでモーダルが閉じないようにする
+                    if (e && e.nativeEvent) {
+                      e.stopPropagation();
+                    }
+                  }}
+                >
+                  <ColorPicker
+                    value={newOptionColor}
+                    onValueChange={setNewOptionColor}
+                    label="色"
+                  />
+                </View>
                 {isPrefecture && (
                   <Text style={styles.infoText}>
                     都道府県の色をカスタマイズできます（地方ごとのデフォルト色が設定されています）
@@ -307,14 +347,24 @@ export function NotionSelect({
                       styles.updateButton,
                       !newOptionText.trim() && styles.updateButtonDisabled,
                     ]}
-                    onPress={handleUpdateOption}
+                    onPress={(e) => {
+                      // 更新ボタンのクリックでモーダルが閉じないようにする
+                      if (e && e.nativeEvent) {
+                        e.stopPropagation();
+                      }
+                      handleUpdateOption();
+                    }}
                     disabled={!newOptionText.trim()}
                   >
                     <Text style={styles.updateButtonText}>更新</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.cancelButton}
-                    onPress={() => {
+                    onPress={(e) => {
+                      // キャンセルボタンのクリックでモーダルが閉じないようにする
+                      if (e && e.nativeEvent) {
+                        e.stopPropagation();
+                      }
                       setEditingOptionIndex(null);
                       setNewOptionText("");
                       // カテゴリの場合はデフォルト色を取得、それ以外は空文字列から取得
@@ -339,20 +389,47 @@ export function NotionSelect({
                     style={styles.addOptionInput}
                     value={newOptionText}
                     onChangeText={setNewOptionText}
-                  placeholder="選択肢名"
-                  placeholderTextColor="#9b9a97"
-                />
-                  <ColorPicker
-                    value={newOptionColor}
-                    onValueChange={setNewOptionColor}
-                    label="色"
+                    placeholder="選択肢名"
+                    placeholderTextColor="#9b9a97"
+                    onFocus={(e) => {
+                      // フォーカス時にイベント伝播を停止
+                      if (e && e.nativeEvent) {
+                        e.stopPropagation();
+                      }
+                    }}
+                    onTouchStart={(e) => {
+                      // タッチ開始時にイベント伝播を停止
+                      if (e && e.nativeEvent) {
+                        e.stopPropagation();
+                      }
+                    }}
                   />
+                  <View
+                    onTouchStart={(e) => {
+                      // ColorPickerのタッチでモーダルが閉じないようにする
+                      if (e && e.nativeEvent) {
+                        e.stopPropagation();
+                      }
+                    }}
+                  >
+                    <ColorPicker
+                      value={newOptionColor}
+                      onValueChange={setNewOptionColor}
+                      label="色"
+                    />
+                  </View>
                 <TouchableOpacity
                     style={[
                       styles.addButton,
                       !newOptionText.trim() && styles.addButtonDisabled,
                     ]}
-                    onPress={handleAddNewOption}
+                    onPress={(e) => {
+                      // 追加ボタンのクリックでモーダルが閉じないようにする
+                      if (e && e.nativeEvent) {
+                        e.stopPropagation();
+                      }
+                      handleAddNewOption();
+                    }}
                     disabled={!newOptionText.trim()}
                   >
                     <Text style={styles.addButtonText}>追加</Text>
