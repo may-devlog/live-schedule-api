@@ -190,7 +190,7 @@ export default function StayDetailScreen() {
                   color={websiteOption?.color || "#E5E7EB"}
                 />
               );
-            })() : null}
+            })() : undefined}
           </NotionProperty>
           <NotionProperty
             label="Fee"
