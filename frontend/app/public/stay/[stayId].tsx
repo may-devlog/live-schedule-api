@@ -9,7 +9,6 @@ import { PageHeader } from "../../../components/PageHeader";
 import type { Schedule } from "../../HomeScreen";
 import { maskHotelName } from "../../../utils/mask-hotel-name";
 import type { SelectOption } from "../../../types/select-option";
-import { authenticatedFetch, getApiUrl } from "../../../utils/api";
 
 type Stay = {
   id: number;
