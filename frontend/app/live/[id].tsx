@@ -104,104 +104,105 @@ export default function DetailScreen() {
       const data: Schedule[] = await res.json();
       setAllSchedules(data);
 
-        const found = data.find((s) => s.id.toString() === id);
-        if (!found) {
-          throw new Error("Schedule not found");
-        }
-        
-        // TargetとLineupの選択肢を読み込んでフィルタリング
-        // データベースから選択肢を読み込む（認証されていない場合でも試行）
-        let targets: Array<{ label: string; color: string }> = [];
-        try {
-          const res = await authenticatedFetch(getApiUrl("/select-options/targets"));
-          if (res.ok) {
-            const options: Array<{ label: string; color: string }> = await res.json();
-            targets = options;
-          }
-        } catch (error) {
-          console.log("[LiveDetail] Failed to load select options from database, trying local storage:", error);
-          // データベースから読み込めない場合は、ローカルストレージから読み込む
-          const localTargets = await loadSelectOptions("TARGETS");
-          targets = localTargets;
-        }
-        
-        const targetOptionLabels = targets.map(opt => opt.label);
-        console.log("Target options:", targetOptionLabels);
-        console.log("Found target:", found.target);
-        
-        // Target: データベースに保存されている値があれば表示（選択肢に存在しない場合でも表示）
-        let validTarget: string | null = null;
-        let targetColor: string = "#E5E7EB"; // デフォルト色
-        if (found.target) {
-          // 選択肢に存在する場合は色情報を取得
-          const targetOption = targets.find(opt => opt.label === found.target);
-          if (targetOption) {
-            targetColor = targetOption.color || "#E5E7EB";
-          }
-          validTarget = found.target;
-        }
-        console.log("Valid target:", validTarget);
-        setFilteredTarget(validTarget);
-        setTargetColor(targetColor);
-        
-        // Lineup: データベースに保存されている値があれば表示（選択肢に存在しない場合でも表示）
-        const lineupOptionLabels = targets.map(opt => opt.label); // LineupもTargetと同じ選択肢を使用
-        let validLineup: string | null = null;
-        let validLineupOptions: Array<{ label: string; color: string }> = [];
-        if (found.lineup) {
-          const lineupValues = found.lineup.split(",").map(v => v.trim()).filter(v => v);
-          console.log("Lineup values:", lineupValues);
-          console.log("Lineup options:", lineupOptionLabels);
-          
-          // データベースに保存されている値すべてを表示（選択肢に存在しない場合でも表示）
-          validLineupOptions = lineupValues.map((label) => {
-            // 選択肢に存在する場合は色情報を取得
-            const option = targets.find(opt => opt.label === label);
-            return {
-              label,
-              color: option?.color || "#E5E7EB"
-            };
-          });
-          console.log("Valid lineup values:", validLineupOptions);
-          if (validLineupOptions.length > 0) {
-            validLineup = validLineupOptions.map(opt => opt.label).join(", ");
-          }
-        }
-        setFilteredLineup(validLineup);
-        setFilteredLineupOptions(validLineupOptions);
-        
-        setSchedule(found);
-
-        await fetchTrafficAndStay(found.id);
-        
-        // 選択肢の色情報を取得
-        if (validTarget) {
-          const color = await getOptionColor(validTarget, "TARGETS");
-          setTargetColor(color);
-        }
-        if (found.category) {
-          const color = await getOptionColor(found.category, "CATEGORIES");
-          setCategoryColor(color);
-        }
-        if (found.area) {
-          const color = await getOptionColor(found.area, "AREAS");
-          setAreaColor(color);
-        }
-        if (found.seller) {
-          const color = await getOptionColor(found.seller, "SELLERS");
-          setSellerColor(color);
-        }
-        if (found.status) {
-          const color = await getOptionColor(found.status, "STATUSES");
-          setStatusColor(color);
-        }
-      } catch (e: any) {
-        setError(e.message ?? "Unknown error");
-      } finally {
-        setLoading(false);
+      const found = data.find((s) => s.id.toString() === id);
+      if (!found) {
+        throw new Error("Schedule not found");
       }
-    };
+      
+      // TargetとLineupの選択肢を読み込んでフィルタリング
+      // データベースから選択肢を読み込む（認証されていない場合でも試行）
+      let targets: Array<{ label: string; color: string }> = [];
+      try {
+        const res = await authenticatedFetch(getApiUrl("/select-options/targets"));
+        if (res.ok) {
+          const options: Array<{ label: string; color: string }> = await res.json();
+          targets = options;
+        }
+      } catch (error) {
+        console.log("[LiveDetail] Failed to load select options from database, trying local storage:", error);
+        // データベースから読み込めない場合は、ローカルストレージから読み込む
+        const localTargets = await loadSelectOptions("TARGETS");
+        targets = localTargets.map(opt => ({ label: opt.label, color: opt.color || "#E5E7EB" }));
+      }
+      
+      const targetOptionLabels = targets.map(opt => opt.label);
+      console.log("Target options:", targetOptionLabels);
+      console.log("Found target:", found.target);
+      
+      // Target: データベースに保存されている値があれば表示（選択肢に存在しない場合でも表示）
+      let validTarget: string | null = null;
+      let targetColor: string = "#E5E7EB"; // デフォルト色
+      if (found.target) {
+        // 選択肢に存在する場合は色情報を取得
+        const targetOption = targets.find(opt => opt.label === found.target);
+        if (targetOption) {
+          targetColor = targetOption.color || "#E5E7EB";
+        }
+        validTarget = found.target;
+      }
+      console.log("Valid target:", validTarget);
+      setFilteredTarget(validTarget);
+      setTargetColor(targetColor);
+      
+      // Lineup: データベースに保存されている値があれば表示（選択肢に存在しない場合でも表示）
+      const lineupOptionLabels = targets.map(opt => opt.label); // LineupもTargetと同じ選択肢を使用
+      let validLineup: string | null = null;
+      let validLineupOptions: Array<{ label: string; color: string }> = [];
+      if (found.lineup) {
+        const lineupValues = found.lineup.split(",").map(v => v.trim()).filter(v => v);
+        console.log("Lineup values:", lineupValues);
+        console.log("Lineup options:", lineupOptionLabels);
+        
+        // データベースに保存されている値すべてを表示（選択肢に存在しない場合でも表示）
+        validLineupOptions = lineupValues.map((label) => {
+          // 選択肢に存在する場合は色情報を取得
+          const option = targets.find(opt => opt.label === label);
+          return {
+            label,
+            color: option?.color || "#E5E7EB"
+          };
+        });
+        console.log("Valid lineup values:", validLineupOptions);
+        if (validLineupOptions.length > 0) {
+          validLineup = validLineupOptions.map(opt => opt.label).join(", ");
+        }
+      }
+      setFilteredLineup(validLineup);
+      setFilteredLineupOptions(validLineupOptions);
+      
+      setSchedule(found);
 
+      await fetchTrafficAndStay(found.id);
+      
+      // 選択肢の色情報を取得
+      if (validTarget) {
+        const color = await getOptionColor(validTarget, "TARGETS");
+        setTargetColor(color);
+      }
+      if (found.category) {
+        const color = await getOptionColor(found.category, "CATEGORIES");
+        setCategoryColor(color);
+      }
+      if (found.area) {
+        const color = await getOptionColor(found.area, "AREAS");
+        setAreaColor(color);
+      }
+      if (found.seller) {
+        const color = await getOptionColor(found.seller, "SELLERS");
+        setSellerColor(color);
+      }
+      if (found.status) {
+        const color = await getOptionColor(found.status, "STATUSES");
+        setStatusColor(color);
+      }
+    } catch (e: any) {
+      setError(e.message ?? "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDetail();
   }, [id]);
 
@@ -594,7 +595,7 @@ export default function DetailScreen() {
       // スケジュールを再取得
       const updatedSchedule: Schedule = await res.json();
       setSchedule(updatedSchedule);
-      setShowRelatedModal(false);
+      // モーダルを閉じる（必要に応じて実装）
     } catch (error) {
       console.error("Error updating related schedules:", error);
     }
@@ -1175,20 +1176,10 @@ const styles = StyleSheet.create({
   relationContainer: {
     gap: 8,
   },
-  section: {
-    marginTop: 24,
-  },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#37352f",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
   trafficCard: {
     marginBottom: 12,
@@ -1210,26 +1201,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
-  },
-  relationDate: {
-    fontSize: 11,
-    color: "#9b9a97",
-    marginBottom: 2,
-  },
-  relationTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#37352f",
-    marginBottom: 2,
-  },
-  relationArea: {
-    fontSize: 12,
-    color: "#9b9a97",
-  },
-  relationLink: {
-    fontSize: 14,
-    color: "#37352f",
-    textDecorationLine: "underline",
   },
   cardDate: {
     fontSize: 14,
