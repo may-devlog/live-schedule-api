@@ -65,7 +65,9 @@ export default function SharedStayDetailScreen() {
         
         // Website選択肢を取得（共有用エンドポイントを使用）
         try {
-          const websiteRes = await fetch(getApiUrl(`/share/${share_id}/stay-select-options/website`));
+          const websiteUrl = getApiUrl(`/share/${share_id}/stay-select-options/website`);
+          console.log("[SharedStayDetail] Fetching website options from:", websiteUrl);
+          const websiteRes = await fetch(websiteUrl);
           if (websiteRes.ok) {
             const websiteData: SelectOption[] = await websiteRes.json();
             console.log("[SharedStayDetail] Website options fetched:", websiteData);
