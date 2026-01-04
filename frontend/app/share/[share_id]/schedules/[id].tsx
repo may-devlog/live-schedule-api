@@ -445,7 +445,7 @@ export default function SharedScheduleDetailScreen() {
             <Text style={styles.sectionTitle}>Related Schedules</Text>
           </View>
           {relatedIds.length === 0 ? (
-            <Text style={styles.emptyValue}>No related schedules</Text>
+            <Text style={styles.emptyValue}>関連スケジュールがありません</Text>
           ) : (
             <View style={styles.relationContainer}>
               {relatedIds.map((rid) => {
@@ -494,7 +494,7 @@ export default function SharedScheduleDetailScreen() {
             <Text style={styles.sectionTitle}>Traffic</Text>
           </View>
           {trafficSummaries.length === 0 ? (
-            <Text style={styles.emptyValue}>No traffic information</Text>
+            <Text style={styles.emptyValue}>交通情報がありません</Text>
           ) : (
             trafficSummaries.map((traffic) => {
               const detailText = traffic.return_flag
@@ -537,7 +537,7 @@ export default function SharedScheduleDetailScreen() {
             <Text style={styles.sectionTitle}>Stay</Text>
           </View>
           {staySummaries.length === 0 ? (
-            <Text style={styles.emptyValue}>No stay information</Text>
+            <Text style={styles.emptyValue}>宿泊情報がありません</Text>
           ) : (
             staySummaries.map((stay) => {
               // チェックイン/チェックアウトの日時をフォーマット
