@@ -287,10 +287,16 @@ export default function HomeScreen() {
   };
 
   const onRefresh = async () => {
+    console.log('[HomeScreen] onRefresh called');
     setRefreshing(true);
     try {
+      console.log('[HomeScreen] Starting refresh...');
       await fetchUpcoming();
+      console.log('[HomeScreen] Refresh completed');
+    } catch (error) {
+      console.error('[HomeScreen] Refresh error:', error);
     } finally {
+      console.log('[HomeScreen] Setting refreshing to false');
       setRefreshing(false);
     }
   };
@@ -411,100 +417,91 @@ export default function HomeScreen() {
     console.log('[HomeScreen] Email changed to:', email);
   }, [email]);
 
-  // ダミーデータを作成（FlatListのアイテムとして表示するため）
-  const listData = nextSchedules.length > 0 ? nextSchedules : [{ id: 'empty' }];
-
   return (
     <>
-    <FlatList
-      style={styles.scrollContainer}
+    <ScrollView 
+      style={styles.scrollContainer} 
       contentContainerStyle={styles.scrollContent}
-      data={listData}
-      keyExtractor={(item) => (typeof item === 'object' && 'id' in item ? item.id.toString() : 'empty')}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
-      ListHeaderComponent={
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>SCHEDULES</Text>
-            <TouchableOpacity
-              style={styles.loginButton}
-              onPress={() => {
-                console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
-                if (isAuthenticated) {
-                  // ログイン済みの場合、メニューモーダルを表示
-                  setShowUserMenuModal(true);
-                } else {
-                  setShowLoginModal(true);
-                }
-              }}
-            >
-              <Text style={{ fontSize: 24 }}>
-                {isAuthenticated ? "👤" : "🔐"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {isAuthenticated && (
-            <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
-              <Text style={styles.newButtonText}>+ New Live</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* カレンダー */}
-          <ScheduleCalendar schedules={allSchedules} />
-
-          <Text style={styles.sectionTitle}>NEXT</Text>
-          {loadingNext && <ActivityIndicator color="#333333" />}
-          {errorNext && <Text style={styles.errorText}>Error: {errorNext}</Text>}
-          {!loadingNext && !errorNext && nextSchedules.length === 0 && (
-            <Text style={styles.emptyText}>No upcoming schedules</Text>
-          )}
-        </View>
-      }
-      renderItem={({ item }) => {
-        // ダミーデータの場合は何も表示しない
-        if (typeof item === 'object' && 'id' in item && (item.id === 'empty' || item.id === null)) {
-          return null;
-        }
-        const schedule = item as Schedule;
-        return (
+    >
+    <View style={styles.container}>
+        <View style={styles.header}>
+      <Text style={styles.title}>SCHEDULES</Text>
           <TouchableOpacity
-            style={styles.card}
-            onPress={() => router.push(`/live/${schedule.id}`)}
+            style={styles.loginButton}
+            onPress={() => {
+              console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
+              if (isAuthenticated) {
+                // ログイン済みの場合、メニューモーダルを表示
+                setShowUserMenuModal(true);
+              } else {
+                setShowLoginModal(true);
+              }
+            }}
           >
-            <Text style={styles.cardDate}>
-              {formatDateTimeUTC(schedule.datetime)}
-            </Text>
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {schedule.title}
-            </Text>
-            <Text style={styles.cardSub}>
-              {schedule.area} / {schedule.venue}
+            <Text style={{ fontSize: 24 }}>
+              {isAuthenticated ? "👤" : "🔐"}
             </Text>
           </TouchableOpacity>
-        );
-      }}
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-      ListFooterComponent={
-        <View style={styles.container}>
-          <Text style={styles.sectionTitle}>Years</Text>
-          <View style={styles.yearListColumn}>
-            {availableYears.map((year) => (
-              <TouchableOpacity
-                key={year}
-                style={styles.yearRow}
-                onPress={() => handleOpenYearPage(year)}
-              >
-                <Text style={styles.yearRowText}>{year}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View style={styles.bottomSpacer} />
         </View>
-      }
-    />
+
+        {isAuthenticated && (
+      <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
+        <Text style={styles.newButtonText}>+ New Live</Text>
+      </TouchableOpacity>
+        )}
+
+        {/* カレンダー */}
+        <ScheduleCalendar schedules={allSchedules} />
+
+      <Text style={styles.sectionTitle}>NEXT</Text>
+      {loadingNext && <ActivityIndicator color="#333333" />}
+      {errorNext && <Text style={styles.errorText}>Error: {errorNext}</Text>}
+      {!loadingNext && !errorNext && nextSchedules.length === 0 && (
+        <Text style={styles.emptyText}>No upcoming schedules</Text>
+      )}
+      {!loadingNext && !errorNext && nextSchedules.length > 0 && (
+        <FlatList
+          data={nextSchedules}
+          keyExtractor={(item) => item.id.toString()}
+          scrollEnabled={false}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => router.push(`/live/${item.id}`)}
+            >
+              <Text style={styles.cardDate}>
+                {formatDateTimeUTC(item.datetime)}
+              </Text>
+              <Text style={styles.cardTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+              <Text style={styles.cardSub}>
+                {item.area} / {item.venue}
+              </Text>
+            </TouchableOpacity>
+          )}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+      )}
+
+      <Text style={styles.sectionTitle}>Years</Text>
+      <View style={styles.yearListColumn}>
+        {availableYears.map((year) => (
+          <TouchableOpacity
+            key={year}
+            style={styles.yearRow}
+            onPress={() => handleOpenYearPage(year)}
+          >
+            <Text style={styles.yearRowText}>{year}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={styles.bottomSpacer} />
+      </View>
+    </ScrollView>
 
     {/* ログインモーダル */}
       <Modal

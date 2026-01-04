@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  RefreshControl,
 } from "react-native";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
@@ -70,6 +71,7 @@ export default function DetailScreen() {
   const [stayOriginalScheduleIds, setStayOriginalScheduleIds] = useState<Map<number, number>>(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   
   // 選択肢の色情報
   const [categoryColor, setCategoryColor] = useState<string | null>(null);
@@ -89,19 +91,18 @@ export default function DetailScreen() {
   // TrafficのTransportation色情報
   const [transportationColors, setTransportationColors] = useState<Map<number, string>>(new Map());
 
-  useEffect(() => {
+  const fetchDetail = async () => {
     if (!id) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
 
-    const fetchDetail = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // 全 Schedule 取得
-        const res = await authenticatedFetch(getApiUrl("/schedules"));
-        if (!res.ok) throw new Error(`status: ${res.status}`);
-        const data: Schedule[] = await res.json();
-        setAllSchedules(data);
+      // 全 Schedule 取得
+      const res = await authenticatedFetch(getApiUrl("/schedules"));
+      if (!res.ok) throw new Error(`status: ${res.status}`);
+      const data: Schedule[] = await res.json();
+      setAllSchedules(data);
 
         const found = data.find((s) => s.id.toString() === id);
         if (!found) {
@@ -203,6 +204,15 @@ export default function DetailScreen() {
 
     fetchDetail();
   }, [id]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchDetail();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Related SchedulesのArea色情報を取得
   useEffect(() => {
@@ -687,7 +697,12 @@ export default function DetailScreen() {
   return (
     <View style={styles.container}>
       <PageHeader showBackButton={true} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* タイトル */}
         <View style={styles.titleHeader}>
         <Text style={styles.mainTitle}>

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
+  RefreshControl,
 } from "react-native";
 import { getApiUrl } from "../../../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../../../components/notion-property";
@@ -56,6 +57,7 @@ export default function SharedScheduleDetailScreen() {
   const [staySummaries, setStaySummaries] = useState<StaySummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   
   // 選択肢の色情報
   const [categoryColor, setCategoryColor] = useState<string | null>(null);
@@ -75,95 +77,190 @@ export default function SharedScheduleDetailScreen() {
   // TrafficのTransportation色情報
   const [transportationColors, setTransportationColors] = useState<Map<number, string>>(new Map());
 
-  useEffect(() => {
+  const fetchDetail = async () => {
     if (!share_id || !id) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
 
-    const fetchDetail = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // 共有スケジュールを取得
-        const res = await fetch(getApiUrl(`/share/${share_id}/schedules/${id}`));
-        if (!res.ok) {
-          if (res.status === 404) {
-            throw new Error("スケジュールが見つかりません");
-          }
-          throw new Error(`status: ${res.status}`);
+      // 共有スケジュールを取得
+      const res = await fetch(getApiUrl(`/share/${share_id}/schedules/${id}`));
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error("スケジュールが見つかりません");
         }
-        const found: Schedule = await res.json();
-        setSchedule(found);
-
-        // 全スケジュールを取得（関連スケジュール表示用）
-        const allRes = await fetch(getApiUrl(`/share/${share_id}`));
-        if (allRes.ok) {
-          const allData: Schedule[] = await allRes.json();
-          setAllSchedules(allData);
-        }
-
-        await fetchTrafficAndStay(found.id);
-        
-        // TargetとLineupの選択肢を読み込んでフィルタリング
-        const targets = await loadSelectOptions("TARGETS", share_id);
-        const targetOptionLabels = targets.map(opt => opt.label);
-        
-        // Target: 選択肢に存在する場合のみ表示
-        let targetColor: string = "#E5E7EB"; // デフォルト色
-        if (found.target && targetOptionLabels.includes(found.target)) {
-          const targetOption = targets.find(opt => opt.label === found.target);
-          if (targetOption) {
-            targetColor = targetOption.color || "#E5E7EB";
-          }
-        }
-        setTargetColor(targetColor);
-        setFilteredTarget(found.target && targetOptionLabels.includes(found.target) ? found.target : null);
-        
-        // Lineup: 選択肢に存在する場合のみ表示
-        const lineupOptions: Array<{ label: string; color: string }> = [];
-        if (found.lineup) {
-          const lineupValues = found.lineup.split(',').map(v => v.trim()).filter(v => v);
-          for (const lineupValue of lineupValues) {
-            if (targetOptionLabels.includes(lineupValue)) {
-              const lineupOption = targets.find(opt => opt.label === lineupValue);
-              if (lineupOption) {
-                lineupOptions.push({
-                  label: lineupOption.label,
-                  color: lineupOption.color || "#E5E7EB"
-                });
-              }
-            }
-          }
-        }
-        setFilteredLineupOptions(lineupOptions);
-        setFilteredLineup(lineupOptions.length > 0 ? lineupOptions.map(opt => opt.label).join(', ') : null);
-        
-        // その他の選択肢の色情報を取得
-        if (found.category) {
-          const color = await getOptionColor(found.category, "CATEGORIES");
-          setCategoryColor(color);
-        }
-        if (found.area) {
-          const color = await getOptionColor(found.area, "AREAS");
-          setAreaColor(color);
-        }
-        if (found.seller) {
-          const color = await getOptionColor(found.seller, "SELLERS");
-          setSellerColor(color);
-        }
-        if (found.status) {
-          const color = await getOptionColor(found.status, "STATUSES");
-          setStatusColor(color);
-        }
-      } catch (err: any) {
-        console.error("[SharedScheduleDetailScreen] Error:", err);
-        setError(err.message || "スケジュールの取得に失敗しました");
-      } finally {
-        setLoading(false);
+        throw new Error(`status: ${res.status}`);
       }
-    };
+      const found: Schedule = await res.json();
+      setSchedule(found);
 
+      // 全スケジュールを取得（関連スケジュール表示用）
+      const allRes = await fetch(getApiUrl(`/share/${share_id}`));
+      if (allRes.ok) {
+        const allData: Schedule[] = await allRes.json();
+        setAllSchedules(allData);
+      }
+
+      await fetchTrafficAndStay(found.id);
+      
+      // TargetとLineupの選択肢を読み込んでフィルタリング
+      const targets = await loadSelectOptions("TARGETS", share_id);
+      const targetOptionLabels = targets.map(opt => opt.label);
+      
+      // Target: 選択肢に存在する場合のみ表示
+      let targetColor: string = "#E5E7EB"; // デフォルト色
+      if (found.target && targetOptionLabels.includes(found.target)) {
+        const targetOption = targets.find(opt => opt.label === found.target);
+        if (targetOption) {
+          targetColor = targetOption.color || "#E5E7EB";
+        }
+      }
+      setTargetColor(targetColor);
+      setFilteredTarget(found.target && targetOptionLabels.includes(found.target) ? found.target : null);
+      
+      // Lineup: 選択肢に存在する場合のみ表示
+      const lineupOptions: Array<{ label: string; color: string }> = [];
+      if (found.lineup) {
+        const lineupValues = found.lineup.split(',').map(v => v.trim()).filter(v => v);
+        for (const lineupValue of lineupValues) {
+          if (targetOptionLabels.includes(lineupValue)) {
+            const lineupOption = targets.find(opt => opt.label === lineupValue);
+            lineupOptions.push({
+              label: lineupValue,
+              color: lineupOption?.color || "#E5E7EB"
+            });
+          }
+        }
+      }
+      setFilteredLineupOptions(lineupOptions);
+      setFilteredLineup(lineupOptions.length > 0 ? lineupOptions.map(opt => opt.label).join(", ") : null);
+      
+      // 選択肢の色情報を取得
+      if (found.category) {
+        const color = await getOptionColor(found.category, "CATEGORIES");
+        setCategoryColor(color);
+      }
+      if (found.area) {
+        const color = await getOptionColor(found.area, "AREAS");
+        setAreaColor(color);
+      }
+      if (found.seller) {
+        const color = await getOptionColor(found.seller, "SELLERS");
+        setSellerColor(color);
+      }
+      if (found.status) {
+        const color = await getOptionColor(found.status, "STATUSES");
+        setStatusColor(color);
+      }
+    } catch (e: any) {
+      setError(e.message ?? "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDetail();
   }, [share_id, id]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchDetail();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Related SchedulesのArea色情報を取得
+  useEffect(() => {
+    if (!schedule || !allSchedules.length) return;
+          try {
+            setLoading(true);
+            setError(null);
+
+            // 共有スケジュールを取得
+            const res = await fetch(getApiUrl(`/share/${share_id}/schedules/${id}`));
+            if (!res.ok) {
+              if (res.status === 404) {
+                throw new Error("スケジュールが見つかりません");
+              }
+              throw new Error(`status: ${res.status}`);
+            }
+            const found: Schedule = await res.json();
+            setSchedule(found);
+
+            // 全スケジュールを取得（関連スケジュール表示用）
+            const allRes = await fetch(getApiUrl(`/share/${share_id}`));
+            if (allRes.ok) {
+              const allData: Schedule[] = await allRes.json();
+              setAllSchedules(allData);
+            }
+
+            await fetchTrafficAndStay(found.id);
+            
+            // TargetとLineupの選択肢を読み込んでフィルタリング
+            const targets = await loadSelectOptions("TARGETS", share_id);
+            const targetOptionLabels = targets.map(opt => opt.label);
+            
+            // Target: 選択肢に存在する場合のみ表示
+            let targetColor: string = "#E5E7EB"; // デフォルト色
+            if (found.target && targetOptionLabels.includes(found.target)) {
+              const targetOption = targets.find(opt => opt.label === found.target);
+              if (targetOption) {
+                targetColor = targetOption.color || "#E5E7EB";
+              }
+            }
+            setTargetColor(targetColor);
+            setFilteredTarget(found.target && targetOptionLabels.includes(found.target) ? found.target : null);
+            
+            // Lineup: 選択肢に存在する場合のみ表示
+            const lineupOptions: Array<{ label: string; color: string }> = [];
+            if (found.lineup) {
+              const lineupValues = found.lineup.split(',').map(v => v.trim()).filter(v => v);
+              for (const lineupValue of lineupValues) {
+                if (targetOptionLabels.includes(lineupValue)) {
+                  const lineupOption = targets.find(opt => opt.label === lineupValue);
+                  lineupOptions.push({
+                    label: lineupValue,
+                    color: lineupOption?.color || "#E5E7EB"
+                  });
+                }
+              }
+            }
+            setFilteredLineupOptions(lineupOptions);
+            setFilteredLineup(lineupOptions.length > 0 ? lineupOptions.map(opt => opt.label).join(", ") : null);
+            
+            // 選択肢の色情報を取得
+            if (found.category) {
+              const color = await getOptionColor(found.category, "CATEGORIES");
+              setCategoryColor(color);
+            }
+            if (found.area) {
+              const color = await getOptionColor(found.area, "AREAS");
+              setAreaColor(color);
+            }
+            if (found.seller) {
+              const color = await getOptionColor(found.seller, "SELLERS");
+              setSellerColor(color);
+            }
+            if (found.status) {
+              const color = await getOptionColor(found.status, "STATUSES");
+              setStatusColor(color);
+            }
+          } catch (e: any) {
+            setError(e.message ?? "Unknown error");
+          } finally {
+            setLoading(false);
+          }
+        };
+        await fetchDetail();
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Related SchedulesのArea色情報を取得
   useEffect(() => {
@@ -282,7 +379,12 @@ export default function SharedScheduleDetailScreen() {
   return (
     <View style={styles.container}>
       <PageHeader showBackButton={true} homePath={`/share/${share_id}`} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* タイトル */}
         <View style={styles.titleHeader}>
           <Text style={styles.mainTitle}>
