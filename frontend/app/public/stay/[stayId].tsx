@@ -8,6 +8,8 @@ import { NotionTag } from "../../../components/notion-tag";
 import { PageHeader } from "../../../components/PageHeader";
 import type { Schedule } from "../../HomeScreen";
 import { maskHotelName } from "../../../utils/mask-hotel-name";
+import type { SelectOption } from "../../../types/select-option";
+import { authenticatedFetch, getApiUrl } from "../../../utils/api";
 
 type Stay = {
   id: number;
@@ -15,6 +17,7 @@ type Stay = {
   check_in: string;
   check_out: string;
   hotel_name: string;
+  website?: string | null;
   fee: number;
   breakfast_flag: boolean;
   deadline?: string | null;
@@ -29,6 +32,7 @@ export default function PublicStayDetailScreen() {
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
 
   useEffect(() => {
     if (!stayId) return;
@@ -58,6 +62,17 @@ export default function PublicStayDetailScreen() {
           } catch (e) {
             console.error("[PublicStayDetail] Failed to fetch schedule:", e);
           }
+        }
+        
+        // Website選択肢を取得（認証不要のエンドポイントを使用）
+        try {
+          const websiteRes = await fetch(getApiUrl("/stay-select-options/website"));
+          if (websiteRes.ok) {
+            const websiteData: SelectOption[] = await websiteRes.json();
+            setWebsiteOptions(websiteData);
+          }
+        } catch (e) {
+          console.error("[PublicStayDetail] Failed to fetch website options:", e);
         }
       } catch (e: any) {
         setError(e.message ?? "Unknown error");
@@ -114,10 +129,19 @@ export default function PublicStayDetailScreen() {
             label="Check-out"
             value={stay.check_out}
           />
-          <NotionProperty
-            label="Hotel Name"
-            value={maskHotelName(stay.hotel_name, false)}
-          />
+          {stay.website && (
+            <NotionProperty label="Website">
+              {(() => {
+                const websiteOption = websiteOptions.find(opt => opt.label === stay.website);
+                return (
+                  <NotionTag
+                    label={stay.website}
+                    color={websiteOption?.color || "#E5E7EB"}
+                  />
+                );
+              })()}
+            </NotionProperty>
+          )}
           <NotionProperty
             label="Fee"
             value={formatCurrency(stay.fee)}
