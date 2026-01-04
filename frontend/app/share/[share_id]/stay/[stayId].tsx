@@ -63,9 +63,9 @@ export default function SharedStayDetailScreen() {
           }
         }
         
-        // Website選択肢を取得（認証不要のエンドポイントを使用）
+        // Website選択肢を取得（共有用エンドポイントを使用）
         try {
-          const websiteRes = await fetch(getApiUrl("/stay-select-options/website"));
+          const websiteRes = await fetch(getApiUrl(`/share/${share_id}/stay-select-options/website`));
           if (websiteRes.ok) {
             const websiteData: SelectOption[] = await websiteRes.json();
             setWebsiteOptions(websiteData);

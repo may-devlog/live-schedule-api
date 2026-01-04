@@ -4299,6 +4299,70 @@ async fn save_select_options(
     Ok(Json(serde_json::json!({ "success": true })))
 }
 
+// GET /share/:share_id/stay-select-options/:type - 共有ページ用のホテル選択肢を取得（認証不要）
+async fn get_shared_stay_select_options(
+    Path((share_id, option_type)): Path<(String, String)>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<ErrorResponse>)> {
+    // share_idからユーザーIDを取得
+    let user_id: Option<i64> = sqlx::query_scalar(
+        "SELECT id FROM users WHERE share_id = ?"
+    )
+    .bind(&share_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[GetSharedStaySelectOptions] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    if let Some(user_id) = user_id {
+        let row: Option<(String,)> = sqlx::query_as::<_, (String,)>(
+            "SELECT options_json FROM stay_select_options WHERE user_id = ? AND option_type = ?"
+        )
+        .bind(user_id)
+        .bind(&option_type)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| {
+            eprintln!("[GetSharedStaySelectOptions] Database error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            )
+        })?;
+
+        if let Some((options_json,)) = row {
+            let options: Vec<serde_json::Value> = serde_json::from_str(&options_json)
+                .map_err(|_| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ErrorResponse {
+                            error: "Failed to parse options".to_string(),
+                        }),
+                    )
+                })?;
+            Ok(Json(options))
+        } else {
+            Ok(Json(vec![]))
+        }
+    } else {
+        Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "User not found".to_string(),
+            }),
+        ))
+    }
+}
+
 // GET /stay-select-options/:type - ホテル用選択肢を取得
 async fn get_stay_select_options(
     user: AuthenticatedUser,
@@ -4838,6 +4902,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/share/:share_id/schedules/:id", get(get_shared_schedule))
         .route("/share/:share_id/traffic/:id", get(get_shared_traffic))
         .route("/share/:share_id/stay/:id", get(get_shared_stay))
+        .route("/share/:share_id/stay-select-options/:type", get(get_shared_stay_select_options))
         .route("/public/schedules", get(list_public_schedules))
         .route("/public/schedules/:id", get(get_public_schedule))
         .route("/public/traffic", get(list_public_traffics))
