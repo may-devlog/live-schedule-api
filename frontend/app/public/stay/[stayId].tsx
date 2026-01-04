@@ -128,19 +128,17 @@ export default function PublicStayDetailScreen() {
             label="Check-out"
             value={stay.check_out}
           />
-          {stay.website && (
-            <NotionProperty label="Website">
-              {(() => {
-                const websiteOption = websiteOptions.find(opt => opt.label === stay.website);
-                return (
-                  <NotionTag
-                    label={stay.website}
-                    color={websiteOption?.color || "#E5E7EB"}
-                  />
-                );
-              })()}
-            </NotionProperty>
-          )}
+          <NotionProperty label="Website">
+            {stay.website ? (() => {
+              const websiteOption = websiteOptions.find(opt => opt.label === stay.website);
+              return (
+                <NotionTag
+                  label={stay.website}
+                  color={websiteOption?.color || "#E5E7EB"}
+                />
+              );
+            })() : undefined}
+          </NotionProperty>
           <NotionProperty
             label="Fee"
             value={formatCurrency(stay.fee)}
