@@ -34,7 +34,7 @@ export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: P
         </TouchableOpacity>
       </View>
       {scheduleTitle && (
-        <Text style={styles.scheduleTitle} numberOfLines={1}>
+        <Text style={styles.scheduleTitle}>
           {scheduleTitle}
         </Text>
       )}

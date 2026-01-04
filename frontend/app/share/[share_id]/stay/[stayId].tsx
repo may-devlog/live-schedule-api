@@ -162,7 +162,7 @@ export default function SharedStayDetailScreen() {
       >
         {/* タイトル */}
         <View style={styles.titleHeader}>
-          <Text style={styles.mainTitle} numberOfLines={2}>
+          <Text style={styles.mainTitle}>
             {maskHotelName(stay.hotel_name, false)}
           </Text>
         </View>

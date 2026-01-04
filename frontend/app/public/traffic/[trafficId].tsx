@@ -113,7 +113,7 @@ export default function PublicTrafficDetailScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* タイトル */}
         <View style={styles.titleHeader}>
-          <Text style={styles.mainTitle} numberOfLines={2}>
+          <Text style={styles.mainTitle}>
             {title}
           </Text>
         </View>

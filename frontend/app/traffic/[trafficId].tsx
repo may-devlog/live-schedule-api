@@ -195,7 +195,7 @@ export default function TrafficDetailScreen() {
       >
         {/* タイトル */}
         <View style={styles.titleHeader}>
-          <Text style={styles.mainTitle} numberOfLines={2}>
+          <Text style={styles.mainTitle}>
             {title}
           </Text>
           {isAuthenticated && (

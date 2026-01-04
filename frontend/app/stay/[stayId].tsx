@@ -199,7 +199,7 @@ export default function StayDetailScreen() {
       >
         {/* タイトル */}
         <View style={styles.titleHeader}>
-          <Text style={styles.mainTitle} numberOfLines={2}>
+          <Text style={styles.mainTitle}>
             {maskHotelName(stay.hotel_name, isAuthenticated)}
           </Text>
           {isAuthenticated && (
