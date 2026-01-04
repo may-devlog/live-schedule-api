@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getApiUrl } from '../../utils/api';
@@ -33,6 +34,7 @@ export default function SharedScheduleScreen() {
   const [nextSchedules, setNextSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   useEffect(() => {
@@ -122,6 +124,15 @@ export default function SharedScheduleScreen() {
     router.push(`/share/${share_id}/schedules/${scheduleId}`);
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchSchedules();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -150,7 +161,13 @@ export default function SharedScheduleScreen() {
   }
 
   return (
-    <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
+    <ScrollView 
+      style={styles.scrollContainer} 
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>SCHEDULES</Text>

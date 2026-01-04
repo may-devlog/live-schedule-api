@@ -9,6 +9,7 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  RefreshControl,
 } from "react-native";
 import type { Schedule } from "../../../HomeScreen";
 import { getApiUrl } from "../../../../utils/api";
@@ -25,6 +26,7 @@ export default function SharedYearScreen() {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
 
   const fetchAvailableYears = async () => {
@@ -142,6 +144,18 @@ export default function SharedYearScreen() {
     router.push(`/share/${share_id}/schedules/${id}`);
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (currentYear && share_id) {
+        await fetchYear(currentYear);
+      }
+      await fetchAvailableYears();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   if (!share_id) {
     return (
       <View style={styles.container}>
@@ -187,6 +201,9 @@ export default function SharedYearScreen() {
           <FlatList
             data={schedules}
             keyExtractor={(item) => item.id.toString()}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}

@@ -12,6 +12,7 @@ import {
   Alert,
   Platform,
   ScrollView,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
@@ -169,6 +170,7 @@ export default function HomeScreen() {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [loadingNext, setLoadingNext] = useState(false);
   const [errorNext, setErrorNext] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -281,6 +283,15 @@ export default function HomeScreen() {
       setErrorNext(e.message ?? "Unknown error");
     } finally {
       setLoadingNext(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchUpcoming();
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -402,7 +413,13 @@ export default function HomeScreen() {
 
   return (
     <>
-    <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
+    <ScrollView 
+      style={styles.scrollContainer} 
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
     <View style={styles.container}>
         <View style={styles.header}>
       <Text style={styles.title}>SCHEDULES</Text>

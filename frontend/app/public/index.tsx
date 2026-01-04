@@ -7,6 +7,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { getApiUrl } from "../../utils/api";
@@ -18,6 +19,7 @@ export default function PublicIndexScreen() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchPublicSchedules = async () => {
     try {
@@ -64,6 +66,15 @@ export default function PublicIndexScreen() {
     fetchPublicSchedules();
   }, []);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchPublicSchedules();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>公開スケジュール</Text>
@@ -79,6 +90,9 @@ export default function PublicIndexScreen() {
         <FlatList
           data={schedules}
           keyExtractor={(item) => item.id.toString()}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.scheduleItem}

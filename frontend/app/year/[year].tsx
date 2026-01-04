@@ -9,6 +9,7 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  RefreshControl,
 } from "react-native";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
@@ -28,6 +29,7 @@ export default function YearScreen() {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
 
 const fetchAvailableYears = async () => {
@@ -126,6 +128,18 @@ const fetchYear = async (y: string) => {
     router.push(`/live/${id}`);
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (currentYear) {
+        await fetchYear(currentYear);
+      }
+      await fetchAvailableYears();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* ナビゲーションバーのタイトルを非表示 */}
@@ -168,6 +182,9 @@ const fetchYear = async (y: string) => {
         <FlatList
           data={schedules}
           keyExtractor={(item) => item.id.toString()}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
