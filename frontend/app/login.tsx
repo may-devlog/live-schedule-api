@@ -36,7 +36,7 @@ export default function LoginScreen() {
         setError('メールアドレスの確認が完了していません。登録時に送信されたメールを確認してください。');
         return;
       }
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (error: any) {
       console.error('[LoginScreen] Auth error:', error);
       console.error('[LoginScreen] Error type:', error?.constructor?.name);

@@ -8,9 +8,10 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/contexts/AuthContext';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+// Tab navigation removed - using direct routing instead
+// export const unstable_settings = {
+//   anchor: '(tabs)',
+// };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -34,7 +35,7 @@ export default function RootLayout() {
             headerShown: false, // デフォルトでヘッダーを非表示
           }}
         >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style="auto" />
