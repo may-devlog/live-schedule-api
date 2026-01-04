@@ -605,11 +605,12 @@ const styles = StyleSheet.create({
     color: "#37352f",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#f7f6f3",
+    backgroundColor: "#f0f0f0",
     borderRadius: 4,
     borderLeftWidth: 4,
     borderLeftColor: "#37352f",
     letterSpacing: 0.3,
+    alignSelf: "stretch",
   },
   relationContainer: {
     gap: 8,
@@ -658,6 +659,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 24,
     marginBottom: 12,
+    width: "100%",
   },
   trafficCard: {
     marginBottom: 12,

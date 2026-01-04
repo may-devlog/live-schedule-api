@@ -41,7 +41,11 @@ export function NotionPropertyBlock({ children, title }: PropertyBlockProps) {
   
   return (
     <View style={styles.block}>
-      {title && <Text style={styles.blockTitle}>{title}</Text>}
+      {title && (
+        <View style={styles.blockTitleContainer}>
+          <Text style={styles.blockTitle}>{title}</Text>
+        </View>
+      )}
       <View style={styles.properties}>
         {React.Children.map(children, (child, index) => {
           if (React.isValidElement(child)) {
@@ -61,18 +65,22 @@ const styles = StyleSheet.create({
   block: {
     marginBottom: 24,
   },
+  blockTitleContainer: {
+    width: "100%",
+    marginBottom: 12,
+  },
   blockTitle: {
     fontSize: 14,
     fontWeight: "700",
     color: "#37352f",
-    marginBottom: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#f7f6f3",
+    backgroundColor: "#f0f0f0",
     borderRadius: 4,
     borderLeftWidth: 4,
     borderLeftColor: "#37352f",
     letterSpacing: 0.3,
+    width: "100%",
   },
   properties: {
     backgroundColor: "#ffffff",
