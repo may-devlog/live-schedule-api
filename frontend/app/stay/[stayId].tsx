@@ -26,7 +26,6 @@ import type { Schedule } from "../HomeScreen";
 import { maskHotelName } from "../../utils/mask-hotel-name";
 import { NotionRelation } from "../../components/notion-relation";
 import type { SelectOption } from "../../types/select-option";
-import { authenticatedFetch, getApiUrl } from "../../utils/api";
 
 export default function StayDetailScreen() {
   const { stayId } = useLocalSearchParams<{ stayId: string }>();

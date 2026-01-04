@@ -25,7 +25,6 @@ import { HomeButton } from "../../components/HomeButton";
 import { NotionRelation } from "../../components/notion-relation";
 import type { Schedule } from "../HomeScreen";
 import { PageHeader } from "../../components/PageHeader";
-import { authenticatedFetch, getApiUrl } from "../../utils/api";
 
 const STAY_STATUSES_KEY = "@select_options:stay_statuses" as const;
 
