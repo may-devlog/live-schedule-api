@@ -460,6 +460,7 @@ export default function HomeScreen() {
         <FlatList
           data={nextSchedules}
           keyExtractor={(item) => item.id.toString()}
+          scrollEnabled={false}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
@@ -819,6 +820,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
+    flexGrow: 1,
   },
   container: {
     paddingTop: 48,
