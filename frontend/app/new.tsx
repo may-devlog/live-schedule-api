@@ -456,6 +456,7 @@ export default function NewScheduleScreen() {
         onOptionsChange={handleLineupOptionsChange}
         placeholder="選択してください"
         sharedOptionsKey="TARGETS"
+        optionType="TARGETS"
       />
 
       <NotionSelect

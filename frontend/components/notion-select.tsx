@@ -15,7 +15,7 @@ import { NotionTag } from "./notion-tag";
 import { ColorPicker } from "./color-picker";
 import type { SelectOption } from "../types/select-option";
 import { getDefaultColorForLabel, sortByKanaOrder, sortByOrder } from "../types/select-option";
-import { saveSelectOptions } from "../utils/select-options-storage";
+import { saveSelectOptions, saveStaySelectOptions } from "../utils/select-options-storage";
 
 type NotionSelectProps = {
   label: string;
@@ -28,7 +28,8 @@ type NotionSelectProps = {
   isPrefecture?: boolean; // 都道府県選択肢かどうか
   isCategory?: boolean; // カテゴリ選択肢かどうか
   isTransportation?: boolean; // 交通手段選択肢かどうか（背景色を統一で薄いグレーに）
-  optionType?: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS"; // 選択肢タイプ（並び替え機能用）
+  optionType?: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS" | "WEBSITE"; // 選択肢タイプ（並び替え機能用）
+  stayOptionType?: "WEBSITE" | "STATUS"; // Stay用選択肢タイプ（並び替え機能用）
 };
 
 export function NotionSelect({
@@ -43,6 +44,7 @@ export function NotionSelect({
   isCategory = false,
   isTransportation = false,
   optionType,
+  stayOptionType,
 }: NotionSelectProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [newOptionText, setNewOptionText] = useState("");
@@ -272,7 +274,7 @@ export function NotionSelect({
 
   // 保存ボタンのハンドラー
   const handleSaveOrder = async () => {
-    if (!optionType || !onOptionsChange) return;
+    if ((!optionType && !stayOptionType) || !onOptionsChange) return;
     try {
       setIsSaving(true);
       // displayedOptionsの順序に基づいてoptionsを更新
@@ -283,7 +285,11 @@ export function NotionSelect({
           order: index,
         };
       });
-      await saveSelectOptions(optionType, updatedOptions);
+      if (stayOptionType) {
+        await saveStaySelectOptions(stayOptionType, updatedOptions);
+      } else if (optionType) {
+        await saveSelectOptions(optionType, updatedOptions);
+      }
       Alert.alert("保存完了", "並び順を保存しました");
       onOptionsChange(updatedOptions);
     } catch (error) {
@@ -357,8 +363,8 @@ export function NotionSelect({
           >
             <Text style={styles.modalTitle}>{label}</Text>
             
-            {/* 並び替え設定（optionTypeが指定されている場合のみ表示） */}
-            {optionType && onOptionsChange && (
+            {/* 並び替え設定（optionTypeまたはstayOptionTypeが指定されている場合のみ表示） */}
+            {(optionType || stayOptionType) && onOptionsChange && (
               <View style={styles.sortContainer}>
                 <View style={styles.sortToggle}>
                   <TouchableOpacity

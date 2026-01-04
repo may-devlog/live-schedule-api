@@ -301,6 +301,7 @@ export default function EditStayScreen() {
         onValueChange={setWebsite}
         onOptionsChange={handleWebsiteOptionsChange}
         placeholder="選択してください"
+        stayOptionType="WEBSITE"
       />
 
       <Text style={styles.label}>

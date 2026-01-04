@@ -341,3 +341,38 @@ export async function saveSelectOptions(
   console.log(`[SelectOptions] Saved ${key} to local storage`);
 }
 
+// ホテル用選択肢を保存する（データベースに保存し、成功した場合のみローカルストレージにも保存）
+export async function saveStaySelectOptions(
+  key: keyof typeof STAY_STORAGE_KEYS,
+  options: SelectOption[]
+): Promise<void> {
+  // まずデータベースに保存
+  const url = getApiUrl(`/stay-select-options/${key.toLowerCase()}`);
+  const payload = { options };
+  console.log(`[StaySelectOptions] Saving ${key} to database:`, url);
+  console.log(`[StaySelectOptions] Payload:`, JSON.stringify(payload, null, 2));
+  
+  const res = await authenticatedFetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  
+  console.log(`[StaySelectOptions] Response status:`, res.status);
+  console.log(`[StaySelectOptions] Response headers:`, Object.fromEntries(res.headers.entries()));
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`[StaySelectOptions] Failed to save ${key} to database:`, res.status, errorText);
+    throw new Error(`Failed to save ${key} to database: ${res.status} ${errorText}`);
+  }
+  
+  // データベースへの保存が成功した場合のみ、ローカルストレージにも保存（キャッシュ）
+  const result = await res.json();
+  console.log(`[StaySelectOptions] Successfully saved ${key} to database:`, result);
+  
+  // データベースへの保存が成功した場合のみ、ローカルストレージにも保存
+  await AsyncStorage.setItem(STAY_STORAGE_KEYS[key], JSON.stringify(options));
+  console.log(`[StaySelectOptions] Saved ${key} to local storage`);
+}
+
