@@ -24,7 +24,11 @@ export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: P
         )}
         <TouchableOpacity
           style={styles.homeButton}
-          onPress={() => router.push(homePath || '/')}
+          onPress={() => {
+            const path = homePath || '/';
+            console.log('[PageHeader] Home button pressed, navigating to:', path);
+            router.push(path);
+          }}
         >
           <Text style={styles.homeButtonText}>🏠 Home</Text>
         </TouchableOpacity>
