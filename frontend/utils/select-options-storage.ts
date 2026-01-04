@@ -40,11 +40,81 @@ const DEFAULT_SELLERS = ["チケットぴあ", "イープラス", "ローチケ"
 const DEFAULT_STATUSES = ["Canceled", "Pending", "Keep", "Done"];
 const DEFAULT_TRANSPORTATIONS = ["🚄 新幹線", "✈️ 飛行機", "🚃 在来線", "🚌 バス", "🚗 車", "🚕 タクシー", "その他"];
 
+// デフォルト選択肢を取得する関数
+function getDefaultOptions(
+  key: keyof typeof STORAGE_KEYS
+): SelectOption[] {
+  const defaults: Record<keyof typeof STORAGE_KEYS, string[]> = {
+    CATEGORIES: DEFAULT_CATEGORIES,
+    AREAS: DEFAULT_AREAS,
+    TARGETS: DEFAULT_TARGETS,
+    SELLERS: DEFAULT_SELLERS,
+    STATUSES: DEFAULT_STATUSES,
+    TRANSPORTATIONS: DEFAULT_TRANSPORTATIONS,
+  };
+  const isPrefecture = key === "AREAS";
+  const isCategory = key === "CATEGORIES";
+  const isSeller = key === "SELLERS";
+  const options = stringArrayToOptions(defaults[key], undefined, isPrefecture, isCategory, isSeller);
+  if (key === "TRANSPORTATIONS") {
+    return options.map((opt) => ({
+      ...opt,
+      color: opt.color || "#E5E7EB",
+    }));
+  }
+  return options;
+}
+
+// データベースの選択肢とデフォルト選択肢をマージする関数
+function mergeOptionsWithDefaults(
+  dbOptions: SelectOption[],
+  defaultOptions: SelectOption[],
+  key: keyof typeof STORAGE_KEYS
+): SelectOption[] {
+  // データベースの選択肢をラベルでマップ
+  const dbOptionsMap = new Map<string, SelectOption>();
+  dbOptions.forEach((opt) => {
+    dbOptionsMap.set(opt.label, opt);
+  });
+
+  // デフォルト選択肢とマージ（デフォルト選択肢の色をデータベースの値で上書き）
+  const merged: SelectOption[] = defaultOptions.map((defaultOpt, index) => {
+    const dbOpt = dbOptionsMap.get(defaultOpt.label);
+    if (dbOpt) {
+      // データベースに存在する場合は、データベースの値を優先（色とorder）
+      return {
+        ...defaultOpt,
+        color: dbOpt.color || defaultOpt.color,
+        order: dbOpt.order !== undefined ? dbOpt.order : index,
+      };
+    }
+    // データベースに存在しない場合は、デフォルト値を使用
+    return {
+      ...defaultOpt,
+      order: index,
+    };
+  });
+
+  // データベースにあってデフォルトにない選択肢を追加
+  dbOptions.forEach((dbOpt) => {
+    if (!defaultOptions.some((d) => d.label === dbOpt.label)) {
+      merged.push({
+        ...dbOpt,
+        order: dbOpt.order !== undefined ? dbOpt.order : merged.length,
+      });
+    }
+  });
+
+  return merged;
+}
+
 // 選択肢を読み込む（データベース優先、フォールバックはローカルストレージ）
 export async function loadSelectOptions(
   key: keyof typeof STORAGE_KEYS,
   shareId?: string // 共有ページ用のshare_id（オプション）
 ): Promise<SelectOption[]> {
+  const defaultOptions = getDefaultOptions(key);
+  
   try {
     // まずデータベースから読み込む
     try {
@@ -59,9 +129,11 @@ export async function loadSelectOptions(
       if (res.ok) {
         const options: SelectOption[] = await res.json();
         if (options.length > 0) {
+          // データベースの選択肢とデフォルト選択肢をマージ
+          const merged = mergeOptionsWithDefaults(options, defaultOptions, key);
           // データベースに保存されている場合は、ローカルストレージにも保存（キャッシュ）
-          await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(options));
-          return options;
+          await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(merged));
+          return merged;
         }
       }
     } catch (error) {
@@ -180,30 +252,11 @@ export async function loadSelectOptions(
     console.error(`Error loading ${key}:`, error);
   }
 
-  // デフォルト値を返す
-  const defaults: Record<keyof typeof STORAGE_KEYS, string[]> = {
-    CATEGORIES: DEFAULT_CATEGORIES,
-    AREAS: DEFAULT_AREAS,
-    TARGETS: DEFAULT_TARGETS,
-    SELLERS: DEFAULT_SELLERS,
-    STATUSES: DEFAULT_STATUSES,
-    TRANSPORTATIONS: DEFAULT_TRANSPORTATIONS,
-  };
-  // AREASの場合は都道府県として扱う
-  // CATEGORIESの場合はカテゴリとして扱う
-  // SELLERSの場合はSellerとして扱う
-  // TRANSPORTATIONSの場合はデフォルトで薄いグレーに（カスタマイズ可能）
-  const isPrefecture = key === "AREAS";
-  const isCategory = key === "CATEGORIES";
-  const isSeller = key === "SELLERS";
-  const options = stringArrayToOptions(defaults[key], undefined, isPrefecture, isCategory, isSeller);
-  if (key === "TRANSPORTATIONS") {
-    return options.map((opt) => ({
-      ...opt,
-      color: opt.color || "#E5E7EB", // 色が設定されていない場合のみ薄いグレー（デフォルト）
-    }));
-  }
-  return options;
+  // デフォルト値を返す（orderを付与）
+  return defaultOptions.map((opt, index) => ({
+    ...opt,
+    order: index,
+  }));
 }
 
 // ホテル用選択肢を読み込む（データベース優先、フォールバックはローカルストレージ）

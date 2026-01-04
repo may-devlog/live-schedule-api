@@ -424,6 +424,7 @@ export default function NewScheduleScreen() {
         onOptionsChange={handleCategoriesChange}
         placeholder="選択してください"
         isCategory={true}
+        optionType="CATEGORIES"
       />
 
       <NotionSelect
@@ -435,6 +436,7 @@ export default function NewScheduleScreen() {
         placeholder="選択してください"
         required={true}
         isPrefecture={true}
+        optionType="AREAS"
       />
 
       <Text style={styles.label}>
@@ -471,6 +473,7 @@ export default function NewScheduleScreen() {
         onValueChange={setSeller}
         onOptionsChange={handleSellersChange}
         placeholder="選択してください"
+        optionType="SELLERS"
       />
 
       {/* Number型 */}
@@ -497,6 +500,7 @@ export default function NewScheduleScreen() {
         onValueChange={setStatus}
         onOptionsChange={handleStatusesChange}
         placeholder="選択してください"
+        optionType="STATUSES"
       />
 
       {/* Relation型 */}

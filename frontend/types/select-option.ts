@@ -2,6 +2,7 @@
 export type SelectOption = {
   label: string;
   color?: string; // カラーコード（例: "#FF5733"）
+  order?: number; // 並び順（カスタム順の場合に使用）
 };
 
 // 選択肢のデフォルト色（Notion風の薄いパステルカラー）
@@ -162,5 +163,22 @@ export function getDefaultColorForLabel(
 // SelectOption配列から文字列配列に変換
 export function optionsToStringArray(options: SelectOption[]): string[] {
   return options.map((opt) => opt.label);
+}
+
+// 五十音順でソートする関数
+export function sortByKanaOrder(options: SelectOption[]): SelectOption[] {
+  return [...options].sort((a, b) => {
+    // 日本語の五十音順でソート（localeCompareを使用）
+    return a.label.localeCompare(b.label, "ja");
+  });
+}
+
+// orderフィールドでソートする関数（カスタム順）
+export function sortByOrder(options: SelectOption[]): SelectOption[] {
+  return [...options].sort((a, b) => {
+    const orderA = a.order !== undefined ? a.order : Infinity;
+    const orderB = b.order !== undefined ? b.order : Infinity;
+    return orderA - orderB;
+  });
 }
 
