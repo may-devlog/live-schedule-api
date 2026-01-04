@@ -4977,6 +4977,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/share/:share_id", get(get_shared_schedules))
         .route("/share/:share_id/schedules/:id", get(get_shared_schedule))
         .route("/share/:share_id/traffic/:id", get(get_shared_traffic))
+        .route("/share/:share_id/select-options/:type", get(get_shared_select_options))
         .route("/share/:share_id/stay-select-options/:type", get(get_shared_stay_select_options))
         .route("/share/:share_id/stay/:id", get(get_shared_stay))
         .route("/public/schedules", get(list_public_schedules))

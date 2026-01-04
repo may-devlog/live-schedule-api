@@ -42,12 +42,20 @@ const DEFAULT_TRANSPORTATIONS = ["🚄 新幹線", "✈️ 飛行機", "🚃 在
 
 // 選択肢を読み込む（データベース優先、フォールバックはローカルストレージ）
 export async function loadSelectOptions(
-  key: keyof typeof STORAGE_KEYS
+  key: keyof typeof STORAGE_KEYS,
+  shareId?: string // 共有ページ用のshare_id（オプション）
 ): Promise<SelectOption[]> {
   try {
     // まずデータベースから読み込む
     try {
-      const res = await authenticatedFetch(getApiUrl(`/select-options/${key.toLowerCase()}`));
+      let res: Response;
+      if (shareId) {
+        // 共有ページの場合は共有用エンドポイントを使用
+        res = await fetch(getApiUrl(`/share/${shareId}/select-options/${key.toLowerCase()}`));
+      } else {
+        // 通常の場合は認証付きエンドポイントを使用
+        res = await authenticatedFetch(getApiUrl(`/select-options/${key.toLowerCase()}`));
+      }
       if (res.ok) {
         const options: SelectOption[] = await res.json();
         if (options.length > 0) {
