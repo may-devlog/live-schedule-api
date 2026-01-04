@@ -230,7 +230,7 @@ export default function SharedScheduleScreen() {
         {loading && <ActivityIndicator color="#333333" />}
         {error && <Text style={styles.errorText}>Error: {error}</Text>}
         {!loading && !error && nextSchedules.length === 0 && (
-          <Text style={styles.emptyText}>No upcoming schedules</Text>
+          <Text style={styles.emptyText}>今後のスケジュールがありません</Text>
         )}
         {!loading && !error && nextSchedules.length > 0 && (
           <FlatList

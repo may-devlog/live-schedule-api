@@ -121,14 +121,14 @@ export default function PublicStayDetailScreen() {
         {/* [Stay Info] */}
         <NotionPropertyBlock title="Stay Info">
           <NotionProperty
-            label="Check-in"
+            label="チェックイン"
             value={stay.check_in}
           />
           <NotionProperty
-            label="Check-out"
+            label="チェックアウト"
             value={stay.check_out}
           />
-          <NotionProperty label="Website">
+          <NotionProperty label="予約サイト">
             {stay.website ? (() => {
               const websiteOption = websiteOptions.find(opt => opt.label === stay.website);
               return (
@@ -140,15 +140,15 @@ export default function PublicStayDetailScreen() {
             })() : undefined}
           </NotionProperty>
           <NotionProperty
-            label="Fee"
+            label="宿泊費"
             value={formatCurrency(stay.fee)}
           />
           <NotionProperty
-            label="Breakfast"
+            label="朝食"
             value={stay.breakfast_flag ? "Yes" : "No"}
           />
           <NotionProperty
-            label="Deadline"
+            label="取消料発生日時"
             value={
               stay.deadline && stay.deadline.trim().length > 0
                 ? stay.deadline
@@ -156,7 +156,7 @@ export default function PublicStayDetailScreen() {
             }
           />
           <NotionProperty
-            label="Penalty"
+            label="取消料"
             value={
               stay.penalty !== null && stay.penalty !== undefined
                 ? `${stay.penalty}%`
@@ -164,7 +164,7 @@ export default function PublicStayDetailScreen() {
             }
           />
           <NotionProperty
-            label="Status"
+            label="ステータス"
             value={stay.status}
           />
         </NotionPropertyBlock>

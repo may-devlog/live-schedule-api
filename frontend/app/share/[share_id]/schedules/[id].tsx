@@ -346,38 +346,38 @@ export default function SharedScheduleDetailScreen() {
 
         {/* [Event Info] */}
         <NotionPropertyBlock title="Event Info">
-          <NotionProperty label="Group" value={schedule.group || "-"} />
+          <NotionProperty label="グループ" value={schedule.group || "-"} />
           <NotionProperty
-            label="Date"
+            label="日付"
             value={schedule.date ?? formatDateTimeUTC(schedule.datetime)}
           />
-          <NotionProperty label="Open" value={schedule.open} />
-          <NotionProperty label="Start" value={schedule.start} />
-          <NotionProperty label="End" value={schedule.end} />
+          <NotionProperty label="開場" value={schedule.open} />
+          <NotionProperty label="開演" value={schedule.start} />
+          <NotionProperty label="終演" value={schedule.end} />
           <NotionProperty
-            label="Notes"
+            label="備考"
             value={
               schedule.notes && schedule.notes.trim().length > 0
                 ? schedule.notes
                 : undefined
             }
           />
-          <NotionProperty label="Category">
+          <NotionProperty label="カテゴリ">
             {schedule.category ? (
               <NotionTag label={schedule.category} color={categoryColor || undefined} />
             ) : (
               <Text style={styles.emptyValue}>-</Text>
             )}
           </NotionProperty>
-          <NotionProperty label="Area">
+          <NotionProperty label="エリア">
             {schedule.area ? (
               <NotionTag label={schedule.area} color={areaColor || undefined} />
             ) : (
               <Text style={styles.emptyValue}>-</Text>
             )}
           </NotionProperty>
-          <NotionProperty label="Venue" value={schedule.venue} />
-          <NotionProperty label="Lineup">
+          <NotionProperty label="会場" value={schedule.venue} />
+          <NotionProperty label="出演者">
             {filteredLineupOptions.length > 0 ? (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                 {filteredLineupOptions.map((opt) => (
@@ -388,7 +388,7 @@ export default function SharedScheduleDetailScreen() {
               <Text style={styles.emptyValue}>-</Text>
             )}
           </NotionProperty>
-          <NotionProperty label="Target">
+          <NotionProperty label="お目当て">
             {filteredTarget ? (
               <NotionTag label={filteredTarget} color={targetColor || undefined} />
             ) : (
@@ -399,7 +399,7 @@ export default function SharedScheduleDetailScreen() {
 
         {/* [Cost] */}
         <NotionPropertyBlock title="Cost">
-          <NotionProperty label="Seller">
+          <NotionProperty label="販売元">
             {schedule.seller ? (
               <NotionTag label={schedule.seller} color={sellerColor || undefined} />
             ) : (
@@ -407,30 +407,30 @@ export default function SharedScheduleDetailScreen() {
             )}
           </NotionProperty>
           <NotionProperty
-            label="Ticket fee"
+            label="チケット代"
             value={formatCurrency(schedule.ticket_fee)}
           />
           <NotionProperty
-            label="Drink fee"
+            label="ドリンク代"
             value={formatCurrency(schedule.drink_fee)}
           />
           <NotionProperty
-            label="Total fare"
+            label="交通費合計"
             value={formatCurrency(schedule.total_fare)}
           />
           <NotionProperty
-            label="Stay fee"
+            label="宿泊費合計"
             value={formatCurrency(schedule.stay_fee)}
           />
           <NotionProperty
-            label="Travel cost"
+            label="遠征費合計"
             value={formatCurrency(schedule.travel_cost)}
           />
           <NotionProperty
-            label="Total cost"
+            label="総費用"
             value={formatCurrency(schedule.total_cost)}
           />
-          <NotionProperty label="Status">
+          <NotionProperty label="ステータス">
             {schedule.status ? (
               <NotionTag label={schedule.status} color={statusColor || undefined} />
             ) : (

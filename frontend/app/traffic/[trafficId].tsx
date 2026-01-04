@@ -210,14 +210,14 @@ export default function TrafficDetailScreen() {
         {/* [Traffic Info] */}
         <NotionPropertyBlock title="Traffic Info">
           <NotionProperty
-            label="Date"
+            label="利用日"
             value={traffic.date}
           />
           <NotionProperty
-            label="Order"
+            label="利用順"
             value={traffic.order.toString()}
           />
-          <NotionProperty label="Transportation">
+          <NotionProperty label="交通手段">
             {traffic.transportation ? (
               <NotionTag label={traffic.transportation} color={transportationColor || undefined} />
             ) : (
@@ -225,15 +225,15 @@ export default function TrafficDetailScreen() {
             )}
           </NotionProperty>
           <NotionProperty
-            label="From"
+            label="出発地"
             value={traffic.from}
           />
           <NotionProperty
-            label="To"
+            label="到着地"
             value={traffic.to}
           />
           <NotionProperty
-            label="Notes"
+            label="備考"
             value={
               traffic.notes && traffic.notes.trim().length > 0
                 ? traffic.notes
@@ -241,11 +241,11 @@ export default function TrafficDetailScreen() {
             }
           />
           <NotionProperty
-            label="Fare"
+            label="運賃"
             value={formatCurrency(traffic.fare)}
           />
           <NotionProperty
-            label="Miles"
+            label="消費マイル"
             value={
               traffic.miles !== null && traffic.miles !== undefined
                 ? traffic.miles.toString()
@@ -253,7 +253,7 @@ export default function TrafficDetailScreen() {
             }
           />
           <NotionProperty
-            label="Return"
+            label="往復フラグ"
             value={traffic.return_flag ? "Yes" : "No"}
           />
         </NotionPropertyBlock>
