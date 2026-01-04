@@ -222,7 +222,7 @@ export default function NewTrafficScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <PageHeader showBackButton={true} />
+      <PageHeader showBackButton={true} homePath="/" />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>
           {copyFrom ? "Duplicate Traffic" : "New Traffic"}

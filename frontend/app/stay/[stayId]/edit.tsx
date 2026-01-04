@@ -263,7 +263,7 @@ export default function EditStayScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <PageHeader showBackButton={true} />
+      <PageHeader showBackButton={true} homePath="/" />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Edit Stay</Text>
 
