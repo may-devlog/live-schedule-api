@@ -23,17 +23,31 @@ export default function LoginScreen() {
   const router = useRouter();
 
   const handleSubmit = async () => {
-    if (!email.trim() || !password.trim()) {
+    // 入力値を正規化（最新の状態を確実に取得）
+    const normalizedEmail = email.trim();
+    const normalizedPassword = password.trim();
+    
+    if (!normalizedEmail || !normalizedPassword) {
       setError('メールアドレスとパスワードを入力してください');
+      return;
+    }
+
+    // ローディング中は処理をスキップ
+    if (loading) {
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
-      const result = await login(email.trim(), password);
+      
+      // デバッグログ（本番環境では削除推奨）
+      console.log('[LoginScreen] Attempting login with email:', normalizedEmail);
+      
+      const result = await login(normalizedEmail, normalizedPassword);
       if (!result.email_verified) {
         setError('メールアドレスの確認が完了していません。登録時に送信されたメールを確認してください。');
+        setLoading(false);
         return;
       }
       router.replace('/');
@@ -73,6 +87,10 @@ export default function LoginScreen() {
             setEmail(text);
             setError(null); // 入力時にエラーをクリア
           }}
+          onBlur={() => {
+            // フォーカスが外れた時に値を正規化
+            setEmail(email.trim());
+          }}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
@@ -87,6 +105,10 @@ export default function LoginScreen() {
             onChangeText={(text) => {
               setPassword(text);
               setError(null); // 入力時にエラーをクリア
+            }}
+            onBlur={() => {
+              // フォーカスが外れた時に値を正規化（パスワードは先頭・末尾のスペースのみ削除）
+              setPassword(password.trim());
             }}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
