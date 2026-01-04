@@ -3863,6 +3863,7 @@ async fn list_stays(
           check_in,
           check_out,
           hotel_name,
+          website,
           fee,
           breakfast_flag,
           deadline,
