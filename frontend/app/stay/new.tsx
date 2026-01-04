@@ -274,7 +274,7 @@ export default function NewStayScreen() {
       <PageHeader showBackButton={true} homePath="/" />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>
-          {copyFrom ? "Duplicate Stay" : "New Stay"}
+          {copyFrom ? "宿泊を複製" : "新規宿泊"}
         </Text>
 
       <View style={styles.section}>
@@ -293,7 +293,7 @@ export default function NewStayScreen() {
       </View>
 
       <NotionDatePicker
-        label="Check-in"
+        label="チェックイン"
         value={checkIn}
         onValueChange={setCheckIn}
         mode="datetime"
@@ -302,7 +302,7 @@ export default function NewStayScreen() {
       />
 
       <NotionDatePicker
-        label="Check-out"
+        label="チェックアウト"
         value={checkOut}
         onValueChange={setCheckOut}
         mode="datetime"
@@ -311,7 +311,7 @@ export default function NewStayScreen() {
       />
 
       <Text style={styles.label}>
-        Hotel <Text style={styles.required}>*</Text>
+        ホテル名 <Text style={styles.required}>*</Text>
       </Text>
       <TextInput
         style={styles.input}
@@ -320,7 +320,7 @@ export default function NewStayScreen() {
       />
 
       <NotionSelect
-        label="Website"
+        label="予約サイト"
         value={website}
         options={websiteOptions}
         onValueChange={setWebsite}
@@ -330,7 +330,7 @@ export default function NewStayScreen() {
       />
 
       <Text style={styles.label}>
-        Fee <Text style={styles.required}>*</Text>
+        宿泊費 <Text style={styles.required}>*</Text>
       </Text>
       <TextInput
         style={styles.input}
@@ -340,19 +340,19 @@ export default function NewStayScreen() {
       />
 
       <View style={styles.flagRow}>
-        <Text style={styles.label}>Breakfast</Text>
+        <Text style={styles.label}>朝食</Text>
         <Switch value={breakfastFlag} onValueChange={setBreakfastFlag} />
       </View>
 
       <NotionDatePicker
-        label="Deadline"
+        label="取消料発生日時"
         value={deadline}
         onValueChange={setDeadline}
         mode="datetime"
         placeholder="YYYY-MM-DD HH:MM"
       />
 
-      <Text style={styles.label}>Penalty (%)</Text>
+      <Text style={styles.label}>取消料 (%)</Text>
       <TextInput
         style={styles.input}
         value={penalty}
@@ -361,7 +361,7 @@ export default function NewStayScreen() {
       />
 
       <NotionSelect
-        label="Status"
+        label="ステータス"
         value={status}
         options={statuses}
         onValueChange={setStatus}
@@ -375,7 +375,7 @@ export default function NewStayScreen() {
         disabled={submitting}
       >
         <Text style={styles.buttonText}>
-          {submitting ? "Saving..." : "Save"}
+          {submitting ? "保存中..." : "保存"}
         </Text>
       </TouchableOpacity>
       </ScrollView>

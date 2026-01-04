@@ -142,7 +142,7 @@ export default function StayDetailScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Stay Detail</Text>
-        <Text style={styles.errorText}>Error: {error}</Text>
+        <Text style={styles.errorText}>エラー: {error}</Text>
       </View>
     );
   }
@@ -247,7 +247,7 @@ export default function StayDetailScreen() {
           />
           <NotionProperty
             label="朝食"
-            value={stay.breakfast_flag ? "Yes" : "No"}
+            value={stay.breakfast_flag ? "あり" : "なし"}
           />
           <NotionProperty
             label="取消料発生日時"

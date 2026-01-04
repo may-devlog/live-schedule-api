@@ -125,7 +125,7 @@ export default function TrafficDetailScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Traffic Detail</Text>
-        <Text style={styles.errorText}>Error: {error}</Text>
+        <Text style={styles.errorText}>エラー: {error}</Text>
       </View>
     );
   }
@@ -254,7 +254,7 @@ export default function TrafficDetailScreen() {
           />
           <NotionProperty
             label="往復フラグ"
-            value={traffic.return_flag ? "Yes" : "No"}
+            value={traffic.return_flag ? "あり" : "なし"}
           />
         </NotionPropertyBlock>
 

@@ -216,7 +216,7 @@ const fetchYear = async (y: string) => {
         ListHeaderComponent={
           <>
             {loading && <ActivityIndicator color="#333333" />}
-            {error && <Text style={styles.errorText}>Error: {error}</Text>}
+            {error && <Text style={styles.errorText}>エラー: {error}</Text>}
           </>
         }
         ListEmptyComponent={

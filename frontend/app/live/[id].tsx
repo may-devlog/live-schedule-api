@@ -315,7 +315,7 @@ export default function DetailScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Error: {error}</Text>
+        <Text style={styles.errorText}>エラー: {error}</Text>
       </View>
     );
   }

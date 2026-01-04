@@ -101,7 +101,7 @@ export default function SharedTrafficDetailScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Error: {error}</Text>
+        <Text style={styles.errorText}>エラー: {error}</Text>
       </View>
     );
   }
@@ -213,7 +213,7 @@ export default function SharedTrafficDetailScreen() {
           />
           <NotionProperty
             label="往復フラグ"
-            value={traffic.return_flag ? "Yes" : "No"}
+            value={traffic.return_flag ? "あり" : "なし"}
           />
         </NotionPropertyBlock>
       </ScrollView>

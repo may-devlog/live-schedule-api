@@ -218,10 +218,10 @@ export default function EditTrafficScreen() {
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
       <PageHeader showBackButton={true} homePath="/" />
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Edit Traffic</Text>
+        <Text style={styles.title}>交通を編集</Text>
 
       <NotionDatePicker
-        label="Date"
+        label="利用日"
         value={date}
         onValueChange={setDate}
         mode="date"
@@ -230,7 +230,7 @@ export default function EditTrafficScreen() {
       />
 
       <Text style={styles.label}>
-        Order <Text style={styles.required}>*</Text>
+        利用順 <Text style={styles.required}>*</Text>
       </Text>
       <TextInput
         style={styles.input}
@@ -240,7 +240,7 @@ export default function EditTrafficScreen() {
       />
 
       <NotionSelect
-        label="Transportation"
+        label="交通手段"
         value={transportation}
         options={transportations}
         onValueChange={setTransportation}
@@ -250,7 +250,7 @@ export default function EditTrafficScreen() {
       />
 
       <Text style={styles.label}>
-        From <Text style={styles.required}>*</Text>
+        出発地 <Text style={styles.required}>*</Text>
       </Text>
       <TextInput
         style={styles.input}
@@ -259,7 +259,7 @@ export default function EditTrafficScreen() {
       />
 
       <Text style={styles.label}>
-        To <Text style={styles.required}>*</Text>
+        到着地 <Text style={styles.required}>*</Text>
       </Text>
       <TextInput
         style={styles.input}
@@ -267,7 +267,7 @@ export default function EditTrafficScreen() {
         onChangeText={setToPlace}
       />
 
-      <Text style={styles.label}>Notes</Text>
+      <Text style={styles.label}>備考</Text>
       <TextInput
         style={[styles.input, styles.multiline]}
         value={notes}
@@ -276,7 +276,7 @@ export default function EditTrafficScreen() {
       />
 
       <Text style={styles.label}>
-        Fare <Text style={styles.required}>*</Text>
+        運賃 <Text style={styles.required}>*</Text>
       </Text>
       <TextInput
         style={styles.input}
@@ -285,7 +285,7 @@ export default function EditTrafficScreen() {
         keyboardType="numeric"
       />
 
-      <Text style={styles.label}>Miles</Text>
+      <Text style={styles.label}>消費マイル</Text>
       <TextInput
         style={styles.input}
         value={miles}
@@ -294,7 +294,7 @@ export default function EditTrafficScreen() {
       />
 
       <View style={styles.flagRow}>
-        <Text style={styles.label}>Return</Text>
+        <Text style={styles.label}>往復フラグ</Text>
         <Switch value={returnFlag} onValueChange={setReturnFlag} />
       </View>
 
@@ -304,7 +304,7 @@ export default function EditTrafficScreen() {
         disabled={submitting}
       >
         <Text style={styles.buttonText}>
-          {submitting ? "Updating..." : "Update"}
+          {submitting ? "更新中..." : "更新"}
         </Text>
       </TouchableOpacity>
       </ScrollView>

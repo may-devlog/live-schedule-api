@@ -201,23 +201,23 @@ export default function PublicDetailScreen() {
 
         <NotionPropertyBlock label="Event Info">
           {schedule.date && (
-            <NotionProperty label="Date" value={schedule.date} />
+            <NotionProperty label="日付" value={schedule.date} />
           )}
           {schedule.open && (
-            <NotionProperty label="Open" value={schedule.open} />
+            <NotionProperty label="開場" value={schedule.open} />
           )}
           {schedule.start && (
-            <NotionProperty label="Start" value={schedule.start} />
+            <NotionProperty label="開演" value={schedule.start} />
           )}
           {schedule.end && (
-            <NotionProperty label="End" value={schedule.end} />
+            <NotionProperty label="終演" value={schedule.end} />
           )}
           {schedule.notes && (
-            <NotionProperty label="Notes" value={schedule.notes} />
+            <NotionProperty label="備考" value={schedule.notes} />
           )}
           {schedule.category && (
             <NotionProperty
-              label="Category"
+              label="カテゴリ"
               value={
                 <NotionTag
                   label={schedule.category}
@@ -228,7 +228,7 @@ export default function PublicDetailScreen() {
           )}
           {schedule.area && (
             <NotionProperty
-              label="Area"
+              label="エリア"
               value={
                 <NotionTag
                   label={schedule.area}
@@ -237,8 +237,8 @@ export default function PublicDetailScreen() {
               }
             />
           )}
-          <NotionProperty label="Venue" value={schedule.venue} />
-          <NotionProperty label="Lineup">
+          <NotionProperty label="会場" value={schedule.venue} />
+          <NotionProperty label="出演者">
             {lineupOptions.length > 0 ? (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                 {lineupOptions.map((opt) => (
@@ -251,7 +251,7 @@ export default function PublicDetailScreen() {
           </NotionProperty>
           {schedule.target && (
             <NotionProperty
-              label="Target"
+              label="お目当て"
               value={
                 <NotionTag
                   label={schedule.target}
@@ -265,7 +265,7 @@ export default function PublicDetailScreen() {
         <NotionPropertyBlock label="Cost">
           {schedule.seller && (
             <NotionProperty
-              label="Seller"
+              label="販売元"
               value={
                 <NotionTag
                   label={schedule.seller}
@@ -276,37 +276,37 @@ export default function PublicDetailScreen() {
           )}
           {schedule.ticket_fee !== null && schedule.ticket_fee !== undefined && (
             <NotionProperty
-              label="Ticket Fee"
+              label="チケット代"
               value={`¥${schedule.ticket_fee.toLocaleString()}`}
             />
           )}
           {schedule.drink_fee !== null && schedule.drink_fee !== undefined && (
             <NotionProperty
-              label="Drink Fee"
+              label="ドリンク代"
               value={`¥${schedule.drink_fee.toLocaleString()}`}
             />
           )}
           {schedule.total_fare !== null && schedule.total_fare !== undefined && (
             <NotionProperty
-              label="Total Fare"
+              label="交通費合計"
               value={`¥${schedule.total_fare.toLocaleString()}`}
             />
           )}
           {schedule.stay_fee !== null && schedule.stay_fee !== undefined && (
             <NotionProperty
-              label="Stay Fee"
+              label="宿泊費合計"
               value={`¥${schedule.stay_fee.toLocaleString()}`}
             />
           )}
           {schedule.travel_cost !== null && schedule.travel_cost !== undefined && (
             <NotionProperty
-              label="Travel Cost"
+              label="遠征費合計"
               value={`¥${schedule.travel_cost.toLocaleString()}`}
             />
           )}
           {schedule.total_cost !== null && schedule.total_cost !== undefined && (
             <NotionProperty
-              label="Total Cost"
+              label="総費用"
               value={`¥${schedule.total_cost.toLocaleString()}`}
             />
           )}
@@ -315,7 +315,7 @@ export default function PublicDetailScreen() {
         <NotionPropertyBlock label="Status">
           {schedule.status && (
             <NotionProperty
-              label="Status"
+              label="ステータス"
               value={
                 <NotionTag
                   label={schedule.status}
@@ -334,46 +334,46 @@ export default function PublicDetailScreen() {
             trafficSummaries.map((traffic) => (
               <View key={traffic.id} style={styles.trafficItem}>
                 <NotionProperty
-                  label="Date"
+                  label="利用日"
                   value={traffic.date}
                 />
                 <NotionProperty
-                  label="Order"
+                  label="利用順"
                   value={traffic.order.toString()}
                 />
                 {traffic.transportation && (
                   <NotionProperty
-                    label="Transportation"
+                    label="交通手段"
                     value={traffic.transportation}
                   />
                 )}
                 <NotionProperty
-                  label="From"
+                  label="出発地"
                   value={traffic.from}
                 />
                 <NotionProperty
-                  label="To"
+                  label="到着地"
                   value={traffic.to}
                 />
                 {traffic.notes && (
                   <NotionProperty
-                    label="Notes"
+                    label="備考"
                     value={traffic.notes}
                   />
                 )}
                 <NotionProperty
-                  label="Fare"
+                  label="運賃"
                   value={`¥${traffic.fare.toLocaleString()}`}
                 />
                 {traffic.miles !== null && traffic.miles !== undefined && (
                   <NotionProperty
-                    label="Miles"
+                    label="消費マイル"
                     value={traffic.miles.toString()}
                   />
                 )}
                 <NotionProperty
-                  label="Return"
-                  value={traffic.return_flag ? "Yes" : "No"}
+                  label="往復フラグ"
+                  value={traffic.return_flag ? "あり" : "なし"}
                 />
               </View>
             ))
@@ -388,39 +388,39 @@ export default function PublicDetailScreen() {
             staySummaries.map((stay) => (
               <View key={stay.id} style={styles.stayItem}>
                 <NotionProperty
-                  label="Check In"
+                  label="チェックイン"
                   value={stay.check_in}
                 />
                 <NotionProperty
-                  label="Check Out"
+                  label="チェックアウト"
                   value={stay.check_out}
                 />
                 <NotionProperty
-                  label="Hotel Name"
+                  label="ホテル名"
                   value={maskHotelName(stay.hotel_name, false)}
                 />
                 <NotionProperty
-                  label="Fee"
+                  label="宿泊費"
                   value={`¥${stay.fee.toLocaleString()}`}
                 />
                 <NotionProperty
-                  label="Breakfast"
-                  value={stay.breakfast_flag ? "Yes" : "No"}
+                  label="朝食"
+                  value={stay.breakfast_flag ? "あり" : "なし"}
                 />
                 {stay.deadline && (
                   <NotionProperty
-                    label="Deadline"
+                    label="取消料発生日時"
                     value={stay.deadline}
                   />
                 )}
                 {stay.penalty !== null && stay.penalty !== undefined && (
                   <NotionProperty
-                    label="Penalty"
+                    label="取消料"
                     value={`${stay.penalty}%`}
                   />
                 )}
                 <NotionProperty
-                  label="Status"
+                  label="ステータス"
                   value={stay.status}
                 />
               </View>

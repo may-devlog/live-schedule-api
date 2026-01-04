@@ -88,7 +88,7 @@ export default function PublicIndexScreen() {
         ListHeaderComponent={
           <>
             {loading && <ActivityIndicator color="#333333" style={styles.loader} />}
-            {error && <Text style={styles.errorText}>Error: {error}</Text>}
+            {error && <Text style={styles.errorText}>エラー: {error}</Text>}
           </>
         }
         ListEmptyComponent={

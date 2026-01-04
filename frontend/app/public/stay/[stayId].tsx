@@ -94,7 +94,7 @@ export default function PublicStayDetailScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Error: {error}</Text>
+        <Text style={styles.errorText}>エラー: {error}</Text>
       </View>
     );
   }
@@ -145,7 +145,7 @@ export default function PublicStayDetailScreen() {
           />
           <NotionProperty
             label="朝食"
-            value={stay.breakfast_flag ? "Yes" : "No"}
+            value={stay.breakfast_flag ? "あり" : "なし"}
           />
           <NotionProperty
             label="取消料発生日時"

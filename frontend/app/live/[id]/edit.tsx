@@ -373,11 +373,11 @@ export default function EditScheduleScreen() {
         <HomeButton />
       </View>
       <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Edit Live</Text>
+      <Text style={styles.title}>イベントを編集</Text>
 
       {/* Text型 */}
       <Text style={styles.label}>
-        Title <Text style={styles.required}>*</Text>
+        タイトル <Text style={styles.required}>*</Text>
       </Text>
       <TextInput
         style={styles.input}
@@ -385,7 +385,7 @@ export default function EditScheduleScreen() {
         onChangeText={setTitle}
       />
 
-      <Text style={styles.label}>Group</Text>
+      <Text style={styles.label}>グループ</Text>
       <TextInput
         style={styles.input}
         value={group}
@@ -394,7 +394,7 @@ export default function EditScheduleScreen() {
 
       {/* Date/Time型 */}
       <NotionDatePicker
-        label="Date"
+        label="日付"
         value={date}
         onValueChange={setDate}
         mode="date"
@@ -402,7 +402,7 @@ export default function EditScheduleScreen() {
       />
 
       <NotionDatePicker
-        label="Open"
+        label="開場"
         value={openTime}
         onValueChange={setOpenTime}
         mode="time"
@@ -410,7 +410,7 @@ export default function EditScheduleScreen() {
       />
 
       <NotionDatePicker
-        label="Start"
+        label="開演"
         value={startTime}
         onValueChange={setStartTime}
         mode="time"
@@ -418,7 +418,7 @@ export default function EditScheduleScreen() {
       />
 
       <NotionDatePicker
-        label="End"
+        label="終演"
         value={endTime}
         onValueChange={setEndTime}
         mode="time"
@@ -426,7 +426,7 @@ export default function EditScheduleScreen() {
       />
 
       {/* Text型（複数行） */}
-      <Text style={styles.label}>Notes</Text>
+      <Text style={styles.label}>備考</Text>
       <TextInput
         style={[styles.input, styles.multiline]}
         value={notes}
@@ -436,7 +436,7 @@ export default function EditScheduleScreen() {
 
       {/* Select型 */}
       <NotionSelect
-        label="Category"
+        label="カテゴリ"
         value={category}
         options={categories}
         onValueChange={setCategory}
@@ -447,7 +447,7 @@ export default function EditScheduleScreen() {
       />
 
       <NotionSelect
-        label="Area"
+        label="エリア"
         value={area}
         options={areas}
         onValueChange={setArea}
@@ -459,7 +459,7 @@ export default function EditScheduleScreen() {
       />
 
       <Text style={styles.label}>
-        Venue <Text style={styles.required}>*</Text>
+        会場 <Text style={styles.required}>*</Text>
       </Text>
       <TextInput
         style={styles.input}
@@ -468,7 +468,7 @@ export default function EditScheduleScreen() {
       />
 
       <NotionMultiSelect
-        label="Lineup"
+        label="出演者"
         value={lineup}
         options={lineupOptions}
         onValueChange={setLineup}
@@ -479,7 +479,7 @@ export default function EditScheduleScreen() {
       />
 
       <NotionSelect
-        label="Target"
+        label="お目当て"
         value={target}
         options={targets}
         onValueChange={setTarget}
@@ -487,7 +487,7 @@ export default function EditScheduleScreen() {
       />
 
       <NotionSelect
-        label="Seller"
+        label="販売元"
         value={seller}
         options={sellers}
         onValueChange={setSeller}
@@ -497,7 +497,7 @@ export default function EditScheduleScreen() {
       />
 
       {/* Number型 */}
-      <Text style={styles.label}>Ticket fee</Text>
+      <Text style={styles.label}>チケット代</Text>
       <TextInput
         style={styles.input}
         value={ticketFee}
@@ -505,7 +505,7 @@ export default function EditScheduleScreen() {
         keyboardType="numeric"
       />
 
-      <Text style={styles.label}>Drink fee</Text>
+      <Text style={styles.label}>ドリンク代</Text>
       <TextInput
         style={styles.input}
         value={drinkFee}
@@ -514,7 +514,7 @@ export default function EditScheduleScreen() {
       />
 
       <NotionSelect
-        label="Status"
+        label="ステータス"
         value={status}
         options={statuses}
         onValueChange={setStatus}
@@ -534,7 +534,7 @@ export default function EditScheduleScreen() {
 
       {/* Relation型 */}
       <NotionRelation
-        label="Related Schedules"
+        label="関連スケジュール"
         value={relatedScheduleIds}
         onValueChange={setRelatedScheduleIds}
         currentScheduleId={id ? Number(id) : undefined}
@@ -547,7 +547,7 @@ export default function EditScheduleScreen() {
         disabled={submitting}
       >
         <Text style={styles.buttonText}>
-          {submitting ? "Updating..." : "Update"}
+          {submitting ? "更新中..." : "更新"}
         </Text>
       </TouchableOpacity>
     </ScrollView>

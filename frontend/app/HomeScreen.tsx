@@ -489,7 +489,7 @@ export default function HomeScreen() {
 
         {isAuthenticated && (
       <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
-        <Text style={styles.newButtonText}>+ New Live</Text>
+        <Text style={styles.newButtonText}>+ 新規イベント</Text>
       </TouchableOpacity>
         )}
 
@@ -498,7 +498,7 @@ export default function HomeScreen() {
 
       <Text style={styles.sectionTitle}>NEXT</Text>
       {loadingNext && <ActivityIndicator color="#333333" />}
-      {errorNext && <Text style={styles.errorText}>Error: {errorNext}</Text>}
+      {errorNext && <Text style={styles.errorText}>エラー: {errorNext}</Text>}
       {!loadingNext && !errorNext && nextSchedules.length === 0 && (
         <Text style={styles.emptyText}>今後のスケジュールがありません</Text>
       )}
