@@ -65,6 +65,8 @@ export default function StayDetailScreen() {
           throw new Error(`status: ${res.status}`);
         }
         const data: Stay = await res.json();
+        console.log("[StayDetail] Fetched stay data:", data);
+        console.log("[StayDetail] Website value:", data.website);
         setStay(data);
         setSelectedScheduleId(data.schedule_id || null);
         
