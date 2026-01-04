@@ -64,9 +64,9 @@ export default function SharedStayDetailScreen() {
           }
         }
         
-        // Website選択肢を取得（Lineupと同じアプローチ：認証付きエンドポイントを試行し、失敗した場合はローカルストレージから読み込む）
+        // Website選択肢を取得（共有用エンドポイントを使用）
         try {
-          const websiteData = await loadStaySelectOptions("WEBSITE");
+          const websiteData = await loadStaySelectOptions("WEBSITE", share_id);
           console.log("[SharedStayDetail] Website options loaded:", websiteData);
           console.log("[SharedStayDetail] Stay website value:", data.website);
           setWebsiteOptions(websiteData);

@@ -4299,6 +4299,76 @@ async fn save_select_options(
     Ok(Json(serde_json::json!({ "success": true })))
 }
 
+// GET /share/:share_id/select-options/:type - 共有ページ用の選択肢を取得（認証不要）
+async fn get_shared_select_options(
+    Path((share_id, option_type)): Path<(String, String)>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<ErrorResponse>)> {
+    eprintln!("[GetSharedSelectOptions] Called with share_id: {}, option_type: {}", share_id, option_type);
+    
+    // share_idからユーザーIDを取得
+    let user_id: Option<i64> = sqlx::query_scalar(
+        "SELECT id FROM users WHERE share_id = ?"
+    )
+    .bind(&share_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[GetSharedSelectOptions] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+    
+    eprintln!("[GetSharedSelectOptions] User ID found: {:?}", user_id);
+    
+    if let Some(user_id) = user_id {
+        let row: Option<(String,)> = sqlx::query_as::<_, (String,)>(
+            "SELECT options_json FROM select_options WHERE user_id = ? AND option_type = ?"
+        )
+        .bind(user_id)
+        .bind(&option_type)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| {
+            eprintln!("[GetSharedSelectOptions] Database error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            )
+        })?;
+
+        if let Some((options_json,)) = row {
+            let options: Vec<serde_json::Value> = serde_json::from_str(&options_json)
+                .map_err(|_| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ErrorResponse {
+                            error: "Failed to parse options".to_string(),
+                        }),
+                    )
+                })?;
+            eprintln!("[GetSharedSelectOptions] Returning {} options", options.len());
+            Ok(Json(options))
+        } else {
+            eprintln!("[GetSharedSelectOptions] No options found, returning empty array");
+            Ok(Json(vec![]))
+        }
+    } else {
+        Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "User not found".to_string(),
+            }),
+        ))
+    }
+}
+
 // GET /share/:share_id/stay-select-options/:type - 共有ページ用のホテル選択肢を取得（認証不要）
 async fn get_shared_stay_select_options(
     Path((share_id, option_type)): Path<(String, String)>,

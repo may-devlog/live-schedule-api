@@ -104,7 +104,7 @@ export default function SharedScheduleDetailScreen() {
         await fetchTrafficAndStay(found.id);
         
         // TargetとLineupの選択肢を読み込んでフィルタリング
-        const targets = await loadSelectOptions("TARGETS");
+        const targets = await loadSelectOptions("TARGETS", share_id);
         const targetOptionLabels = targets.map(opt => opt.label);
         
         // Target: 選択肢に存在する場合のみ表示
