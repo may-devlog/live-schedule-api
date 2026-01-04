@@ -1,7 +1,7 @@
 // app/stay/[stayId].tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, RefreshControl, Platform } from "react-native";
 
 type Stay = {
   id: number;
@@ -37,6 +37,9 @@ export default function StayDetailScreen() {
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
   const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
   const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
 
@@ -50,73 +53,82 @@ export default function StayDetailScreen() {
     router.push(`/stay/new?copyFrom=${stayId}`);
   };
 
-  useEffect(() => {
+  const fetchStay = async () => {
     if (!stayId) return;
-
-    const fetchStay = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await authenticatedFetch(getApiUrl(`/stay/${stayId}`));
-        if (!res.ok) {
-          if (res.status === 404) {
-            throw new Error("Stay not found");
-          }
-          throw new Error(`status: ${res.status}`);
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await authenticatedFetch(getApiUrl(`/stay/${stayId}`));
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error("Stay not found");
         }
-        const data: Stay = await res.json();
-        console.log("[StayDetail] Fetched stay data:", data);
-        console.log("[StayDetail] Website value:", data.website);
-        setStay(data);
-        setSelectedScheduleId(data.schedule_id || null);
-        
-        // 全スケジュール一覧を取得（スケジュール選択用）
-        try {
-          const schedulesRes = await authenticatedFetch(getApiUrl("/schedules"));
-          if (schedulesRes.ok) {
-            const schedulesData: Schedule[] = await schedulesRes.json();
-            setAllSchedules(schedulesData);
-          }
-        } catch (e) {
-          console.error("[StayDetail] Failed to fetch schedules:", e);
-        }
-        
-        // スケジュール情報を取得
-        if (data.schedule_id) {
-          try {
-            // 公開APIを使用（認証不要）
-            const scheduleRes = await fetch(getApiUrl(`/public/schedules/${data.schedule_id}`));
-            if (scheduleRes.ok) {
-              const scheduleData: Schedule = await scheduleRes.json();
-              setSchedule(scheduleData);
-              console.log("[StayDetail] Schedule loaded:", scheduleData.title);
-            } else {
-              console.error("[StayDetail] Failed to fetch schedule, status:", scheduleRes.status);
-            }
-          } catch (e) {
-            console.error("[StayDetail] Failed to fetch schedule:", e);
-          }
-        }
-        
-        // Website選択肢を取得
-        try {
-          const websiteRes = await authenticatedFetch(getApiUrl("/stay-select-options/website"));
-          if (websiteRes.ok) {
-            const websiteData: SelectOption[] = await websiteRes.json();
-            setWebsiteOptions(websiteData);
-          }
-        } catch (e) {
-          console.error("[StayDetail] Failed to fetch website options:", e);
-        }
-      } catch (e: any) {
-        setError(e.message ?? "Unknown error");
-      } finally {
-        setLoading(false);
+        throw new Error(`status: ${res.status}`);
       }
-    };
+      const data: Stay = await res.json();
+      console.log("[StayDetail] Fetched stay data:", data);
+      console.log("[StayDetail] Website value:", data.website);
+      setStay(data);
+      setSelectedScheduleId(data.schedule_id || null);
+      
+      // 全スケジュール一覧を取得（スケジュール選択用）
+      try {
+        const schedulesRes = await authenticatedFetch(getApiUrl("/schedules"));
+        if (schedulesRes.ok) {
+          const schedulesData: Schedule[] = await schedulesRes.json();
+          setAllSchedules(schedulesData);
+        }
+      } catch (e) {
+        console.error("[StayDetail] Failed to fetch schedules:", e);
+      }
+      
+      // スケジュール情報を取得
+      if (data.schedule_id) {
+        try {
+          // 公開APIを使用（認証不要）
+          const scheduleRes = await fetch(getApiUrl(`/public/schedules/${data.schedule_id}`));
+          if (scheduleRes.ok) {
+            const scheduleData: Schedule = await scheduleRes.json();
+            setSchedule(scheduleData);
+            console.log("[StayDetail] Schedule loaded:", scheduleData.title);
+          } else {
+            console.error("[StayDetail] Failed to fetch schedule, status:", scheduleRes.status);
+          }
+        } catch (e) {
+          console.error("[StayDetail] Failed to fetch schedule:", e);
+        }
+      }
+      
+      // Website選択肢を取得
+      try {
+        const websiteRes = await authenticatedFetch(getApiUrl("/stay-select-options/website"));
+        if (websiteRes.ok) {
+          const websiteData: SelectOption[] = await websiteRes.json();
+          setWebsiteOptions(websiteData);
+        }
+      } catch (e) {
+        console.error("[StayDetail] Failed to fetch website options:", e);
+      }
+    } catch (e: any) {
+      setError(e.message ?? "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchStay();
   }, [stayId]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchStay();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -147,7 +159,44 @@ export default function StayDetailScreen() {
   return (
     <View style={styles.container}>
       <PageHeader scheduleTitle={schedule?.title || null} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+          />
+        }
+        scrollEnabled={true}
+        nestedScrollEnabled={true}
+        onTouchStart={(e) => {
+          const touch = e.nativeEvent.touches[0];
+          if (touch) {
+            setTouchStartY(touch.pageY);
+          }
+        }}
+        onTouchMove={(e) => {
+          if (touchStartY !== null) {
+            const touch = e.nativeEvent.touches[0];
+            if (touch) {
+              const distance = touch.pageY - touchStartY;
+              if (distance > 0) {
+                setPullDistance(distance);
+              }
+            }
+          }
+        }}
+        onTouchEnd={() => {
+          if (pullDistance > 100 && !refreshing) {
+            onRefresh();
+          }
+          setTouchStartY(null);
+          setPullDistance(0);
+        }}
+        scrollEventThrottle={16}
+      >
         {/* タイトル */}
         <View style={styles.titleHeader}>
           <Text style={styles.mainTitle} numberOfLines={2}>
@@ -304,6 +353,8 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
+    flexGrow: 1,
+    minHeight: '100%',
   },
   titleHeader: {
     flexDirection: "row",

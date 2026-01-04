@@ -1,7 +1,7 @@
 // app/traffic/[trafficId].tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, RefreshControl, Platform } from "react-native";
 
 type Traffic = {
   id: number;
@@ -37,6 +37,9 @@ export default function TrafficDetailScreen() {
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
   const [transportationColor, setTransportationColor] = useState<string | null>(null);
   const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
 
@@ -50,10 +53,8 @@ export default function TrafficDetailScreen() {
     router.push(`/traffic/new?copyFrom=${trafficId}`);
   };
 
-  useEffect(() => {
+  const fetchTraffic = async () => {
     if (!trafficId) return;
-
-    const fetchTraffic = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -106,8 +107,9 @@ export default function TrafficDetailScreen() {
       } finally {
         setLoading(false);
       }
-    };
+  };
 
+  useEffect(() => {
     fetchTraffic();
   }, [trafficId]);
 
@@ -144,7 +146,44 @@ export default function TrafficDetailScreen() {
   return (
     <View style={styles.container}>
       <PageHeader scheduleTitle={schedule?.title || null} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+          />
+        }
+        scrollEnabled={true}
+        nestedScrollEnabled={true}
+        onTouchStart={(e) => {
+          const touch = e.nativeEvent.touches[0];
+          if (touch) {
+            setTouchStartY(touch.pageY);
+          }
+        }}
+        onTouchMove={(e) => {
+          if (touchStartY !== null) {
+            const touch = e.nativeEvent.touches[0];
+            if (touch) {
+              const distance = touch.pageY - touchStartY;
+              if (distance > 0) {
+                setPullDistance(distance);
+              }
+            }
+          }
+        }}
+        onTouchEnd={() => {
+          if (pullDistance > 100 && !refreshing) {
+            onRefresh();
+          }
+          setTouchStartY(null);
+          setPullDistance(0);
+        }}
+        scrollEventThrottle={16}
+      >
         {/* タイトル */}
         <View style={styles.titleHeader}>
           <Text style={styles.mainTitle} numberOfLines={2}>
@@ -301,6 +340,8 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
+    flexGrow: 1,
+    minHeight: '100%',
   },
   titleHeader: {
     flexDirection: "row",

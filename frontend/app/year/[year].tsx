@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
+  Platform,
 } from "react-native";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
@@ -30,6 +31,8 @@ export default function YearScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
 
 const fetchAvailableYears = async () => {
@@ -179,8 +182,37 @@ const fetchYear = async (y: string) => {
         data={schedules}
         keyExtractor={(item) => item.id.toString()}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+          />
         }
+        onTouchStart={(e) => {
+          const touch = e.nativeEvent.touches[0];
+          if (touch) {
+            setTouchStartY(touch.pageY);
+          }
+        }}
+        onTouchMove={(e) => {
+          if (touchStartY !== null) {
+            const touch = e.nativeEvent.touches[0];
+            if (touch) {
+              const distance = touch.pageY - touchStartY;
+              if (distance > 0) {
+                setPullDistance(distance);
+              }
+            }
+          }
+        }}
+        onTouchEnd={() => {
+          if (pullDistance > 100 && !refreshing) {
+            onRefresh();
+          }
+          setTouchStartY(null);
+          setPullDistance(0);
+        }}
         ListHeaderComponent={
           <>
             {loading && <ActivityIndicator color="#333333" />}

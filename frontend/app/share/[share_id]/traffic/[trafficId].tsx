@@ -1,7 +1,7 @@
 // app/share/[share_id]/traffic/[trafficId].tsx - 共有ページ用の交通詳細画面（閲覧専用）
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, RefreshControl, Platform } from "react-native";
 import { getApiUrl } from "../../../../utils/api";
 import { NotionTag } from "../../../../components/notion-tag";
 import { NotionProperty, NotionPropertyBlock } from "../../../../components/notion-property";
@@ -32,12 +32,13 @@ export default function SharedTrafficDetailScreen() {
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
   const [transportationColor, setTransportationColor] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchTraffic = async () => {
     if (!trafficId || !share_id) return;
-
-    const fetchTraffic = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -74,10 +75,20 @@ export default function SharedTrafficDetailScreen() {
       } finally {
         setLoading(false);
       }
-    };
+  };
 
+  useEffect(() => {
     fetchTraffic();
   }, [trafficId, share_id]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchTraffic();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -109,8 +120,45 @@ export default function SharedTrafficDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} homePath={`/share/${share_id}`} />
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+          />
+        }
+        scrollEnabled={true}
+        nestedScrollEnabled={true}
+        onTouchStart={(e) => {
+          const touch = e.nativeEvent.touches[0];
+          if (touch) {
+            setTouchStartY(touch.pageY);
+          }
+        }}
+        onTouchMove={(e) => {
+          if (touchStartY !== null) {
+            const touch = e.nativeEvent.touches[0];
+            if (touch) {
+              const distance = touch.pageY - touchStartY;
+              if (distance > 0) {
+                setPullDistance(distance);
+              }
+            }
+          }
+        }}
+        onTouchEnd={() => {
+          if (pullDistance > 100 && !refreshing) {
+            onRefresh();
+          }
+          setTouchStartY(null);
+          setPullDistance(0);
+        }}
+        scrollEventThrottle={16}
+      >
         {/* タイトル */}
         <View style={styles.titleHeader}>
           <Text style={styles.mainTitle} numberOfLines={2}>
@@ -188,6 +236,8 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
+    flexGrow: 1,
+    minHeight: '100%',
   },
   titleHeader: {
     flexDirection: "row",

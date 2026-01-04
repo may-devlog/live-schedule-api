@@ -1,7 +1,7 @@
 // app/share/[share_id]/stay/[stayId].tsx - 共有ページ用の宿泊詳細画面（閲覧専用）
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, RefreshControl, Platform } from "react-native";
 import { getApiUrl } from "../../../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../../../components/notion-property";
 import { NotionTag } from "../../../../components/notion-tag";
@@ -32,56 +32,68 @@ export default function SharedStayDetailScreen() {
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
   const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
 
-  useEffect(() => {
+  const fetchStay = async () => {
     if (!stayId || !share_id) return;
-
-    const fetchStay = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await fetch(getApiUrl(`/share/${share_id}/stay/${stayId}`));
-        if (!res.ok) {
-          if (res.status === 404) {
-            throw new Error("Stay not found");
-          }
-          throw new Error(`status: ${res.status}`);
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(getApiUrl(`/share/${share_id}/stay/${stayId}`));
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error("Stay not found");
         }
-        const data: Stay = await res.json();
-        setStay(data);
-        
-        // スケジュール情報を取得
-        if (data.schedule_id) {
-          try {
-            const scheduleRes = await fetch(getApiUrl(`/share/${share_id}/schedules/${data.schedule_id}`));
-            if (scheduleRes.ok) {
-              const scheduleData: Schedule = await scheduleRes.json();
-              setSchedule(scheduleData);
-            }
-          } catch (e) {
-            console.error("[SharedStayDetail] Failed to fetch schedule:", e);
-          }
-        }
-        
-        // Website選択肢を取得（共有用エンドポイントを使用）
-        try {
-          const websiteData = await loadStaySelectOptions("WEBSITE", share_id);
-          console.log("[SharedStayDetail] Website options loaded:", websiteData);
-          console.log("[SharedStayDetail] Stay website value:", data.website);
-          setWebsiteOptions(websiteData);
-        } catch (e) {
-          console.error("[SharedStayDetail] Failed to load website options:", e);
-        }
-      } catch (e: any) {
-        setError(e.message ?? "Unknown error");
-      } finally {
-        setLoading(false);
+        throw new Error(`status: ${res.status}`);
       }
-    };
+      const data: Stay = await res.json();
+      setStay(data);
+      
+      // スケジュール情報を取得
+      if (data.schedule_id) {
+        try {
+          const scheduleRes = await fetch(getApiUrl(`/share/${share_id}/schedules/${data.schedule_id}`));
+          if (scheduleRes.ok) {
+            const scheduleData: Schedule = await scheduleRes.json();
+            setSchedule(scheduleData);
+          }
+        } catch (e) {
+          console.error("[SharedStayDetail] Failed to fetch schedule:", e);
+        }
+      }
+      
+      // Website選択肢を取得（共有用エンドポイントを使用）
+      try {
+        const websiteData = await loadStaySelectOptions("WEBSITE", share_id);
+        console.log("[SharedStayDetail] Website options loaded:", websiteData);
+        console.log("[SharedStayDetail] Stay website value:", data.website);
+        setWebsiteOptions(websiteData);
+      } catch (e) {
+        console.error("[SharedStayDetail] Failed to load website options:", e);
+      }
+    } catch (e: any) {
+      setError(e.message ?? "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchStay();
   }, [stayId, share_id]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchStay();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -109,8 +121,45 @@ export default function SharedStayDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} homePath={`/share/${share_id}`} />
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+          />
+        }
+        scrollEnabled={true}
+        nestedScrollEnabled={true}
+        onTouchStart={(e) => {
+          const touch = e.nativeEvent.touches[0];
+          if (touch) {
+            setTouchStartY(touch.pageY);
+          }
+        }}
+        onTouchMove={(e) => {
+          if (touchStartY !== null) {
+            const touch = e.nativeEvent.touches[0];
+            if (touch) {
+              const distance = touch.pageY - touchStartY;
+              if (distance > 0) {
+                setPullDistance(distance);
+              }
+            }
+          }
+        }}
+        onTouchEnd={() => {
+          if (pullDistance > 100 && !refreshing) {
+            onRefresh();
+          }
+          setTouchStartY(null);
+          setPullDistance(0);
+        }}
+        scrollEventThrottle={16}
+      >
         {/* タイトル */}
         <View style={styles.titleHeader}>
           <Text style={styles.mainTitle} numberOfLines={2}>
@@ -194,6 +243,8 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
+    flexGrow: 1,
+    minHeight: '100%',
   },
   titleHeader: {
     flexDirection: "row",
