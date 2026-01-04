@@ -9,6 +9,7 @@ import { PageHeader } from "../../../../components/PageHeader";
 import type { Schedule } from "../../../HomeScreen";
 import { maskHotelName } from "../../../../utils/mask-hotel-name";
 import type { SelectOption } from "../../../../types/select-option";
+import { loadStaySelectOptions } from "../../../../utils/select-options-storage";
 
 type Stay = {
   id: number;
@@ -63,21 +64,14 @@ export default function SharedStayDetailScreen() {
           }
         }
         
-        // Website選択肢を取得（共有用エンドポイントを使用）
+        // Website選択肢を取得（Lineupと同じアプローチ：認証付きエンドポイントを試行し、失敗した場合はローカルストレージから読み込む）
         try {
-          const websiteUrl = getApiUrl(`/share/${share_id}/stay-select-options/website`);
-          console.log("[SharedStayDetail] Fetching website options from:", websiteUrl);
-          const websiteRes = await fetch(websiteUrl);
-          if (websiteRes.ok) {
-            const websiteData: SelectOption[] = await websiteRes.json();
-            console.log("[SharedStayDetail] Website options fetched:", websiteData);
-            console.log("[SharedStayDetail] Stay website value:", data.website);
-            setWebsiteOptions(websiteData);
-          } else {
-            console.error("[SharedStayDetail] Failed to fetch website options, status:", websiteRes.status);
-          }
+          const websiteData = await loadStaySelectOptions("WEBSITE");
+          console.log("[SharedStayDetail] Website options loaded:", websiteData);
+          console.log("[SharedStayDetail] Stay website value:", data.website);
+          setWebsiteOptions(websiteData);
         } catch (e) {
-          console.error("[SharedStayDetail] Failed to fetch website options:", e);
+          console.error("[SharedStayDetail] Failed to load website options:", e);
         }
       } catch (e: any) {
         setError(e.message ?? "Unknown error");

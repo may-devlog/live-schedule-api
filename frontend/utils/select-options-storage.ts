@@ -17,6 +17,11 @@ const STORAGE_KEYS = {
   TRANSPORTATIONS: "@select_options:transportations",
 } as const;
 
+const STAY_STORAGE_KEYS = {
+  WEBSITE: "@stay_select_options:website",
+  STATUS: "@stay_select_options:status",
+} as const;
+
 // デフォルトの選択肢（文字列配列）
 const DEFAULT_CATEGORIES = ["ワンマン", "対バン", "フェス", "イベント", "舞台", "その他"];
 // 47都道府県の標準順
@@ -191,6 +196,45 @@ export async function loadSelectOptions(
     }));
   }
   return options;
+}
+
+// ホテル用選択肢を読み込む（データベース優先、フォールバックはローカルストレージ）
+export async function loadStaySelectOptions(
+  key: keyof typeof STAY_STORAGE_KEYS
+): Promise<SelectOption[]> {
+  try {
+    // まずデータベースから読み込む
+    try {
+      const res = await authenticatedFetch(getApiUrl(`/stay-select-options/${key.toLowerCase()}`));
+      if (res.ok) {
+        const options: SelectOption[] = await res.json();
+        if (options.length > 0) {
+          // データベースに保存されている場合は、ローカルストレージにも保存（キャッシュ）
+          await AsyncStorage.setItem(STAY_STORAGE_KEYS[key], JSON.stringify(options));
+          return options;
+        }
+      }
+    } catch (error) {
+      console.log(`[StaySelectOptions] Failed to load ${key} from database, falling back to local storage:`, error);
+    }
+
+    // データベースにない場合は、ローカルストレージから読み込む
+    const stored = await AsyncStorage.getItem(STAY_STORAGE_KEYS[key]);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        if (typeof parsed[0] === "string") {
+          return stringArrayToOptions(parsed);
+        }
+        return parsed as SelectOption[];
+      }
+    }
+  } catch (error) {
+    console.error(`Error loading stay ${key}:`, error);
+  }
+
+  // デフォルト値を返す
+  return [];
 }
 
 // 選択肢を保存する（データベースに保存し、成功した場合のみローカルストレージにも保存）
