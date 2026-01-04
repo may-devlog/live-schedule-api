@@ -199,7 +199,7 @@ export default function PublicDetailScreen() {
       <View style={styles.content}>
         <Text style={styles.title}>{schedule.title}</Text>
 
-        <NotionPropertyBlock label="Event Info">
+        <NotionPropertyBlock title="イベント情報">
           {schedule.date && (
             <NotionProperty label="日付" value={schedule.date} />
           )}
@@ -262,7 +262,7 @@ export default function PublicDetailScreen() {
           )}
         </NotionPropertyBlock>
 
-        <NotionPropertyBlock label="Cost">
+        <NotionPropertyBlock title="費用">
           {schedule.seller && (
             <NotionProperty
               label="販売元"

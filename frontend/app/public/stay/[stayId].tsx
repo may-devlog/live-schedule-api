@@ -119,7 +119,7 @@ export default function PublicStayDetailScreen() {
         </View>
 
         {/* [Stay Info] */}
-        <NotionPropertyBlock title="Stay Info">
+        <NotionPropertyBlock title="宿泊情報">
           <NotionProperty
             label="チェックイン"
             value={stay.check_in}

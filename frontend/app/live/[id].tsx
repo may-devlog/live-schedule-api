@@ -774,7 +774,7 @@ export default function DetailScreen() {
         </View>
 
         {/* [Event Info] */}
-        <NotionPropertyBlock title="Event Info">
+        <NotionPropertyBlock title="イベント情報">
           <NotionProperty label="グループ" value={schedule.group || "-"} />
           <NotionProperty
             label="日付"
@@ -827,7 +827,7 @@ export default function DetailScreen() {
         </NotionPropertyBlock>
 
         {/* [Cost] */}
-        <NotionPropertyBlock title="Cost">
+        <NotionPropertyBlock title="費用">
           <NotionProperty label="販売元">
             {schedule.seller ? (
               <NotionTag label={schedule.seller} color={sellerColor || undefined} />
@@ -871,7 +871,7 @@ export default function DetailScreen() {
         {/* [Relation] Live */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Related Schedules</Text>
+            <Text style={styles.sectionTitle}>関連スケジュール</Text>
           </View>
           {relatedIds.length === 0 ? (
             <Text style={styles.emptyValue}>関連スケジュールがありません</Text>
@@ -940,7 +940,7 @@ export default function DetailScreen() {
         {/* [Traffic] */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Traffic</Text>
+        <Text style={styles.sectionTitle}>交通</Text>
           </View>
           {trafficSummaries.length === 0 ? (
             <Text style={styles.emptyValue}>交通情報がありません</Text>
@@ -1003,7 +1003,7 @@ export default function DetailScreen() {
         {/* [Stay] */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Stay</Text>
+        <Text style={styles.sectionTitle}>宿泊</Text>
           </View>
           {staySummaries.length === 0 ? (
             <Text style={styles.emptyValue}>宿泊情報がありません</Text>
@@ -1149,12 +1149,15 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#37352f",
-    marginTop: 24,
-    marginBottom: 8,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#f7f6f3",
+    borderRadius: 4,
+    borderLeftWidth: 4,
+    borderLeftColor: "#37352f",
+    letterSpacing: 0.3,
   },
   relationContainer: {
     gap: 8,
@@ -1221,6 +1224,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 24,
     marginBottom: 12,
   },
   trafficCard: {
