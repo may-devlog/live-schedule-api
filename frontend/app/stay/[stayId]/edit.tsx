@@ -18,6 +18,7 @@ import { NotionSelect } from "../../../components/notion-select";
 import { NotionDatePicker } from "../../../components/notion-date-picker";
 import type { SelectOption } from "../../../types/select-option";
 import { PageHeader } from "../../../components/PageHeader";
+import { loadStaySelectOptions, saveStaySelectOptions } from "../../../utils/select-options-storage";
 
 type Stay = {
   id: number;
@@ -83,11 +84,8 @@ export default function EditStayScreen() {
       
       // Website選択肢を取得
       try {
-        const websiteRes = await authenticatedFetch(getApiUrl("/stay-select-options/website"));
-        if (websiteRes.ok) {
-          const websiteData: SelectOption[] = await websiteRes.json();
-          setWebsiteOptions(websiteData);
-        }
+        const websiteData = await loadStaySelectOptions("WEBSITE");
+        setWebsiteOptions(websiteData);
       } catch (e) {
         console.error("[EditStay] Failed to fetch website options:", e);
       }
@@ -103,11 +101,7 @@ export default function EditStayScreen() {
   const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
     setWebsiteOptions(newOptions);
     try {
-      await authenticatedFetch(getApiUrl("/stay-select-options/website"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ options: newOptions }),
-      });
+      await saveStaySelectOptions("WEBSITE", newOptions);
     } catch (e) {
       console.error("[EditStay] Failed to save website options:", e);
     }

@@ -19,6 +19,8 @@ import type { SelectOption } from "../../types/select-option";
 import {
   loadSelectOptions,
   saveSelectOptions,
+  loadStaySelectOptions,
+  saveStaySelectOptions,
 } from "../../utils/select-options-storage";
 import { useEffect } from "react";
 import { HomeButton } from "../../components/HomeButton";
@@ -96,11 +98,8 @@ export default function NewStayScreen() {
       
       // Website選択肢を取得
       try {
-        const websiteRes = await authenticatedFetch(getApiUrl("/stay-select-options/website"));
-        if (websiteRes.ok) {
-          const websiteData: SelectOption[] = await websiteRes.json();
-          setWebsiteOptions(websiteData);
-        }
+        const websiteData = await loadStaySelectOptions("WEBSITE");
+        setWebsiteOptions(websiteData);
       } catch (e) {
         console.error("[NewStay] Failed to fetch website options:", e);
       }
@@ -164,11 +163,7 @@ export default function NewStayScreen() {
   const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
     setWebsiteOptions(newOptions);
     try {
-      await authenticatedFetch(getApiUrl("/stay-select-options/website"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ options: newOptions }),
-      });
+      await saveStaySelectOptions("WEBSITE", newOptions);
     } catch (e) {
       console.error("[NewStay] Failed to save website options:", e);
     }

@@ -410,7 +410,7 @@ export function NotionSelect({
                   </TouchableOpacity>
                   {onOptionsChange && (
                     <View style={styles.optionActions}>
-                      {optionType && !isKanaOrder && (
+                      {(optionType || stayOptionType) && !isKanaOrder && (
                         <View style={styles.sortButtons}>
                           <TouchableOpacity
                             style={[styles.sortButton, index === 0 && styles.sortButtonDisabled]}
