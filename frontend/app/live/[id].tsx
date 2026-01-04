@@ -1223,8 +1223,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "column",
+    alignItems: "stretch",
     marginTop: 24,
     marginBottom: 12,
     width: "100%",
