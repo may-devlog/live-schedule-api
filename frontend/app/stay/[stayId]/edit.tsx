@@ -25,6 +25,7 @@ type Stay = {
   check_in: string;
   check_out: string;
   hotel_name: string;
+  website?: string | null;
   fee: number;
   breakfast_flag: boolean;
   deadline?: string | null;
@@ -71,6 +72,7 @@ export default function EditStayScreen() {
   const router = useRouter();
 
   const [statuses, setStatuses] = useState<SelectOption[]>([]);
+  const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -78,6 +80,17 @@ export default function EditStayScreen() {
     const loadOptions = async () => {
       const statusesData = await loadStayStatuses();
       setStatuses(statusesData);
+      
+      // Website選択肢を取得
+      try {
+        const websiteRes = await authenticatedFetch(getApiUrl("/stay-select-options/website"));
+        if (websiteRes.ok) {
+          const websiteData: SelectOption[] = await websiteRes.json();
+          setWebsiteOptions(websiteData);
+        }
+      } catch (e) {
+        console.error("[EditStay] Failed to fetch website options:", e);
+      }
     };
     loadOptions();
   }, []);
@@ -87,9 +100,23 @@ export default function EditStayScreen() {
     await saveStayStatuses(newStatuses);
   };
 
+  const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
+    setWebsiteOptions(newOptions);
+    try {
+      await authenticatedFetch(getApiUrl("/stay-select-options/website"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ options: newOptions }),
+      });
+    } catch (e) {
+      console.error("[EditStay] Failed to save website options:", e);
+    }
+  };
+
   const [checkIn, setCheckIn] = useState<string | null>(null);
   const [checkOut, setCheckOut] = useState<string | null>(null);
   const [hotelName, setHotelName] = useState("");
+  const [website, setWebsite] = useState<string | null>(null);
   const [fee, setFee] = useState("");
   const [breakfastFlag, setBreakfastFlag] = useState(false);
   const [deadline, setDeadline] = useState<string | null>(null);
@@ -115,6 +142,7 @@ export default function EditStayScreen() {
         setCheckIn(data.check_in || null);
         setCheckOut(data.check_out || null);
         setHotelName(data.hotel_name || "");
+        setWebsite(data.website || null);
         setFee(data.fee.toString());
         setBreakfastFlag(data.breakfast_flag);
         setDeadline(data.deadline || null);
@@ -156,7 +184,7 @@ export default function EditStayScreen() {
     // schedule_idを取得するために既存データを再取得
     let scheduleId: number;
     try {
-      const res = await fetch(`${API_BASE}/stay/${stayId}`);
+      const res = await authenticatedFetch(getApiUrl(`/stay/${stayId}`));
       if (!res.ok) throw new Error("Failed to fetch stay");
       const stay: Stay = await res.json();
       scheduleId = stay.schedule_id;
@@ -170,6 +198,7 @@ export default function EditStayScreen() {
       check_in: checkIn,
       check_out: checkOut,
       hotel_name: hotelName.trim(),
+      website: website || null,
       fee: feeNum,
       breakfast_flag: breakfastFlag,
       deadline: deadline || null,
@@ -265,6 +294,15 @@ export default function EditStayScreen() {
         style={styles.input}
         value={hotelName}
         onChangeText={setHotelName}
+      />
+
+      <NotionSelect
+        label="Website"
+        value={website}
+        options={websiteOptions}
+        onValueChange={setWebsite}
+        onOptionsChange={handleWebsiteOptionsChange}
+        placeholder="選択してください"
       />
 
       <Text style={styles.label}>

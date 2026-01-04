@@ -578,6 +578,7 @@ struct Stay {
     check_in: String,
     check_out: String,
     hotel_name: String,
+    website: Option<String>,
     fee: i32,
     breakfast_flag: bool,
     deadline: Option<String>,
@@ -592,6 +593,7 @@ struct StayRow {
     check_in: String,
     check_out: String,
     hotel_name: String,
+    website: Option<String>,
     fee: i32,
     breakfast_flag: i32, // 0/1
     deadline: Option<String>,
@@ -611,6 +613,7 @@ struct NewStay {
     check_in: String,
     check_out: String,
     hotel_name: String,
+    website: Option<String>,
     fee: i32,
     breakfast_flag: bool,
     deadline: Option<String>,
@@ -704,6 +707,7 @@ fn row_to_stay(row: StayRow) -> Stay {
         check_in: row.check_in,
         check_out: row.check_out,
         hotel_name: row.hotel_name,
+        website: row.website,
         fee: row.fee,
         breakfast_flag: row.breakfast_flag != 0,
         deadline: row.deadline,
@@ -3187,6 +3191,7 @@ async fn list_public_stays(
           check_in,
           check_out,
           hotel_name,
+          website,
           fee,
           breakfast_flag,
           deadline,
@@ -3272,6 +3277,7 @@ async fn get_public_stay(
           check_in,
           check_out,
           hotel_name,
+          website,
           fee,
           breakfast_flag,
           deadline,
@@ -3462,6 +3468,7 @@ async fn get_shared_stay(
               check_in,
               check_out,
               hotel_name,
+              website,
               fee,
               breakfast_flag,
               deadline,
@@ -3819,6 +3826,7 @@ async fn list_all_stays(
           st.check_in,
           st.check_out,
           st.hotel_name,
+          st.website,
           st.fee,
           st.breakfast_flag,
           st.deadline,
@@ -3887,6 +3895,7 @@ async fn get_stay(
           check_in,
           check_out,
           hotel_name,
+          website,
           fee,
           breakfast_flag,
           deadline,
@@ -3934,6 +3943,7 @@ async fn create_stay(
           check_in,
           check_out,
           hotel_name,
+          website,
           fee,
           breakfast_flag,
           deadline,
@@ -3942,7 +3952,7 @@ async fn create_stay(
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
         "#,
     )
@@ -3950,6 +3960,7 @@ async fn create_stay(
     .bind(&payload.check_in)
     .bind(&payload.check_out)
     .bind(&payload.hotel_name)
+    .bind(&payload.website)
     .bind(payload.fee)
     .bind(if payload.breakfast_flag { 1 } else { 0 })
     .bind(&payload.deadline)
@@ -3974,6 +3985,7 @@ async fn create_stay(
           check_in,
           check_out,
           hotel_name,
+          website,
           fee,
           breakfast_flag,
           deadline,
@@ -4005,6 +4017,7 @@ async fn update_stay(
           check_in = ?,
           check_out = ?,
           hotel_name = ?,
+          website = ?,
           fee = ?,
           breakfast_flag = ?,
           deadline = ?,
@@ -4018,6 +4031,7 @@ async fn update_stay(
     .bind(&payload.check_in)
     .bind(&payload.check_out)
     .bind(&payload.hotel_name)
+    .bind(&payload.website)
     .bind(payload.fee)
     .bind(if payload.breakfast_flag { 1 } else { 0 })
     .bind(&payload.deadline)
@@ -4044,6 +4058,7 @@ async fn update_stay(
           check_in,
           check_out,
           hotel_name,
+          website,
           fee,
           breakfast_flag,
           deadline,
@@ -4279,6 +4294,158 @@ async fn save_select_options(
     })?;
 
     eprintln!("[SaveSelectOptions] Successfully saved. Rows affected: {}", result.rows_affected());
+
+    Ok(Json(serde_json::json!({ "success": true })))
+}
+
+// GET /stay-select-options/:type - ホテル用選択肢を取得
+async fn get_stay_select_options(
+    user: AuthenticatedUser,
+    Path(option_type): Path<String>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<ErrorResponse>)> {
+    // DISABLE_AUTHが有効な場合、データベースから実際のユーザーIDを取得
+    let actual_user_id = if std::env::var("DISABLE_AUTH").is_ok() {
+        if let Ok(user_id_str) = std::env::var("DEFAULT_USER_ID") {
+            user_id_str.parse::<i32>().ok().unwrap_or(user.user_id)
+        } else if let Ok(email) = std::env::var("DEFAULT_USER_EMAIL") {
+            if let Some(user_id) = get_user_id_by_email(&pool, &email).await {
+                user_id
+            } else {
+                get_first_user_id(&pool).await.unwrap_or(user.user_id)
+            }
+        } else {
+            get_first_user_id(&pool).await.unwrap_or(user.user_id)
+        }
+    } else {
+        user.user_id
+    };
+    
+    let row: Option<(String,)> = sqlx::query_as::<_, (String,)>(
+        "SELECT options_json FROM stay_select_options WHERE user_id = ? AND option_type = ?"
+    )
+    .bind(actual_user_id as i64)
+    .bind(&option_type)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[GetStaySelectOptions] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    if let Some((options_json,)) = row {
+        let options: Vec<serde_json::Value> = serde_json::from_str(&options_json)
+            .map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: "Failed to parse options".to_string(),
+                    }),
+                )
+            })?;
+        Ok(Json(options))
+    } else {
+        Ok(Json(vec![]))
+    }
+}
+
+// POST /stay-select-options/:type - ホテル用選択肢を保存
+async fn save_stay_select_options(
+    user: AuthenticatedUser,
+    Path(option_type): Path<String>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<SelectOptionsRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    // DISABLE_AUTHが有効な場合、データベースから実際のユーザーIDを取得
+    let actual_user_id = if std::env::var("DISABLE_AUTH").is_ok() {
+        if let Ok(user_id_str) = std::env::var("DEFAULT_USER_ID") {
+            user_id_str.parse::<i32>().ok().unwrap_or(user.user_id)
+        } else if let Ok(email) = std::env::var("DEFAULT_USER_EMAIL") {
+            if let Some(user_id) = get_user_id_by_email(&pool, &email).await {
+                user_id
+            } else {
+                get_first_user_id(&pool).await.unwrap_or(user.user_id)
+            }
+        } else {
+            get_first_user_id(&pool).await.unwrap_or(user.user_id)
+        }
+    } else {
+        user.user_id
+    };
+    
+    let user_id_i64 = actual_user_id as i64;
+    let options_json = serde_json::to_string(&payload.options)
+        .map_err(|_| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: "Invalid options format".to_string(),
+                }),
+            )
+        })?;
+
+    let now = Utc::now().to_rfc3339();
+
+    let result = if let Some((existing_id,)) = sqlx::query_as::<_, (i64,)>(
+        "SELECT id FROM stay_select_options WHERE user_id = ? AND option_type = ?"
+    )
+    .bind(user_id_i64)
+    .bind(&option_type)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[SaveStaySelectOptions] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })? {
+        // 既存のレコードを更新
+        sqlx::query(
+            r#"
+            UPDATE stay_select_options 
+            SET options_json = ?, updated_at = ?
+            WHERE user_id = ? AND option_type = ?
+            "#
+        )
+        .bind(&options_json)
+        .bind(&now)
+        .bind(user_id_i64)
+        .bind(&option_type)
+        .execute(&pool)
+        .await
+    } else {
+        // 新しいレコードを挿入
+        sqlx::query(
+            r#"
+            INSERT INTO stay_select_options (user_id, option_type, options_json, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            "#
+        )
+        .bind(user_id_i64)
+        .bind(&option_type)
+        .bind(&options_json)
+        .bind(&now)
+        .bind(&now)
+        .execute(&pool)
+        .await
+    }
+    .map_err(|e| {
+        eprintln!("[SaveStaySelectOptions] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: format!("Failed to save options: {}", e),
+            }),
+        )
+    })?;
 
     Ok(Json(serde_json::json!({ "success": true })))
 }
@@ -4688,6 +4855,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/admin/import-db", post(import_database_dump)) // 一時的なエンドポイント
         .route("/admin/delete-old-schedules", post(delete_old_schedules)) // 一時的なエンドポイント
         .route("/select-options/:type", get(get_select_options).post(save_select_options))
+        .route("/stay-select-options/:type", get(get_stay_select_options).post(save_stay_select_options))
         .layer(cors)
         .layer(Extension(pool));
 
@@ -4866,6 +5034,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       check_in       TEXT NOT NULL,
       check_out      TEXT NOT NULL,
       hotel_name     TEXT NOT NULL,
+      website        TEXT,
       fee            INTEGER NOT NULL,
       breakfast_flag INTEGER NOT NULL,
       deadline       TEXT,
@@ -4889,11 +5058,24 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     );
     "#;
 
+    let create_stay_select_options = r#"
+    CREATE TABLE IF NOT EXISTS stay_select_options (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id      INTEGER NOT NULL,
+      option_type  TEXT NOT NULL,
+      options_json TEXT NOT NULL,
+      created_at   TEXT,
+      updated_at   TEXT,
+      UNIQUE(user_id, option_type)
+    );
+    "#;
+
     sqlx::query(create_users).execute(pool).await?;
     sqlx::query(create_schedules).execute(pool).await?;
     sqlx::query(create_traffics).execute(pool).await?;
     sqlx::query(create_stays).execute(pool).await?;
     sqlx::query(create_select_options).execute(pool).await?;
+    sqlx::query(create_stay_select_options).execute(pool).await?;
     
     // 既存のselect_optionsテーブルからFOREIGN KEY制約を削除（マイグレーション）
     // SQLiteではALTER TABLEでFOREIGN KEY制約を削除できないため、
@@ -4926,6 +5108,11 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await;
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN sharing_enabled INTEGER NOT NULL DEFAULT 0")
+        .execute(pool)
+        .await;
+    
+    // 既存のstaysテーブルにwebsiteカラムを追加（マイグレーション）
+    let _ = sqlx::query("ALTER TABLE stays ADD COLUMN website TEXT")
         .execute(pool)
         .await;
 

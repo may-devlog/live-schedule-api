@@ -25,6 +25,7 @@ import { HomeButton } from "../../components/HomeButton";
 import { NotionRelation } from "../../components/notion-relation";
 import type { Schedule } from "../HomeScreen";
 import { PageHeader } from "../../components/PageHeader";
+import { authenticatedFetch, getApiUrl } from "../../utils/api";
 
 const STAY_STATUSES_KEY = "@select_options:stay_statuses" as const;
 
@@ -68,6 +69,7 @@ type Stay = {
   check_in: string;
   check_out: string;
   hotel_name: string;
+  website?: string | null;
   fee: number;
   breakfast_flag: boolean;
   deadline?: string | null;
@@ -85,11 +87,24 @@ export default function NewStayScreen() {
   const [scheduleId, setScheduleId] = useState<string | null>(initialScheduleId || null);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [statuses, setStatuses] = useState<SelectOption[]>([]);
+  const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
+  const [website, setWebsite] = useState<string | null>(null);
 
   useEffect(() => {
     const loadOptions = async () => {
       const statusesData = await loadStayStatuses();
       setStatuses(statusesData);
+      
+      // Website選択肢を取得
+      try {
+        const websiteRes = await authenticatedFetch(getApiUrl("/stay-select-options/website"));
+        if (websiteRes.ok) {
+          const websiteData: SelectOption[] = await websiteRes.json();
+          setWebsiteOptions(websiteData);
+        }
+      } catch (e) {
+        console.error("[NewStay] Failed to fetch website options:", e);
+      }
     };
     loadOptions();
     
@@ -124,6 +139,7 @@ export default function NewStayScreen() {
         setCheckIn(data.check_in || null);
         setCheckOut(data.check_out || null);
         setHotelName(data.hotel_name || "");
+        setWebsite(data.website || null);
         setFee(data.fee.toString());
         setBreakfastFlag(data.breakfast_flag);
         setDeadline(data.deadline || null);
@@ -144,6 +160,19 @@ export default function NewStayScreen() {
   const handleStatusesChange = async (newStatuses: SelectOption[]) => {
     setStatuses(newStatuses);
     await saveStayStatuses(newStatuses);
+  };
+
+  const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
+    setWebsiteOptions(newOptions);
+    try {
+      await authenticatedFetch(getApiUrl("/stay-select-options/website"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ options: newOptions }),
+      });
+    } catch (e) {
+      console.error("[NewStay] Failed to save website options:", e);
+    }
   };
 
   const [checkIn, setCheckIn] = useState<string | null>(null);
@@ -182,6 +211,7 @@ export default function NewStayScreen() {
       check_in: checkIn,
       check_out: checkOut,
       hotel_name: hotelName.trim(),
+      website: website || null,
       fee: feeNum,
       breakfast_flag: breakfastFlag,
       deadline: deadline || null,
@@ -293,6 +323,15 @@ export default function NewStayScreen() {
         style={styles.input}
         value={hotelName}
         onChangeText={setHotelName}
+      />
+
+      <NotionSelect
+        label="Website"
+        value={website}
+        options={websiteOptions}
+        onValueChange={setWebsite}
+        onOptionsChange={handleWebsiteOptionsChange}
+        placeholder="選択してください"
       />
 
       <Text style={styles.label}>
