@@ -35,7 +35,8 @@ export default function SharedScheduleScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [isPulling, setIsPulling] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   useEffect(() => {
@@ -181,18 +182,35 @@ export default function SharedScheduleScreen() {
       }
       scrollEnabled={true}
       nestedScrollEnabled={true}
-      onScrollBeginDrag={(e) => {
-        const { contentOffset } = e.nativeEvent;
-        if (contentOffset.y < -50) {
-          setIsPulling(true);
+      onTouchStart={(e) => {
+        const touch = e.nativeEvent.touches[0];
+        if (touch) {
+          setTouchStartY(touch.pageY);
         }
       }}
-      onScrollEndDrag={(e) => {
-        const { contentOffset } = e.nativeEvent;
-        if (contentOffset.y < -100 && isPulling) {
+      onTouchMove={(e) => {
+        if (touchStartY !== null) {
+          const touch = e.nativeEvent.touches[0];
+          if (touch) {
+            const distance = touch.pageY - touchStartY;
+            if (distance > 0) {
+              setPullDistance(distance);
+            }
+          }
+        }
+      }}
+      onTouchEnd={() => {
+        if (pullDistance > 100 && !refreshing) {
           onRefresh();
         }
-        setIsPulling(false);
+        setTouchStartY(null);
+        setPullDistance(0);
+      }}
+      onScroll={(e) => {
+        const { contentOffset } = e.nativeEvent;
+        if (contentOffset.y === 0 && pullDistance > 100 && !refreshing) {
+          onRefresh();
+        }
       }}
       scrollEventThrottle={16}
     >

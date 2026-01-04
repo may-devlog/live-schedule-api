@@ -171,8 +171,8 @@ export default function HomeScreen() {
   const [loadingNext, setLoadingNext] = useState(false);
   const [errorNext, setErrorNext] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const [isPulling, setIsPulling] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -434,22 +434,35 @@ export default function HomeScreen() {
       }
       scrollEnabled={true}
       nestedScrollEnabled={true}
-      onScrollBeginDrag={(e) => {
-        const { contentOffset } = e.nativeEvent;
-        if (contentOffset.y < -50) {
-          setIsPulling(true);
+      onTouchStart={(e) => {
+        const touch = e.nativeEvent.touches[0];
+        if (touch) {
+          setTouchStartY(touch.pageY);
         }
       }}
-      onScrollEndDrag={(e) => {
-        const { contentOffset } = e.nativeEvent;
-        if (contentOffset.y < -100 && isPulling) {
+      onTouchMove={(e) => {
+        if (touchStartY !== null) {
+          const touch = e.nativeEvent.touches[0];
+          if (touch) {
+            const distance = touch.pageY - touchStartY;
+            if (distance > 0) {
+              setPullDistance(distance);
+            }
+          }
+        }
+      }}
+      onTouchEnd={() => {
+        if (pullDistance > 100 && !refreshing) {
           onRefresh();
         }
-        setIsPulling(false);
+        setTouchStartY(null);
+        setPullDistance(0);
       }}
       onScroll={(e) => {
         const { contentOffset } = e.nativeEvent;
-        setScrollY(contentOffset.y);
+        if (contentOffset.y === 0 && pullDistance > 100 && !refreshing) {
+          onRefresh();
+        }
       }}
       scrollEventThrottle={16}
     >

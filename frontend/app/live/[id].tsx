@@ -72,7 +72,8 @@ export default function DetailScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [isPulling, setIsPulling] = useState(false);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
   
   // 選択肢の色情報
   const [categoryColor, setCategoryColor] = useState<string | null>(null);
@@ -711,18 +712,35 @@ export default function DetailScreen() {
         }
         scrollEnabled={true}
         nestedScrollEnabled={true}
-        onScrollBeginDrag={(e) => {
-          const { contentOffset } = e.nativeEvent;
-          if (contentOffset.y < -50) {
-            setIsPulling(true);
+        onTouchStart={(e) => {
+          const touch = e.nativeEvent.touches[0];
+          if (touch) {
+            setTouchStartY(touch.pageY);
           }
         }}
-        onScrollEndDrag={(e) => {
-          const { contentOffset } = e.nativeEvent;
-          if (contentOffset.y < -100 && isPulling) {
+        onTouchMove={(e) => {
+          if (touchStartY !== null) {
+            const touch = e.nativeEvent.touches[0];
+            if (touch) {
+              const distance = touch.pageY - touchStartY;
+              if (distance > 0) {
+                setPullDistance(distance);
+              }
+            }
+          }
+        }}
+        onTouchEnd={() => {
+          if (pullDistance > 100 && !refreshing) {
             onRefresh();
           }
-          setIsPulling(false);
+          setTouchStartY(null);
+          setPullDistance(0);
+        }}
+        onScroll={(e) => {
+          const { contentOffset } = e.nativeEvent;
+          if (contentOffset.y === 0 && pullDistance > 100 && !refreshing) {
+            onRefresh();
+          }
         }}
         scrollEventThrottle={16}
       >
