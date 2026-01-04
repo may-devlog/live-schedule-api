@@ -175,17 +175,24 @@ const fetchYear = async (y: string) => {
         ))}
       </View>
 
-      {loading && <ActivityIndicator color="#333333" />}
-      {error && <Text style={styles.errorText}>Error: {error}</Text>}
-
-      {!loading && !error && (
-        <FlatList
-          data={schedules}
-          keyExtractor={(item) => item.id.toString()}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          renderItem={({ item }) => (
+      <FlatList
+        data={schedules}
+        keyExtractor={(item) => item.id.toString()}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListHeaderComponent={
+          <>
+            {loading && <ActivityIndicator color="#333333" />}
+            {error && <Text style={styles.errorText}>Error: {error}</Text>}
+          </>
+        }
+        ListEmptyComponent={
+          !loading && !error ? (
+            <Text style={styles.emptyText}>スケジュールがありません</Text>
+          ) : null
+        }
+        renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
               onPress={() => handleOpenDetail(item.id)}
@@ -215,7 +222,6 @@ const fetchYear = async (y: string) => {
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
-      )}
       </View>
     </View>
   );
@@ -334,5 +340,12 @@ const styles = StyleSheet.create({
     color: "#d93025",
     marginVertical: 8,
     fontSize: 14,
+  },
+  emptyText: {
+    color: "#787774",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 24,
+    fontStyle: "italic",
   },
 });

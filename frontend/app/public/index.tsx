@@ -79,21 +79,24 @@ export default function PublicIndexScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>公開スケジュール</Text>
 
-      {loading && <ActivityIndicator color="#333333" style={styles.loader} />}
-      {error && <Text style={styles.errorText}>Error: {error}</Text>}
-      
-      {!loading && !error && schedules.length === 0 && (
-        <Text style={styles.emptyText}>公開されているスケジュールがありません</Text>
-      )}
-
-      {!loading && !error && schedules.length > 0 && (
-        <FlatList
-          data={schedules}
-          keyExtractor={(item) => item.id.toString()}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          renderItem={({ item }) => (
+      <FlatList
+        data={schedules}
+        keyExtractor={(item) => item.id.toString()}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListHeaderComponent={
+          <>
+            {loading && <ActivityIndicator color="#333333" style={styles.loader} />}
+            {error && <Text style={styles.errorText}>Error: {error}</Text>}
+          </>
+        }
+        ListEmptyComponent={
+          !loading && !error ? (
+            <Text style={styles.emptyText}>公開されているスケジュールがありません</Text>
+          ) : null
+        }
+        renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.scheduleItem}
               onPress={() => handleOpenSchedule(item.id)}
@@ -107,7 +110,6 @@ export default function PublicIndexScreen() {
           )}
           contentContainerStyle={styles.listContent}
         />
-      )}
     </View>
   );
 }
