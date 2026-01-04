@@ -160,72 +160,81 @@ export default function SharedScheduleScreen() {
     );
   }
 
+  // ダミーデータを作成（FlatListのアイテムとして表示するため）
+  const listData = nextSchedules.length > 0 ? nextSchedules : [{ id: 'empty' }];
+
   return (
-    <ScrollView 
-      style={styles.scrollContainer} 
+    <FlatList
+      style={styles.scrollContainer}
       contentContainerStyle={styles.scrollContent}
+      data={listData}
+      keyExtractor={(item) => (typeof item === 'object' && 'id' in item ? item.id.toString() : 'empty')}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
-    >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>SCHEDULES</Text>
-        </View>
+      ListHeaderComponent={
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.title}>SCHEDULES</Text>
+          </View>
 
-        {/* カレンダー */}
-        <ScheduleCalendar 
-          schedules={schedules} 
-          isPublic={true}
-          onSchedulePress={handleSchedulePress}
-        />
-
-        <Text style={styles.sectionTitle}>NEXT</Text>
-        {loading && <ActivityIndicator color="#333333" />}
-        {error && <Text style={styles.errorText}>Error: {error}</Text>}
-        {!loading && !error && nextSchedules.length === 0 && (
-          <Text style={styles.emptyText}>No upcoming schedules</Text>
-        )}
-        {!loading && !error && nextSchedules.length > 0 && (
-          <FlatList
-            data={nextSchedules}
-            keyExtractor={(item) => item.id.toString()}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => handleSchedulePress(item)}
-              >
-                <Text style={styles.cardDate}>
-                  {formatDateTimeUTC(item.datetime)}
-                </Text>
-                <Text style={styles.cardTitle} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                <Text style={styles.cardSub}>
-                  {item.area} / {item.venue}
-                </Text>
-              </TouchableOpacity>
-            )}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          {/* カレンダー */}
+          <ScheduleCalendar 
+            schedules={schedules} 
+            isPublic={true}
+            onSchedulePress={handleSchedulePress}
           />
-        )}
 
-        <Text style={styles.sectionTitle}>Years</Text>
-        <View style={styles.yearListColumn}>
-          {availableYears.map((year) => (
-            <TouchableOpacity
-              key={year}
-              style={styles.yearRow}
-              onPress={() => router.push(`/share/${share_id}/year/${year}`)}
-            >
-              <Text style={styles.yearRowText}>{year}</Text>
-            </TouchableOpacity>
-          ))}
+          <Text style={styles.sectionTitle}>NEXT</Text>
+          {loading && <ActivityIndicator color="#333333" />}
+          {error && <Text style={styles.errorText}>Error: {error}</Text>}
+          {!loading && !error && nextSchedules.length === 0 && (
+            <Text style={styles.emptyText}>No upcoming schedules</Text>
+          )}
         </View>
-        <View style={styles.bottomSpacer} />
-      </View>
-    </ScrollView>
+      }
+      renderItem={({ item }) => {
+        // ダミーデータの場合は何も表示しない
+        if (typeof item === 'object' && 'id' in item && (item.id === 'empty' || item.id === null)) {
+          return null;
+        }
+        const schedule = item as Schedule;
+        return (
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => handleSchedulePress(schedule)}
+          >
+            <Text style={styles.cardDate}>
+              {formatDateTimeUTC(schedule.datetime)}
+            </Text>
+            <Text style={styles.cardTitle} numberOfLines={2}>
+              {schedule.title}
+            </Text>
+            <Text style={styles.cardSub}>
+              {schedule.area} / {schedule.venue}
+            </Text>
+          </TouchableOpacity>
+        );
+      }}
+      ItemSeparatorComponent={() => <View style={styles.separator} />}
+      ListFooterComponent={
+        <View style={styles.container}>
+          <Text style={styles.sectionTitle}>Years</Text>
+          <View style={styles.yearListColumn}>
+            {availableYears.map((year) => (
+              <TouchableOpacity
+                key={year}
+                style={styles.yearRow}
+                onPress={() => router.push(`/share/${share_id}/year/${year}`)}
+              >
+                <Text style={styles.yearRowText}>{year}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.bottomSpacer} />
+        </View>
+      }
+    />
   );
 }
 
