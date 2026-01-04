@@ -70,7 +70,29 @@ export function ColorPicker({
           activeOpacity={1}
           onPress={() => setModalVisible(false)}
         >
-          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+          <View
+            style={styles.modalContent}
+            onStartShouldSetResponder={() => true}
+            onResponderTerminationRequest={() => false}
+            onTouchStart={(e) => {
+              // モーダルコンテンツ内のタッチでモーダルが閉じないようにする
+              if (e && e.nativeEvent) {
+                e.stopPropagation();
+              }
+            }}
+            onTouchEnd={(e) => {
+              // モーダルコンテンツ内のタッチでモーダルが閉じないようにする
+              if (e && e.nativeEvent) {
+                e.stopPropagation();
+              }
+            }}
+            onClick={(e) => {
+              // Web環境でのクリックイベント伝播を防止
+              if (e) {
+                e.stopPropagation();
+              }
+            }}
+          >
             <Text style={styles.modalTitle}>色を選択</Text>
 
             <ScrollView style={styles.colorsList}>
@@ -84,7 +106,13 @@ export function ColorPicker({
                       { backgroundColor: color },
                       value === color && styles.colorOptionSelected,
                     ]}
-                    onPress={() => handleColorSelect(color)}
+                    onPress={(e) => {
+                      // プリセット色のクリックで親モーダルが閉じないようにする
+                      if (e && e.nativeEvent) {
+                        e.stopPropagation();
+                      }
+                      handleColorSelect(color);
+                    }}
                   >
                     {value === color && <Text style={styles.checkmark}>✓</Text>}
                   </TouchableOpacity>
@@ -114,13 +142,31 @@ export function ColorPicker({
                   placeholderTextColor="#9b9a97"
                   maxLength={7}
                   autoCapitalize="none"
+                  onFocus={(e) => {
+                    // フォーカス時にイベント伝播を停止
+                    if (e && e.nativeEvent) {
+                      e.stopPropagation();
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    // タッチ開始時にイベント伝播を停止
+                    if (e && e.nativeEvent) {
+                      e.stopPropagation();
+                    }
+                  }}
                 />
                 <TouchableOpacity
                   style={[
                     styles.submitButton,
                     !isValidColor(customColor) && styles.submitButtonDisabled,
                   ]}
-                  onPress={handleCustomColorSubmit}
+                  onPress={(e) => {
+                    // 適用ボタンのクリックで親モーダルが閉じないようにする
+                    if (e && e.nativeEvent) {
+                      e.stopPropagation();
+                    }
+                    handleCustomColorSubmit();
+                  }}
                   disabled={!isValidColor(customColor)}
                 >
                   <Text style={styles.submitButtonText}>適用</Text>
