@@ -22,6 +22,6 @@ primary_region = "nrt"  # 東京リージョン
   memory_mb = 256
 
 [mounts]
-  source = "data"
+  source = "data_backup"
   destination = "/app/data"
 
