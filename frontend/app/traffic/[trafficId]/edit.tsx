@@ -21,7 +21,7 @@ import {
   loadSelectOptions,
   saveSelectOptions,
 } from "../../../utils/select-options-storage";
-import { HomeButton } from "../../../components/HomeButton";
+import { PageHeader } from "../../../components/PageHeader";
 
 type Traffic = {
   id: number;
@@ -216,9 +216,7 @@ export default function EditTrafficScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <View style={styles.header}>
-        <HomeButton />
-      </View>
+      <PageHeader showBackButton={true} />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Edit Traffic</Text>
 

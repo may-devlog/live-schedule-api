@@ -17,7 +17,7 @@ import { authenticatedFetch, getApiUrl } from "../../../utils/api";
 import { NotionSelect } from "../../../components/notion-select";
 import { NotionDatePicker } from "../../../components/notion-date-picker";
 import type { SelectOption } from "../../../types/select-option";
-import { HomeButton } from "../../../components/HomeButton";
+import { PageHeader } from "../../../components/PageHeader";
 
 type Stay = {
   id: number;
@@ -263,9 +263,7 @@ export default function EditStayScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <View style={styles.header}>
-        <HomeButton />
-      </View>
+      <PageHeader showBackButton={true} />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Edit Stay</Text>
 
