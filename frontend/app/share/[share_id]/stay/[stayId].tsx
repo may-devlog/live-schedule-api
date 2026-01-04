@@ -68,7 +68,11 @@ export default function SharedStayDetailScreen() {
           const websiteRes = await fetch(getApiUrl(`/share/${share_id}/stay-select-options/website`));
           if (websiteRes.ok) {
             const websiteData: SelectOption[] = await websiteRes.json();
+            console.log("[SharedStayDetail] Website options fetched:", websiteData);
+            console.log("[SharedStayDetail] Stay website value:", data.website);
             setWebsiteOptions(websiteData);
+          } else {
+            console.error("[SharedStayDetail] Failed to fetch website options, status:", websiteRes.status);
           }
         } catch (e) {
           console.error("[SharedStayDetail] Failed to fetch website options:", e);
@@ -131,6 +135,12 @@ export default function SharedStayDetailScreen() {
           <NotionProperty label="Website">
             {stay.website ? (() => {
               const websiteOption = websiteOptions.find(opt => opt.label === stay.website);
+              console.log("[SharedStayDetail] Rendering Website:", {
+                stayWebsite: stay.website,
+                websiteOptions: websiteOptions,
+                foundOption: websiteOption,
+                color: websiteOption?.color || "#E5E7EB"
+              });
               return (
                 <NotionTag
                   label={stay.website}
