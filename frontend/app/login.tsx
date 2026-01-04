@@ -63,7 +63,7 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.form}>
-        <Text style={styles.title}>SCHEDULES</Text>
+        <Text style={styles.title}>SKDREC</Text>
 
         <TextInput
           style={styles.input}
