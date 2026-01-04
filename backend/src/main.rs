@@ -4304,6 +4304,8 @@ async fn get_shared_stay_select_options(
     Path((share_id, option_type)): Path<(String, String)>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<ErrorResponse>)> {
+    eprintln!("[GetSharedStaySelectOptions] Called with share_id: {}, option_type: {}", share_id, option_type);
+    
     // share_idからユーザーIDを取得
     let user_id: Option<i64> = sqlx::query_scalar(
         "SELECT id FROM users WHERE share_id = ?"
@@ -4320,6 +4322,8 @@ async fn get_shared_stay_select_options(
             }),
         )
     })?;
+    
+    eprintln!("[GetSharedStaySelectOptions] User ID found: {:?}", user_id);
 
     if let Some(user_id) = user_id {
         let row: Option<(String,)> = sqlx::query_as::<_, (String,)>(
@@ -4349,8 +4353,10 @@ async fn get_shared_stay_select_options(
                         }),
                     )
                 })?;
+            eprintln!("[GetSharedStaySelectOptions] Returning {} options", options.len());
             Ok(Json(options))
         } else {
+            eprintln!("[GetSharedStaySelectOptions] No options found, returning empty array");
             Ok(Json(vec![]))
         }
     } else {
