@@ -181,7 +181,7 @@ export default function StayDetailScreen() {
             label="Check Out"
             value={stay.check_out}
           />
-          {stay.website && (
+          {stay.website ? (
             <NotionProperty label="Website">
               {(() => {
                 const websiteOption = websiteOptions.find(opt => opt.label === stay.website);
@@ -193,7 +193,7 @@ export default function StayDetailScreen() {
                 );
               })()}
             </NotionProperty>
-          )}
+          ) : null}
           <NotionProperty
             label="Fee"
             value={formatCurrency(stay.fee)}
