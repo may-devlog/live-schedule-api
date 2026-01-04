@@ -113,6 +113,15 @@ export default function TrafficDetailScreen() {
     fetchTraffic();
   }, [trafficId]);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchTraffic();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
