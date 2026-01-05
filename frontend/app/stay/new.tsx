@@ -155,6 +155,29 @@ export default function NewStayScreen() {
     loadStayForCopy();
   }, [copyFrom, scheduleId]);
 
+  // scheduleIdが渡された場合、スケジュール情報を取得してチェックインをデフォルト値に設定
+  useEffect(() => {
+    if (!scheduleId || copyFrom || checkIn) return; // 複製の場合、または既にチェックインが設定されている場合はスキップ
+
+    const loadScheduleForDefault = async () => {
+      try {
+        const res = await authenticatedFetch(getApiUrl(`/schedules/${scheduleId}`));
+        if (res.ok) {
+          const schedule: Schedule = await res.json();
+          // チェックインをライブ当日の15:00に設定
+          if (schedule.date) {
+            const checkInDateTime = `${schedule.date} 15:00`;
+            setCheckIn(checkInDateTime);
+          }
+        }
+      } catch (e) {
+        console.error("[NewStay] Failed to fetch schedule for default:", e);
+      }
+    };
+
+    loadScheduleForDefault();
+  }, [scheduleId, copyFrom, checkIn]);
+
   const handleStatusesChange = async (newStatuses: SelectOption[]) => {
     setStatuses(newStatuses);
     await saveStayStatuses(newStatuses);
