@@ -870,7 +870,12 @@ export default function DetailScreen() {
           />
           <NotionProperty
             label="遠征費合計"
-            value={formatCurrency(schedule.travel_cost)}
+            value={formatCurrency(
+              // 交通費合計（往復フラグ考慮済み）+ 宿泊費合計
+              trafficSummaries.reduce((sum, traffic) => {
+                return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
+              }, 0) + (schedule.stay_fee || 0)
+            )}
           />
           <NotionProperty
             label="総費用"
