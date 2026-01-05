@@ -733,6 +733,9 @@ const styles = StyleSheet.create({
     color: "#37352f",
     flex: 1,
   },
+  cardPriceContainer: {
+    alignItems: "flex-end",
+  },
   cardPrice: {
     fontSize: 14,
     color: "#37352f",
@@ -742,7 +745,7 @@ const styles = StyleSheet.create({
   cardMiles: {
     fontSize: 12,
     color: "#787774",
-    marginTop: 4,
+    marginTop: 2,
   },
   cardDetail: {
     fontSize: 14,
