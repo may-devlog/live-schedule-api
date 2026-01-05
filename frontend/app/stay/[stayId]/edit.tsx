@@ -1,6 +1,6 @@
 // app/stay/[stayId]/edit.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -137,6 +137,9 @@ export default function EditStayScreen() {
 
   // チェックイン変更時に、キャンセル期限日時がNULLの場合、デフォルト値を設定
   useEffect(() => {
+    // 初回ロード時はスキップ（既存データから設定されるため）
+    if (isInitialLoad.current) return;
+    
     if (checkIn && !deadline) {
       const defaultDeadline = getCheckInDateAtMidnight(checkIn);
       if (defaultDeadline) {
@@ -186,6 +189,7 @@ export default function EditStayScreen() {
   const [deadlineError, setDeadlineError] = useState<string | null>(null);
   const [penalty, setPenalty] = useState("");
   const [status, setStatus] = useState<string | null>("Keep");
+  const isInitialLoad = useRef(true);
 
   // 既存データを読み込む
   useEffect(() => {
@@ -212,6 +216,7 @@ export default function EditStayScreen() {
         setDeadline(data.deadline || null);
         setPenalty(data.penalty?.toString() || "");
         setStatus(data.status || "Keep");
+        isInitialLoad.current = false;
       } catch (e: any) {
         console.error("Error fetching stay:", e);
         Alert.alert("エラー", "データの読み込みに失敗しました。");
