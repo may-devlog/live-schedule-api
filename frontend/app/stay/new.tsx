@@ -16,11 +16,7 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 // NotionSelectを動的インポートで循環依存を回避
 import { NotionDatePicker } from "../../components/notion-date-picker";
 import type { SelectOption } from "../../types/select-option";
-import {
-  loadSelectOptions,
-  saveSelectOptions,
-} from "../../utils/select-options-storage";
-// 動的インポートで循環依存を回避（loadStaySelectOptions, saveStaySelectOptions）
+// 動的インポートで循環依存を回避（loadSelectOptions, saveSelectOptions, loadStaySelectOptions, saveStaySelectOptions）
 import { useEffect } from "react";
 import { HomeButton } from "../../components/HomeButton";
 import { NotionRelation } from "../../components/notion-relation";
