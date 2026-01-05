@@ -1,7 +1,7 @@
 // 選択肢の永続化ユーティリティ
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { SelectOption } from "../types/select-option";
-import { authenticatedFetch, getApiUrl } from "./api";
+// 動的インポートで循環依存を回避（authenticatedFetch, getApiUrl）
 
 // 色の決定ロジックを関数内に移動してモジュール読み込み時の実行を回避
 function getDefaultColorForLabel(
@@ -194,6 +194,8 @@ export async function loadSelectOptions(
   try {
     // まずデータベースから読み込む
     try {
+      // 動的インポートで循環依存を回避
+      const { authenticatedFetch, getApiUrl } = await import("./api");
       let res: Response;
       if (shareId) {
         // 共有ページの場合は共有用エンドポイントを使用
@@ -343,6 +345,8 @@ export async function loadStaySelectOptions(
   try {
     // まずデータベースから読み込む
     try {
+      // 動的インポートで循環依存を回避
+      const { authenticatedFetch, getApiUrl } = await import("./api");
       let res: Response;
       if (shareId) {
         // 共有ページの場合は共有用エンドポイントを使用
@@ -388,6 +392,8 @@ export async function saveSelectOptions(
   key: keyof typeof STORAGE_KEYS,
   options: SelectOption[]
 ): Promise<void> {
+  // 動的インポートで循環依存を回避
+  const { authenticatedFetch, getApiUrl } = await import("./api");
   // まずデータベースに保存
   const url = getApiUrl(`/select-options/${key.toLowerCase()}`);
   const payload = { options };
@@ -423,6 +429,8 @@ export async function saveStaySelectOptions(
   key: keyof typeof STAY_STORAGE_KEYS,
   options: SelectOption[]
 ): Promise<void> {
+  // 動的インポートで循環依存を回避
+  const { authenticatedFetch, getApiUrl } = await import("./api");
   // まずデータベースに保存
   const url = getApiUrl(`/stay-select-options/${key.toLowerCase()}`);
   const payload = { options };
