@@ -157,12 +157,18 @@ export default function NewStayScreen() {
 
   // scheduleIdが渡された場合、スケジュール情報を取得してチェックインをデフォルト値に設定
   useEffect(() => {
-    if (!scheduleId || copyFrom || checkIn || allSchedules.length === 0) {
+    if (!scheduleId || copyFrom || allSchedules.length === 0) {
       // スケジュール一覧が取得済みで、scheduleIdがない場合、isInitialLoadをfalseに設定
       if (allSchedules.length > 0 && !scheduleId && !copyFrom) {
         isInitialLoad.current = false;
       }
-      return; // 複製の場合、または既にチェックインが設定されている場合、またはスケジュール一覧が未取得の場合はスキップ
+      return; // 複製の場合、またはスケジュール一覧が未取得の場合はスキップ
+    }
+
+    // 既にチェックインが設定されている場合はスキップ（無限ループを防ぐ）
+    if (checkIn) {
+      isInitialLoad.current = false;
+      return;
     }
 
     // 全スケジュール一覧から該当するスケジュールを検索
@@ -173,7 +179,7 @@ export default function NewStayScreen() {
       setCheckIn(checkInDateTime);
       isInitialLoad.current = false;
     }
-  }, [scheduleId, copyFrom, allSchedules, checkIn]);
+  }, [scheduleId, copyFrom, allSchedules]); // checkInを依存配列から削除して無限ループを防ぐ
 
   const handleStatusesChange = async (newStatuses: SelectOption[]) => {
     setStatuses(newStatuses);

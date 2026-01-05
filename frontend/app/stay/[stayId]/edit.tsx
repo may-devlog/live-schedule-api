@@ -151,13 +151,16 @@ export default function EditStayScreen() {
     // 初回ロード時はスキップ（既存データから設定されるため）
     if (isInitialLoad.current) return;
     
-    if (checkIn && !deadline) {
+    // 既にdeadlineが設定されている場合はスキップ（無限ループを防ぐ）
+    if (deadline) return;
+    
+    if (checkIn) {
       const defaultDeadline = getCheckInDateAtMidnight(checkIn);
       if (defaultDeadline) {
         setDeadline(defaultDeadline);
       }
     }
-  }, [checkIn]);
+  }, [checkIn]); // deadlineを依存配列に含めない（無限ループを防ぐ）
 
   // キャンセル期限日時のバリデーション
   const handleDeadlineChange = (value: string | null) => {
