@@ -36,38 +36,6 @@ type Stay = {
 
 const STAY_STATUSES_KEY = "@select_options:stay_statuses" as const;
 
-async function loadStayStatuses(): Promise<SelectOption[]> {
-  try {
-    const AsyncStorage = require("@react-native-async-storage/async-storage")
-      .default;
-    const stored = await AsyncStorage.getItem(STAY_STATUSES_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        if (typeof parsed[0] === "string") {
-          // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
-          return parsed.map((str: string) => ({ label: str }));
-        }
-        return parsed as SelectOption[];
-      }
-    }
-  } catch (error) {
-    console.error("Error loading stay statuses:", error);
-  }
-  // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
-  return ["Canceled", "Keep", "Done"].map((str) => ({ label: str }));
-}
-
-async function saveStayStatuses(options: SelectOption[]): Promise<void> {
-  try {
-    const AsyncStorage = require("@react-native-async-storage/async-storage")
-      .default;
-    await AsyncStorage.setItem(STAY_STATUSES_KEY, JSON.stringify(options));
-  } catch (error) {
-    console.error("Error saving stay statuses:", error);
-  }
-}
-
 export default function EditStayScreen() {
   const { stayId } = useLocalSearchParams<{ stayId: string }>();
   const router = useRouter();
@@ -80,6 +48,29 @@ export default function EditStayScreen() {
 
   useEffect(() => {
     const loadOptions = async () => {
+      // loadStayStatusesをコンポーネント内で定義して循環依存を回避
+      const loadStayStatuses = async (): Promise<SelectOption[]> => {
+        try {
+          const AsyncStorage = require("@react-native-async-storage/async-storage")
+            .default;
+          const stored = await AsyncStorage.getItem(STAY_STATUSES_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              if (typeof parsed[0] === "string") {
+                // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
+                return parsed.map((str: string) => ({ label: str }));
+              }
+              return parsed as SelectOption[];
+            }
+          }
+        } catch (error) {
+          console.error("Error loading stay statuses:", error);
+        }
+        // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
+        return ["Canceled", "Keep", "Done"].map((str) => ({ label: str }));
+      };
+
       const statusesData = await loadStayStatuses();
       setStatuses(statusesData);
       
@@ -96,7 +87,14 @@ export default function EditStayScreen() {
 
   const handleStatusesChange = async (newStatuses: SelectOption[]) => {
     setStatuses(newStatuses);
-    await saveStayStatuses(newStatuses);
+    // saveStayStatusesをコンポーネント内で定義して循環依存を回避
+    try {
+      const AsyncStorage = require("@react-native-async-storage/async-storage")
+        .default;
+      await AsyncStorage.setItem(STAY_STATUSES_KEY, JSON.stringify(newStatuses));
+    } catch (error) {
+      console.error("Error saving stay statuses:", error);
+    }
   };
 
   const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
