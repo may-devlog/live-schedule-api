@@ -90,10 +90,19 @@ export function NotionSelect({
 
   // 五十音順/カスタム順の切り替え
   useEffect(() => {
-    if (isKanaOrder) {
-      setDisplayedOptions(sortByKanaOrder(options));
-    } else {
-      setDisplayedOptions(sortByOrder(options));
+    try {
+      if (!Array.isArray(options) || options.length === 0) {
+        setDisplayedOptions([]);
+        return;
+      }
+      if (isKanaOrder) {
+        setDisplayedOptions(sortByKanaOrder(options));
+      } else {
+        setDisplayedOptions(sortByOrder(options));
+      }
+    } catch (e) {
+      console.error("[NotionSelect] Error sorting options:", e);
+      setDisplayedOptions(Array.isArray(options) ? options : []);
     }
   }, [isKanaOrder, options]);
 
