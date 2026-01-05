@@ -62,7 +62,7 @@ export function NotionSelect({
     }
     return getDefaultColorForLabel("", isPrefecture, false);
   };
-  const [newOptionColor, setNewOptionColor] = useState(getInitialColor());
+  const [newOptionColor, setNewOptionColor] = useState(() => getInitialColor());
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [editingOptionIndex, setEditingOptionIndex] = useState<number | null>(
     null

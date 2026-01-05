@@ -456,14 +456,22 @@ export default function EditStayScreen() {
         keyboardType="numeric"
       />
 
-      <NotionSelect
-        label="ステータス"
-        value={status}
-        options={statuses}
-        onValueChange={setStatus}
-        onOptionsChange={handleStatusesChange}
-        placeholder="選択してください"
-      />
+      {statuses.length > 0 && (
+        <NotionSelect
+          label="ステータス"
+          value={status}
+          options={statuses}
+          onValueChange={setStatus}
+          onOptionsChange={handleStatusesChange}
+          placeholder="選択してください"
+        />
+      )}
+      {statuses.length === 0 && (
+        <View>
+          <Text style={styles.label}>ステータス</Text>
+          <Text style={styles.emptyValue}>読み込み中...</Text>
+        </View>
+      )}
 
       <TouchableOpacity
         style={[styles.button, submitting && styles.buttonDisabled]}
