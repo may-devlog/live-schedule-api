@@ -214,7 +214,7 @@ export function NotionStayRelation({
               <Text style={styles.loadingText}>読み込み中...</Text>
             ) : filteredStays.length === 0 ? (
               <Text style={styles.emptyText}>
-                {searchText ? "検索結果がありません" : "既存の宿泊情報がありません"}
+                {searchText ? "検索結果がありません" : "既存の宿泊情報はありません"}
               </Text>
             ) : (
               <ScrollView style={styles.optionsList}>

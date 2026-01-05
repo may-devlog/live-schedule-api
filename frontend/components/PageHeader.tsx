@@ -19,7 +19,7 @@ export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: P
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={styles.backButtonText}>← 戻る</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -30,7 +30,7 @@ export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: P
             router.push(path);
           }}
         >
-          <Text style={styles.homeButtonText}>🏠 Home</Text>
+          <Text style={styles.homeButtonText}>🏠 ホーム</Text>
         </TouchableOpacity>
       </View>
       {scheduleTitle && (

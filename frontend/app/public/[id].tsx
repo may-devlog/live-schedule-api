@@ -329,7 +329,7 @@ export default function PublicDetailScreen() {
         {/* Traffic */}
         <NotionPropertyBlock label="Traffic">
           {trafficSummaries.length === 0 ? (
-            <Text style={styles.emptyText}>交通情報がありません</Text>
+            <Text style={styles.emptyText}>交通情報はありません</Text>
           ) : (
             trafficSummaries.map((traffic) => (
               <View key={traffic.id} style={styles.trafficItem}>
@@ -383,7 +383,7 @@ export default function PublicDetailScreen() {
         {/* Stay */}
         <NotionPropertyBlock label="Stay">
           {staySummaries.length === 0 ? (
-            <Text style={styles.emptyText}>宿泊情報がありません</Text>
+            <Text style={styles.emptyText}>宿泊情報はありません</Text>
           ) : (
             staySummaries.map((stay) => (
               <View key={stay.id} style={styles.stayItem}>

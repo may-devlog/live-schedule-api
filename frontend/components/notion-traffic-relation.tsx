@@ -183,7 +183,7 @@ export function NotionTrafficRelation({
               <Text style={styles.loadingText}>読み込み中...</Text>
             ) : filteredTraffics.length === 0 ? (
               <Text style={styles.emptyText}>
-                {searchText ? "検索結果がありません" : "既存の交通情報がありません"}
+                {searchText ? "検索結果がありません" : "既存の交通情報はありません"}
               </Text>
             ) : (
               <ScrollView style={styles.optionsList}>

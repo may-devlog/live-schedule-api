@@ -93,7 +93,7 @@ export default function PublicIndexScreen() {
         }
         ListEmptyComponent={
           !loading && !error ? (
-            <Text style={styles.emptyText}>公開されているスケジュールがありません</Text>
+            <Text style={styles.emptyText}>公開されているスケジュールはありません</Text>
           ) : null
         }
         renderItem={({ item }) => (

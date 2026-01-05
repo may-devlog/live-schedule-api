@@ -500,7 +500,7 @@ export default function HomeScreen() {
       {loadingNext && <ActivityIndicator color="#333333" />}
       {errorNext && <Text style={styles.errorText}>エラー: {errorNext}</Text>}
       {!loadingNext && !errorNext && nextSchedules.length === 0 && (
-        <Text style={styles.emptyText}>今後のスケジュールがありません</Text>
+        <Text style={styles.emptyText}>今後のスケジュールはありません</Text>
       )}
       {!loadingNext && !errorNext && nextSchedules.length > 0 && (
         <FlatList

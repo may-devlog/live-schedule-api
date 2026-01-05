@@ -874,7 +874,7 @@ export default function DetailScreen() {
             <Text style={styles.sectionTitle}>関連スケジュール</Text>
           </View>
           {relatedIds.length === 0 ? (
-            <Text style={styles.emptyValue}>関連スケジュールがありません</Text>
+            <Text style={styles.emptyValue}>関連スケジュールはありません</Text>
           ) : (
             <View style={styles.relationContainer}>
         {relatedIds.map((rid) => {
@@ -943,7 +943,7 @@ export default function DetailScreen() {
         <Text style={styles.sectionTitle}>交通</Text>
           </View>
           {trafficSummaries.length === 0 ? (
-            <Text style={styles.emptyValue}>交通情報がありません</Text>
+            <Text style={styles.emptyValue}>交通情報はありません</Text>
           ) : (
             trafficSummaries.map((traffic) => {
               const detailText = traffic.return_flag
@@ -1006,7 +1006,7 @@ export default function DetailScreen() {
         <Text style={styles.sectionTitle}>宿泊</Text>
           </View>
           {staySummaries.length === 0 ? (
-            <Text style={styles.emptyValue}>宿泊情報がありません</Text>
+            <Text style={styles.emptyValue}>宿泊情報はありません</Text>
           ) : (
             staySummaries.map((stay) => {
               // チェックイン/チェックアウトの日時をフォーマット

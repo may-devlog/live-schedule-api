@@ -221,7 +221,7 @@ const fetchYear = async (y: string) => {
         }
         ListEmptyComponent={
           !loading && !error ? (
-            <Text style={styles.emptyText}>スケジュールがありません</Text>
+            <Text style={styles.emptyText}>スケジュールはありません</Text>
           ) : null
         }
         renderItem={({ item }) => (

@@ -174,7 +174,7 @@ export function NotionRelation({
               <ScrollView style={styles.optionsList}>
                 {filteredSchedules.length === 0 ? (
                   <Text style={styles.emptyText}>
-                    {searchText ? "検索結果がありません" : "スケジュールがありません"}
+                    {searchText ? "検索結果がありません" : "スケジュールはありません"}
                   </Text>
                 ) : (
                   filteredSchedules.map((schedule) => {
