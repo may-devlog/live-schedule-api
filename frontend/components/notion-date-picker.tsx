@@ -28,6 +28,7 @@ type NotionDatePickerProps = {
   mode?: "date" | "time" | "datetime";
   placeholder?: string;
   required?: boolean;
+  maxDate?: string | null; // YYYY-MM-DD or YYYY-MM-DD HH:MM format
 };
 
 export function NotionDatePicker({
@@ -37,6 +38,7 @@ export function NotionDatePicker({
   mode = "date",
   placeholder = "選択してください",
   required = false,
+  maxDate,
 }: NotionDatePickerProps) {
   // ヘルパー関数を先に定義
   const parseValueToDate = (val: string, m: "date" | "time" | "datetime"): Date | null => {
@@ -121,6 +123,13 @@ export function NotionDatePicker({
     }
   };
 
+  // maxDateをDateオブジェクトに変換
+  const getMaxDate = (): Date | undefined => {
+    if (!maxDate) return undefined;
+    const parsed = parseValueToDate(maxDate, mode);
+    return parsed || undefined;
+  };
+
   const handleCalendarChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === "web") {
       // Webの場合は直接処理
@@ -160,6 +169,15 @@ export function NotionDatePicker({
 
   const handleConfirm = () => {
     if (tempValue.trim()) {
+      // maxDateのバリデーション
+      if (maxDate) {
+        const selectedDate = parseValueToDate(tempValue.trim(), mode);
+        const maxDateObj = parseValueToDate(maxDate, mode);
+        if (selectedDate && maxDateObj && selectedDate > maxDateObj) {
+          // エラーは親コンポーネントで処理するため、ここでは何もしない
+          // 親コンポーネントでバリデーションを行う
+        }
+      }
       onValueChange(tempValue.trim());
       // 手入力で値が設定されたら、tempDateも更新
       const parsed = parseValueToDate(tempValue.trim(), mode);
@@ -263,6 +281,13 @@ export function NotionDatePicker({
                         ? tempValue || ""
                         : tempValue ? tempValue.replace(" ", "T") : ""
                     }
+                    max={
+                      maxDate
+                        ? mode === "datetime"
+                          ? maxDate.replace(" ", "T")
+                          : maxDate
+                        : undefined
+                    }
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val) {
@@ -300,6 +325,7 @@ export function NotionDatePicker({
                   display="spinner"
                   onChange={handleCalendarChange}
                   style={styles.picker}
+                  maximumDate={getMaxDate()}
                 />
               ) : (
                 // Androidの場合はModal外で表示
@@ -384,6 +410,7 @@ export function NotionDatePicker({
           mode={mode === "datetime" ? "datetime" : mode === "time" ? "time" : "date"}
           display="default"
           onChange={handleCalendarChange}
+          maximumDate={getMaxDate()}
         />
       )}
       

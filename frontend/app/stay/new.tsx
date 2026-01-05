@@ -169,12 +169,82 @@ export default function NewStayScreen() {
     }
   };
 
+  // 日付文字列をDateオブジェクトに変換するヘルパー関数
+  const parseDateTime = (dateTimeStr: string): Date | null => {
+    try {
+      const [datePart, timePart] = dateTimeStr.split(" ");
+      if (datePart && timePart) {
+        const [year, month, day] = datePart.split("-").map(Number);
+        const [hours, minutes] = timePart.split(":").map(Number);
+        if (year && month && day && hours !== undefined && minutes !== undefined) {
+          return new Date(year, month - 1, day, hours, minutes, 0, 0);
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  };
+
+  // チェックインの日付を0:00に設定した日時文字列を取得
+  const getCheckInDateAtMidnight = (checkInStr: string | null): string | null => {
+    if (!checkInStr) return null;
+    const date = parseDateTime(checkInStr);
+    if (!date) return null;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day} 00:00`;
+  };
+
+  // チェックイン変更時に、キャンセル期限日時がNULLの場合、デフォルト値を設定
+  useEffect(() => {
+    if (checkIn && !deadline) {
+      const defaultDeadline = getCheckInDateAtMidnight(checkIn);
+      if (defaultDeadline) {
+        setDeadline(defaultDeadline);
+      }
+    }
+  }, [checkIn]);
+
+  // キャンセル期限日時のバリデーション
+  const handleDeadlineChange = (value: string | null) => {
+    setDeadlineError(null);
+    
+    if (!value) {
+      setDeadline(value);
+      return;
+    }
+
+    if (!checkIn) {
+      setDeadline(value);
+      return;
+    }
+
+    const deadlineDate = parseDateTime(value);
+    const checkInDate = parseDateTime(checkIn);
+
+    if (!deadlineDate || !checkInDate) {
+      setDeadline(value);
+      return;
+    }
+
+    // キャンセル期限日時がチェックインより後の場合はエラー
+    if (deadlineDate > checkInDate) {
+      setDeadlineError("取消料発生日時はチェックインより前の日時に設定してください。");
+      return;
+    }
+
+    setDeadline(value);
+  };
+
   const [checkIn, setCheckIn] = useState<string | null>(null);
   const [checkOut, setCheckOut] = useState<string | null>(null);
   const [hotelName, setHotelName] = useState("");
   const [fee, setFee] = useState("");
   const [breakfastFlag, setBreakfastFlag] = useState(false);
   const [deadline, setDeadline] = useState<string | null>(null);
+  const [deadlineError, setDeadlineError] = useState<string | null>(null);
   const [penalty, setPenalty] = useState("");
   const [status, setStatus] = useState<string | null>("Keep");
   const [submitting, setSubmitting] = useState(false);
@@ -187,6 +257,17 @@ export default function NewStayScreen() {
     if (!checkIn || !checkOut || !hotelName.trim()) {
       Alert.alert("必須項目", "Check-in / Check-out / Hotel は必須です。");
       return;
+    }
+
+    // キャンセル期限日時のバリデーション
+    if (deadline && checkIn) {
+      const deadlineDate = parseDateTime(deadline);
+      const checkInDate = parseDateTime(checkIn);
+      if (deadlineDate && checkInDate && deadlineDate > checkInDate) {
+        Alert.alert("入力エラー", "取消料発生日時はチェックインより前の日時に設定してください。");
+        setDeadlineError("取消料発生日時はチェックインより前の日時に設定してください。");
+        return;
+      }
     }
 
     const feeNum = fee ? Number(fee) : NaN;
@@ -347,10 +428,14 @@ export default function NewStayScreen() {
       <NotionDatePicker
         label="取消料発生日時"
         value={deadline}
-        onValueChange={setDeadline}
+        onValueChange={handleDeadlineChange}
         mode="datetime"
         placeholder="YYYY-MM-DD HH:MM"
+        maxDate={checkIn}
       />
+      {deadlineError && (
+        <Text style={styles.errorText}>{deadlineError}</Text>
+      )}
 
       <Text style={styles.label}>取消料 (%)</Text>
       <TextInput
@@ -470,5 +555,11 @@ const styles = StyleSheet.create({
     color: "#37352f",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  errorText: {
+    fontSize: 12,
+    color: "#d93025",
+    marginTop: 4,
+    marginBottom: 8,
   },
 });
