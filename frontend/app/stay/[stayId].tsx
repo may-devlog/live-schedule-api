@@ -42,6 +42,7 @@ export default function StayDetailScreen() {
   const [pullDistance, setPullDistance] = useState(0);
   const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
   const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
+  const [statusOptions, setStatusOptions] = useState<SelectOption[]>([]);
 
   const handleEdit = () => {
     router.push(`/stay/${stayId}/edit`);
@@ -195,6 +196,29 @@ export default function StayDetailScreen() {
         }
       } catch (e) {
         console.error("[StayDetail] Failed to fetch website options:", e);
+      }
+      
+      // ステータス選択肢を取得（動的インポートで循環依存を回避）
+      try {
+        const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+        const stored = await AsyncStorage.getItem("@select_options:stay_statuses");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            if (typeof parsed[0] === "string") {
+              setStatusOptions(parsed.map((str: string) => ({ label: str })));
+            } else {
+              setStatusOptions(parsed as SelectOption[]);
+            }
+          } else {
+            setStatusOptions(["Canceled", "Keep", "Done"].map((str) => ({ label: str })));
+          }
+        } else {
+          setStatusOptions(["Canceled", "Keep", "Done"].map((str) => ({ label: str })));
+        }
+      } catch (e) {
+        console.error("[StayDetail] Failed to load status options:", e);
+        setStatusOptions(["Canceled", "Keep", "Done"].map((str) => ({ label: str })));
       }
     } catch (e: any) {
       setError(e.message ?? "Unknown error");

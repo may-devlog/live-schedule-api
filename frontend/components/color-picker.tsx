@@ -9,7 +9,11 @@ import {
   StyleSheet,
   ScrollView,
 } from "react-native";
-import { DEFAULT_COLORS } from "../types/select-option";
+// DEFAULT_COLORSを直接定義して循環依存を回避
+const DEFAULT_COLORS = [
+  "#FEE2E2", "#FEF3C7", "#D1FAE5", "#DBEAFE", "#E9D5FF", "#FCE7F3",
+  "#E5E7EB", "#FED7AA", "#ECFCCB", "#CCFBF1", "#E0E7FF", "#F3E8FF",
+];
 
 type ColorPickerProps = {
   value?: string;
