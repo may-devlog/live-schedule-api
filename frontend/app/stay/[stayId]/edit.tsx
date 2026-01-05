@@ -421,7 +421,12 @@ export default function EditStayScreen() {
         onChangeText={setHotelName}
       />
 
-      {websiteOptions.length > 0 && NotionSelectComponent && (
+      {notionSelectError ? (
+        <View>
+          <Text style={styles.label}>予約サイト</Text>
+          <Text style={styles.errorText}>{notionSelectError}</Text>
+        </View>
+      ) : websiteOptions.length > 0 && NotionSelectComponent ? (
         <NotionSelectComponent
           label="予約サイト"
           value={website}
@@ -431,8 +436,7 @@ export default function EditStayScreen() {
           placeholder="選択してください"
           stayOptionType="WEBSITE"
         />
-      )}
-      {websiteOptions.length === 0 && (
+      ) : (
         <View>
           <Text style={styles.label}>予約サイト</Text>
           <Text style={styles.emptyValue}>読み込み中...</Text>

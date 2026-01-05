@@ -447,7 +447,12 @@ export default function NewStayScreen() {
         onChangeText={setHotelName}
       />
 
-      {websiteOptions.length > 0 && NotionSelectComponent && (
+      {notionSelectError ? (
+        <View>
+          <Text style={styles.label}>予約サイト</Text>
+          <Text style={styles.errorText}>{notionSelectError}</Text>
+        </View>
+      ) : websiteOptions.length > 0 && NotionSelectComponent ? (
         <NotionSelectComponent
           label="予約サイト"
           value={website}
@@ -457,8 +462,7 @@ export default function NewStayScreen() {
           placeholder="選択してください"
           stayOptionType="WEBSITE"
         />
-      )}
-      {websiteOptions.length === 0 && (
+      ) : (
         <View>
           <Text style={styles.label}>予約サイト</Text>
           <Text style={styles.emptyValue}>読み込み中...</Text>
@@ -500,7 +504,12 @@ export default function NewStayScreen() {
         keyboardType="numeric"
       />
 
-      {statuses.length > 0 && NotionSelectComponent && (
+      {notionSelectError ? (
+        <View>
+          <Text style={styles.label}>ステータス</Text>
+          <Text style={styles.errorText}>{notionSelectError}</Text>
+        </View>
+      ) : statuses.length > 0 && NotionSelectComponent ? (
         <NotionSelectComponent
           label="ステータス"
           value={status}
@@ -509,8 +518,7 @@ export default function NewStayScreen() {
           onOptionsChange={handleStatusesChange}
           placeholder="選択してください"
         />
-      )}
-      {statuses.length === 0 && (
+      ) : (
         <View>
           <Text style={styles.label}>ステータス</Text>
           <Text style={styles.emptyValue}>読み込み中...</Text>
