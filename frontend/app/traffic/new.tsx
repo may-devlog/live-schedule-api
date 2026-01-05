@@ -114,11 +114,13 @@ export default function NewTrafficScreen() {
 
     const loadScheduleForDefault = async () => {
       try {
-        const res = await authenticatedFetch(getApiUrl(`/schedules/${scheduleId}`));
+        // 全スケジュール一覧から該当するスケジュールを検索
+        const res = await authenticatedFetch(getApiUrl("/schedules"));
         if (res.ok) {
-          const schedule: Schedule = await res.json();
+          const schedules: Schedule[] = await res.json();
+          const schedule = schedules.find((s) => s.id.toString() === scheduleId);
           // 利用日をライブ当日に設定
-          if (schedule.date) {
+          if (schedule?.date) {
             setDate(schedule.date);
           }
         }

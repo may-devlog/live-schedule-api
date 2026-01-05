@@ -161,11 +161,13 @@ export default function NewStayScreen() {
 
     const loadScheduleForDefault = async () => {
       try {
-        const res = await authenticatedFetch(getApiUrl(`/schedules/${scheduleId}`));
+        // 全スケジュール一覧から該当するスケジュールを検索
+        const res = await authenticatedFetch(getApiUrl("/schedules"));
         if (res.ok) {
-          const schedule: Schedule = await res.json();
+          const schedules: Schedule[] = await res.json();
+          const schedule = schedules.find((s) => s.id.toString() === scheduleId);
           // チェックインをライブ当日の15:00に設定
-          if (schedule.date) {
+          if (schedule?.date) {
             const checkInDateTime = `${schedule.date} 15:00`;
             setCheckIn(checkInDateTime);
           }
