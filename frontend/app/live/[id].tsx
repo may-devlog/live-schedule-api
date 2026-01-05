@@ -997,7 +997,12 @@ export default function DetailScreen() {
             >
                   <View style={styles.cardRow}>
                     <Text style={styles.cardDate}>{traffic.date}</Text>
-                    <Text style={styles.cardPrice}>{formatCurrency(displayFare)}</Text>
+                    <View style={styles.cardPriceContainer}>
+                      <Text style={styles.cardPrice}>{formatCurrency(displayFare)}</Text>
+                      {displayMiles !== null && displayMiles !== undefined && (
+                        <Text style={styles.cardMiles}>消費マイル: {displayMiles}</Text>
+                      )}
+                    </View>
                   </View>
                   <View style={styles.cardRow}>
                     {traffic.transportation && (
@@ -1010,11 +1015,6 @@ export default function DetailScreen() {
                   <View style={styles.cardRow}>
                     <Text style={styles.cardDetail}>{detailWithNotes}</Text>
                   </View>
-                  {displayMiles !== null && displayMiles !== undefined && (
-                    <View style={styles.cardRow}>
-                      <Text style={styles.cardMiles}>消費マイル: {displayMiles}</Text>
-                    </View>
-                  )}
             </TouchableOpacity>
           );
             })
@@ -1301,6 +1301,9 @@ const styles = StyleSheet.create({
     color: "#37352f",
     flex: 1,
   },
+  cardPriceContainer: {
+    alignItems: "flex-end",
+  },
   cardPrice: {
     fontSize: 14,
     color: "#37352f",
@@ -1311,6 +1314,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#787774",
     marginTop: 4,
+    textAlign: "right",
   },
   transportationRow: {
     flexDirection: "row",
