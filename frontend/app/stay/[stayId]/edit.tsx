@@ -14,7 +14,7 @@ import {
   Platform,
 } from "react-native";
 import { authenticatedFetch, getApiUrl } from "../../../utils/api";
-import { NotionSelect } from "../../../components/notion-select";
+// NotionSelectを動的インポートで循環依存を回避
 import { NotionDatePicker } from "../../../components/notion-date-picker";
 import type { SelectOption } from "../../../types/select-option";
 // 動的インポートで循環依存を回避（loadStaySelectOptions, saveStaySelectOptions）
@@ -45,6 +45,7 @@ export default function EditStayScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [NotionSelectComponent, setNotionSelectComponent] = useState<React.ComponentType<any> | null>(null);
   useEffect(() => {
     const loadOptions = async () => {
 
@@ -459,8 +460,8 @@ export default function EditStayScreen() {
         keyboardType="numeric"
       />
 
-      {statuses.length > 0 ? (
-        <NotionSelect
+      {statuses.length > 0 && NotionSelectComponent ? (
+        <NotionSelectComponent
           label="ステータス"
           value={status}
           options={statuses}
@@ -468,6 +469,16 @@ export default function EditStayScreen() {
           onOptionsChange={handleStatusesChange}
           placeholder="選択してください"
         />
+      ) : statuses.length > 0 && !NotionSelectComponent ? (
+        <View>
+          <Text style={styles.label}>ステータス</Text>
+          <TextInput
+            style={styles.input}
+            value={status || ""}
+            onChangeText={setStatus}
+            placeholder="ステータスを入力"
+          />
+        </View>
       ) : (
         <View>
           <Text style={styles.label}>ステータス</Text>
