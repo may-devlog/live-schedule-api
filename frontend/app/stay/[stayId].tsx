@@ -381,10 +381,17 @@ export default function StayDetailScreen() {
                 : undefined
             }
           />
-          <NotionProperty
-            label="ステータス"
-            value={stay.status}
-          />
+          <NotionProperty label="ステータス">
+            {stay.status ? (() => {
+              const statusOption = statusOptions.find(opt => opt.label === stay.status);
+              return (
+                <NotionTag
+                  label={stay.status}
+                  color={statusOption?.color || "#E5E7EB"}
+                />
+              );
+            })() : undefined}
+          </NotionProperty>
         </NotionPropertyBlock>
 
         {/* [Schedule Link] */}
