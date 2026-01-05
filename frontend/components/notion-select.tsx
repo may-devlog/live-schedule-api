@@ -83,12 +83,7 @@ export function NotionSelect({
     null
   );
 
-  // optionsが変更されたときにdisplayedOptionsを更新
-  useEffect(() => {
-    setDisplayedOptions(options);
-  }, [options]);
-
-  // 五十音順/カスタム順の切り替え
+  // optionsが変更されたとき、または五十音順/カスタム順が切り替わったときにdisplayedOptionsを更新
   useEffect(() => {
     try {
       if (!Array.isArray(options) || options.length === 0) {
