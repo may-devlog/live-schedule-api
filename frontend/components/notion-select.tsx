@@ -48,8 +48,12 @@ const sortByOrder = (options: SelectOption[]): SelectOption[] => {
   });
 };
 
-// 色の決定ロジックを関数内に移動して遅延初期化し、循環依存を回避
-const getDefaultColorForLabel = (() => {
+// 色の決定ロジックを関数に変更してモジュール読み込み時の実行を回避
+function getDefaultColorForLabel(
+  label: string,
+  isPrefecture: boolean = false,
+  isCategory: boolean = false
+): string {
   const DEFAULT_COLORS = [
     "#FEE2E2", // red (薄い赤)
     "#FEF3C7", // amber (薄い黄色)
@@ -86,31 +90,25 @@ const getDefaultColorForLabel = (() => {
     "フェス": "#FEE2E2", "イベント": "#D1FAE5", "舞台": "#E9D5FF", "その他": "#E5E7EB",
   };
 
-  return (
-    label: string,
-    isPrefecture: boolean = false,
-    isCategory: boolean = false
-  ): string => {
-    if (isPrefecture) {
-      const region = PREFECTURE_REGIONS[label];
-      if (region && REGION_COLORS[region]) {
-        return REGION_COLORS[region];
-      }
+  if (isPrefecture) {
+    const region = PREFECTURE_REGIONS[label];
+    if (region && REGION_COLORS[region]) {
+      return REGION_COLORS[region];
     }
-    
-    if (isCategory) {
-      if (CATEGORY_COLORS[label]) {
-        return CATEGORY_COLORS[label];
-      }
+  }
+  
+  if (isCategory) {
+    if (CATEGORY_COLORS[label]) {
+      return CATEGORY_COLORS[label];
     }
-    
-    // ハッシュベースで色を決定
-    const hash = label.split("").reduce((acc, char) => {
-      return char.charCodeAt(0) + ((acc << 5) - acc);
-    }, 0);
-    return DEFAULT_COLORS[Math.abs(hash) % DEFAULT_COLORS.length];
-  };
-})();
+  }
+  
+  // ハッシュベースで色を決定
+  const hash = label.split("").reduce((acc, char) => {
+    return char.charCodeAt(0) + ((acc << 5) - acc);
+  }, 0);
+  return DEFAULT_COLORS[Math.abs(hash) % DEFAULT_COLORS.length];
+}
 
 type NotionSelectProps = {
   label: string;
