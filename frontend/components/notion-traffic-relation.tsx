@@ -216,7 +216,7 @@ export function NotionTrafficRelation({
                           </Text>
                         )}
                         <Text style={styles.optionSubtitle}>
-                          ¥{traffic.fare.toLocaleString()}
+                          ¥{(traffic.return_flag ? traffic.fare * 2 : traffic.fare).toLocaleString()}
                         </Text>
                       </View>
                       {isSelected && <Text style={styles.checkmark}>✓</Text>}

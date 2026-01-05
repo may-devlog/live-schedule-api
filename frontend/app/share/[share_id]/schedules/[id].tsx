@@ -416,8 +416,25 @@ export default function SharedScheduleDetailScreen() {
           />
           <NotionProperty
             label="交通費合計"
-            value={formatCurrency(schedule.total_fare)}
+            value={formatCurrency(
+              trafficSummaries.reduce((sum, traffic) => {
+                // 往復フラグがある場合は金額を2倍
+                return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
+              }, 0)
+            )}
           />
+          {trafficSummaries.some(t => t.miles !== null && t.miles !== undefined) && (
+            <NotionProperty
+              label="消費マイル合計"
+              value={
+                trafficSummaries.reduce((sum, traffic) => {
+                  if (traffic.miles === null || traffic.miles === undefined) return sum;
+                  // 往復フラグがある場合はマイルを2倍
+                  return sum + (traffic.return_flag ? traffic.miles * 2 : traffic.miles);
+                }, 0).toString()
+              }
+            />
+          )}
           <NotionProperty
             label="宿泊費合計"
             value={formatCurrency(schedule.stay_fee)}
@@ -503,6 +520,12 @@ export default function SharedScheduleDetailScreen() {
               const detailWithNotes = traffic.notes
                 ? `${detailText} (${traffic.notes})`
                 : detailText;
+              // 往復フラグがある場合は金額を2倍
+              const displayFare = traffic.return_flag ? traffic.fare * 2 : traffic.fare;
+              // 往復フラグがある場合はマイルを2倍
+              const displayMiles = traffic.return_flag && traffic.miles 
+                ? traffic.miles * 2 
+                : traffic.miles;
               
               return (
                 <TouchableOpacity
@@ -512,7 +535,7 @@ export default function SharedScheduleDetailScreen() {
                 >
                   <View style={styles.cardRow}>
                     <Text style={styles.cardDate}>{traffic.date}</Text>
-                    <Text style={styles.cardPrice}>{formatCurrency(traffic.fare)}</Text>
+                    <Text style={styles.cardPrice}>{formatCurrency(displayFare)}</Text>
                   </View>
                   <View style={styles.cardRow}>
                     {traffic.transportation && (
@@ -525,6 +548,11 @@ export default function SharedScheduleDetailScreen() {
                   <View style={styles.cardRow}>
                     <Text style={styles.cardDetail}>{detailWithNotes}</Text>
                   </View>
+                  {displayMiles !== null && displayMiles !== undefined && (
+                    <View style={styles.cardRow}>
+                      <Text style={styles.cardMiles}>消費マイル: {displayMiles}</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             })
@@ -697,6 +725,11 @@ const styles = StyleSheet.create({
     color: "#37352f",
     fontWeight: "500",
     textAlign: "right",
+  },
+  cardMiles: {
+    fontSize: 12,
+    color: "#787774",
+    marginTop: 4,
   },
   cardDetail: {
     fontSize: 14,
