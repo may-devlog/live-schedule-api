@@ -116,7 +116,7 @@ export default function NewTrafficScreen() {
   };
 
   const [date, setDate] = useState<string | null>(null);
-  const [order, setOrder] = useState("1");
+  const [order, setOrder] = useState("");
   const [transportation, setTransportation] = useState<string | null>(null);
   const [fromPlace, setFromPlace] = useState("");
   const [toPlace, setToPlace] = useState("");
