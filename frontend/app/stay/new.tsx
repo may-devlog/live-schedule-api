@@ -13,7 +13,7 @@ import {
   Platform,
 } from "react-native";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
-import { NotionSelect } from "../../components/notion-select";
+// NotionSelectを動的インポートで循環依存を回避
 import { NotionDatePicker } from "../../components/notion-date-picker";
 import type { SelectOption } from "../../types/select-option";
 import {
@@ -55,9 +55,18 @@ export default function NewStayScreen() {
   const [statuses, setStatuses] = useState<SelectOption[]>([]);
   const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
   const [website, setWebsite] = useState<string | null>(null);
+  const [NotionSelectComponent, setNotionSelectComponent] = useState<React.ComponentType<any> | null>(null);
 
   useEffect(() => {
     const loadOptions = async () => {
+      // NotionSelectコンポーネントを動的インポートで循環依存を回避
+      try {
+        const { NotionSelect } = await import("../../components/notion-select");
+        setNotionSelectComponent(() => NotionSelect);
+      } catch (e) {
+        console.error("[NewStay] Failed to load NotionSelect:", e);
+      }
+
       // loadStayStatusesをコンポーネント内で定義して循環依存を回避
       const loadStayStatuses = async (): Promise<SelectOption[]> => {
         try {
@@ -428,8 +437,8 @@ export default function NewStayScreen() {
         onChangeText={setHotelName}
       />
 
-      {websiteOptions.length > 0 && (
-        <NotionSelect
+      {websiteOptions.length > 0 && NotionSelectComponent && (
+        <NotionSelectComponent
           label="予約サイト"
           value={website}
           options={websiteOptions}
@@ -481,8 +490,8 @@ export default function NewStayScreen() {
         keyboardType="numeric"
       />
 
-      {statuses.length > 0 && (
-        <NotionSelect
+      {statuses.length > 0 && NotionSelectComponent && (
+        <NotionSelectComponent
           label="ステータス"
           value={status}
           options={statuses}
