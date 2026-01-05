@@ -76,6 +76,7 @@ export default function EditStayScreen() {
   const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -194,6 +195,7 @@ export default function EditStayScreen() {
   // 既存データを読み込む
   useEffect(() => {
     if (!stayId) {
+      setError("stayIdが指定されていません");
       setLoading(false);
       return;
     }
@@ -201,6 +203,8 @@ export default function EditStayScreen() {
     const fetchStay = async () => {
       try {
         setLoading(true);
+        setError(null);
+        console.log("[EditStay] Fetching stay with ID:", stayId);
         const res = await authenticatedFetch(getApiUrl(`/stay/${stayId}`));
         if (!res.ok) {
           if (res.status === 404) {
@@ -209,6 +213,7 @@ export default function EditStayScreen() {
           throw new Error(`status: ${res.status}`);
         }
         const data: Stay = await res.json();
+        console.log("[EditStay] Fetched stay data:", data);
 
         setCheckIn(data.check_in || null);
         setCheckOut(data.check_out || null);
@@ -221,20 +226,16 @@ export default function EditStayScreen() {
         setStatus(data.status || "Keep");
         isInitialLoad.current = false;
       } catch (e: any) {
-        console.error("Error fetching stay:", e);
-        Alert.alert("エラー", "データの読み込みに失敗しました。", [
-          {
-            text: "OK",
-            onPress: () => router.back(),
-          },
-        ]);
+        console.error("[EditStay] Error fetching stay:", e);
+        const errorMessage = e.message || "データの読み込みに失敗しました";
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
     };
 
     fetchStay();
-  }, [stayId, router]);
+  }, [stayId]);
 
   const handleSubmit = async () => {
     if (!stayId) {
@@ -342,8 +343,29 @@ export default function EditStayScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator color="#37352f" size="large" />
+      <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+        <PageHeader showBackButton={true} homePath="/" />
+        <View style={styles.container}>
+          <ActivityIndicator color="#37352f" size="large" />
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+        <PageHeader showBackButton={true} homePath="/" />
+        <View style={styles.container}>
+          <Text style={styles.title}>宿泊を編集</Text>
+          <Text style={styles.errorText}>エラー: {error}</Text>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.buttonText}>戻る</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
