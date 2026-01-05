@@ -403,15 +403,23 @@ export default function EditStayScreen() {
         onChangeText={setHotelName}
       />
 
-      <NotionSelect
-        label="予約サイト"
-        value={website}
-        options={websiteOptions}
-        onValueChange={setWebsite}
-        onOptionsChange={handleWebsiteOptionsChange}
-        placeholder="選択してください"
-        stayOptionType="WEBSITE"
-      />
+      {websiteOptions.length > 0 && (
+        <NotionSelect
+          label="予約サイト"
+          value={website}
+          options={websiteOptions}
+          onValueChange={setWebsite}
+          onOptionsChange={handleWebsiteOptionsChange}
+          placeholder="選択してください"
+          stayOptionType="WEBSITE"
+        />
+      )}
+      {websiteOptions.length === 0 && (
+        <View>
+          <Text style={styles.label}>予約サイト</Text>
+          <Text style={styles.emptyValue}>読み込み中...</Text>
+        </View>
+      )}
 
       <Text style={styles.label}>
         宿泊費 <Text style={styles.required}>*</Text>
@@ -543,6 +551,12 @@ const styles = StyleSheet.create({
     color: "#d93025",
     marginTop: 4,
     marginBottom: 8,
+  },
+  emptyValue: {
+    fontSize: 14,
+    color: "#9b9a97",
+    marginTop: 8,
+    marginBottom: 16,
   },
 });
 
