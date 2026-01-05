@@ -193,7 +193,10 @@ export default function EditStayScreen() {
 
   // 既存データを読み込む
   useEffect(() => {
-    if (!stayId) return;
+    if (!stayId) {
+      setLoading(false);
+      return;
+    }
 
     const fetchStay = async () => {
       try {
@@ -219,8 +222,12 @@ export default function EditStayScreen() {
         isInitialLoad.current = false;
       } catch (e: any) {
         console.error("Error fetching stay:", e);
-        Alert.alert("エラー", "データの読み込みに失敗しました。");
-        router.back();
+        Alert.alert("エラー", "データの読み込みに失敗しました。", [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]);
       } finally {
         setLoading(false);
       }

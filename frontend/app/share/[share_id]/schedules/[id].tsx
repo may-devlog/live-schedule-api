@@ -451,6 +451,7 @@ export default function SharedScheduleDetailScreen() {
           <NotionProperty
             label="総費用"
             value={formatCurrency(schedule.total_cost)}
+            isLast={false}
           />
           <NotionProperty label="ステータス">
             {schedule.status ? (
