@@ -52,6 +52,7 @@ export default function NewStayScreen() {
   const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
   const [website, setWebsite] = useState<string | null>(null);
   const [NotionSelectComponent, setNotionSelectComponent] = useState<React.ComponentType<any> | null>(null);
+  const [notionSelectError, setNotionSelectError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -59,8 +60,12 @@ export default function NewStayScreen() {
       try {
         const { NotionSelect } = await import("../../components/notion-select");
         setNotionSelectComponent(() => NotionSelect);
-      } catch (e) {
+        setNotionSelectError(null);
+      } catch (e: any) {
+        const errorMsg = e?.message || String(e) || "Unknown error";
         console.error("[NewStay] Failed to load NotionSelect:", e);
+        setNotionSelectError(`NotionSelect読み込みエラー: ${errorMsg}`);
+        // エラーが発生しても画面は表示し続ける
       }
 
       // loadStayStatusesをコンポーネント内で定義して循環依存を回避

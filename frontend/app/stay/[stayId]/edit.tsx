@@ -46,6 +46,7 @@ export default function EditStayScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [NotionSelectComponent, setNotionSelectComponent] = useState<React.ComponentType<any> | null>(null);
+  const [notionSelectError, setNotionSelectError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -53,8 +54,12 @@ export default function EditStayScreen() {
       try {
         const { NotionSelect } = await import("../../../components/notion-select");
         setNotionSelectComponent(() => NotionSelect);
-      } catch (e) {
+        setNotionSelectError(null);
+      } catch (e: any) {
+        const errorMsg = e?.message || String(e) || "Unknown error";
         console.error("[EditStay] Failed to load NotionSelect:", e);
+        setNotionSelectError(`NotionSelect読み込みエラー: ${errorMsg}`);
+        // エラーが発生しても画面は表示し続ける
       }
 
       // loadStayStatusesをコンポーネント内で定義して循環依存を回避
@@ -469,7 +474,12 @@ export default function EditStayScreen() {
         keyboardType="numeric"
       />
 
-      {statuses.length > 0 && NotionSelectComponent && (
+      {notionSelectError ? (
+        <View>
+          <Text style={styles.label}>ステータス</Text>
+          <Text style={styles.errorText}>{notionSelectError}</Text>
+        </View>
+      ) : statuses.length > 0 && NotionSelectComponent ? (
         <NotionSelectComponent
           label="ステータス"
           value={status}
@@ -478,8 +488,7 @@ export default function EditStayScreen() {
           onOptionsChange={handleStatusesChange}
           placeholder="選択してください"
         />
-      )}
-      {statuses.length === 0 && (
+      ) : (
         <View>
           <Text style={styles.label}>ステータス</Text>
           <Text style={styles.emptyValue}>読み込み中...</Text>
