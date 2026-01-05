@@ -17,21 +17,66 @@ import type { SelectOption } from "../types/select-option";
 import { sortByKanaOrder, sortByOrder } from "../types/select-option";
 import { saveSelectOptions, saveStaySelectOptions } from "../utils/select-options-storage";
 
-// getDefaultColorForLabelを動的にインポートして初期化エラーを回避
-let getDefaultColorForLabel: ((label: string, isPrefecture?: boolean, isCategory?: boolean, isSeller?: boolean) => string) | null = null;
+// 色の決定ロジックをコンポーネント内に直接実装して循環依存を回避
+const DEFAULT_COLORS = [
+  "#FEE2E2", // red (薄い赤)
+  "#FEF3C7", // amber (薄い黄色)
+  "#D1FAE5", // emerald (薄い緑)
+  "#DBEAFE", // blue (薄い青)
+  "#E9D5FF", // violet (薄い紫)
+  "#FCE7F3", // pink (薄いピンク)
+  "#E5E7EB", // gray (薄いグレー)
+  "#FED7AA", // orange (薄いオレンジ)
+  "#ECFCCB", // lime (薄いライム)
+  "#CCFBF1", // teal (薄いティール)
+  "#E0E7FF", // indigo (薄いインディゴ)
+  "#F3E8FF", // purple (薄いパープル)
+];
 
-const loadGetDefaultColorForLabel = () => {
-  if (!getDefaultColorForLabel) {
-    try {
-      const module = require("../types/select-option");
-      getDefaultColorForLabel = module.getDefaultColorForLabel;
-    } catch (e) {
-      console.error("[NotionSelect] Error loading getDefaultColorForLabel:", e);
-      // フォールバック関数
-      getDefaultColorForLabel = () => "#E5E7EB";
+const PREFECTURE_REGIONS: Record<string, string> = {
+  "北海道": "北海道",
+  "青森": "東北", "岩手": "東北", "宮城": "東北", "秋田": "東北", "山形": "東北", "福島": "東北",
+  "茨城": "関東", "栃木": "関東", "群馬": "関東", "埼玉": "関東", "千葉": "関東", "東京": "関東", "神奈川": "関東",
+  "新潟": "甲信越", "富山": "甲信越", "石川": "甲信越", "福井": "甲信越", "山梨": "甲信越", "長野": "甲信越",
+  "岐阜": "東海", "静岡": "東海", "愛知": "東海", "三重": "東海",
+  "滋賀": "近畿", "京都": "近畿", "大阪": "近畿", "兵庫": "近畿", "奈良": "近畿", "和歌山": "近畿",
+  "鳥取": "中国", "島根": "中国", "岡山": "中国", "広島": "中国", "山口": "中国",
+  "徳島": "四国", "香川": "四国", "愛媛": "四国", "高知": "四国",
+  "福岡": "九州", "佐賀": "九州", "長崎": "九州", "熊本": "九州", "大分": "九州", "宮崎": "九州", "鹿児島": "九州", "沖縄": "九州",
+};
+
+const REGION_COLORS: Record<string, string> = {
+  "北海道": "#DBEAFE", "東北": "#E9D5FF", "関東": "#FEE2E2", "甲信越": "#FED7AA",
+  "東海": "#D1FAE5", "近畿": "#FEF3C7", "中国": "#CCFBF1", "四国": "#ECFCCB", "九州": "#FCE7F3",
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  "フェス": "#FEE2E2", "イベント": "#D1FAE5", "舞台": "#E9D5FF", "その他": "#E5E7EB",
+};
+
+const getDefaultColorForLabel = (
+  label: string,
+  isPrefecture: boolean = false,
+  isCategory: boolean = false
+): string => {
+  if (isPrefecture) {
+    const region = PREFECTURE_REGIONS[label];
+    if (region && REGION_COLORS[region]) {
+      return REGION_COLORS[region];
     }
   }
-  return getDefaultColorForLabel;
+  
+  if (isCategory) {
+    if (CATEGORY_COLORS[label]) {
+      return CATEGORY_COLORS[label];
+    }
+  }
+  
+  // ハッシュベースで色を決定
+  const hash = label.split("").reduce((acc, char) => {
+    return char.charCodeAt(0) + ((acc << 5) - acc);
+  }, 0);
+  return DEFAULT_COLORS[Math.abs(hash) % DEFAULT_COLORS.length];
 };
 
 type NotionSelectProps = {
@@ -78,32 +123,9 @@ export function NotionSelect({
   const [isSaving, setIsSaving] = useState(false);
   // カテゴリの場合はデフォルト色を取得、それ以外は空文字列から取得
   // Transportationの場合はデフォルトで薄いグレー
-  // 初期化を遅らせるため、useStateの初期値として直接計算するのではなく、useEffectで設定
+  // 初期化エラーを避けるため、初期色は常にデフォルト値を使用
+  // 実際にオプションを作成する時にのみgetDefaultColorForLabelを呼び出す
   const [newOptionColor, setNewOptionColor] = useState<string>("#E5E7EB");
-  
-  // 初期色を設定（コンポーネントがマウントされた後に実行）
-  useEffect(() => {
-    // 次のフレームで実行することで、すべてのインポートが確実に初期化されるまで待つ
-    const timeoutId = setTimeout(() => {
-      try {
-        const getColor = loadGetDefaultColorForLabel();
-        let initialColor = "#E5E7EB"; // デフォルト
-        if (isCategory) {
-          initialColor = getColor("", false, true);
-        } else if (isTransportation) {
-          initialColor = "#E5E7EB"; // 薄いグレー（デフォルト）
-        } else {
-          initialColor = getColor("", isPrefecture, false);
-        }
-        setNewOptionColor(initialColor);
-      } catch (e) {
-        console.error("[NotionSelect] Error setting initial color:", e);
-        setNewOptionColor("#E5E7EB"); // フォールバック
-      }
-    }, 0);
-    
-    return () => clearTimeout(timeoutId);
-  }, [isCategory, isTransportation, isPrefecture]);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [editingOptionIndex, setEditingOptionIndex] = useState<number | null>(
     null
@@ -151,10 +173,9 @@ export function NotionSelect({
       onValueChange(newOptionText.trim());
       setNewOptionText("");
       // カテゴリの場合はデフォルト色を取得、それ以外は空文字列から取得
-      const getColor = loadGetDefaultColorForLabel();
       const defaultColor = isCategory
-        ? getColor("", false, true)
-        : getColor("", isPrefecture, false);
+        ? getDefaultColorForLabel("", false, true)
+        : getDefaultColorForLabel("", isPrefecture, false);
       setNewOptionColor(defaultColor);
       setModalVisible(false);
     }
@@ -169,10 +190,9 @@ export function NotionSelect({
       setNewOptionColor(existingColor);
     } else {
       // カテゴリの場合はカテゴリ用のデフォルト色、それ以外は通常のデフォルト色
-      const getColor = loadGetDefaultColorForLabel();
       const defaultColor = isCategory
-        ? getColor(options[index].label, false, true)
-        : getColor(options[index].label, isPrefecture, false);
+        ? getDefaultColorForLabel(options[index].label, false, true)
+        : getDefaultColorForLabel(options[index].label, isPrefecture, false);
       setNewOptionColor(defaultColor);
     }
     setShowColorPicker(false);
@@ -217,12 +237,11 @@ export function NotionSelect({
       setNewOptionText("");
       // カテゴリの場合はデフォルト色を取得、それ以外は空文字列から取得
       // Transportationの場合はデフォルトで薄いグレー
-      const getColor = loadGetDefaultColorForLabel();
       const defaultColor = isCategory
-        ? getColor("", false, true)
+        ? getDefaultColorForLabel("", false, true)
         : isTransportation
         ? "#E5E7EB" // 薄いグレー（デフォルト）
-        : getColor("", isPrefecture, false);
+        : getDefaultColorForLabel("", isPrefecture, false);
       setNewOptionColor(defaultColor);
     }
   };
@@ -582,12 +601,11 @@ export function NotionSelect({
                       setNewOptionText("");
                       // カテゴリの場合はデフォルト色を取得、それ以外は空文字列から取得
                       // Transportationの場合はデフォルトで薄いグレー
-                      const getColor = loadGetDefaultColorForLabel();
                       const defaultColor = isCategory
-                        ? getColor("", false, true)
+                        ? getDefaultColorForLabel("", false, true)
                         : isTransportation
                         ? "#E5E7EB" // 薄いグレー（デフォルト）
-                        : getColor("", isPrefecture, false);
+                        : getDefaultColorForLabel("", isPrefecture, false);
                       setNewOptionColor(defaultColor);
                     }}
                   >
@@ -672,12 +690,11 @@ export function NotionSelect({
                 setNewOptionText("");
                 // カテゴリの場合はデフォルト色を取得、それ以外は空文字列から取得
                 // Transportationの場合はデフォルトで薄いグレー
-                const getColor = loadGetDefaultColorForLabel();
                 const defaultColor = isCategory
-                  ? getColor("", false, true)
+                  ? getDefaultColorForLabel("", false, true)
                   : isTransportation
                   ? "#E5E7EB" // 薄いグレー（デフォルト）
-                  : getColor("", isPrefecture, false);
+                  : getDefaultColorForLabel("", isPrefecture, false);
                 setNewOptionColor(defaultColor);
               }}
             >
