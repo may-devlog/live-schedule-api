@@ -137,7 +137,7 @@ export default function EditTrafficScreen() {
     // schedule_idを取得するために既存データを再取得
     let scheduleId: number;
     try {
-      const res = await fetch(`${API_BASE}/traffic/${trafficId}`);
+      const res = await authenticatedFetch(getApiUrl(`/traffic/${trafficId}`));
       if (!res.ok) throw new Error("Failed to fetch traffic");
       const traffic: Traffic = await res.json();
       scheduleId = traffic.schedule_id;
