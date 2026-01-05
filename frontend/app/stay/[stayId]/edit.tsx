@@ -17,10 +17,7 @@ import { authenticatedFetch, getApiUrl } from "../../../utils/api";
 import { NotionSelect } from "../../../components/notion-select";
 import { NotionDatePicker } from "../../../components/notion-date-picker";
 import type { SelectOption } from "../../../types/select-option";
-import {
-  loadStaySelectOptions,
-  saveStaySelectOptions,
-} from "../../../utils/select-options-storage";
+// 動的インポートで循環依存を回避（loadStaySelectOptions, saveStaySelectOptions）
 import { PageHeader } from "../../../components/PageHeader";
 
 type Stay = {
