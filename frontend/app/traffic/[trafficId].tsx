@@ -1,7 +1,7 @@
 // app/traffic/[trafficId].tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, RefreshControl, Platform } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, RefreshControl, Platform, Alert } from "react-native";
 
 type Traffic = {
   id: number;
@@ -51,6 +51,92 @@ export default function TrafficDetailScreen() {
     // 複製時はscheduleIdをコピーせず、空にする（後で選択可能）
     if (!traffic) return;
     router.push(`/traffic/new?copyFrom=${trafficId}`);
+  };
+
+  const handleDelete = () => {
+    const performDelete = async () => {
+      try {
+        console.log("[DELETE] Attempting to delete traffic:", trafficId);
+        const res = await authenticatedFetch(getApiUrl(`/traffic/${trafficId}`), {
+          method: "DELETE",
+        });
+        console.log("[DELETE] Response status:", res.status);
+        console.log("[DELETE] Response ok:", res.ok);
+        
+        if (!res.ok) {
+          let errorMessage = "削除に失敗しました";
+          try {
+            const text = await res.text();
+            if (text) {
+              try {
+                const error = JSON.parse(text);
+                errorMessage = error.error || errorMessage;
+              } catch {
+                // JSONパースに失敗した場合は、テキストをそのまま使用
+                errorMessage = text || errorMessage;
+              }
+            }
+          } catch {
+            // レスポンスの読み取りに失敗した場合は、ステータスコードを使用
+            errorMessage = `削除に失敗しました (${res.status})`;
+          }
+          if (Platform.OS === "web" && typeof window !== "undefined" && window.alert) {
+            window.alert(`エラー: ${errorMessage}`);
+          } else {
+            Alert.alert("エラー", errorMessage);
+          }
+          return;
+        }
+        
+        // 削除成功メッセージを表示
+        const successMessage = "交通情報を削除しました";
+        if (Platform.OS === "web" && typeof window !== "undefined" && window.alert) {
+          window.alert(successMessage);
+          // 少し待ってから遷移（アラートが閉じるのを待つ）
+          setTimeout(() => {
+            router.replace("/");
+          }, 100);
+        } else {
+          Alert.alert("削除完了", successMessage, [
+            {
+              text: "OK",
+              onPress: () => {
+                router.replace("/");
+              },
+            },
+          ]);
+        }
+      } catch (error: any) {
+        const errorMessage = error.message || "削除に失敗しました";
+        if (Platform.OS === "web" && typeof window !== "undefined" && window.alert) {
+          window.alert(`エラー: ${errorMessage}`);
+        } else {
+          Alert.alert("エラー", errorMessage);
+        }
+      }
+    };
+
+    if (Platform.OS === "web" && typeof window !== "undefined" && window.confirm) {
+      if (window.confirm("この交通情報を削除しますか？この操作は取り消せません。")) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        "削除確認",
+        "この交通情報を削除しますか？この操作は取り消せません。",
+        [
+          {
+            text: "キャンセル",
+            style: "cancel",
+          },
+          {
+            text: "削除",
+            style: "destructive",
+            onPress: performDelete,
+          },
+        ]
+      );
+    }
   };
 
   const fetchTraffic = async () => {
@@ -211,6 +297,12 @@ export default function TrafficDetailScreen() {
                 onPress={handleEdit}
               >
                 <Text style={styles.editButtonText}>編集</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={handleDelete}
+              >
+                <Text style={styles.deleteButtonText}>削除</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -391,6 +483,17 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   editButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  deleteButton: {
+    backgroundColor: "#d93025",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 3,
+  },
+  deleteButtonText: {
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "600",
