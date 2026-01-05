@@ -1,12 +1,90 @@
 // 選択肢の永続化ユーティリティ
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { SelectOption } from "../types/select-option";
-import {
-  stringArrayToOptions,
-  optionsToStringArray,
-  getDefaultColorForLabel,
-} from "../types/select-option";
 import { authenticatedFetch, getApiUrl } from "./api";
+
+// 色の決定ロジックを直接実装して循環依存を回避
+const getDefaultColorForLabel = (() => {
+  const DEFAULT_COLORS = [
+    "#FEE2E2", "#FEF3C7", "#D1FAE5", "#DBEAFE", "#E9D5FF", "#FCE7F3",
+    "#E5E7EB", "#FED7AA", "#ECFCCB", "#CCFBF1", "#E0E7FF", "#F3E8FF",
+  ];
+
+  const PREFECTURE_REGIONS: Record<string, string> = {
+    "北海道": "北海道",
+    "青森": "東北", "岩手": "東北", "宮城": "東北", "秋田": "東北", "山形": "東北", "福島": "東北",
+    "茨城": "関東", "栃木": "関東", "群馬": "関東", "埼玉": "関東", "千葉": "関東", "東京": "関東", "神奈川": "関東",
+    "新潟": "甲信越", "富山": "甲信越", "石川": "甲信越", "福井": "甲信越", "山梨": "甲信越", "長野": "甲信越",
+    "岐阜": "東海", "静岡": "東海", "愛知": "東海", "三重": "東海",
+    "滋賀": "近畿", "京都": "近畿", "大阪": "近畿", "兵庫": "近畿", "奈良": "近畿", "和歌山": "近畿",
+    "鳥取": "中国", "島根": "中国", "岡山": "中国", "広島": "中国", "山口": "中国",
+    "徳島": "四国", "香川": "四国", "愛媛": "四国", "高知": "四国",
+    "福岡": "九州", "佐賀": "九州", "長崎": "九州", "熊本": "九州", "大分": "九州", "宮崎": "九州", "鹿児島": "九州", "沖縄": "九州",
+  };
+
+  const REGION_COLORS: Record<string, string> = {
+    "北海道": "#DBEAFE", "東北": "#E9D5FF", "関東": "#FEE2E2", "甲信越": "#FED7AA",
+    "東海": "#D1FAE5", "近畿": "#FEF3C7", "中国": "#CCFBF1", "四国": "#ECFCCB", "九州": "#FCE7F3",
+  };
+
+  const CATEGORY_COLORS: Record<string, string> = {
+    "フェス": "#FEE2E2", "イベント": "#D1FAE5", "舞台": "#E9D5FF", "その他": "#E5E7EB",
+  };
+
+  const SELLER_COLORS: Record<string, string> = {
+    "チケットぴあ": "#BFDBFE", "イープラス": "#F9D5E5", "ローチケ": "#93C5FD", "その他": "#E5E7EB",
+  };
+
+  return (
+    label: string,
+    isPrefecture: boolean = false,
+    isCategory: boolean = false,
+    isSeller: boolean = false
+  ): string => {
+    if (isPrefecture) {
+      const region = PREFECTURE_REGIONS[label];
+      if (region && REGION_COLORS[region]) {
+        return REGION_COLORS[region];
+      }
+    }
+    
+    if (isCategory) {
+      if (CATEGORY_COLORS[label]) {
+        return CATEGORY_COLORS[label];
+      }
+    }
+    
+    if (isSeller) {
+      if (SELLER_COLORS[label]) {
+        return SELLER_COLORS[label];
+      }
+    }
+    
+    const hash = label.split("").reduce((acc, char) => {
+      return char.charCodeAt(0) + ((acc << 5) - acc);
+    }, 0);
+    return DEFAULT_COLORS[Math.abs(hash) % DEFAULT_COLORS.length];
+  };
+})();
+
+// stringArrayToOptionsを直接実装して循環依存を回避
+const stringArrayToOptions = (
+  strings: string[],
+  colorMap?: Record<string, string>,
+  isPrefecture: boolean = false,
+  isCategory: boolean = false,
+  isSeller: boolean = false
+): SelectOption[] => {
+  return strings.map((str) => ({
+    label: str,
+    color: colorMap?.[str] || getDefaultColorForLabel(str, isPrefecture, isCategory, isSeller),
+  }));
+};
+
+// optionsToStringArrayを直接実装
+const optionsToStringArray = (options: SelectOption[]): string[] => {
+  return options.map((opt) => opt.label);
+};
 
 const STORAGE_KEYS = {
   CATEGORIES: "@select_options:categories",
