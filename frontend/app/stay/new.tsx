@@ -1,6 +1,6 @@
 // app/stay/new.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -123,13 +123,17 @@ export default function NewStayScreen() {
 
   // 既存データを複製する場合の読み込み
   useEffect(() => {
-    if (!copyFrom) return;
+    if (!copyFrom) {
+      isInitialLoad.current = false;
+      return;
+    }
 
     const loadStayForCopy = async () => {
       try {
         const res = await authenticatedFetch(getApiUrl(`/stay/${copyFrom}`));
         if (!res.ok) {
           console.warn("Stay not found for copy:", copyFrom);
+          isInitialLoad.current = false;
           return;
         }
         const data: Stay = await res.json();
@@ -147,8 +151,10 @@ export default function NewStayScreen() {
         if (!scheduleId && data.schedule_id) {
           setScheduleId(data.schedule_id.toString());
         }
+        isInitialLoad.current = false;
       } catch (e: any) {
         console.error("Error loading stay for copy:", e);
+        isInitialLoad.current = false;
       }
     };
 
@@ -157,7 +163,13 @@ export default function NewStayScreen() {
 
   // scheduleIdが渡された場合、スケジュール情報を取得してチェックインをデフォルト値に設定
   useEffect(() => {
-    if (!scheduleId || copyFrom || checkIn || allSchedules.length === 0) return; // 複製の場合、または既にチェックインが設定されている場合、またはスケジュール一覧が未取得の場合はスキップ
+    if (!scheduleId || copyFrom || checkIn || allSchedules.length === 0) {
+      // スケジュール一覧が取得済みで、scheduleIdがない場合、isInitialLoadをfalseに設定
+      if (allSchedules.length > 0 && !scheduleId && !copyFrom) {
+        isInitialLoad.current = false;
+      }
+      return; // 複製の場合、または既にチェックインが設定されている場合、またはスケジュール一覧が未取得の場合はスキップ
+    }
 
     // 全スケジュール一覧から該当するスケジュールを検索
     const schedule = allSchedules.find((s) => s.id.toString() === scheduleId);
@@ -165,8 +177,9 @@ export default function NewStayScreen() {
     if (schedule?.date) {
       const checkInDateTime = `${schedule.date} 15:00`;
       setCheckIn(checkInDateTime);
+      isInitialLoad.current = false;
     }
-  }, [scheduleId, copyFrom, allSchedules]);
+  }, [scheduleId, copyFrom, allSchedules, checkIn]);
 
   const handleStatusesChange = async (newStatuses: SelectOption[]) => {
     setStatuses(newStatuses);
@@ -212,6 +225,9 @@ export default function NewStayScreen() {
 
   // チェックイン変更時に、キャンセル期限日時がNULLの場合、デフォルト値を設定
   useEffect(() => {
+    // 初回ロード時はスキップ（既存データから設定されるため）
+    if (isInitialLoad.current) return;
+    
     if (checkIn && !deadline) {
       const defaultDeadline = getCheckInDateAtMidnight(checkIn);
       if (defaultDeadline) {
@@ -261,6 +277,7 @@ export default function NewStayScreen() {
   const [penalty, setPenalty] = useState("");
   const [status, setStatus] = useState<string | null>("Keep");
   const [submitting, setSubmitting] = useState(false);
+  const isInitialLoad = useRef(true);
 
   const handleSubmit = async () => {
     if (!scheduleId || scheduleId === "undefined" || scheduleId === "null") {

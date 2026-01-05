@@ -35,7 +35,7 @@ export default function StayDetailScreen() {
   const [stay, setStay] = useState<Stay | null>(null);
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
