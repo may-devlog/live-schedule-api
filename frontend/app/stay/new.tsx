@@ -84,8 +84,9 @@ export default function NewStayScreen() {
       const statusesData = await loadStayStatuses();
       setStatuses(statusesData);
       
-      // Website選択肢を取得
+      // Website選択肢を取得（動的インポートで循環依存を回避）
       try {
+        const { loadStaySelectOptions } = await import("../../utils/select-options-storage");
         const websiteData = await loadStaySelectOptions("WEBSITE");
         setWebsiteOptions(websiteData);
       } catch (e) {
@@ -184,6 +185,8 @@ export default function NewStayScreen() {
   const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
     setWebsiteOptions(newOptions);
     try {
+      // 動的インポートで循環依存を回避
+      const { saveStaySelectOptions } = await import("../../utils/select-options-storage");
       await saveStaySelectOptions("WEBSITE", newOptions);
     } catch (e) {
       console.error("[NewStay] Failed to save website options:", e);
