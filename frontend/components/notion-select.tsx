@@ -14,8 +14,23 @@ import {
 import { NotionTag } from "./notion-tag";
 import { ColorPicker } from "./color-picker";
 import type { SelectOption } from "../types/select-option";
-import { sortByKanaOrder, sortByOrder } from "../types/select-option";
 import { saveSelectOptions, saveStaySelectOptions } from "../utils/select-options-storage";
+
+// ソート関数をコンポーネント内に直接実装して循環依存を回避
+const sortByKanaOrder = (options: SelectOption[]): SelectOption[] => {
+  return [...options].sort((a, b) => {
+    // 日本語の五十音順でソート（localeCompareを使用）
+    return a.label.localeCompare(b.label, "ja");
+  });
+};
+
+const sortByOrder = (options: SelectOption[]): SelectOption[] => {
+  return [...options].sort((a, b) => {
+    const orderA = a.order !== undefined ? a.order : Infinity;
+    const orderB = b.order !== undefined ? b.order : Infinity;
+    return orderA - orderB;
+  });
+};
 
 // 色の決定ロジックを関数内に移動して遅延初期化し、循環依存を回避
 const getDefaultColorForLabel = (() => {
