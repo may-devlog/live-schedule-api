@@ -61,23 +61,26 @@ export function NotionSelect({
   const [isSaving, setIsSaving] = useState(false);
   // カテゴリの場合はデフォルト色を取得、それ以外は空文字列から取得
   // Transportationの場合はデフォルトで薄いグレー
-  const getInitialColor = (): string => {
-    if (isCategory) {
-      return getDefaultColorForLabel("", false, true);
-    }
-    if (isTransportation) {
-      return "#E5E7EB"; // 薄いグレー（デフォルト）
-    }
-    return getDefaultColorForLabel("", isPrefecture, false);
-  };
-  const [newOptionColor, setNewOptionColor] = useState<string>(() => {
+  // 初期化を遅らせるため、useStateの初期値として直接計算するのではなく、useEffectで設定
+  const [newOptionColor, setNewOptionColor] = useState<string>("#E5E7EB");
+  
+  // 初期色を設定（コンポーネントがマウントされた後に実行）
+  useEffect(() => {
     try {
-      return getInitialColor();
+      let initialColor = "#E5E7EB"; // デフォルト
+      if (isCategory) {
+        initialColor = getDefaultColorForLabel("", false, true);
+      } else if (isTransportation) {
+        initialColor = "#E5E7EB"; // 薄いグレー（デフォルト）
+      } else {
+        initialColor = getDefaultColorForLabel("", isPrefecture, false);
+      }
+      setNewOptionColor(initialColor);
     } catch (e) {
-      console.error("[NotionSelect] Error getting initial color:", e);
-      return "#E5E7EB"; // フォールバック
+      console.error("[NotionSelect] Error setting initial color:", e);
+      setNewOptionColor("#E5E7EB"); // フォールバック
     }
-  });
+  }, [isCategory, isTransportation, isPrefecture]);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [editingOptionIndex, setEditingOptionIndex] = useState<number | null>(
     null
