@@ -14,7 +14,23 @@ import {
 import { NotionTag } from "./notion-tag";
 import { ColorPicker } from "./color-picker";
 import type { SelectOption } from "../types/select-option";
-import { saveSelectOptions, saveStaySelectOptions } from "../utils/select-options-storage";
+// 動的インポートで循環依存を回避
+type SaveFunction = (key: string, options: SelectOption[]) => Promise<void>;
+let saveSelectOptions: SaveFunction | null = null;
+let saveStaySelectOptions: SaveFunction | null = null;
+
+const loadSaveFunctions = async (): Promise<{ saveSelectOptions: SaveFunction | null; saveStaySelectOptions: SaveFunction | null }> => {
+  if (!saveSelectOptions || !saveStaySelectOptions) {
+    try {
+      const module = await import("../utils/select-options-storage");
+      saveSelectOptions = module.saveSelectOptions;
+      saveStaySelectOptions = module.saveStaySelectOptions;
+    } catch (e) {
+      console.error("[NotionSelect] Error loading save functions:", e);
+    }
+  }
+  return { saveSelectOptions, saveStaySelectOptions };
+};
 
 // ソート関数をコンポーネント内に直接実装して循環依存を回避
 const sortByKanaOrder = (options: SelectOption[]): SelectOption[] => {
@@ -361,6 +377,9 @@ export function NotionSelect({
     if ((!optionType && !stayOptionType) || !onOptionsChange) return;
     try {
       setIsSaving(true);
+      // 動的インポートで関数を読み込む
+      const { saveSelectOptions: saveSelect, saveStaySelectOptions: saveStay } = await loadSaveFunctions();
+      
       // displayedOptionsの順序に基づいてoptionsを更新
       const updatedOptions = displayedOptions.map((opt, index) => {
         const originalOpt = options.find((o) => o.label === opt.label);
@@ -369,10 +388,10 @@ export function NotionSelect({
           order: index,
         };
       });
-      if (stayOptionType) {
-        await saveStaySelectOptions(stayOptionType, updatedOptions);
-      } else if (optionType) {
-        await saveSelectOptions(optionType, updatedOptions);
+      if (stayOptionType && saveStay) {
+        await saveStay(stayOptionType, updatedOptions);
+      } else if (optionType && saveSelect) {
+        await saveSelect(optionType, updatedOptions);
       }
       Alert.alert("保存完了", "並び順を保存しました");
       onOptionsChange(updatedOptions);
