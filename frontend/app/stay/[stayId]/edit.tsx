@@ -18,7 +18,7 @@ import { NotionSelect } from "../../../components/notion-select";
 import { NotionDatePicker } from "../../../components/notion-date-picker";
 import type { SelectOption } from "../../../types/select-option";
 import { PageHeader } from "../../../components/PageHeader";
-import { loadStaySelectOptions, saveStaySelectOptions } from "../../../utils/select-options-storage";
+// 動的インポートで循環依存を回避
 
 type Stay = {
   id: number;
@@ -74,8 +74,9 @@ export default function EditStayScreen() {
       const statusesData = await loadStayStatuses();
       setStatuses(statusesData);
       
-      // Website選択肢を取得
+      // Website選択肢を取得（動的インポートで循環依存を回避）
       try {
+        const { loadStaySelectOptions } = await import("../../../utils/select-options-storage");
         const websiteData = await loadStaySelectOptions("WEBSITE");
         setWebsiteOptions(websiteData);
       } catch (e) {
@@ -100,6 +101,8 @@ export default function EditStayScreen() {
   const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
     setWebsiteOptions(newOptions);
     try {
+      // 動的インポートで循環依存を回避
+      const { saveStaySelectOptions } = await import("../../../utils/select-options-storage");
       await saveStaySelectOptions("WEBSITE", newOptions);
     } catch (e) {
       console.error("[EditStay] Failed to save website options:", e);

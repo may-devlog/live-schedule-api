@@ -19,9 +19,8 @@ import type { SelectOption } from "../../types/select-option";
 import {
   loadSelectOptions,
   saveSelectOptions,
-  loadStaySelectOptions,
-  saveStaySelectOptions,
 } from "../../utils/select-options-storage";
+// 動的インポートで循環依存を回避（loadStaySelectOptions, saveStaySelectOptions）
 import { useEffect } from "react";
 import { HomeButton } from "../../components/HomeButton";
 import { NotionRelation } from "../../components/notion-relation";
