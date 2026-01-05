@@ -45,8 +45,8 @@ async function loadStayStatuses(): Promise<SelectOption[]> {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed) && parsed.length > 0) {
         if (typeof parsed[0] === "string") {
-          const { stringArrayToOptions } = require("../../../types/select-option");
-          return stringArrayToOptions(parsed, undefined, false, false);
+          // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
+          return parsed.map((str: string) => ({ label: str }));
         }
         return parsed as SelectOption[];
       }
@@ -54,8 +54,8 @@ async function loadStayStatuses(): Promise<SelectOption[]> {
   } catch (error) {
     console.error("Error loading stay statuses:", error);
   }
-  const { stringArrayToOptions } = require("../../../types/select-option");
-  return stringArrayToOptions(["Canceled", "Keep", "Done"], undefined, false, false);
+  // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
+  return ["Canceled", "Keep", "Done"].map((str) => ({ label: str }));
 }
 
 async function saveStayStatuses(options: SelectOption[]): Promise<void> {
