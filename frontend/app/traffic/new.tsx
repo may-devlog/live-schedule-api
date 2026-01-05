@@ -110,27 +110,15 @@ export default function NewTrafficScreen() {
 
   // scheduleIdが渡された場合、スケジュール情報を取得して利用日をデフォルト値に設定
   useEffect(() => {
-    if (!scheduleId || copyFrom || date) return; // 複製の場合、または既に日付が設定されている場合はスキップ
+    if (!scheduleId || copyFrom || date || allSchedules.length === 0) return; // 複製の場合、または既に日付が設定されている場合、またはスケジュール一覧が未取得の場合はスキップ
 
-    const loadScheduleForDefault = async () => {
-      try {
-        // 全スケジュール一覧から該当するスケジュールを検索
-        const res = await authenticatedFetch(getApiUrl("/schedules"));
-        if (res.ok) {
-          const schedules: Schedule[] = await res.json();
-          const schedule = schedules.find((s) => s.id.toString() === scheduleId);
-          // 利用日をライブ当日に設定
-          if (schedule?.date) {
-            setDate(schedule.date);
-          }
-        }
-      } catch (e) {
-        console.error("[NewTraffic] Failed to fetch schedule for default:", e);
-      }
-    };
-
-    loadScheduleForDefault();
-  }, [scheduleId, copyFrom, date]);
+    // 全スケジュール一覧から該当するスケジュールを検索
+    const schedule = allSchedules.find((s) => s.id.toString() === scheduleId);
+    // 利用日をライブ当日に設定
+    if (schedule?.date) {
+      setDate(schedule.date);
+    }
+  }, [scheduleId, copyFrom, allSchedules]);
 
   const handleTransportationsChange = async (
     newTransportations: SelectOption[]

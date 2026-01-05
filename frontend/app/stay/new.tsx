@@ -157,28 +157,16 @@ export default function NewStayScreen() {
 
   // scheduleIdが渡された場合、スケジュール情報を取得してチェックインをデフォルト値に設定
   useEffect(() => {
-    if (!scheduleId || copyFrom || checkIn) return; // 複製の場合、または既にチェックインが設定されている場合はスキップ
+    if (!scheduleId || copyFrom || checkIn || allSchedules.length === 0) return; // 複製の場合、または既にチェックインが設定されている場合、またはスケジュール一覧が未取得の場合はスキップ
 
-    const loadScheduleForDefault = async () => {
-      try {
-        // 全スケジュール一覧から該当するスケジュールを検索
-        const res = await authenticatedFetch(getApiUrl("/schedules"));
-        if (res.ok) {
-          const schedules: Schedule[] = await res.json();
-          const schedule = schedules.find((s) => s.id.toString() === scheduleId);
-          // チェックインをライブ当日の15:00に設定
-          if (schedule?.date) {
-            const checkInDateTime = `${schedule.date} 15:00`;
-            setCheckIn(checkInDateTime);
-          }
-        }
-      } catch (e) {
-        console.error("[NewStay] Failed to fetch schedule for default:", e);
-      }
-    };
-
-    loadScheduleForDefault();
-  }, [scheduleId, copyFrom, checkIn]);
+    // 全スケジュール一覧から該当するスケジュールを検索
+    const schedule = allSchedules.find((s) => s.id.toString() === scheduleId);
+    // チェックインをライブ当日の15:00に設定
+    if (schedule?.date) {
+      const checkInDateTime = `${schedule.date} 15:00`;
+      setCheckIn(checkInDateTime);
+    }
+  }, [scheduleId, copyFrom, allSchedules]);
 
   const handleStatusesChange = async (newStatuses: SelectOption[]) => {
     setStatuses(newStatuses);
