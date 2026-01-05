@@ -16,7 +16,10 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { NotionSelect } from "../../components/notion-select";
 import { NotionDatePicker } from "../../components/notion-date-picker";
 import type { SelectOption } from "../../types/select-option";
-// 動的インポートで循環依存を回避（loadStaySelectOptions, saveStaySelectOptions）
+import {
+  loadStaySelectOptions,
+  saveStaySelectOptions,
+} from "../../utils/select-options-storage";
 import { useEffect } from "react";
 import { HomeButton } from "../../components/HomeButton";
 import { NotionRelation } from "../../components/notion-relation";
