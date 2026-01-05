@@ -293,7 +293,8 @@ export async function loadStaySelectOptions(
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed) && parsed.length > 0) {
         if (typeof parsed[0] === "string") {
-          return stringArrayToOptions(parsed);
+          // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
+          return parsed.map((str: string) => ({ label: str }));
         }
         return parsed as SelectOption[];
       }
