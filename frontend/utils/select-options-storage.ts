@@ -3,8 +3,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { SelectOption } from "../types/select-option";
 import { authenticatedFetch, getApiUrl } from "./api";
 
-// 色の決定ロジックを直接実装して循環依存を回避
-const getDefaultColorForLabel = (() => {
+// 色の決定ロジックを関数内に移動してモジュール読み込み時の実行を回避
+function getDefaultColorForLabel(
+  label: string,
+  isPrefecture: boolean = false,
+  isCategory: boolean = false,
+  isSeller: boolean = false
+): string {
   const DEFAULT_COLORS = [
     "#FEE2E2", "#FEF3C7", "#D1FAE5", "#DBEAFE", "#E9D5FF", "#FCE7F3",
     "#E5E7EB", "#FED7AA", "#ECFCCB", "#CCFBF1", "#E0E7FF", "#F3E8FF",
@@ -35,51 +40,44 @@ const getDefaultColorForLabel = (() => {
     "チケットぴあ": "#BFDBFE", "イープラス": "#F9D5E5", "ローチケ": "#93C5FD", "その他": "#E5E7EB",
   };
 
-  return (
-    label: string,
-    isPrefecture: boolean = false,
-    isCategory: boolean = false,
-    isSeller: boolean = false
-  ): string => {
-    if (isPrefecture) {
-      const region = PREFECTURE_REGIONS[label];
-      if (region && REGION_COLORS[region]) {
-        return REGION_COLORS[region];
-      }
+  if (isPrefecture) {
+    const region = PREFECTURE_REGIONS[label];
+    if (region && REGION_COLORS[region]) {
+      return REGION_COLORS[region];
     }
-    
-    if (isCategory) {
-      if (CATEGORY_COLORS[label]) {
-        return CATEGORY_COLORS[label];
-      }
+  }
+  
+  if (isCategory) {
+    if (CATEGORY_COLORS[label]) {
+      return CATEGORY_COLORS[label];
     }
-    
-    if (isSeller) {
-      if (SELLER_COLORS[label]) {
-        return SELLER_COLORS[label];
-      }
+  }
+  
+  if (isSeller) {
+    if (SELLER_COLORS[label]) {
+      return SELLER_COLORS[label];
     }
-    
-    const hash = label.split("").reduce((acc, char) => {
-      return char.charCodeAt(0) + ((acc << 5) - acc);
-    }, 0);
-    return DEFAULT_COLORS[Math.abs(hash) % DEFAULT_COLORS.length];
-  };
-})();
+  }
+  
+  const hash = label.split("").reduce((acc, char) => {
+    return char.charCodeAt(0) + ((acc << 5) - acc);
+  }, 0);
+  return DEFAULT_COLORS[Math.abs(hash) % DEFAULT_COLORS.length];
+}
 
 // stringArrayToOptionsを直接実装して循環依存を回避
-const stringArrayToOptions = (
+function stringArrayToOptions(
   strings: string[],
   colorMap?: Record<string, string>,
   isPrefecture: boolean = false,
   isCategory: boolean = false,
   isSeller: boolean = false
-): SelectOption[] => {
+): SelectOption[] {
   return strings.map((str) => ({
     label: str,
     color: colorMap?.[str] || getDefaultColorForLabel(str, isPrefecture, isCategory, isSeller),
   }));
-};
+}
 
 // optionsToStringArrayを直接実装
 const optionsToStringArray = (options: SelectOption[]): string[] => {
