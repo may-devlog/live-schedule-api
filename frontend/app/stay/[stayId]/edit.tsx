@@ -14,11 +14,11 @@ import {
   Platform,
 } from "react-native";
 import { authenticatedFetch, getApiUrl } from "../../../utils/api";
-// NotionSelectを動的インポートで循環依存を回避
+import { NotionSelect } from "../../../components/notion-select";
 import { NotionDatePicker } from "../../../components/notion-date-picker";
 import type { SelectOption } from "../../../types/select-option";
 import { PageHeader } from "../../../components/PageHeader";
-// 動的インポートで循環依存を回避
+// 動的インポートで循環依存を回避（loadStaySelectOptions, saveStaySelectOptions）
 
 type Stay = {
   id: number;
@@ -45,22 +45,8 @@ export default function EditStayScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [NotionSelectComponent, setNotionSelectComponent] = useState<React.ComponentType<any> | null>(null);
-  const [notionSelectError, setNotionSelectError] = useState<string | null>(null);
-
   useEffect(() => {
     const loadOptions = async () => {
-      // NotionSelectコンポーネントを動的インポートで循環依存を回避
-      try {
-        const { NotionSelect } = await import("../../../components/notion-select");
-        setNotionSelectComponent(() => NotionSelect);
-        setNotionSelectError(null);
-      } catch (e: any) {
-        const errorMsg = e?.message || String(e) || "Unknown error";
-        console.error("[EditStay] Failed to load NotionSelect:", e);
-        setNotionSelectError(`NotionSelect読み込みエラー: ${errorMsg}`);
-        // エラーが発生しても画面は表示し続ける
-      }
 
       // loadStayStatusesをコンポーネント内で定義して循環依存を回避
       const loadStayStatuses = async (): Promise<SelectOption[]> => {
@@ -421,13 +407,8 @@ export default function EditStayScreen() {
         onChangeText={setHotelName}
       />
 
-      {notionSelectError ? (
-        <View>
-          <Text style={styles.label}>予約サイト</Text>
-          <Text style={styles.errorText}>{notionSelectError}</Text>
-        </View>
-      ) : websiteOptions.length > 0 && NotionSelectComponent ? (
-        <NotionSelectComponent
+      {websiteOptions.length > 0 ? (
+        <NotionSelect
           label="予約サイト"
           value={website}
           options={websiteOptions}
@@ -478,13 +459,8 @@ export default function EditStayScreen() {
         keyboardType="numeric"
       />
 
-      {notionSelectError ? (
-        <View>
-          <Text style={styles.label}>ステータス</Text>
-          <Text style={styles.errorText}>{notionSelectError}</Text>
-        </View>
-      ) : statuses.length > 0 && NotionSelectComponent ? (
-        <NotionSelectComponent
+      {statuses.length > 0 ? (
+        <NotionSelect
           label="ステータス"
           value={status}
           options={statuses}
