@@ -37,6 +37,7 @@ export default function EditScheduleScreen() {
   const [lineupOptions, setLineupOptions] = useState<SelectOption[]>([]);
   const [sellers, setSellers] = useState<SelectOption[]>([]);
   const [statuses, setStatuses] = useState<SelectOption[]>([]);
+  const [groups, setGroups] = useState<SelectOption[]>([]);
   const [optionsLoaded, setOptionsLoaded] = useState(false);
 
   // 選択肢を読み込む
@@ -44,7 +45,7 @@ export default function EditScheduleScreen() {
     const loadOptions = async () => {
       try {
         // データベースから直接選択肢を読み込む（認証されていない場合でも試行）
-        const loadFromDatabase = async (optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES"): Promise<SelectOption[]> => {
+        const loadFromDatabase = async (optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "GROUPS"): Promise<SelectOption[]> => {
           try {
             const res = await authenticatedFetch(getApiUrl(`/select-options/${optionType.toLowerCase()}`));
             if (res.ok) {
@@ -60,13 +61,14 @@ export default function EditScheduleScreen() {
           return await loadSelectOptions(optionType);
         };
 
-        const [cats, areasData, targetsData, sellersData, statusesData] =
+        const [cats, areasData, targetsData, sellersData, statusesData, groupsData] =
           await Promise.all([
             loadFromDatabase("CATEGORIES"),
             loadFromDatabase("AREAS"),
             loadFromDatabase("TARGETS"),
             loadFromDatabase("SELLERS"),
             loadFromDatabase("STATUSES"),
+            loadFromDatabase("GROUPS"),
           ]);
         setCategories(cats);
         setAreas(areasData);
@@ -75,6 +77,7 @@ export default function EditScheduleScreen() {
         setTargets(targetsData); // TargetはLineupの選択肢を読み込む（編集不可）
         setSellers(sellersData);
         setStatuses(statusesData);
+        setGroups(groupsData);
       } catch (error) {
         console.error("Error loading select options:", error);
       } finally {
@@ -145,7 +148,7 @@ export default function EditScheduleScreen() {
   // 必須
   const [title, setTitle] = useState("");
   // 任意（未入力時はtitleを使用）
-  const [group, setGroup] = useState("");
+  const [group, setGroup] = useState<string | null>(null);
   const [area, setArea] = useState<string | null>(null);
   const [venue, setVenue] = useState("");
 
@@ -186,7 +189,7 @@ export default function EditScheduleScreen() {
 
         // フォームに既存データを設定
         setTitle(found.title || "");
-        setGroup(found.group || "");
+        setGroup(found.group || null);
         setArea(found.area || null);
         setVenue(found.venue || "");
         setDate(found.date || null);
@@ -257,7 +260,7 @@ export default function EditScheduleScreen() {
 
     const payload = {
       title: title.trim(),
-      group: group.trim() || null, // 空文字列の場合はnull（未入力時はtitleを使用）
+      group: group || null, // 未選択の場合はnull（未入力時はtitleを使用）
       date: date || null,
       open: openTime || null,
       start: startTime || null,
@@ -385,11 +388,14 @@ export default function EditScheduleScreen() {
         onChangeText={setTitle}
       />
 
-      <Text style={styles.label}>グループ</Text>
-      <TextInput
-        style={styles.input}
+      <NotionSelect
+        label="グループ"
         value={group}
-        onChangeText={setGroup}
+        options={groups}
+        onValueChange={setGroup}
+        onOptionsChange={handleGroupsChange}
+        placeholder="選択してください"
+        optionType="GROUPS"
       />
 
       {/* Date/Time型 */}

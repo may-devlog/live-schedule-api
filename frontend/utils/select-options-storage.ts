@@ -104,6 +104,7 @@ const STORAGE_KEYS = {
   SELLERS: "@select_options:sellers",
   STATUSES: "@select_options:statuses",
   TRANSPORTATIONS: "@select_options:transportations",
+  GROUPS: "@select_options:groups",
 } as const;
 
 const STAY_STORAGE_KEYS = {
@@ -128,6 +129,7 @@ const DEFAULT_TARGETS: string[] = [];
 const DEFAULT_SELLERS = ["チケットぴあ", "イープラス", "ローチケ", "その他"];
 const DEFAULT_STATUSES = ["Canceled", "Pending", "Keep", "Done"];
 const DEFAULT_TRANSPORTATIONS = ["🚄 新幹線", "✈️ 飛行機", "🚃 在来線", "🚌 バス", "🚗 車", "🚕 タクシー", "その他"];
+const DEFAULT_GROUPS: string[] = [];
 
 // デフォルト選択肢を取得する関数
 function getDefaultOptions(
@@ -140,6 +142,7 @@ function getDefaultOptions(
     SELLERS: DEFAULT_SELLERS,
     STATUSES: DEFAULT_STATUSES,
     TRANSPORTATIONS: DEFAULT_TRANSPORTATIONS,
+    GROUPS: DEFAULT_GROUPS,
   };
   const isPrefecture = key === "AREAS";
   const isCategory = key === "CATEGORIES";

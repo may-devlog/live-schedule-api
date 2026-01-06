@@ -81,6 +81,7 @@ export default function DetailScreen() {
   const [targetColor, setTargetColor] = useState<string | null>(null);
   const [sellerColor, setSellerColor] = useState<string | null>(null);
   const [statusColor, setStatusColor] = useState<string | null>(null);
+  const [groupColor, setGroupColor] = useState<string | null>(null);
   
   // フィルタリング後のTargetとLineup
   const [filteredTarget, setFilteredTarget] = useState<string | null>(null);
@@ -196,6 +197,10 @@ export default function DetailScreen() {
       if (found.status) {
         const color = await getOptionColor(found.status, "STATUSES");
         setStatusColor(color);
+      }
+      if (found.group) {
+        const color = await getOptionColor(found.group, "GROUPS");
+        setGroupColor(color);
       }
     } catch (e: any) {
       setError(e.message ?? "Unknown error");
@@ -775,7 +780,13 @@ export default function DetailScreen() {
 
         {/* [Event Info] */}
         <NotionPropertyBlock title="イベント情報">
-          <NotionProperty label="グループ" value={schedule.group || "-"} />
+          <NotionProperty label="グループ">
+            {schedule.group ? (
+              <NotionTag label={schedule.group} color={groupColor || undefined} />
+            ) : (
+              <Text style={styles.emptyValue}>-</Text>
+            )}
+          </NotionProperty>
           <NotionProperty
             label="日付"
             value={schedule.date ?? formatDateTimeUTC(schedule.datetime)}

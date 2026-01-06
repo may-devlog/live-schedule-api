@@ -5,12 +5,13 @@ import { loadSelectOptions } from "./select-options-storage";
 export async function loadSelectOptionsMap(
   shareId?: string
 ): Promise<Map<string, Map<string, number>>> {
-  const [categories, areas, targets, sellers, statuses] = await Promise.all([
+  const [categories, areas, targets, sellers, statuses, groups] = await Promise.all([
     loadSelectOptions("CATEGORIES", shareId),
     loadSelectOptions("AREAS", shareId),
     loadSelectOptions("TARGETS", shareId),
     loadSelectOptions("SELLERS", shareId),
     loadSelectOptions("STATUSES", shareId),
+    loadSelectOptions("GROUPS", shareId),
   ]);
 
   const orderMap = new Map<string, Map<string, number>>();
@@ -48,6 +49,12 @@ export async function loadSelectOptionsMap(
     statusOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
   });
   orderMap.set("status", statusOrder);
+
+  const groupOrder = new Map<string, number>();
+  groups.forEach((opt, idx) => {
+    groupOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+  });
+  orderMap.set("group", groupOrder);
 
   return orderMap;
 }
