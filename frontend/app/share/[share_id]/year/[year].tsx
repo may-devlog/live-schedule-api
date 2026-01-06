@@ -238,6 +238,8 @@ export default function SharedYearScreen() {
   };
 
   const groupedSchedules = useMemo(() => {
+    console.log(`[SharedYear] groupedSchedules useMemo called, selectOptionsMap.size: ${selectOptionsMap.size}, field: ${groupingField}`);
+    
     const groupSchedules = (schedules: Schedule[], field: GroupingField): GroupedSchedule[] => {
       if (field === "none") {
         return [{ title: "", data: schedules }];
@@ -340,18 +342,27 @@ export default function SharedYearScreen() {
         }
 
         // orderがない場合は文字列比較
-        // デバッグ用: orderが見つからない場合のログ
-        if (field === "area") {
-          console.log(`[SharedYear] Order not found for area grouping:`, {
-            field,
-            titleA,
-            titleB,
-            orderA: orderMap?.get(titleA),
-            orderB: orderMap?.get(titleB),
-            orderMapSize: orderMap?.size,
-            selectOptionsMapKeys: Array.from(selectOptionsMap.keys()),
-            orderMapExists: orderMap !== undefined,
-          });
+        // デバッグ用: orderが見つからない場合のログ（最初の数回のみ）
+        if (field === "area" && (!orderMap || orderMap.size === 0 || orderMap.get(titleA) === undefined || orderMap.get(titleB) === undefined)) {
+          // ログの重複を避けるため、最初の数回のみ表示
+          const logKey = `${titleA}-${titleB}`;
+          if (!loggedMissingOrdersRef.current.has(logKey)) {
+            loggedMissingOrdersRef.current.add(logKey);
+            if (loggedMissingOrdersRef.current.size <= 3) {
+              console.log(`[SharedYear] Order not found for area grouping:`, {
+                field,
+                titleA,
+                titleB,
+                orderA: orderMap?.get(titleA),
+                orderB: orderMap?.get(titleB),
+                orderMapSize: orderMap?.size,
+                selectOptionsMapSize: selectOptionsMap.size,
+                selectOptionsMapKeys: Array.from(selectOptionsMap.keys()),
+                orderMapExists: orderMap !== undefined,
+                areaOrderMapEntries: selectOptionsMap.get("area") ? Array.from(selectOptionsMap.get("area")!.entries()).slice(0, 5) : [],
+              });
+            }
+          }
         }
         return titleA.localeCompare(titleB, "ja");
       });
