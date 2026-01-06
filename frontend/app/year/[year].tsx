@@ -20,6 +20,8 @@ import { NotionTag } from "../../components/notion-tag";
 import { getOptionColor, getOptionColorSync } from "../../utils/get-option-color";
 import { groupSchedules, type GroupingField, type GroupedSchedule } from "../../utils/group-schedules";
 import { loadSelectOptionsMap } from "../../utils/load-select-options-map";
+import { fetchAreaColors } from "../../utils/fetch-area-colors";
+import { formatDateTimeUTC } from "../../utils/format-datetime";
 
 export default function YearScreen() {
   const params = useLocalSearchParams<{ year: string }>();
@@ -114,18 +116,12 @@ const fetchYear = async (y: string) => {
   useEffect(() => {
     if (schedules.length === 0) return;
     
-    const fetchAreaColors = async () => {
-      const colorMap = new Map<number, string>();
-      for (const schedule of schedules) {
-        if (schedule.area) {
-          const color = await getOptionColor(schedule.area, "AREAS");
-          colorMap.set(schedule.id, color);
-        }
-      }
+    const loadAreaColors = async () => {
+      const colorMap = await fetchAreaColors(schedules);
       setAreaColors(colorMap);
     };
     
-    fetchAreaColors();
+    loadAreaColors();
   }, [schedules]);
 
   // 選択肢の並び順情報を取得（グルーピングのソート用）
@@ -380,21 +376,6 @@ const fetchYear = async (y: string) => {
   );
 }
 
-// RustのUTC時刻をそのまま表示するフォーマット
-function formatDateTimeUTC(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) {
-    return iso;
-  }
-
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  const hours = String(d.getUTCHours()).padStart(2, "0");
-  const minutes = String(d.getUTCMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
-}
 
 const styles = StyleSheet.create({
   container: {
