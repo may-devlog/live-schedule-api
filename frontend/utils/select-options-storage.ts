@@ -145,13 +145,18 @@ function getDefaultOptions(
   const isCategory = key === "CATEGORIES";
   const isSeller = key === "SELLERS";
   const options = stringArrayToOptions(defaults[key], undefined, isPrefecture, isCategory, isSeller);
+  // orderプロパティを確実に設定
+  const optionsWithOrder = options.map((opt, index) => ({
+    ...opt,
+    order: index,
+  }));
   if (key === "TRANSPORTATIONS") {
-    return options.map((opt) => ({
+    return optionsWithOrder.map((opt) => ({
       ...opt,
       color: opt.color || "#E5E7EB",
     }));
   }
-  return options;
+  return optionsWithOrder;
 }
 
 // データベースの選択肢とデフォルト選択肢をマージする関数

@@ -925,6 +925,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+    backgroundColor: "#f7f6f3",
+    paddingVertical: 4,
+    paddingHorizontal: 0,
   },
   card: {
     padding: 16,

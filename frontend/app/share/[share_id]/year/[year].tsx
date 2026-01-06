@@ -161,35 +161,48 @@ export default function SharedYearScreen() {
         const orderMap = new Map<string, Map<string, number>>();
         
         // 各選択肢タイプのorder情報をマップに保存
+        // loadSelectOptionsで取得した選択肢は既にorderでソートされているので、その順序を使用
         const categoryOrder = new Map<string, number>();
-        categories.forEach((opt, idx) => {
-          categoryOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        categories.forEach((opt) => {
+          // opt.orderが存在する場合はそれを使用、存在しない場合は配列のインデックスを使用
+          // ただし、loadSelectOptionsは既にorderでソートされているので、opt.orderを使用
+          if (opt.order !== undefined) {
+            categoryOrder.set(opt.label, opt.order);
+          }
         });
         orderMap.set("category", categoryOrder);
 
         const areaOrder = new Map<string, number>();
         // loadSelectOptionsで取得した選択肢は既にorderでソートされているので、その順序を使用
-        areas.forEach((opt, idx) => {
-          areaOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        areas.forEach((opt) => {
+          if (opt.order !== undefined) {
+            areaOrder.set(opt.label, opt.order);
+          }
         });
         orderMap.set("area", areaOrder);
 
         const targetOrder = new Map<string, number>();
-        targets.forEach((opt, idx) => {
-          targetOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        targets.forEach((opt) => {
+          if (opt.order !== undefined) {
+            targetOrder.set(opt.label, opt.order);
+          }
         });
         orderMap.set("target", targetOrder);
         orderMap.set("lineup", targetOrder); // LineupもTargetと同じ選択肢を使用
 
         const sellerOrder = new Map<string, number>();
-        sellers.forEach((opt, idx) => {
-          sellerOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        sellers.forEach((opt) => {
+          if (opt.order !== undefined) {
+            sellerOrder.set(opt.label, opt.order);
+          }
         });
         orderMap.set("seller", sellerOrder);
 
         const statusOrder = new Map<string, number>();
-        statuses.forEach((opt, idx) => {
-          statusOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        statuses.forEach((opt) => {
+          if (opt.order !== undefined) {
+            statusOrder.set(opt.label, opt.order);
+          }
         });
         orderMap.set("status", statusOrder);
 
