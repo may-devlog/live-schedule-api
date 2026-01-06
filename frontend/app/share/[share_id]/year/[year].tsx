@@ -508,6 +508,8 @@ export default function SharedYearScreen() {
           <SectionList
             sections={groupedSchedules}
             keyExtractor={(item) => item.id.toString()}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1 }}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
