@@ -39,6 +39,13 @@ type Stay = {
 
 const STAY_STATUSES_KEY = "@select_options:stay_statuses" as const;
 
+// 宿泊ステータス用の固定カラー
+const STAY_STATUS_COLORS: Record<string, string> = {
+  Canceled: "#E5E7EB", // gray
+  Keep: "#BFDBFE",     // blue
+  Done: "#D1FAE5",     // green
+};
+
 export default function EditStayScreen() {
   const { stayId } = useLocalSearchParams<{ stayId: string }>();
   const router = useRouter();
@@ -62,16 +69,26 @@ export default function EditStayScreen() {
             if (Array.isArray(parsed) && parsed.length > 0) {
               if (typeof parsed[0] === "string") {
                 // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
-                return parsed.map((str: string) => ({ label: str }));
+                return (parsed as string[]).map((str) => ({
+                  label: str,
+                  color: STAY_STATUS_COLORS[str] ?? undefined,
+                }));
               }
-              return parsed as SelectOption[];
+              // 既存データにも固定カラーを適用
+              return (parsed as SelectOption[]).map((opt) => ({
+                ...opt,
+                color: STAY_STATUS_COLORS[opt.label] ?? opt.color,
+              }));
             }
           }
         } catch (error) {
           console.error("Error loading stay statuses:", error);
         }
-        // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
-        return ["Canceled", "Keep", "Done"].map((str) => ({ label: str }));
+        // デフォルトのステータスにも固定カラーを適用
+        return ["Canceled", "Keep", "Done"].map((str) => ({
+          label: str,
+          color: STAY_STATUS_COLORS[str] ?? undefined,
+        }));
       };
 
       const statusesData = await loadStayStatuses();
