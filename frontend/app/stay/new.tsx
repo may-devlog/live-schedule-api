@@ -16,11 +16,10 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { NotionSelect } from "../../components/notion-select";
 import { NotionDatePicker } from "../../components/notion-date-picker";
 import type { SelectOption } from "../../types/select-option";
-// Website機能を一時的に無効化
-// import {
-//   loadStaySelectOptions,
-//   saveStaySelectOptions,
-// } from "../../utils/select-options-storage";
+import {
+  loadStaySelectOptions,
+  saveStaySelectOptions,
+} from "../../utils/select-options-storage";
 import { useEffect } from "react";
 import { HomeButton } from "../../components/HomeButton";
 import { NotionRelation } from "../../components/notion-relation";
@@ -53,9 +52,8 @@ export default function NewStayScreen() {
   const [scheduleId, setScheduleId] = useState<string | null>(initialScheduleId || null);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [statuses, setStatuses] = useState<SelectOption[]>([]);
-  // Website機能を一時的に無効化
-  // const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
-  // const [website, setWebsite] = useState<string | null>(null);
+  const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
+  const [website, setWebsite] = useState<string | null>(null);
   useEffect(() => {
     const loadOptions = async () => {
 
@@ -85,14 +83,13 @@ export default function NewStayScreen() {
       const statusesData = await loadStayStatuses();
       setStatuses(statusesData);
       
-      // Website機能を一時的に無効化
-      // // Website選択肢を取得
-      // try {
-      //   const websiteData = await loadStaySelectOptions("WEBSITE");
-      //   setWebsiteOptions(websiteData);
-      // } catch (e) {
-      //   console.error("[NewStay] Failed to fetch website options:", e);
-      // }
+      // Website選択肢を取得
+      try {
+        const websiteData = await loadStaySelectOptions("WEBSITE");
+        setWebsiteOptions(websiteData);
+      } catch (e) {
+        console.error("[NewStay] Failed to fetch website options:", e);
+      }
     };
     loadOptions();
     
@@ -131,11 +128,10 @@ export default function NewStayScreen() {
         setCheckIn(data.check_in || null);
         setCheckOut(data.check_out || null);
         setHotelName(data.hotel_name || "");
-        // Website機能を一時的に無効化
-        // setWebsite(data.website || null);
+        setWebsite(data.website || null);
         setFee(data.fee.toString());
         setBreakfastFlag(data.breakfast_flag);
-        // Deadline機能を一時的に無効化
+        // Deadline機能はまだ無効化
         // setDeadline(data.deadline || null);
         setPenalty(data.penalty?.toString() || "");
         setStatus(data.status || "Keep");
@@ -191,15 +187,14 @@ export default function NewStayScreen() {
     }
   };
 
-  // Website機能を一時的に無効化
-  // const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
-  //   setWebsiteOptions(newOptions);
-  //   try {
-  //     await saveStaySelectOptions("WEBSITE", newOptions);
-  //   } catch (e) {
-  //     console.error("[NewStay] Failed to save website options:", e);
-  //   }
-  // };
+  const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
+    setWebsiteOptions(newOptions);
+    try {
+      await saveStaySelectOptions("WEBSITE", newOptions);
+    } catch (e) {
+      console.error("[NewStay] Failed to save website options:", e);
+    }
+  };
 
   // 日付文字列をDateオブジェクトに変換するヘルパー関数
   const parseDateTime = (dateTimeStr: string): Date | null => {
@@ -328,12 +323,10 @@ export default function NewStayScreen() {
       check_in: checkIn,
       check_out: checkOut,
       hotel_name: hotelName.trim(),
-      // Website機能を一時的に無効化
-      // website: website || null,
-      website: null,
+      website: website || null,
       fee: feeNum,
       breakfast_flag: breakfastFlag,
-      // Deadline機能を一時的に無効化
+      // Deadline機能はまだ無効化
       // deadline: deadline || null,
       deadline: null,
       penalty: penaltyNum ?? null,
@@ -446,8 +439,7 @@ export default function NewStayScreen() {
         onChangeText={setHotelName}
       />
 
-      {/* Website機能を一時的に無効化 */}
-      {/* {websiteOptions.length > 0 ? (
+      {websiteOptions.length > 0 ? (
         <NotionSelect
           label="予約サイト"
           value={website}
@@ -462,7 +454,7 @@ export default function NewStayScreen() {
           <Text style={styles.label}>予約サイト</Text>
           <Text style={styles.emptyValue}>読み込み中...</Text>
         </View>
-      )} */}
+      )}
 
       <Text style={styles.label}>
         宿泊費 <Text style={styles.required}>*</Text>

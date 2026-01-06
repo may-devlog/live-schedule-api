@@ -17,11 +17,10 @@ import { authenticatedFetch, getApiUrl } from "../../../utils/api";
 import { NotionSelect } from "../../../components/notion-select";
 import { NotionDatePicker } from "../../../components/notion-date-picker";
 import type { SelectOption } from "../../../types/select-option";
-// Website機能を一時的に無効化
-// import {
-//   loadStaySelectOptions,
-//   saveStaySelectOptions,
-// } from "../../../utils/select-options-storage";
+import {
+  loadStaySelectOptions,
+  saveStaySelectOptions,
+} from "../../../utils/select-options-storage";
 import { PageHeader } from "../../../components/PageHeader";
 
 type Stay = {
@@ -45,8 +44,7 @@ export default function EditStayScreen() {
   const router = useRouter();
 
   const [statuses, setStatuses] = useState<SelectOption[]>([]);
-  // Website機能を一時的に無効化
-  // const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
+  const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,14 +77,13 @@ export default function EditStayScreen() {
       const statusesData = await loadStayStatuses();
       setStatuses(statusesData);
       
-      // Website機能を一時的に無効化
-      // // Website選択肢を取得
-      // try {
-      //   const websiteData = await loadStaySelectOptions("WEBSITE");
-      //   setWebsiteOptions(websiteData);
-      // } catch (e) {
-      //   console.error("[EditStay] Failed to fetch website options:", e);
-      // }
+      // Website選択肢を取得
+      try {
+        const websiteData = await loadStaySelectOptions("WEBSITE");
+        setWebsiteOptions(websiteData);
+      } catch (e) {
+        console.error("[EditStay] Failed to fetch website options:", e);
+      }
     };
     loadOptions();
   }, []);
@@ -103,15 +100,14 @@ export default function EditStayScreen() {
     }
   };
 
-  // Website機能を一時的に無効化
-  // const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
-  //   setWebsiteOptions(newOptions);
-  //   try {
-  //     await saveStaySelectOptions("WEBSITE", newOptions);
-  //   } catch (e) {
-  //     console.error("[EditStay] Failed to save website options:", e);
-  //   }
-  // };
+  const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
+    setWebsiteOptions(newOptions);
+    try {
+      await saveStaySelectOptions("WEBSITE", newOptions);
+    } catch (e) {
+      console.error("[EditStay] Failed to save website options:", e);
+    }
+  };
 
   // 日付文字列をDateオブジェクトに変換するヘルパー関数
   const parseDateTime = (dateTimeStr: string): Date | null => {
@@ -192,11 +188,10 @@ export default function EditStayScreen() {
   const [checkIn, setCheckIn] = useState<string | null>(null);
   const [checkOut, setCheckOut] = useState<string | null>(null);
   const [hotelName, setHotelName] = useState("");
-  // Website機能を一時的に無効化
-  // const [website, setWebsite] = useState<string | null>(null);
+  const [website, setWebsite] = useState<string | null>(null);
   const [fee, setFee] = useState("");
   const [breakfastFlag, setBreakfastFlag] = useState(false);
-  // Deadline機能を一時的に無効化
+  // Deadline機能はまだ無効化
   // const [deadline, setDeadline] = useState<string | null>(null);
   // const [deadlineError, setDeadlineError] = useState<string | null>(null);
   const [penalty, setPenalty] = useState("");
@@ -229,11 +224,10 @@ export default function EditStayScreen() {
         setCheckIn(data.check_in || null);
         setCheckOut(data.check_out || null);
         setHotelName(data.hotel_name || "");
-        // Website機能を一時的に無効化
-        // setWebsite(data.website || null);
+        setWebsite(data.website || null);
         setFee(data.fee.toString());
         setBreakfastFlag(data.breakfast_flag);
-        // Deadline機能を一時的に無効化
+        // Deadline機能はまだ無効化
         // setDeadline(data.deadline || null);
         setPenalty(data.penalty?.toString() || "");
         setStatus(data.status || "Keep");
@@ -300,12 +294,10 @@ export default function EditStayScreen() {
       check_in: checkIn,
       check_out: checkOut,
       hotel_name: hotelName.trim(),
-      // Website機能を一時的に無効化
-      // website: website || null,
-      website: null,
+      website: website || null,
       fee: feeNum,
       breakfast_flag: breakfastFlag,
-      // Deadline機能を一時的に無効化
+      // Deadline機能はまだ無効化
       // deadline: deadline || null,
       deadline: null,
       penalty: penaltyNum ?? null,
@@ -421,8 +413,7 @@ export default function EditStayScreen() {
         onChangeText={setHotelName}
       />
 
-      {/* Website機能を一時的に無効化 */}
-      {/* {websiteOptions.length > 0 ? (
+      {websiteOptions.length > 0 ? (
         <NotionSelect
           label="予約サイト"
           value={website}
@@ -437,7 +428,7 @@ export default function EditStayScreen() {
           <Text style={styles.label}>予約サイト</Text>
           <Text style={styles.emptyValue}>読み込み中...</Text>
         </View>
-      )} */}
+      )}
 
       <Text style={styles.label}>
         宿泊費 <Text style={styles.required}>*</Text>
