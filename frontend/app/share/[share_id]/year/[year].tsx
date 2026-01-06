@@ -42,119 +42,155 @@ export default function SharedYearScreen() {
   // 選択肢の並び順情報（グルーピングのソート用）
   const [selectOptionsMap, setSelectOptionsMap] = useState<Map<string, Map<string, number>>>(new Map());
 
-  const fetchAvailableYears = async () => {
-    try {
-      if (!share_id) return;
-      
-      // 共有スケジュールAPIから全データを取得して年を抽出
-      const url = getApiUrl(`/share/${share_id}`);
-      const res = await fetch(url);
-      if (!res.ok) return;
-
-      const data: Schedule[] = await res.json();
-      
-      // データから存在する年を抽出
-      const years = new Set<number>();
-      data.forEach((schedule) => {
-        if (schedule.date) {
-          // dateは"YYYY-MM-DD"形式
-          const year = parseInt(schedule.date.substring(0, 4), 10);
-          if (!isNaN(year)) {
-            years.add(year);
-          }
-        } else if (schedule.datetime) {
-          // datetimeから年を抽出
-          const date = new Date(schedule.datetime);
-          const year = date.getUTCFullYear();
-          if (!isNaN(year)) {
-            years.add(year);
-          }
-        }
-      });
-      // 年を降順でソート（新しい年から）
-      const sortedYears = Array.from(years).sort((a, b) => b - a);
-      setAvailableYears(sortedYears);
-    } catch (e: any) {
-      console.error("ERROR FETCHING AVAILABLE YEARS:", e);
-    }
-  };
-
-  const fetchYear = async (y: string) => {
-    try {
-      if (!share_id) return;
-      
-      setLoading(true);
-      setError(null);
-
-      // 共有スケジュールAPIから全データを取得して年でフィルタリング
-      const url = getApiUrl(`/share/${share_id}`);
-      const res = await fetch(url);
-
-      if (!res.ok) throw new Error(`status: ${res.status}`);
-
-      const data: Schedule[] = await res.json();
-      
-      // 年でフィルタリング
-      const yearNum = parseInt(y, 10);
-      const filtered = data.filter((schedule) => {
-        if (schedule.date) {
-          const scheduleYear = parseInt(schedule.date.substring(0, 4), 10);
-          return !isNaN(scheduleYear) && scheduleYear === yearNum;
-        } else if (schedule.datetime) {
-          const date = new Date(schedule.datetime);
-          const scheduleYear = date.getUTCFullYear();
-          return !isNaN(scheduleYear) && scheduleYear === yearNum;
-        }
-        return false;
-      });
-      
-      console.log("YEAR SCHEDULES FROM API:", y, filtered);
-      setSchedules(filtered);
-    } catch (e: any) {
-      console.log("ERROR FETCHING YEAR:", e);
-      setError(e.message ?? "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // 利用可能な年を取得
   useEffect(() => {
-    fetchAvailableYears();
+    if (!share_id) return;
+    
+    let isMounted = true;
+    
+    const loadAvailableYears = async () => {
+      try {
+        // 共有スケジュールAPIから全データを取得して年を抽出
+        const url = getApiUrl(`/share/${share_id}`);
+        const res = await fetch(url);
+        if (!res.ok) return;
+
+        const data: Schedule[] = await res.json();
+        
+        // データから存在する年を抽出
+        const years = new Set<number>();
+        data.forEach((schedule) => {
+          if (schedule.date) {
+            // dateは"YYYY-MM-DD"形式
+            const year = parseInt(schedule.date.substring(0, 4), 10);
+            if (!isNaN(year)) {
+              years.add(year);
+            }
+          } else if (schedule.datetime) {
+            // datetimeから年を抽出
+            const date = new Date(schedule.datetime);
+            const year = date.getUTCFullYear();
+            if (!isNaN(year)) {
+              years.add(year);
+            }
+          }
+        });
+        // 年を降順でソート（新しい年から）
+        const sortedYears = Array.from(years).sort((a, b) => b - a);
+        if (isMounted) {
+          setAvailableYears(sortedYears);
+        }
+      } catch (e: any) {
+        console.error("ERROR FETCHING AVAILABLE YEARS:", e);
+      }
+    };
+    
+    loadAvailableYears();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [share_id]);
 
   // currentYear が変わるたびにその年を再取得
   useEffect(() => {
     if (!currentYear || !share_id) return;
-    fetchYear(currentYear);
+    
+    let isMounted = true;
+    
+    const loadYear = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 共有スケジュールAPIから全データを取得して年でフィルタリング
+        const url = getApiUrl(`/share/${share_id}`);
+        const res = await fetch(url);
+
+        if (!res.ok) throw new Error(`status: ${res.status}`);
+
+        const data: Schedule[] = await res.json();
+        
+        // 年でフィルタリング
+        const yearNum = parseInt(currentYear, 10);
+        const filtered = data.filter((schedule) => {
+          if (schedule.date) {
+            const scheduleYear = parseInt(schedule.date.substring(0, 4), 10);
+            return !isNaN(scheduleYear) && scheduleYear === yearNum;
+          } else if (schedule.datetime) {
+            const date = new Date(schedule.datetime);
+            const scheduleYear = date.getUTCFullYear();
+            return !isNaN(scheduleYear) && scheduleYear === yearNum;
+          }
+          return false;
+        });
+        
+        console.log("YEAR SCHEDULES FROM API:", currentYear, filtered);
+        if (isMounted) {
+          setSchedules(filtered);
+        }
+      } catch (e: any) {
+        console.log("ERROR FETCHING YEAR:", e);
+        if (isMounted) {
+          setError(e.message ?? "Unknown error");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    loadYear();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [currentYear, share_id]);
 
   // Areaの色情報を取得
   useEffect(() => {
     if (schedules.length === 0) return;
     
+    let isMounted = true;
+    
     const loadAreaColors = async () => {
       const colorMap = await fetchAreaColors(schedules);
-      setAreaColors(colorMap);
+      if (isMounted) {
+        setAreaColors(colorMap);
+      }
     };
     
     loadAreaColors();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [schedules]);
 
   // 選択肢の並び順情報を取得（グルーピングのソート用）
   useEffect(() => {
     if (!share_id) return;
     
+    let isMounted = true;
+    
     const loadOptionsOrder = async () => {
       try {
         const orderMap = await loadSelectOptionsMap(share_id);
-        setSelectOptionsMap(orderMap);
+        if (isMounted) {
+          setSelectOptionsMap(orderMap);
+        }
       } catch (error) {
         console.error("Error loading select options order:", error);
       }
     };
     
     loadOptionsOrder();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [share_id]);
 
   const handleSelectYear = (y: number) => {
@@ -168,12 +204,63 @@ export default function SharedYearScreen() {
   };
 
   const onRefresh = async () => {
+    if (!share_id) return;
+    
     setRefreshing(true);
     try {
-      if (currentYear && share_id) {
-        await fetchYear(currentYear);
+      // 利用可能な年を再取得
+      const url = getApiUrl(`/share/${share_id}`);
+      const res = await fetch(url);
+      if (res.ok) {
+        const data: Schedule[] = await res.json();
+        const years = new Set<number>();
+        data.forEach((schedule) => {
+          if (schedule.date) {
+            const year = parseInt(schedule.date.substring(0, 4), 10);
+            if (!isNaN(year)) {
+              years.add(year);
+            }
+          } else if (schedule.datetime) {
+            const date = new Date(schedule.datetime);
+            const year = date.getUTCFullYear();
+            if (!isNaN(year)) {
+              years.add(year);
+            }
+          }
+        });
+        const sortedYears = Array.from(years).sort((a, b) => b - a);
+        setAvailableYears(sortedYears);
       }
-      await fetchAvailableYears();
+      
+      // 現在の年のスケジュールを再取得
+      if (currentYear) {
+        setLoading(true);
+        setError(null);
+        try {
+          const yearUrl = getApiUrl(`/share/${share_id}`);
+          const yearRes = await fetch(yearUrl);
+          if (yearRes.ok) {
+            const yearData: Schedule[] = await yearRes.json();
+            const yearNum = parseInt(currentYear, 10);
+            const filtered = yearData.filter((schedule) => {
+              if (schedule.date) {
+                const scheduleYear = parseInt(schedule.date.substring(0, 4), 10);
+                return !isNaN(scheduleYear) && scheduleYear === yearNum;
+              } else if (schedule.datetime) {
+                const date = new Date(schedule.datetime);
+                const scheduleYear = date.getUTCFullYear();
+                return !isNaN(scheduleYear) && scheduleYear === yearNum;
+              }
+              return false;
+            });
+            setSchedules(filtered);
+          }
+        } catch (e: any) {
+          setError(e.message ?? "Unknown error");
+        } finally {
+          setLoading(false);
+        }
+      }
     } finally {
       setRefreshing(false);
     }
