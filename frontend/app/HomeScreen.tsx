@@ -739,9 +739,8 @@ export default function HomeScreen() {
                 <View style={styles.sharingUrlRow}>
                   <TouchableOpacity
                     onPress={() => {
-                      if (Platform.OS === 'web' && typeof window !== 'undefined' && navigator.clipboard) {
-                        navigator.clipboard.writeText(sharingUrl);
-                        Alert.alert("コピーしました", sharingUrl);
+                      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                        window.open(sharingUrl, '_blank');
                       } else {
                         Alert.alert("共有URL", sharingUrl);
                       }
