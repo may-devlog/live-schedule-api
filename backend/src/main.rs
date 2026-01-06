@@ -3933,9 +3933,28 @@ async fn get_stay(
 
 // POST /stay
 async fn create_stay(
+    user: AuthenticatedUser,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<NewStay>,
 ) -> Result<(StatusCode, Json<Stay>), StatusCode> {
+    // スケジュールの所有者を確認
+    let schedule_user_id: Option<i64> = sqlx::query_scalar(
+        "SELECT user_id FROM schedules WHERE id = ?",
+    )
+    .bind(payload.schedule_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if let Some(schedule_user_id) = schedule_user_id {
+        if schedule_user_id != user.user_id as i64 {
+            return Err(StatusCode::FORBIDDEN);
+        }
+    } else {
+        // スケジュールが存在しない場合
+        return Err(StatusCode::NOT_FOUND);
+    }
+
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
         r#"

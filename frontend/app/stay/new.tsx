@@ -368,8 +368,9 @@ export default function NewStayScreen() {
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        console.log("CREATE STAY ERROR:", res.status, text);
-        const errorMessage = `宿泊の登録に失敗しました（status: ${res.status}）`;
+        console.error("CREATE STAY ERROR:", res.status, text);
+        console.error("CREATE STAY PAYLOAD:", JSON.stringify(payload, null, 2));
+        const errorMessage = `宿泊の登録に失敗しました（status: ${res.status}）\n\n詳細: ${text}`;
         if (Platform.OS === "web") {
           window.alert(`エラー\n\n${errorMessage}`);
         } else {
