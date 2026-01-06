@@ -18,6 +18,8 @@ import { getApiUrl } from "../../../../utils/api";
 import { PageHeader } from "../../../../components/PageHeader";
 import { NotionTag } from "../../../../components/notion-tag";
 import { getOptionColor, getOptionColorSync } from "../../../../utils/get-option-color";
+import { loadSelectOptions } from "../../../../utils/select-options-storage";
+import { groupSchedules, type GroupingField, type GroupedSchedule } from "../../../../utils/group-schedules";
 
 export default function SharedYearScreen() {
   const { share_id, year } = useLocalSearchParams<{ share_id: string; year: string }>();
@@ -231,146 +233,8 @@ export default function SharedYearScreen() {
   };
 
   // グルーピングロジック
-  type GroupedSchedule = {
-    title: string;
-    data: Schedule[];
-  };
-
   const groupedSchedules = useMemo(() => {
-    console.log(`[SharedYear] groupedSchedules useMemo called, selectOptionsMap.size: ${selectOptionsMap.size}, field: ${groupingField}`);
-    
-    const groupSchedules = (schedules: Schedule[], field: GroupingField): GroupedSchedule[] => {
-      if (field === "none") {
-        return [{ title: "", data: schedules }];
-      }
-
-      const grouped = new Map<string, Schedule[]>();
-
-      schedules.forEach((schedule) => {
-        let groupKey: string;
-
-        switch (field) {
-          case "group":
-            // GroupがNULLの場合はTitleを使用
-            groupKey = schedule.group || schedule.title || "未設定";
-            break;
-          case "category":
-            groupKey = schedule.category || "未設定";
-            break;
-          case "area":
-            groupKey = schedule.area || "未設定";
-            break;
-          case "target":
-            groupKey = schedule.target || "未設定";
-            break;
-          case "lineup":
-            // Lineupはカンマ区切りで複数値がある場合は双方に表示
-            if (schedule.lineup) {
-              const lineupValues = schedule.lineup.split(",").map(v => v.trim()).filter(v => v);
-              if (lineupValues.length > 0) {
-                // 各値に対してスケジュールを追加
-                lineupValues.forEach((value) => {
-                  if (!grouped.has(value)) {
-                    grouped.set(value, []);
-                  }
-                  grouped.get(value)!.push(schedule);
-                });
-              } else {
-                groupKey = "未設定";
-              }
-            } else {
-              groupKey = "未設定";
-            }
-            break;
-          case "seller":
-            groupKey = schedule.seller || "未設定";
-            break;
-          case "status":
-            groupKey = schedule.status || "未設定";
-            break;
-          default:
-            groupKey = "未設定";
-        }
-
-        // lineupの場合は既に処理済みなのでスキップ
-        if (field !== "lineup") {
-          if (!grouped.has(groupKey)) {
-            grouped.set(groupKey, []);
-          }
-          grouped.get(groupKey)!.push(schedule);
-        }
-      });
-
-      // グループをソート
-      const sortedGroups = Array.from(grouped.entries()).sort((a, b) => {
-        const [titleA, dataA] = a;
-        const [titleB, dataB] = b;
-        
-        // 未設定は最後に
-        if (titleA === "未設定") return 1;
-        if (titleB === "未設定") return -1;
-
-        // groupの場合は、各グループに含まれる一番古い開演時間でソート
-        if (field === "group") {
-          const getEarliestDatetime = (schedules: Schedule[]): number => {
-            return Math.min(...schedules.map(s => {
-              try {
-                return new Date(s.datetime).getTime();
-              } catch {
-                return Infinity;
-              }
-            }));
-          };
-          const timeA = getEarliestDatetime(dataA);
-          const timeB = getEarliestDatetime(dataB);
-          return timeA - timeB;
-        }
-
-        // その他のフィールドの場合は、選択肢のorderでソート
-        const orderMap = selectOptionsMap.get(field);
-        if (orderMap && orderMap.size > 0) {
-          const orderA = orderMap.get(titleA);
-          const orderB = orderMap.get(titleB);
-          // 両方のorderが存在する場合はorderでソート
-          if (orderA !== undefined && orderB !== undefined) {
-            return orderA - orderB;
-          }
-          // 片方だけorderがある場合は、orderがある方を前に
-          if (orderA !== undefined) return -1;
-          if (orderB !== undefined) return 1;
-        }
-
-        // orderがない場合は文字列比較
-        // デバッグ用: orderが見つからない場合のログ（最初の数回のみ）
-        if (field === "area" && (!orderMap || orderMap.size === 0 || orderMap.get(titleA) === undefined || orderMap.get(titleB) === undefined)) {
-          // ログの重複を避けるため、最初の数回のみ表示
-          const logKey = `${titleA}-${titleB}`;
-          if (!loggedMissingOrdersRef.current.has(logKey)) {
-            loggedMissingOrdersRef.current.add(logKey);
-            if (loggedMissingOrdersRef.current.size <= 3) {
-              console.log(`[SharedYear] Order not found for area grouping:`, {
-                field,
-                titleA,
-                titleB,
-                orderA: orderMap?.get(titleA),
-                orderB: orderMap?.get(titleB),
-                orderMapSize: orderMap?.size,
-                selectOptionsMapSize: selectOptionsMap.size,
-                selectOptionsMapKeys: Array.from(selectOptionsMap.keys()),
-                orderMapExists: orderMap !== undefined,
-                areaOrderMapEntries: selectOptionsMap.get("area") ? Array.from(selectOptionsMap.get("area")!.entries()).slice(0, 5) : [],
-              });
-            }
-          }
-        }
-        return titleA.localeCompare(titleB, "ja");
-      });
-
-      return sortedGroups.map(([title, data]) => ({ title, data }));
-    };
-
-    // selectOptionsMapが空でもグループ化は実行する（ソートは文字列比較にフォールバック）
-    return groupSchedules(schedules, groupingField);
+    return groupSchedules(schedules, groupingField, selectOptionsMap);
   }, [schedules, groupingField, selectOptionsMap]);
 
   const toggleSection = (title: string) => {
