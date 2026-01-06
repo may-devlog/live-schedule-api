@@ -344,8 +344,6 @@ const fetchYear = async (y: string) => {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>{currentYear}</Text>
-
         {/* 年ボタン */}
         <View style={styles.yearSelector}>
         {availableYears.map((y) => (
@@ -559,8 +557,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e9e9e7",

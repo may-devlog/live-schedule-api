@@ -365,8 +365,6 @@ export default function SharedYearScreen() {
       <PageHeader showBackButton={true} homePath={`/share/${share_id}`} />
       
       <View style={styles.content}>
-        <Text style={styles.title}>{currentYear}</Text>
-
         {/* 年ボタン */}
         <View style={styles.yearSelector}>
           {availableYears.map((y) => (
@@ -596,7 +594,7 @@ const styles = StyleSheet.create({
   },
   yearSelector: {
     flexDirection: "row",
-    marginBottom: 24,
+    marginBottom: 16,
     gap: 8,
   },
   yearButton: {
