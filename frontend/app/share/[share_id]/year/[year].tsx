@@ -452,7 +452,7 @@ export default function SharedYearScreen() {
                   {totalCost > 0 && (
                     <View style={styles.sectionTotalCost}>
                       <Text style={styles.sectionTotalCostText}>
-                        総費用: ¥{totalCost.toLocaleString()}
+                        ¥{totalCost.toLocaleString()}
                       </Text>
                     </View>
                   )}
