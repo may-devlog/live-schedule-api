@@ -37,7 +37,10 @@ type PropertyBlockProps = {
 };
 
 export function NotionPropertyBlock({ children, title }: PropertyBlockProps) {
-  const childrenArray = React.Children.toArray(children);
+  // 有効な子要素のみをフィルタリングして配列に変換
+  const validChildren = React.Children.toArray(children).filter(
+    (child) => React.isValidElement(child)
+  );
   
   return (
     <View style={styles.block}>
@@ -49,7 +52,9 @@ export function NotionPropertyBlock({ children, title }: PropertyBlockProps) {
       <View style={styles.properties}>
         {React.Children.map(children, (child, index) => {
           if (React.isValidElement(child)) {
-            const isLast = index === childrenArray.length - 1;
+            // 有効な子要素の中でのインデックスを取得
+            const validIndex = validChildren.findIndex((c) => c === child);
+            const isLast = validIndex === validChildren.length - 1;
             return React.cloneElement(child as React.ReactElement<any>, {
               isLast,
             });
