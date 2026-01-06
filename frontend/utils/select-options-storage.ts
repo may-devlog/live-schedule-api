@@ -233,8 +233,10 @@ export async function loadSelectOptions(
       if (res.ok) {
         const options: SelectOption[] = await res.json();
         if (options.length > 0) {
+          console.log(`[SelectOptions] Loaded ${options.length} options from ${shareId ? 'shared' : 'database'} for ${key}:`, options.map(opt => ({ label: opt.label, order: opt.order })));
           // データベースの選択肢とデフォルト選択肢をマージ
           const merged = mergeOptionsWithDefaults(options, defaultOptions, key);
+          console.log(`[SelectOptions] Merged ${merged.length} options for ${key}:`, merged.map(opt => ({ label: opt.label, order: opt.order })));
           // データベースに保存されている場合は、ローカルストレージにも保存（キャッシュ）
           await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(merged));
           return merged;
