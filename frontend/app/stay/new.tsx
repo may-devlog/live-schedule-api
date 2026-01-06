@@ -226,9 +226,10 @@ export default function NewStayScreen() {
     return `${year}-${month}-${day} 00:00`;
   };
 
-  // チェックイン変更時に、キャンセル期限日時がNULLの場合、デフォルト値を設定
-  // 安全な実装：useEffect内でstateの存在を確認してから実行
-  useEffect(() => {
+  // チェックイン変更ハンドラー：デフォルト値設定をここで処理
+  const handleCheckInChange = (value: string | null) => {
+    setCheckIn(value);
+    
     // 初回ロード時はスキップ（既存データから設定されるため）
     if (isInitialLoad.current) return;
     
@@ -236,19 +237,17 @@ export default function NewStayScreen() {
     if (deadlineManuallySet.current) return;
     
     // checkInが有効な値でない場合はスキップ
-    if (!checkIn || typeof checkIn !== 'string') return;
+    if (!value || typeof value !== 'string') return;
     
-    // 既にdeadlineが設定されている場合はスキップ（stateの存在確認を安全に行う）
-    // deadlineがundefinedの可能性があるため、明示的にチェック
-    const currentDeadline = deadline;
-    if (currentDeadline !== null && currentDeadline !== undefined) return;
+    // 既にdeadlineが設定されている場合はスキップ
+    if (deadline !== null && deadline !== undefined) return;
     
     // checkInが入力されている場合のみデフォルト値を設定
-    const defaultDeadline = getCheckInDateAtMidnight(checkIn);
+    const defaultDeadline = getCheckInDateAtMidnight(value);
     if (defaultDeadline) {
       setDeadline(defaultDeadline);
     }
-  }, [checkIn]); // deadlineを依存配列に含めない（無限ループを防ぐ）
+  };
 
   // キャンセル期限日時のバリデーション
   const handleDeadlineChange = (value: string | null) => {
@@ -424,7 +423,7 @@ export default function NewStayScreen() {
       <NotionDatePicker
         label="チェックイン"
         value={checkIn}
-        onValueChange={setCheckIn}
+        onValueChange={handleCheckInChange}
         mode="datetime"
         placeholder="YYYY-MM-DD HH:MM"
         required={true}
