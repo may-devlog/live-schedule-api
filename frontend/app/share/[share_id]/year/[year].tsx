@@ -29,8 +29,6 @@ export default function SharedYearScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
-  const [pullDistance, setPullDistance] = useState(0);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   
   // グルーピング関連
