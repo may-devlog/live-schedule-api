@@ -238,53 +238,54 @@ export default function SharedYearScreen() {
         </View>
       </View>
 
-        <FlatList
-          data={schedules}
-          keyExtractor={(item) => item.id.toString()}
-          refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={onRefresh}
-              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-            />
-          }
-          onTouchStart={(e) => {
-            const touch = e.nativeEvent.touches[0];
-            if (touch) {
-              setTouchStartY(touch.pageY);
+        {groupingField === "none" ? (
+          <FlatList
+            data={schedules}
+            keyExtractor={(item) => item.id.toString()}
+            refreshControl={
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh}
+                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+              />
             }
-          }}
-          onTouchMove={(e) => {
-            if (touchStartY !== null) {
+            onTouchStart={(e) => {
               const touch = e.nativeEvent.touches[0];
               if (touch) {
-                const distance = touch.pageY - touchStartY;
-                if (distance > 0) {
-                  setPullDistance(distance);
+                setTouchStartY(touch.pageY);
+              }
+            }}
+            onTouchMove={(e) => {
+              if (touchStartY !== null) {
+                const touch = e.nativeEvent.touches[0];
+                if (touch) {
+                  const distance = touch.pageY - touchStartY;
+                  if (distance > 0) {
+                    setPullDistance(distance);
+                  }
                 }
               }
+            }}
+            onTouchEnd={() => {
+              if (pullDistance > 100 && !refreshing) {
+                onRefresh();
+              }
+              setTouchStartY(null);
+              setPullDistance(0);
+            }}
+            ListHeaderComponent={
+              <>
+                {loading && <ActivityIndicator color="#333333" />}
+                {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+              </>
             }
-          }}
-          onTouchEnd={() => {
-            if (pullDistance > 100 && !refreshing) {
-              onRefresh();
+            ListEmptyComponent={
+              !loading && !error ? (
+                <Text style={styles.emptyText}>スケジュールはありません</Text>
+              ) : null
             }
-            setTouchStartY(null);
-            setPullDistance(0);
-          }}
-          ListHeaderComponent={
-            <>
-              {loading && <ActivityIndicator color="#333333" />}
-              {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-            </>
-          }
-          ListEmptyComponent={
-            !loading && !error ? (
-              <Text style={styles.emptyText}>スケジュールはありません</Text>
-            ) : null
-          }
-          renderItem={({ item }) => (
+            renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}
                 onPress={() => handleOpenDetail(item.id)}
@@ -311,9 +312,107 @@ export default function SharedYearScreen() {
                   <Text style={styles.cardSub}>{item.venue}</Text>
                 </View>
               </TouchableOpacity>
-          )}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-        />
+            )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+        ) : (
+          <SectionList
+            sections={groupedSchedules}
+            keyExtractor={(item) => item.id.toString()}
+            refreshControl={
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh}
+                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+              />
+            }
+            onTouchStart={(e) => {
+              const touch = e.nativeEvent.touches[0];
+              if (touch) {
+                setTouchStartY(touch.pageY);
+              }
+            }}
+            onTouchMove={(e) => {
+              if (touchStartY !== null) {
+                const touch = e.nativeEvent.touches[0];
+                if (touch) {
+                  const distance = touch.pageY - touchStartY;
+                  if (distance > 0) {
+                    setPullDistance(distance);
+                  }
+                }
+              }
+            }}
+            onTouchEnd={() => {
+              if (pullDistance > 100 && !refreshing) {
+                onRefresh();
+              }
+              setTouchStartY(null);
+              setPullDistance(0);
+            }}
+            ListHeaderComponent={
+              <>
+                {loading && <ActivityIndicator color="#333333" />}
+                {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+              </>
+            }
+            ListEmptyComponent={
+              !loading && !error ? (
+                <Text style={styles.emptyText}>スケジュールはありません</Text>
+              ) : null
+            }
+            renderSectionHeader={({ section: { title, data } }) => {
+              const isCollapsed = collapsedSections.has(title);
+              return (
+                <TouchableOpacity
+                  style={styles.sectionHeader}
+                  onPress={() => toggleSection(title)}
+                >
+                  <Text style={styles.sectionHeaderIcon}>
+                    {isCollapsed ? "▶" : "▼"}
+                  </Text>
+                  <Text style={styles.sectionHeaderTitle}>{title}</Text>
+                  <Text style={styles.sectionHeaderCount}>({data.length})</Text>
+                </TouchableOpacity>
+              );
+            }}
+            renderItem={({ item, section }) => {
+              const isCollapsed = collapsedSections.has(section.title);
+              if (isCollapsed) return null;
+              
+              return (
+                <TouchableOpacity
+                  style={styles.card}
+                  onPress={() => handleOpenDetail(item.id)}
+                >
+                  <Text style={styles.cardDate}>
+                    {formatDateTimeUTC(item.datetime)}
+                  </Text>
+                  {/* ツアー名 (Group) */}
+                  {item.group && (
+                    <Text style={styles.cardGroup} numberOfLines={1}>
+                      {item.group}
+                    </Text>
+                  )}
+                  <Text style={styles.cardTitle} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <View style={styles.cardSubContainer}>
+                    {item.area && (
+                      <NotionTag
+                        label={item.area}
+                        color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
+                      />
+                    )}
+                    <Text style={styles.cardSub}>{item.venue}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+        )}
       </View>
     </View>
   );
