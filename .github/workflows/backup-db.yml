@@ -52,6 +52,11 @@ jobs:
             exit 1
           fi
 
+      - name: Install SQLite
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sqlite3
+
       - name: Verify backup integrity
         run: |
           cd backend
@@ -83,11 +88,6 @@ jobs:
             exit 1
           fi
 
-      - name: Install SQLite
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y sqlite3
-
       - name: Upload backup to GitHub Releases
         uses: softprops/action-gh-release@v1
         if: success()
@@ -111,11 +111,10 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          text: 'Database backup failed!'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "::error::Database backup failed! Please check the logs."
+          # オプション: メール通知やSlack通知を追加可能
+          # 例: curl -X POST -H 'Content-type: application/json' \
+          #     --data '{"text":"Database backup failed!"}' \
+          #     ${{ secrets.SLACK_WEBHOOK_URL }}
 
