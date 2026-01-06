@@ -397,17 +397,31 @@ export default function YearScreen() {
           }
           renderSectionHeader={({ section: { title, data } }) => {
             const isCollapsed = collapsedSections.has(title);
+            // 総費用の合計を計算
+            const totalCost = data.reduce((sum, schedule) => {
+              return sum + (schedule.total_cost ?? 0);
+            }, 0);
+            
             return (
-              <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={() => toggleSection(title)}
-              >
-                <Text style={styles.sectionHeaderIcon}>
-                  {isCollapsed ? "▶" : "▼"}
-                </Text>
-                <Text style={styles.sectionHeaderTitle}>{title}</Text>
-                <Text style={styles.sectionHeaderCount}>({data.length})</Text>
-              </TouchableOpacity>
+              <View>
+                <TouchableOpacity
+                  style={styles.sectionHeader}
+                  onPress={() => toggleSection(title)}
+                >
+                  <Text style={styles.sectionHeaderIcon}>
+                    {isCollapsed ? "▶" : "▼"}
+                  </Text>
+                  <Text style={styles.sectionHeaderTitle}>{title}</Text>
+                  <Text style={styles.sectionHeaderCount}>({data.length})</Text>
+                </TouchableOpacity>
+                {totalCost > 0 && (
+                  <View style={styles.sectionTotalCost}>
+                    <Text style={styles.sectionTotalCostText}>
+                      総費用: ¥{totalCost.toLocaleString()}
+                    </Text>
+                  </View>
+                )}
+              </View>
             );
           }}
           renderItem={({ item, section }) => {
