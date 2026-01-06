@@ -375,7 +375,12 @@ export async function loadSelectOptions(
           if (hasChanges) {
             await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(uniqueOptions));
           }
-          return uniqueOptions;
+          // orderでソートして返す
+          return uniqueOptions.sort((a, b) => {
+            const orderA = a.order !== undefined ? a.order : Infinity;
+            const orderB = b.order !== undefined ? b.order : Infinity;
+            return orderA - orderB;
+          });
         }
         // TRANSPORTATIONSの場合は、色が設定されていない場合のみデフォルトで薄いグレーに
         if (key === "TRANSPORTATIONS") {
