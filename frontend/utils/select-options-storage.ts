@@ -275,6 +275,15 @@ export async function loadSelectOptions(
           const missingPrefectures = DEFAULT_AREAS.filter(
             (pref) => !existingLabels.has(pref)
           );
+          // orderを付与（デフォルト順序に基づく）
+          const defaultOrderMap = new Map<string, number>();
+          DEFAULT_AREAS.forEach((pref, idx) => {
+            defaultOrderMap.set(pref, idx);
+          });
+          const optionsWithOrder = existingOptions.map((opt) => ({
+            ...opt,
+            order: opt.order !== undefined ? opt.order : (defaultOrderMap.get(opt.label) ?? Infinity),
+          }));
           if (missingPrefectures.length > 0) {
             const missingOptions = stringArrayToOptions(
               missingPrefectures,
@@ -282,16 +291,37 @@ export async function loadSelectOptions(
               true,
               false
             );
-            return [...existingOptions, ...missingOptions];
+            const missingWithOrder = missingOptions.map((opt) => ({
+              ...opt,
+              order: defaultOrderMap.get(opt.label) ?? Infinity,
+            }));
+            const allOptions = [...optionsWithOrder, ...missingWithOrder];
+            // orderでソートして返す
+            return allOptions.sort((a, b) => {
+              const orderA = a.order !== undefined ? a.order : Infinity;
+              const orderB = b.order !== undefined ? b.order : Infinity;
+              return orderA - orderB;
+            });
           }
-          return existingOptions;
+          // orderでソートして返す
+          return optionsWithOrder.sort((a, b) => {
+            const orderA = a.order !== undefined ? a.order : Infinity;
+            const orderB = b.order !== undefined ? b.order : Infinity;
+            return orderA - orderB;
+          });
         }
         // 既存のSelectOption配列の場合、CATEGORIESの場合は色を再計算
         if (key === "CATEGORIES") {
-          return (parsed as SelectOption[]).map((opt) => ({
+          const options = (parsed as SelectOption[]).map((opt) => ({
             ...opt,
             color: opt.color || getDefaultColorForLabel(opt.label, false, true, false),
           }));
+          // orderでソートして返す
+          return options.sort((a, b) => {
+            const orderA = a.order !== undefined ? a.order : Infinity;
+            const orderB = b.order !== undefined ? b.order : Infinity;
+            return orderA - orderB;
+          });
         }
         // 既存のSelectOption配列の場合、SELLERSの場合は色を再計算
         // また、「ローソンチケット」を「ローチケ」に変換
