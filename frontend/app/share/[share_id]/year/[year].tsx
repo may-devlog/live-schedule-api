@@ -660,5 +660,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#787774",
   },
+  sectionTotalCost: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#f7f6f3",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+  },
+  sectionTotalCostText: {
+    fontSize: 14,
+    color: "#37352f",
+    fontWeight: "600",
+  },
 });
 
