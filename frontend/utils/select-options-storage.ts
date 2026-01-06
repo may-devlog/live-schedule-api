@@ -1,5 +1,5 @@
 // 選択肢の永続化ユーティリティ
-import AsyncStorage from "@react-native-async-storage/async-storage";
+// AsyncStorageを動的インポートで循環依存を回避
 import type { SelectOption } from "../types/select-option";
 // 動的インポートで循環依存を回避（authenticatedFetch, getApiUrl）
 
@@ -190,6 +190,8 @@ export async function loadSelectOptions(
   shareId?: string // 共有ページ用のshare_id（オプション）
 ): Promise<SelectOption[]> {
   const defaultOptions = getDefaultOptions(key);
+  // 動的インポートで循環依存を回避
+  const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
   
   try {
     // まずデータベースから読み込む
@@ -342,6 +344,9 @@ export async function loadStaySelectOptions(
   key: keyof typeof STAY_STORAGE_KEYS,
   shareId?: string // 共有ページ用のshare_id（オプション）
 ): Promise<SelectOption[]> {
+  // 動的インポートで循環依存を回避
+  const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+  
   try {
     // まずデータベースから読み込む
     try {
@@ -394,6 +399,7 @@ export async function saveSelectOptions(
 ): Promise<void> {
   // 動的インポートで循環依存を回避
   const { authenticatedFetch, getApiUrl } = await import("./api");
+  const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
   // まずデータベースに保存
   const url = getApiUrl(`/select-options/${key.toLowerCase()}`);
   const payload = { options };
@@ -431,6 +437,7 @@ export async function saveStaySelectOptions(
 ): Promise<void> {
   // 動的インポートで循環依存を回避
   const { authenticatedFetch, getApiUrl } = await import("./api");
+  const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
   // まずデータベースに保存
   const url = getApiUrl(`/stay-select-options/${key.toLowerCase()}`);
   const payload = { options };
