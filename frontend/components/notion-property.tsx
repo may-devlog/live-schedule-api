@@ -42,6 +42,9 @@ export function NotionPropertyBlock({ children, title }: PropertyBlockProps) {
     (child) => React.isValidElement(child)
   );
   
+  // 有効な子要素の数をカウント
+  let validChildIndex = 0;
+  
   return (
     <View style={styles.block}>
       {title && (
@@ -50,11 +53,12 @@ export function NotionPropertyBlock({ children, title }: PropertyBlockProps) {
         </View>
       )}
       <View style={styles.properties}>
-        {React.Children.map(children, (child, index) => {
+        {React.Children.map(children, (child) => {
           if (React.isValidElement(child)) {
-            // 有効な子要素の中でのインデックスを取得
-            const validIndex = validChildren.findIndex((c) => c === child);
-            const isLast = validIndex === validChildren.length - 1;
+            // 有効な子要素のインデックスを使用
+            const currentIndex = validChildIndex;
+            validChildIndex++;
+            const isLast = currentIndex === validChildren.length - 1;
             return React.cloneElement(child as React.ReactElement<any>, {
               isLast,
             });
