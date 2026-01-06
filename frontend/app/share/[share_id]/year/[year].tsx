@@ -7,6 +7,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  SectionList,
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
@@ -31,6 +32,11 @@ export default function SharedYearScreen() {
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
+  
+  // グルーピング関連
+  type GroupingField = "group" | "category" | "area" | "target" | "lineup" | "seller" | "status" | "none";
+  const [groupingField, setGroupingField] = useState<GroupingField>("group");
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
   const fetchAvailableYears = async () => {
     try {
@@ -196,6 +202,41 @@ export default function SharedYearScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+      {/* グルーピングフィールド選択 */}
+      <View style={styles.groupingSelector}>
+        <Text style={styles.groupingLabel}>グルーピング:</Text>
+        <View style={styles.groupingButtons}>
+          {[
+            { value: "none" as GroupingField, label: "なし" },
+            { value: "group" as GroupingField, label: "グループ" },
+            { value: "category" as GroupingField, label: "カテゴリ" },
+            { value: "area" as GroupingField, label: "エリア" },
+            { value: "target" as GroupingField, label: "お目当て" },
+            { value: "lineup" as GroupingField, label: "出演者" },
+            { value: "seller" as GroupingField, label: "販売元" },
+            { value: "status" as GroupingField, label: "ステータス" },
+          ].map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.groupingButton,
+                groupingField === option.value && styles.groupingButtonActive,
+              ]}
+              onPress={() => setGroupingField(option.value)}
+            >
+              <Text
+                style={[
+                  styles.groupingButtonText,
+                  groupingField === option.value && styles.groupingButtonTextActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
         <FlatList
           data={schedules}
@@ -390,6 +431,67 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 24,
     fontStyle: "italic",
+  },
+  groupingSelector: {
+    marginBottom: 24,
+  },
+  groupingLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#37352f",
+    marginBottom: 8,
+  },
+  groupingButtons: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  groupingButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: "#e9e9e7",
+    backgroundColor: "#ffffff",
+  },
+  groupingButtonActive: {
+    backgroundColor: "#37352f",
+    borderColor: "#37352f",
+  },
+  groupingButtonText: {
+    color: "#37352f",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  groupingButtonTextActive: {
+    color: "#ffffff",
+    fontWeight: "600",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#f7f6f3",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+    marginTop: 8,
+  },
+  sectionHeaderIcon: {
+    fontSize: 12,
+    color: "#787774",
+    marginRight: 8,
+    width: 16,
+  },
+  sectionHeaderTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#37352f",
+    flex: 1,
+  },
+  sectionHeaderCount: {
+    fontSize: 12,
+    color: "#787774",
   },
 });
 

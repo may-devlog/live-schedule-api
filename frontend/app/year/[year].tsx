@@ -7,6 +7,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  SectionList,
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
@@ -34,6 +35,11 @@ export default function YearScreen() {
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
+  
+  // グルーピング関連
+  type GroupingField = "group" | "category" | "area" | "target" | "lineup" | "seller" | "status" | "none";
+  const [groupingField, setGroupingField] = useState<GroupingField>("group");
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
 const fetchAvailableYears = async () => {
   try {
@@ -143,6 +149,96 @@ const fetchYear = async (y: string) => {
     }
   };
 
+  // グルーピングロジック
+  type GroupedSchedule = {
+    title: string;
+    data: Schedule[];
+  };
+
+  const groupSchedules = (schedules: Schedule[], field: GroupingField): GroupedSchedule[] => {
+    if (field === "none") {
+      return [{ title: "", data: schedules }];
+    }
+
+    const grouped = new Map<string, Schedule[]>();
+
+    schedules.forEach((schedule) => {
+      let groupKey: string;
+
+      switch (field) {
+        case "group":
+          // GroupがNULLの場合はTitleを使用
+          groupKey = schedule.group || schedule.title || "未設定";
+          break;
+        case "category":
+          groupKey = schedule.category || "未設定";
+          break;
+        case "area":
+          groupKey = schedule.area || "未設定";
+          break;
+        case "target":
+          groupKey = schedule.target || "未設定";
+          break;
+        case "lineup":
+          // Lineupはカンマ区切りで複数値がある場合は双方に表示
+          if (schedule.lineup) {
+            const lineupValues = schedule.lineup.split(",").map(v => v.trim()).filter(v => v);
+            if (lineupValues.length > 0) {
+              // 各値に対してスケジュールを追加
+              lineupValues.forEach((value) => {
+                if (!grouped.has(value)) {
+                  grouped.set(value, []);
+                }
+                grouped.get(value)!.push(schedule);
+              });
+            } else {
+              groupKey = "未設定";
+            }
+          } else {
+            groupKey = "未設定";
+          }
+          break;
+        case "seller":
+          groupKey = schedule.seller || "未設定";
+          break;
+        case "status":
+          groupKey = schedule.status || "未設定";
+          break;
+        default:
+          groupKey = "未設定";
+      }
+
+      // lineupの場合は既に処理済みなのでスキップ
+      if (field !== "lineup") {
+        if (!grouped.has(groupKey)) {
+          grouped.set(groupKey, []);
+        }
+        grouped.get(groupKey)!.push(schedule);
+      }
+    });
+
+    // グループをソート（未設定は最後に）
+    const sortedGroups = Array.from(grouped.entries()).sort((a, b) => {
+      if (a[0] === "未設定") return 1;
+      if (b[0] === "未設定") return -1;
+      return a[0].localeCompare(b[0], "ja");
+    });
+
+    return sortedGroups.map(([title, data]) => ({ title, data }));
+  };
+
+  const groupedSchedules = groupSchedules(schedules, groupingField);
+
+  const toggleSection = (title: string) => {
+    const newCollapsed = new Set(collapsedSections);
+    if (newCollapsed.has(title)) {
+      newCollapsed.delete(title);
+    } else {
+      newCollapsed.add(title);
+    }
+    setCollapsedSections(newCollapsed);
+  };
+
   return (
     <View style={styles.container}>
       {/* ナビゲーションバーのタイトルを非表示 */}
@@ -178,53 +274,89 @@ const fetchYear = async (y: string) => {
         ))}
       </View>
 
-      <FlatList
-        data={schedules}
-        keyExtractor={(item) => item.id.toString()}
-        refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh}
-            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-          />
-        }
-        onTouchStart={(e) => {
-          const touch = e.nativeEvent.touches[0];
-          if (touch) {
-            setTouchStartY(touch.pageY);
+      {/* グルーピングフィールド選択 */}
+      <View style={styles.groupingSelector}>
+        <Text style={styles.groupingLabel}>グルーピング:</Text>
+        <View style={styles.groupingButtons}>
+          {[
+            { value: "none" as GroupingField, label: "なし" },
+            { value: "group" as GroupingField, label: "グループ" },
+            { value: "category" as GroupingField, label: "カテゴリ" },
+            { value: "area" as GroupingField, label: "エリア" },
+            { value: "target" as GroupingField, label: "お目当て" },
+            { value: "lineup" as GroupingField, label: "出演者" },
+            { value: "seller" as GroupingField, label: "販売元" },
+            { value: "status" as GroupingField, label: "ステータス" },
+          ].map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.groupingButton,
+                groupingField === option.value && styles.groupingButtonActive,
+              ]}
+              onPress={() => setGroupingField(option.value)}
+            >
+              <Text
+                style={[
+                  styles.groupingButtonText,
+                  groupingField === option.value && styles.groupingButtonTextActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {groupingField === "none" ? (
+        <FlatList
+          data={schedules}
+          keyExtractor={(item) => item.id.toString()}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            />
           }
-        }}
-        onTouchMove={(e) => {
-          if (touchStartY !== null) {
+          onTouchStart={(e) => {
             const touch = e.nativeEvent.touches[0];
             if (touch) {
-              const distance = touch.pageY - touchStartY;
-              if (distance > 0) {
-                setPullDistance(distance);
+              setTouchStartY(touch.pageY);
+            }
+          }}
+          onTouchMove={(e) => {
+            if (touchStartY !== null) {
+              const touch = e.nativeEvent.touches[0];
+              if (touch) {
+                const distance = touch.pageY - touchStartY;
+                if (distance > 0) {
+                  setPullDistance(distance);
+                }
               }
             }
+          }}
+          onTouchEnd={() => {
+            if (pullDistance > 100 && !refreshing) {
+              onRefresh();
+            }
+            setTouchStartY(null);
+            setPullDistance(0);
+          }}
+          ListHeaderComponent={
+            <>
+              {loading && <ActivityIndicator color="#333333" />}
+              {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+            </>
           }
-        }}
-        onTouchEnd={() => {
-          if (pullDistance > 100 && !refreshing) {
-            onRefresh();
+          ListEmptyComponent={
+            !loading && !error ? (
+              <Text style={styles.emptyText}>スケジュールはありません</Text>
+            ) : null
           }
-          setTouchStartY(null);
-          setPullDistance(0);
-        }}
-        ListHeaderComponent={
-          <>
-            {loading && <ActivityIndicator color="#333333" />}
-            {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-          </>
-        }
-        ListEmptyComponent={
-          !loading && !error ? (
-            <Text style={styles.emptyText}>スケジュールはありません</Text>
-          ) : null
-        }
-        renderItem={({ item }) => (
+          renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
               onPress={() => handleOpenDetail(item.id)}
@@ -254,6 +386,104 @@ const fetchYear = async (y: string) => {
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
+      ) : (
+        <SectionList
+          sections={groupedSchedules}
+          keyExtractor={(item) => item.id.toString()}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            />
+          }
+          onTouchStart={(e) => {
+            const touch = e.nativeEvent.touches[0];
+            if (touch) {
+              setTouchStartY(touch.pageY);
+            }
+          }}
+          onTouchMove={(e) => {
+            if (touchStartY !== null) {
+              const touch = e.nativeEvent.touches[0];
+              if (touch) {
+                const distance = touch.pageY - touchStartY;
+                if (distance > 0) {
+                  setPullDistance(distance);
+                }
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (pullDistance > 100 && !refreshing) {
+              onRefresh();
+            }
+            setTouchStartY(null);
+            setPullDistance(0);
+          }}
+          ListHeaderComponent={
+            <>
+              {loading && <ActivityIndicator color="#333333" />}
+              {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+            </>
+          }
+          ListEmptyComponent={
+            !loading && !error ? (
+              <Text style={styles.emptyText}>スケジュールはありません</Text>
+            ) : null
+          }
+          renderSectionHeader={({ section: { title, data } }) => {
+            const isCollapsed = collapsedSections.has(title);
+            return (
+              <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={() => toggleSection(title)}
+              >
+                <Text style={styles.sectionHeaderIcon}>
+                  {isCollapsed ? "▶" : "▼"}
+                </Text>
+                <Text style={styles.sectionHeaderTitle}>{title}</Text>
+                <Text style={styles.sectionHeaderCount}>({data.length})</Text>
+              </TouchableOpacity>
+            );
+          }}
+          renderItem={({ item, section }) => {
+            const isCollapsed = collapsedSections.has(section.title);
+            if (isCollapsed) return null;
+            
+            return (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => handleOpenDetail(item.id)}
+              >
+                <Text style={styles.cardDate}>
+                  {formatDateTimeUTC(item.datetime)}
+                </Text>
+                {/* ツアー名 (Group) */}
+                {item.group && (
+                  <Text style={styles.cardGroup} numberOfLines={1}>
+                    {item.group}
+                  </Text>
+                )}
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <View style={styles.cardSubContainer}>
+                  {item.area && (
+                    <NotionTag
+                      label={item.area}
+                      color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
+                    />
+                  )}
+                  <Text style={styles.cardSub}>{item.venue}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+      )}
       </View>
     </View>
   );
@@ -379,5 +609,66 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 24,
     fontStyle: "italic",
+  },
+  groupingSelector: {
+    marginBottom: 24,
+  },
+  groupingLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#37352f",
+    marginBottom: 8,
+  },
+  groupingButtons: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  groupingButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: "#e9e9e7",
+    backgroundColor: "#ffffff",
+  },
+  groupingButtonActive: {
+    backgroundColor: "#37352f",
+    borderColor: "#37352f",
+  },
+  groupingButtonText: {
+    color: "#37352f",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  groupingButtonTextActive: {
+    color: "#ffffff",
+    fontWeight: "600",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#f7f6f3",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+    marginTop: 8,
+  },
+  sectionHeaderIcon: {
+    fontSize: 12,
+    color: "#787774",
+    marginRight: 8,
+    width: 16,
+  },
+  sectionHeaderTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#37352f",
+    flex: 1,
+  },
+  sectionHeaderCount: {
+    fontSize: 12,
+    color: "#787774",
   },
 });
