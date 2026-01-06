@@ -69,6 +69,14 @@ function getDefaultColorForLabel(
     "#F3E8FF", // purple (薄いパープル)
   ];
 
+  // ステータス用の固定カラー（ライブ予定・宿泊で共通）
+  const STATUS_COLORS: Record<string, string> = {
+    Canceled: "#E5E7EB", // gray
+    Keep: "#BFDBFE",     // blue
+    Done: "#D1FAE5",     // green
+    // Pending は既存の色ロジックのまま
+  };
+
   const PREFECTURE_REGIONS: Record<string, string> = {
     "北海道": "北海道",
     "青森": "東北", "岩手": "東北", "宮城": "東北", "秋田": "東北", "山形": "東北", "福島": "東北",
@@ -89,6 +97,11 @@ function getDefaultColorForLabel(
   const CATEGORY_COLORS: Record<string, string> = {
     "フェス": "#FEE2E2", "イベント": "#D1FAE5", "舞台": "#E9D5FF", "その他": "#E5E7EB",
   };
+
+  // ステータス名に対しては固定色を優先的に適用
+  if (STATUS_COLORS[label]) {
+    return STATUS_COLORS[label];
+  }
 
   if (isPrefecture) {
     const region = PREFECTURE_REGIONS[label];
