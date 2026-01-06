@@ -226,48 +226,52 @@ export default function SharedScheduleScreen() {
           onSchedulePress={handleSchedulePress}
         />
 
-        <Text style={styles.sectionTitle}>NEXT</Text>
-        {loading && <ActivityIndicator color="#333333" />}
-        {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-        {!loading && !error && nextSchedules.length === 0 && (
-          <Text style={styles.emptyText}>今後のスケジュールはありません</Text>
-        )}
-        {!loading && !error && nextSchedules.length > 0 && (
-          <FlatList
-            data={nextSchedules}
-            keyExtractor={(item) => item.id.toString()}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => handleSchedulePress(item)}
-              >
-                <Text style={styles.cardDate}>
-                  {formatDateTimeUTC(item.datetime)}
-                </Text>
-                <Text style={styles.cardTitle} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                <Text style={styles.cardSub}>
-                  {item.area} / {item.venue}
-                </Text>
-              </TouchableOpacity>
-            )}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-          />
-        )}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>NEXT</Text>
+          {loading && <ActivityIndicator color="#333333" />}
+          {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+          {!loading && !error && nextSchedules.length === 0 && (
+            <Text style={styles.emptyText}>今後のスケジュールはありません</Text>
+          )}
+          {!loading && !error && nextSchedules.length > 0 && (
+            <FlatList
+              data={nextSchedules}
+              keyExtractor={(item) => item.id.toString()}
+              scrollEnabled={false}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.card}
+                  onPress={() => handleSchedulePress(item)}
+                >
+                  <Text style={styles.cardDate}>
+                    {formatDateTimeUTC(item.datetime)}
+                  </Text>
+                  <Text style={styles.cardTitle} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.cardSub}>
+                    {item.area} / {item.venue}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
+          )}
+        </View>
 
-        <Text style={styles.sectionTitle}>Years</Text>
-        <View style={styles.yearListColumn}>
-          {availableYears.map((year) => (
-            <TouchableOpacity
-              key={year}
-              style={styles.yearRow}
-              onPress={() => router.push(`/share/${share_id}/year/${year}`)}
-            >
-              <Text style={styles.yearRowText}>{year}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Years</Text>
+          <View style={styles.yearListColumn}>
+            {availableYears.map((year) => (
+              <TouchableOpacity
+                key={year}
+                style={styles.yearRow}
+                onPress={() => router.push(`/share/${share_id}/year/${year}`)}
+              >
+                <Text style={styles.yearRowText}>{year}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
         <View style={styles.bottomSpacer} />
       </View>
@@ -338,14 +342,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  sectionContainer: {
+    backgroundColor: "#f7f6f3",
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 24,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#e9e9e7",
+  },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#37352f',
-    marginTop: 32,
+    marginTop: 0,
     marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    backgroundColor: "#f7f6f3",
+    paddingVertical: 4,
+    paddingHorizontal: 0,
   },
   yearListColumn: {
     flexDirection: 'column',
