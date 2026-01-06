@@ -349,7 +349,12 @@ export async function loadSelectOptions(
           if (hasChanges) {
             await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(uniqueOptions));
           }
-          return uniqueOptions;
+          // orderでソートして返す
+          return uniqueOptions.sort((a, b) => {
+            const orderA = a.order !== undefined ? a.order : Infinity;
+            const orderB = b.order !== undefined ? b.order : Infinity;
+            return orderA - orderB;
+          });
         }
         // 既存のSelectOption配列の場合、TARGETSの場合は「Band B」「Band C」を「Artist B」「Artist C」に変換
         if (key === "TARGETS") {
@@ -384,10 +389,16 @@ export async function loadSelectOptions(
         }
         // TRANSPORTATIONSの場合は、色が設定されていない場合のみデフォルトで薄いグレーに
         if (key === "TRANSPORTATIONS") {
-          return (parsed as SelectOption[]).map((opt) => ({
+          const options = (parsed as SelectOption[]).map((opt) => ({
             ...opt,
             color: opt.color || "#E5E7EB", // 色が設定されていない場合のみ薄いグレー（デフォルト）
           }));
+          // orderでソートして返す
+          return options.sort((a, b) => {
+            const orderA = a.order !== undefined ? a.order : Infinity;
+            const orderB = b.order !== undefined ? b.order : Infinity;
+            return orderA - orderB;
+          });
         }
         return parsed as SelectOption[];
       }
