@@ -37,6 +37,9 @@ export default function SharedYearScreen() {
   type GroupingField = "group" | "category" | "area" | "target" | "lineup" | "seller" | "status" | "none";
   const [groupingField, setGroupingField] = useState<GroupingField>("group");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  
+  // 選択肢の並び順情報（グルーピングのソート用）
+  const [selectOptionsMap, setSelectOptionsMap] = useState<Map<string, Map<string, number>>>(new Map());
 
   const fetchAvailableYears = async () => {
     try {
@@ -143,6 +146,63 @@ export default function SharedYearScreen() {
     fetchAreaColors();
   }, [schedules]);
 
+  // 選択肢の並び順情報を取得（グルーピングのソート用）
+  useEffect(() => {
+    if (!share_id) return;
+    
+    const loadOptionsOrder = async () => {
+      try {
+        const [categories, areas, targets, sellers, statuses] = await Promise.all([
+          loadSelectOptions("CATEGORIES", share_id),
+          loadSelectOptions("AREAS", share_id),
+          loadSelectOptions("TARGETS", share_id),
+          loadSelectOptions("SELLERS", share_id),
+          loadSelectOptions("STATUSES", share_id),
+        ]);
+
+        const orderMap = new Map<string, Map<string, number>>();
+        
+        // 各選択肢タイプのorder情報をマップに保存
+        const categoryOrder = new Map<string, number>();
+        categories.forEach((opt, idx) => {
+          categoryOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        });
+        orderMap.set("category", categoryOrder);
+
+        const areaOrder = new Map<string, number>();
+        areas.forEach((opt, idx) => {
+          areaOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        });
+        orderMap.set("area", areaOrder);
+
+        const targetOrder = new Map<string, number>();
+        targets.forEach((opt, idx) => {
+          targetOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        });
+        orderMap.set("target", targetOrder);
+        orderMap.set("lineup", targetOrder); // LineupもTargetと同じ選択肢を使用
+
+        const sellerOrder = new Map<string, number>();
+        sellers.forEach((opt, idx) => {
+          sellerOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        });
+        orderMap.set("seller", sellerOrder);
+
+        const statusOrder = new Map<string, number>();
+        statuses.forEach((opt, idx) => {
+          statusOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        });
+        orderMap.set("status", statusOrder);
+
+        setSelectOptionsMap(orderMap);
+      } catch (error) {
+        console.error("Error loading select options order:", error);
+      }
+    };
+    
+    loadOptionsOrder();
+  }, [share_id]);
+
   const handleSelectYear = (y: number) => {
     const yStr = String(y);
     setCurrentYear(yStr);
@@ -163,6 +223,128 @@ export default function SharedYearScreen() {
     } finally {
       setRefreshing(false);
     }
+  };
+
+  // グルーピングロジック
+  type GroupedSchedule = {
+    title: string;
+    data: Schedule[];
+  };
+
+  const groupSchedules = (schedules: Schedule[], field: GroupingField): GroupedSchedule[] => {
+    if (field === "none") {
+      return [{ title: "", data: schedules }];
+    }
+
+    const grouped = new Map<string, Schedule[]>();
+
+    schedules.forEach((schedule) => {
+      let groupKey: string;
+
+      switch (field) {
+        case "group":
+          // GroupがNULLの場合はTitleを使用
+          groupKey = schedule.group || schedule.title || "未設定";
+          break;
+        case "category":
+          groupKey = schedule.category || "未設定";
+          break;
+        case "area":
+          groupKey = schedule.area || "未設定";
+          break;
+        case "target":
+          groupKey = schedule.target || "未設定";
+          break;
+        case "lineup":
+          // Lineupはカンマ区切りで複数値がある場合は双方に表示
+          if (schedule.lineup) {
+            const lineupValues = schedule.lineup.split(",").map(v => v.trim()).filter(v => v);
+            if (lineupValues.length > 0) {
+              // 各値に対してスケジュールを追加
+              lineupValues.forEach((value) => {
+                if (!grouped.has(value)) {
+                  grouped.set(value, []);
+                }
+                grouped.get(value)!.push(schedule);
+              });
+            } else {
+              groupKey = "未設定";
+            }
+          } else {
+            groupKey = "未設定";
+          }
+          break;
+        case "seller":
+          groupKey = schedule.seller || "未設定";
+          break;
+        case "status":
+          groupKey = schedule.status || "未設定";
+          break;
+        default:
+          groupKey = "未設定";
+      }
+
+      // lineupの場合は既に処理済みなのでスキップ
+      if (field !== "lineup") {
+        if (!grouped.has(groupKey)) {
+          grouped.set(groupKey, []);
+        }
+        grouped.get(groupKey)!.push(schedule);
+      }
+    });
+
+    // グループをソート
+    const sortedGroups = Array.from(grouped.entries()).sort((a, b) => {
+      const [titleA, dataA] = a;
+      const [titleB, dataB] = b;
+      
+      // 未設定は最後に
+      if (titleA === "未設定") return 1;
+      if (titleB === "未設定") return -1;
+
+      // groupの場合は、各グループに含まれる一番古い開演時間でソート
+      if (field === "group") {
+        const getEarliestDatetime = (schedules: Schedule[]): number => {
+          return Math.min(...schedules.map(s => {
+            try {
+              return new Date(s.datetime).getTime();
+            } catch {
+              return Infinity;
+            }
+          }));
+        };
+        const timeA = getEarliestDatetime(dataA);
+        const timeB = getEarliestDatetime(dataB);
+        return timeA - timeB;
+      }
+
+      // その他のフィールドの場合は、選択肢のorderでソート
+      const orderMap = selectOptionsMap.get(field);
+      if (orderMap) {
+        const orderA = orderMap.get(titleA) ?? Infinity;
+        const orderB = orderMap.get(titleB) ?? Infinity;
+        if (orderA !== Infinity || orderB !== Infinity) {
+          return orderA - orderB;
+        }
+      }
+
+      // orderがない場合は文字列比較
+      return titleA.localeCompare(titleB, "ja");
+    });
+
+    return sortedGroups.map(([title, data]) => ({ title, data }));
+  };
+
+  const groupedSchedules = groupSchedules(schedules, groupingField);
+
+  const toggleSection = (title: string) => {
+    const newCollapsed = new Set(collapsedSections);
+    if (newCollapsed.has(title)) {
+      newCollapsed.delete(title);
+    } else {
+      newCollapsed.add(title);
+    }
+    setCollapsedSections(newCollapsed);
   };
 
   if (!share_id) {

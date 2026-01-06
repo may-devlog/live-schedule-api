@@ -18,6 +18,7 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { HomeButton } from "../../components/HomeButton";
 import { NotionTag } from "../../components/notion-tag";
 import { getOptionColor, getOptionColorSync } from "../../utils/get-option-color";
+import { loadSelectOptions } from "../../utils/select-options-storage";
 
 export default function YearScreen() {
   const params = useLocalSearchParams<{ year: string }>();
@@ -40,6 +41,9 @@ export default function YearScreen() {
   type GroupingField = "group" | "category" | "area" | "target" | "lineup" | "seller" | "status" | "none";
   const [groupingField, setGroupingField] = useState<GroupingField>("group");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  
+  // 選択肢の並び順情報（グルーピングのソート用）
+  const [selectOptionsMap, setSelectOptionsMap] = useState<Map<string, Map<string, number>>>(new Map());
 
 const fetchAvailableYears = async () => {
   try {
@@ -125,6 +129,61 @@ const fetchYear = async (y: string) => {
     
     fetchAreaColors();
   }, [schedules]);
+
+  // 選択肢の並び順情報を取得（グルーピングのソート用）
+  useEffect(() => {
+    const loadOptionsOrder = async () => {
+      try {
+        const [categories, areas, targets, sellers, statuses] = await Promise.all([
+          loadSelectOptions("CATEGORIES"),
+          loadSelectOptions("AREAS"),
+          loadSelectOptions("TARGETS"),
+          loadSelectOptions("SELLERS"),
+          loadSelectOptions("STATUSES"),
+        ]);
+
+        const orderMap = new Map<string, Map<string, number>>();
+        
+        // 各選択肢タイプのorder情報をマップに保存
+        const categoryOrder = new Map<string, number>();
+        categories.forEach((opt, idx) => {
+          categoryOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        });
+        orderMap.set("category", categoryOrder);
+
+        const areaOrder = new Map<string, number>();
+        areas.forEach((opt, idx) => {
+          areaOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        });
+        orderMap.set("area", areaOrder);
+
+        const targetOrder = new Map<string, number>();
+        targets.forEach((opt, idx) => {
+          targetOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        });
+        orderMap.set("target", targetOrder);
+        orderMap.set("lineup", targetOrder); // LineupもTargetと同じ選択肢を使用
+
+        const sellerOrder = new Map<string, number>();
+        sellers.forEach((opt, idx) => {
+          sellerOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        });
+        orderMap.set("seller", sellerOrder);
+
+        const statusOrder = new Map<string, number>();
+        statuses.forEach((opt, idx) => {
+          statusOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+        });
+        orderMap.set("status", statusOrder);
+
+        setSelectOptionsMap(orderMap);
+      } catch (error) {
+        console.error("Error loading select options order:", error);
+      }
+    };
+    
+    loadOptionsOrder();
+  }, []);
 
   const handleSelectYear = (y: number) => {
     const yStr = String(y);
@@ -217,11 +276,43 @@ const fetchYear = async (y: string) => {
       }
     });
 
-    // グループをソート（未設定は最後に）
+    // グループをソート
     const sortedGroups = Array.from(grouped.entries()).sort((a, b) => {
-      if (a[0] === "未設定") return 1;
-      if (b[0] === "未設定") return -1;
-      return a[0].localeCompare(b[0], "ja");
+      const [titleA, dataA] = a;
+      const [titleB, dataB] = b;
+      
+      // 未設定は最後に
+      if (titleA === "未設定") return 1;
+      if (titleB === "未設定") return -1;
+
+      // groupの場合は、各グループに含まれる一番古い開演時間でソート
+      if (field === "group") {
+        const getEarliestDatetime = (schedules: Schedule[]): number => {
+          return Math.min(...schedules.map(s => {
+            try {
+              return new Date(s.datetime).getTime();
+            } catch {
+              return Infinity;
+            }
+          }));
+        };
+        const timeA = getEarliestDatetime(dataA);
+        const timeB = getEarliestDatetime(dataB);
+        return timeA - timeB;
+      }
+
+      // その他のフィールドの場合は、選択肢のorderでソート
+      const orderMap = selectOptionsMap.get(field);
+      if (orderMap) {
+        const orderA = orderMap.get(titleA) ?? Infinity;
+        const orderB = orderMap.get(titleB) ?? Infinity;
+        if (orderA !== Infinity || orderB !== Infinity) {
+          return orderA - orderB;
+        }
+      }
+
+      // orderがない場合は文字列比較
+      return titleA.localeCompare(titleB, "ja");
     });
 
     return sortedGroups.map(([title, data]) => ({ title, data }));
