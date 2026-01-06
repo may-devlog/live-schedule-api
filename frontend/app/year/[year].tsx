@@ -304,12 +304,16 @@ const fetchYear = async (y: string) => {
 
         // その他のフィールドの場合は、選択肢のorderでソート
         const orderMap = selectOptionsMap.get(field);
-        if (orderMap) {
-          const orderA = orderMap.get(titleA) ?? Infinity;
-          const orderB = orderMap.get(titleB) ?? Infinity;
-          if (orderA !== Infinity || orderB !== Infinity) {
+        if (orderMap && orderMap.size > 0) {
+          const orderA = orderMap.get(titleA);
+          const orderB = orderMap.get(titleB);
+          // 両方のorderが存在する場合はorderでソート
+          if (orderA !== undefined && orderB !== undefined) {
             return orderA - orderB;
           }
+          // 片方だけorderがある場合は、orderがある方を前に
+          if (orderA !== undefined) return -1;
+          if (orderB !== undefined) return 1;
         }
 
         // orderがない場合は文字列比較
