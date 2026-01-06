@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
     color: "#787774",
   },
   sectionTotalCost: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingVertical: 8,
     backgroundColor: "#f7f6f3",
     borderBottomWidth: 1,

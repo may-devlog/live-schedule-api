@@ -141,6 +141,16 @@ export default function EditScheduleScreen() {
     }
   };
 
+  const handleGroupsChange = async (newGroups: SelectOption[]) => {
+    try {
+      await saveSelectOptions("GROUPS", newGroups);
+      setGroups(newGroups);
+    } catch (error) {
+      console.error("Failed to save groups:", error);
+      Alert.alert("エラー", "選択肢の保存に失敗しました。もう一度お試しください。");
+    }
+  };
+
   // フォームの状態
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
