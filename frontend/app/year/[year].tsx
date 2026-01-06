@@ -33,8 +33,6 @@ export default function YearScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
-  const [pullDistance, setPullDistance] = useState(0);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   
   // グルーピング関連
@@ -346,7 +344,7 @@ const fetchYear = async (y: string) => {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>Year {currentYear}</Text>
+        <Text style={styles.title}>{currentYear}</Text>
 
         {/* 年ボタン */}
         <View style={styles.yearSelector}>
@@ -609,7 +607,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: 48,
+    paddingTop: 24,
     paddingBottom: 16,
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
@@ -623,7 +621,7 @@ const styles = StyleSheet.create({
   },
   title: {
     paddingHorizontal: 24,
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: "700",
     color: "#37352f",
     marginBottom: 24,

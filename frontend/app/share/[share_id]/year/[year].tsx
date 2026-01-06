@@ -367,7 +367,7 @@ export default function SharedYearScreen() {
       <PageHeader showBackButton={true} homePath={`/share/${share_id}`} />
       
       <View style={styles.content}>
-        <Text style={styles.title}>Year {currentYear}</Text>
+        <Text style={styles.title}>{currentYear}</Text>
 
         {/* 年ボタン */}
         <View style={styles.yearSelector}>
@@ -439,30 +439,6 @@ export default function SharedYearScreen() {
                 colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
               />
             }
-            onTouchStart={(e) => {
-              const touch = e.nativeEvent.touches[0];
-              if (touch) {
-                setTouchStartY(touch.pageY);
-              }
-            }}
-            onTouchMove={(e) => {
-              if (touchStartY !== null) {
-                const touch = e.nativeEvent.touches[0];
-                if (touch) {
-                  const distance = touch.pageY - touchStartY;
-                  if (distance > 0) {
-                    setPullDistance(distance);
-                  }
-                }
-              }
-            }}
-            onTouchEnd={() => {
-              if (pullDistance > 100 && !refreshing) {
-                onRefresh();
-              }
-              setTouchStartY(null);
-              setPullDistance(0);
-            }}
             ListHeaderComponent={
               <>
                 {loading && <ActivityIndicator color="#333333" />}
@@ -615,7 +591,7 @@ const styles = StyleSheet.create({
   },
   title: {
     paddingHorizontal: 24,
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: "700",
     color: "#37352f",
     marginBottom: 24,

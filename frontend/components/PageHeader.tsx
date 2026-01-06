@@ -45,7 +45,7 @@ export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: P
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 24,
-    paddingTop: 48,
+    paddingTop: 24,
     paddingBottom: 16,
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
