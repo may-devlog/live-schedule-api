@@ -434,7 +434,12 @@ export function NotionSelect({
           <View style={styles.selectedValueContainer}>
             <NotionTag
               label={selectedOption.label}
-              color={selectedOption.color}
+              color={selectedOption.color || getDefaultColorForLabel(
+                selectedOption.label,
+                isPrefecture,
+                isCategory,
+                stayOptionType
+              )}
             />
           </View>
         ) : (
