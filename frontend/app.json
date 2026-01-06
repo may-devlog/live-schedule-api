@@ -24,7 +24,15 @@
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "meta": {
+        "viewport": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover",
+        "theme-color": "#ffffff",
+        "apple-mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-status-bar-style": "default",
+        "mobile-web-app-capable": "yes",
+        "format-detection": "telephone=no"
+      }
     },
     "plugins": [
       "expo-router",
