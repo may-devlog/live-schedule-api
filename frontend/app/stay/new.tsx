@@ -226,25 +226,26 @@ export default function NewStayScreen() {
     return `${year}-${month}-${day} 00:00`;
   };
 
-  // チェックイン変更時に、キャンセル期限日時がNULLの場合、デフォルト値を設定
-  useEffect(() => {
-    // 初回ロード時はスキップ（既存データから設定されるため）
-    if (isInitialLoad.current) return;
-    
-    // ユーザーが手動で設定した場合はスキップ
-    if (deadlineManuallySet.current) return;
-    
-    // 既にdeadlineが設定されている場合はスキップ
-    if (deadline) return;
-    
-    // checkInが入力されている場合のみデフォルト値を設定
-    if (checkIn) {
-      const defaultDeadline = getCheckInDateAtMidnight(checkIn);
-      if (defaultDeadline) {
-        setDeadline(defaultDeadline);
-      }
-    }
-  }, [checkIn]); // deadlineを依存配列に含めない（無限ループを防ぐ）
+  // デフォルト値設定を一時的に無効化（エラー原因の切り分けのため）
+  // // チェックイン変更時に、キャンセル期限日時がNULLの場合、デフォルト値を設定
+  // useEffect(() => {
+  //   // 初回ロード時はスキップ（既存データから設定されるため）
+  //   if (isInitialLoad.current) return;
+  //   
+  //   // ユーザーが手動で設定した場合はスキップ
+  //   if (deadlineManuallySet.current) return;
+  //   
+  //   // 既にdeadlineが設定されている場合はスキップ
+  //   if (deadline) return;
+  //   
+  //   // checkInが入力されている場合のみデフォルト値を設定
+  //   if (checkIn) {
+  //     const defaultDeadline = getCheckInDateAtMidnight(checkIn);
+  //     if (defaultDeadline) {
+  //       setDeadline(defaultDeadline);
+  //     }
+  //   }
+  // }, [checkIn]); // deadlineを依存配列に含めない（無限ループを防ぐ）
 
   // キャンセル期限日時のバリデーション
   const handleDeadlineChange = (value: string | null) => {
