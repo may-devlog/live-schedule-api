@@ -18,8 +18,8 @@ import { getApiUrl } from "../../../../utils/api";
 import { PageHeader } from "../../../../components/PageHeader";
 import { NotionTag } from "../../../../components/notion-tag";
 import { getOptionColor, getOptionColorSync } from "../../../../utils/get-option-color";
-import { loadSelectOptions } from "../../../../utils/select-options-storage";
 import { groupSchedules, type GroupingField, type GroupedSchedule } from "../../../../utils/group-schedules";
+import { loadSelectOptionsMap } from "../../../../utils/load-select-options-map";
 
 export default function SharedYearScreen() {
   const { share_id, year } = useLocalSearchParams<{ share_id: string; year: string }>();
@@ -151,56 +151,7 @@ export default function SharedYearScreen() {
     
     const loadOptionsOrder = async () => {
       try {
-        const [categories, areas, targets, sellers, statuses] = await Promise.all([
-          loadSelectOptions("CATEGORIES", share_id),
-          loadSelectOptions("AREAS", share_id),
-          loadSelectOptions("TARGETS", share_id),
-          loadSelectOptions("SELLERS", share_id),
-          loadSelectOptions("STATUSES", share_id),
-        ]);
-
-        const orderMap = new Map<string, Map<string, number>>();
-        
-        // 各選択肢タイプのorder情報をマップに保存
-        // loadSelectOptionsで取得した選択肢は既にorderでソートされているので、その順序を使用
-        const categoryOrder = new Map<string, number>();
-        categories.forEach((opt, idx) => {
-          // opt.orderが存在する場合はそれを使用、存在しない場合は配列のインデックスを使用
-          categoryOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
-        });
-        orderMap.set("category", categoryOrder);
-
-        const areaOrder = new Map<string, number>();
-        // loadSelectOptionsで取得した選択肢は既にorderでソートされているので、その順序を使用
-        console.log("[SharedYear] Areas loaded:", areas.map(opt => ({ label: opt.label, order: opt.order })));
-        areas.forEach((opt, idx) => {
-          areaOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
-        });
-        console.log("[SharedYear] Area order map:", Array.from(areaOrder.entries()).sort((a, b) => a[1] - b[1]));
-        orderMap.set("area", areaOrder);
-
-        const targetOrder = new Map<string, number>();
-        targets.forEach((opt, idx) => {
-          targetOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
-        });
-        orderMap.set("target", targetOrder);
-        orderMap.set("lineup", targetOrder); // LineupもTargetと同じ選択肢を使用
-
-        const sellerOrder = new Map<string, number>();
-        sellers.forEach((opt, idx) => {
-          sellerOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
-        });
-        orderMap.set("seller", sellerOrder);
-
-        const statusOrder = new Map<string, number>();
-        statuses.forEach((opt, idx) => {
-          statusOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
-        });
-        orderMap.set("status", statusOrder);
-
-        console.log(`[SharedYear] selectOptionsMap set with keys:`, Array.from(orderMap.keys()));
-        console.log(`[SharedYear] area order map size:`, orderMap.get("area")?.size);
-        console.log(`[SharedYear] area order map entries:`, Array.from(orderMap.get("area")?.entries() || []));
+        const orderMap = await loadSelectOptionsMap(share_id);
         setSelectOptionsMap(orderMap);
       } catch (error) {
         console.error("Error loading select options order:", error);

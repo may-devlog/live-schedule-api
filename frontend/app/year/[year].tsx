@@ -18,8 +18,8 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { HomeButton } from "../../components/HomeButton";
 import { NotionTag } from "../../components/notion-tag";
 import { getOptionColor, getOptionColorSync } from "../../utils/get-option-color";
-import { loadSelectOptions } from "../../utils/select-options-storage";
 import { groupSchedules, type GroupingField, type GroupedSchedule } from "../../utils/group-schedules";
+import { loadSelectOptionsMap } from "../../utils/load-select-options-map";
 
 export default function YearScreen() {
   const params = useLocalSearchParams<{ year: string }>();
@@ -132,50 +132,7 @@ const fetchYear = async (y: string) => {
   useEffect(() => {
     const loadOptionsOrder = async () => {
       try {
-        const [categories, areas, targets, sellers, statuses] = await Promise.all([
-          loadSelectOptions("CATEGORIES"),
-          loadSelectOptions("AREAS"),
-          loadSelectOptions("TARGETS"),
-          loadSelectOptions("SELLERS"),
-          loadSelectOptions("STATUSES"),
-        ]);
-
-        const orderMap = new Map<string, Map<string, number>>();
-        
-        // 各選択肢タイプのorder情報をマップに保存
-        // loadSelectOptionsで取得した選択肢は既にorderでソートされているので、その順序を使用
-        const categoryOrder = new Map<string, number>();
-        categories.forEach((opt, idx) => {
-          // opt.orderが存在する場合はそれを使用、存在しない場合は配列のインデックスを使用
-          categoryOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
-        });
-        orderMap.set("category", categoryOrder);
-
-        const areaOrder = new Map<string, number>();
-        areas.forEach((opt, idx) => {
-          areaOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
-        });
-        orderMap.set("area", areaOrder);
-
-        const targetOrder = new Map<string, number>();
-        targets.forEach((opt, idx) => {
-          targetOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
-        });
-        orderMap.set("target", targetOrder);
-        orderMap.set("lineup", targetOrder); // LineupもTargetと同じ選択肢を使用
-
-        const sellerOrder = new Map<string, number>();
-        sellers.forEach((opt, idx) => {
-          sellerOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
-        });
-        orderMap.set("seller", sellerOrder);
-
-        const statusOrder = new Map<string, number>();
-        statuses.forEach((opt, idx) => {
-          statusOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
-        });
-        orderMap.set("status", statusOrder);
-
+        const orderMap = await loadSelectOptionsMap();
         setSelectOptionsMap(orderMap);
       } catch (error) {
         console.error("Error loading select options order:", error);
