@@ -383,11 +383,17 @@ export default function StayDetailScreen() {
           />
           <NotionProperty label="ステータス">
             {stay.status ? (() => {
-              const statusOption = statusOptions.find(opt => opt.label === stay.status);
+              // ステータス色を取得（Canceled: グレー、Keep: 青、Done: 緑）
+              const STATUS_COLORS: Record<string, string> = {
+                Canceled: "#E5E7EB", // gray
+                Keep: "#BFDBFE",     // blue
+                Done: "#D1FAE5",     // green
+              };
+              const statusColor = STATUS_COLORS[stay.status] || "#E5E7EB";
               return (
                 <NotionTag
                   label={stay.status}
-                  color={statusOption?.color || "#E5E7EB"}
+                  color={statusColor}
                 />
               );
             })() : undefined}

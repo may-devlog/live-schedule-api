@@ -218,10 +218,23 @@ export default function SharedStayDetailScreen() {
                 : undefined
             }
           />
-          <NotionProperty
-            label="ステータス"
-            value={stay.status}
-          />
+          <NotionProperty label="ステータス">
+            {stay.status ? (() => {
+              // ステータス色を取得（Canceled: グレー、Keep: 青、Done: 緑）
+              const STATUS_COLORS: Record<string, string> = {
+                Canceled: "#E5E7EB", // gray
+                Keep: "#BFDBFE",     // blue
+                Done: "#D1FAE5",     // green
+              };
+              const statusColor = STATUS_COLORS[stay.status] || "#E5E7EB";
+              return (
+                <NotionTag
+                  label={stay.status}
+                  color={statusColor}
+                />
+              );
+            })() : undefined}
+          </NotionProperty>
         </NotionPropertyBlock>
       </ScrollView>
     </View>
