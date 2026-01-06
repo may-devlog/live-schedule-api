@@ -496,48 +496,52 @@ export default function HomeScreen() {
         {/* カレンダー */}
         <ScheduleCalendar schedules={allSchedules} />
 
-      <Text style={styles.sectionTitle}>NEXT</Text>
-      {loadingNext && <ActivityIndicator color="#333333" />}
-      {errorNext && <Text style={styles.errorText}>エラー: {errorNext}</Text>}
-      {!loadingNext && !errorNext && nextSchedules.length === 0 && (
-        <Text style={styles.emptyText}>今後のスケジュールはありません</Text>
-      )}
-      {!loadingNext && !errorNext && nextSchedules.length > 0 && (
-        <FlatList
-          data={nextSchedules}
-          keyExtractor={(item) => item.id.toString()}
-          scrollEnabled={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => router.push(`/live/${item.id}`)}
-            >
-              <Text style={styles.cardDate}>
-                {formatDateTimeUTC(item.datetime)}
-              </Text>
-              <Text style={styles.cardTitle} numberOfLines={2}>
-                {item.title}
-              </Text>
-              <Text style={styles.cardSub}>
-                {item.area} / {item.venue}
-              </Text>
-            </TouchableOpacity>
-          )}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-        />
-      )}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>NEXT</Text>
+        {loadingNext && <ActivityIndicator color="#333333" />}
+        {errorNext && <Text style={styles.errorText}>エラー: {errorNext}</Text>}
+        {!loadingNext && !errorNext && nextSchedules.length === 0 && (
+          <Text style={styles.emptyText}>今後のスケジュールはありません</Text>
+        )}
+        {!loadingNext && !errorNext && nextSchedules.length > 0 && (
+          <FlatList
+            data={nextSchedules}
+            keyExtractor={(item) => item.id.toString()}
+            scrollEnabled={false}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => router.push(`/live/${item.id}`)}
+              >
+                <Text style={styles.cardDate}>
+                  {formatDateTimeUTC(item.datetime)}
+                </Text>
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <Text style={styles.cardSub}>
+                  {item.area} / {item.venue}
+                </Text>
+              </TouchableOpacity>
+            )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+        )}
+      </View>
 
-      <Text style={styles.sectionTitle}>Years</Text>
-      <View style={styles.yearListColumn}>
-        {availableYears.map((year) => (
-          <TouchableOpacity
-            key={year}
-            style={styles.yearRow}
-            onPress={() => handleOpenYearPage(year)}
-          >
-            <Text style={styles.yearRowText}>{year}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Years</Text>
+        <View style={styles.yearListColumn}>
+          {availableYears.map((year) => (
+            <TouchableOpacity
+              key={year}
+              style={styles.yearRow}
+              onPress={() => handleOpenYearPage(year)}
+            >
+              <Text style={styles.yearRowText}>{year}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
       <View style={styles.bottomSpacer} />
       </View>
