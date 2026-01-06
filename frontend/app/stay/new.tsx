@@ -125,6 +125,7 @@ export default function NewStayScreen() {
         }
         const data: Stay = await res.json();
 
+        // checkInを設定（handleCheckInChangeを使わず直接設定して、デフォルト値設定をスキップ）
         setCheckIn(data.check_in || null);
         setCheckOut(data.check_out || null);
         setHotelName(data.hotel_name || "");
