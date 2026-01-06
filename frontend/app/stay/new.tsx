@@ -174,6 +174,22 @@ export default function NewStayScreen() {
     if (schedule?.date) {
       const checkInDateTime = `${schedule.date} 15:00`;
       setCheckIn(checkInDateTime);
+      
+      // チェックアウトをライブ予定の翌日の朝10:00に設定
+      const liveDate = new Date(schedule.date);
+      liveDate.setDate(liveDate.getDate() + 1); // 翌日
+      const year = liveDate.getFullYear();
+      const month = String(liveDate.getMonth() + 1).padStart(2, "0");
+      const day = String(liveDate.getDate()).padStart(2, "0");
+      const checkOutDateTime = `${year}-${month}-${day} 10:00`;
+      setCheckOut(checkOutDateTime);
+      
+      // 取消期限をチェックインの日付0:00に設定
+      const defaultDeadline = getCheckInDateAtMidnight(checkInDateTime);
+      if (defaultDeadline) {
+        setDeadline(defaultDeadline);
+      }
+      
       isInitialLoad.current = false;
     }
   }, [scheduleId, copyFrom, allSchedules]); // checkInを依存配列から削除して無限ループを防ぐ
