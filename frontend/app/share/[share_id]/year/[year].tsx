@@ -197,6 +197,9 @@ export default function SharedYearScreen() {
         });
         orderMap.set("status", statusOrder);
 
+        console.log(`[SharedYear] selectOptionsMap set with keys:`, Array.from(orderMap.keys()));
+        console.log(`[SharedYear] area order map size:`, orderMap.get("area")?.size);
+        console.log(`[SharedYear] area order map entries:`, Array.from(orderMap.get("area")?.entries() || []));
         setSelectOptionsMap(orderMap);
       } catch (error) {
         console.error("Error loading select options order:", error);
@@ -338,13 +341,16 @@ export default function SharedYearScreen() {
 
         // orderがない場合は文字列比較
         // デバッグ用: orderが見つからない場合のログ
-        if (field === "area" && (!orderMap || orderMap.size === 0 || orderMap.get(titleA) === undefined || orderMap.get(titleB) === undefined)) {
+        if (field === "area") {
           console.log(`[SharedYear] Order not found for area grouping:`, {
+            field,
             titleA,
             titleB,
             orderA: orderMap?.get(titleA),
             orderB: orderMap?.get(titleB),
             orderMapSize: orderMap?.size,
+            selectOptionsMapKeys: Array.from(selectOptionsMap.keys()),
+            orderMapExists: orderMap !== undefined,
           });
         }
         return titleA.localeCompare(titleB, "ja");
