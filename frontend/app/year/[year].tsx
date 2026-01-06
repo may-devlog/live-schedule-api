@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
   },
   yearSelector: {
     flexDirection: "row",
-    marginBottom: 24,
+    marginBottom: 16,
     gap: 8,
   },
   yearButton: {
