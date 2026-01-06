@@ -172,14 +172,15 @@ function mergeOptionsWithDefaults(
   });
 
   // デフォルト選択肢とマージ（デフォルト選択肢の色をデータベースの値で上書き）
+  // デフォルト選択肢の順序を保持するため、デフォルトのorderを優先
   const merged: SelectOption[] = defaultOptions.map((defaultOpt, index) => {
     const dbOpt = dbOptionsMap.get(defaultOpt.label);
     if (dbOpt) {
-      // データベースに存在する場合は、データベースの値を優先（色とorder）
+      // データベースに存在する場合は、デフォルトのorderを優先（色はデータベースの値を優先）
       return {
         ...defaultOpt,
         color: dbOpt.color || defaultOpt.color,
-        order: dbOpt.order !== undefined ? dbOpt.order : index,
+        order: index, // デフォルトの順序を優先
       };
     }
     // データベースに存在しない場合は、デフォルト値を使用
@@ -199,7 +200,12 @@ function mergeOptionsWithDefaults(
     }
   });
 
-  return merged;
+  // orderでソートして返す（デフォルト選択肢の順序を保証）
+  return merged.sort((a, b) => {
+    const orderA = a.order !== undefined ? a.order : Infinity;
+    const orderB = b.order !== undefined ? b.order : Infinity;
+    return orderA - orderB;
+  });
 }
 
 // 選択肢を読み込む（データベース優先、フォールバックはローカルストレージ）
