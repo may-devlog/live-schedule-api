@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
 type PageHeaderProps = {
@@ -50,6 +50,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e9e9e7",
+    // Web環境では固定ヘッダーを避けて、アドレスバーの非表示を促進
+    ...(Platform.OS === 'web' && {
+      position: 'relative' as const,
+      // position: fixedを明示的に避ける
+    }),
   },
   headerRow: {
     flexDirection: 'row',
