@@ -246,7 +246,23 @@ export async function loadSelectOptions(
           const isPrefecture = key === "AREAS";
           const isCategory = key === "CATEGORIES";
           const isSeller = key === "SELLERS";
-          return stringArrayToOptions(parsed, undefined, isPrefecture, isCategory, isSeller);
+          const options = stringArrayToOptions(parsed, undefined, isPrefecture, isCategory, isSeller);
+          // orderを付与（デフォルト順序に基づく）
+          const defaultOptions = getDefaultOptions(key);
+          const defaultOrderMap = new Map<string, number>();
+          defaultOptions.forEach((opt, idx) => {
+            defaultOrderMap.set(opt.label, idx);
+          });
+          const optionsWithOrder = options.map((opt) => ({
+            ...opt,
+            order: defaultOrderMap.get(opt.label) ?? Infinity,
+          }));
+          // orderでソートして返す
+          return optionsWithOrder.sort((a, b) => {
+            const orderA = a.order !== undefined ? a.order : Infinity;
+            const orderB = b.order !== undefined ? b.order : Infinity;
+            return orderA - orderB;
+          });
         }
         // 既存のSelectOption配列の場合、AREASの場合は色を再計算し、不足している都道府県を追加
         if (key === "AREAS") {
@@ -345,11 +361,17 @@ export async function loadSelectOptions(
     console.error(`Error loading ${key}:`, error);
   }
 
-  // デフォルト値を返す（orderを付与）
-  return defaultOptions.map((opt, index) => ({
+  // デフォルト値を返す（orderを付与し、orderでソート）
+  const optionsWithOrder = defaultOptions.map((opt, index) => ({
     ...opt,
     order: index,
   }));
+  // orderでソートして返す
+  return optionsWithOrder.sort((a, b) => {
+    const orderA = a.order !== undefined ? a.order : Infinity;
+    const orderB = b.order !== undefined ? b.order : Infinity;
+    return orderA - orderB;
+  });
 }
 
 // ホテル用選択肢を読み込む（データベース優先、フォールバックはローカルストレージ）
