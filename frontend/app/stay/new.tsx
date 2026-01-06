@@ -542,6 +542,7 @@ export default function NewStayScreen() {
           onValueChange={setStatus}
           onOptionsChange={handleStatusesChange}
           placeholder="選択してください"
+          stayOptionType="STATUS"
         />
       ) : (
         <View>

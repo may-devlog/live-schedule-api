@@ -52,7 +52,8 @@ const sortByOrder = (options: SelectOption[]): SelectOption[] => {
 function getDefaultColorForLabel(
   label: string,
   isPrefecture: boolean = false,
-  isCategory: boolean = false
+  isCategory: boolean = false,
+  stayOptionType?: "WEBSITE" | "STATUS"
 ): string {
   const DEFAULT_COLORS = [
     "#FEE2E2", // red (薄い赤)
@@ -98,9 +99,12 @@ function getDefaultColorForLabel(
     "フェス": "#FEE2E2", "イベント": "#D1FAE5", "舞台": "#E9D5FF", "その他": "#E5E7EB",
   };
 
-  // ステータス名に対しては固定色を優先的に適用
-  if (STATUS_COLORS[label]) {
-    return STATUS_COLORS[label];
+  // ステータス名に対しては固定色を優先的に適用（ライブ予定・宿泊で共通）
+  // stayOptionType="STATUS"の場合、またはステータス名の場合に適用
+  if (stayOptionType === "STATUS" || STATUS_COLORS[label]) {
+    if (STATUS_COLORS[label]) {
+      return STATUS_COLORS[label];
+    }
   }
 
   if (isPrefecture) {
@@ -516,7 +520,12 @@ export function NotionSelect({
                   >
                     <NotionTag
                       label={option.label}
-                      color={option.color}
+                      color={option.color || getDefaultColorForLabel(
+                        option.label,
+                        isPrefecture,
+                        isCategory,
+                        stayOptionType
+                      )}
                     />
                     {value === option.label && (
                       <Text style={styles.checkmark}>✓</Text>
