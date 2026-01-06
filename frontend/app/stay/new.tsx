@@ -13,7 +13,7 @@ import {
   Platform,
 } from "react-native";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
-// NotionSelectを動的インポートで循環依存を回避
+import { NotionSelect } from "../../components/notion-select";
 import { NotionDatePicker } from "../../components/notion-date-picker";
 import type { SelectOption } from "../../types/select-option";
 // 動的インポートで循環依存を回避（loadStaySelectOptions, saveStaySelectOptions）
@@ -433,8 +433,8 @@ export default function NewStayScreen() {
         onChangeText={setHotelName}
       />
 
-      {websiteOptions.length > 0 && NotionSelectComponent ? (
-        <NotionSelectComponent
+      {websiteOptions.length > 0 ? (
+        <NotionSelect
           label="予約サイト"
           value={website}
           options={websiteOptions}
@@ -443,16 +443,6 @@ export default function NewStayScreen() {
           placeholder="選択してください"
           stayOptionType="WEBSITE"
         />
-      ) : websiteOptions.length > 0 && !NotionSelectComponent ? (
-        <View>
-          <Text style={styles.label}>予約サイト</Text>
-          <TextInput
-            style={styles.input}
-            value={website || ""}
-            onChangeText={setWebsite}
-            placeholder="予約サイトを入力"
-          />
-        </View>
       ) : (
         <View>
           <Text style={styles.label}>予約サイト</Text>
@@ -495,8 +485,8 @@ export default function NewStayScreen() {
         keyboardType="numeric"
       />
 
-      {statuses.length > 0 && NotionSelectComponent ? (
-        <NotionSelectComponent
+      {statuses.length > 0 ? (
+        <NotionSelect
           label="ステータス"
           value={status}
           options={statuses}
@@ -504,16 +494,6 @@ export default function NewStayScreen() {
           onOptionsChange={handleStatusesChange}
           placeholder="選択してください"
         />
-      ) : statuses.length > 0 && !NotionSelectComponent ? (
-        <View>
-          <Text style={styles.label}>ステータス</Text>
-          <TextInput
-            style={styles.input}
-            value={status || ""}
-            onChangeText={setStatus}
-            placeholder="ステータスを入力"
-          />
-        </View>
       ) : (
         <View>
           <Text style={styles.label}>ステータス</Text>
