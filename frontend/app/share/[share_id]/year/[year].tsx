@@ -171,9 +171,11 @@ export default function SharedYearScreen() {
 
         const areaOrder = new Map<string, number>();
         // loadSelectOptionsで取得した選択肢は既にorderでソートされているので、その順序を使用
+        console.log("[SharedYear] Areas loaded:", areas.map(opt => ({ label: opt.label, order: opt.order })));
         areas.forEach((opt, idx) => {
           areaOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
         });
+        console.log("[SharedYear] Area order map:", Array.from(areaOrder.entries()).sort((a, b) => a[1] - b[1]));
         orderMap.set("area", areaOrder);
 
         const targetOrder = new Map<string, number>();
@@ -335,6 +337,16 @@ export default function SharedYearScreen() {
         }
 
         // orderがない場合は文字列比較
+        // デバッグ用: orderが見つからない場合のログ
+        if (field === "area" && (!orderMap || orderMap.size === 0 || orderMap.get(titleA) === undefined || orderMap.get(titleB) === undefined)) {
+          console.log(`[SharedYear] Order not found for area grouping:`, {
+            titleA,
+            titleB,
+            orderA: orderMap?.get(titleA),
+            orderB: orderMap?.get(titleB),
+            orderMapSize: orderMap?.size,
+          });
+        }
         return titleA.localeCompare(titleB, "ja");
       });
 
