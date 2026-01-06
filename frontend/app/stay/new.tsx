@@ -131,8 +131,10 @@ export default function NewStayScreen() {
         setWebsite(data.website || null);
         setFee(data.fee.toString());
         setBreakfastFlag(data.breakfast_flag);
-        // Deadline機能はまだ無効化
-        // setDeadline(data.deadline || null);
+        setDeadline(data.deadline || null);
+        if (data.deadline) {
+          deadlineManuallySet.current = true; // 既存データがある場合は手動設定済みとみなす
+        }
         setPenalty(data.penalty?.toString() || "");
         setStatus(data.status || "Keep");
         // scheduleIdも設定（もし指定されていなければ）
@@ -224,66 +226,72 @@ export default function NewStayScreen() {
     return `${year}-${month}-${day} 00:00`;
   };
 
-  // Deadline機能を一時的に無効化
-  // // チェックイン変更時に、キャンセル期限日時がNULLの場合、デフォルト値を設定
-  // useEffect(() => {
-  //   // 初回ロード時はスキップ（既存データから設定されるため）
-  //   if (isInitialLoad.current) return;
-  //   
-  //   // 既にdeadlineが設定されている場合はスキップ（無限ループを防ぐ）
-  //   if (deadline) return;
-  //   
-  //   if (checkIn) {
-  //     const defaultDeadline = getCheckInDateAtMidnight(checkIn);
-  //     if (defaultDeadline) {
-  //       setDeadline(defaultDeadline);
-  //     }
-  //   }
-  // }, [checkIn]); // deadlineを依存配列に含めない（無限ループを防ぐ）
+  // チェックイン変更時に、キャンセル期限日時がNULLの場合、デフォルト値を設定
+  useEffect(() => {
+    // 初回ロード時はスキップ（既存データから設定されるため）
+    if (isInitialLoad.current) return;
+    
+    // ユーザーが手動で設定した場合はスキップ
+    if (deadlineManuallySet.current) return;
+    
+    // 既にdeadlineが設定されている場合はスキップ
+    if (deadline) return;
+    
+    // checkInが入力されている場合のみデフォルト値を設定
+    if (checkIn) {
+      const defaultDeadline = getCheckInDateAtMidnight(checkIn);
+      if (defaultDeadline) {
+        setDeadline(defaultDeadline);
+      }
+    }
+  }, [checkIn]); // deadlineを依存配列に含めない（無限ループを防ぐ）
 
-  // // キャンセル期限日時のバリデーション
-  // const handleDeadlineChange = (value: string | null) => {
-  //   setDeadlineError(null);
-  //   
-  //   if (!value) {
-  //     setDeadline(value);
-  //     return;
-  //   }
+  // キャンセル期限日時のバリデーション
+  const handleDeadlineChange = (value: string | null) => {
+    setDeadlineError(null);
+    
+    // ユーザーが手動で変更したことを記録
+    deadlineManuallySet.current = true;
+    
+    if (!value) {
+      setDeadline(value);
+      return;
+    }
 
-  //   if (!checkIn) {
-  //     setDeadline(value);
-  //     return;
-  //   }
+    if (!checkIn) {
+      setDeadline(value);
+      return;
+    }
 
-  //   const deadlineDate = parseDateTime(value);
-  //   const checkInDate = parseDateTime(checkIn);
+    const deadlineDate = parseDateTime(value);
+    const checkInDate = parseDateTime(checkIn);
 
-  //   if (!deadlineDate || !checkInDate) {
-  //     setDeadline(value);
-  //     return;
-  //   }
+    if (!deadlineDate || !checkInDate) {
+      setDeadline(value);
+      return;
+    }
 
-  //   // キャンセル期限日時がチェックインより後の場合はエラー
-  //   if (deadlineDate > checkInDate) {
-  //     setDeadlineError("取消料発生日時はチェックインより前の日時に設定してください。");
-  //     return;
-  //   }
+    // キャンセル期限日時がチェックインより後の場合はエラー（値は設定しない）
+    if (deadlineDate > checkInDate) {
+      setDeadlineError("取消料発生日時はチェックインより前の日時に設定してください。");
+      return;
+    }
 
-  //   setDeadline(value);
-  // };
+    setDeadline(value);
+  };
 
   const [checkIn, setCheckIn] = useState<string | null>(null);
   const [checkOut, setCheckOut] = useState<string | null>(null);
   const [hotelName, setHotelName] = useState("");
   const [fee, setFee] = useState("");
   const [breakfastFlag, setBreakfastFlag] = useState(false);
-  // Deadline機能を一時的に無効化
-  // const [deadline, setDeadline] = useState<string | null>(null);
-  // const [deadlineError, setDeadlineError] = useState<string | null>(null);
+  const [deadline, setDeadline] = useState<string | null>(null);
+  const [deadlineError, setDeadlineError] = useState<string | null>(null);
   const [penalty, setPenalty] = useState("");
   const [status, setStatus] = useState<string | null>("Keep");
   const [submitting, setSubmitting] = useState(false);
   const isInitialLoad = useRef(true);
+  const deadlineManuallySet = useRef(false); // ユーザーが手動で設定したかどうか
 
   const handleSubmit = async () => {
     if (!scheduleId || scheduleId === "undefined" || scheduleId === "null") {
@@ -295,17 +303,16 @@ export default function NewStayScreen() {
       return;
     }
 
-    // Deadline機能を一時的に無効化
-    // // キャンセル期限日時のバリデーション
-    // if (deadline && checkIn) {
-    //   const deadlineDate = parseDateTime(deadline);
-    //   const checkInDate = parseDateTime(checkIn);
-    //   if (deadlineDate && checkInDate && deadlineDate > checkInDate) {
-    //     Alert.alert("入力エラー", "取消料発生日時はチェックインより前の日時に設定してください。");
-    //     setDeadlineError("取消料発生日時はチェックインより前の日時に設定してください。");
-    //     return;
-    //   }
-    // }
+    // キャンセル期限日時のバリデーション
+    if (deadline && checkIn) {
+      const deadlineDate = parseDateTime(deadline);
+      const checkInDate = parseDateTime(checkIn);
+      if (deadlineDate && checkInDate && deadlineDate > checkInDate) {
+        Alert.alert("入力エラー", "取消料発生日時はチェックインより前の日時に設定してください。");
+        setDeadlineError("取消料発生日時はチェックインより前の日時に設定してください。");
+        return;
+      }
+    }
 
     const feeNum = fee ? Number(fee) : NaN;
     if (Number.isNaN(feeNum)) {
@@ -326,9 +333,7 @@ export default function NewStayScreen() {
       website: website || null,
       fee: feeNum,
       breakfast_flag: breakfastFlag,
-      // Deadline機能はまだ無効化
-      // deadline: deadline || null,
-      deadline: null,
+      deadline: deadline || null,
       penalty: penaltyNum ?? null,
       status: status || "Keep",
     };
@@ -471,8 +476,7 @@ export default function NewStayScreen() {
         <Switch value={breakfastFlag} onValueChange={setBreakfastFlag} />
       </View>
 
-      {/* Deadline機能を一時的に無効化 */}
-      {/* <NotionDatePicker
+      <NotionDatePicker
         label="取消料発生日時"
         value={deadline}
         onValueChange={handleDeadlineChange}
@@ -482,7 +486,7 @@ export default function NewStayScreen() {
       />
       {deadlineError && (
         <Text style={styles.errorText}>{deadlineError}</Text>
-      )} */}
+      )}
 
       <Text style={styles.label}>取消料 (%)</Text>
       <TextInput
