@@ -416,30 +416,6 @@ const fetchYear = async (y: string) => {
               colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
             />
           }
-          onTouchStart={(e) => {
-            const touch = e.nativeEvent.touches[0];
-            if (touch) {
-              setTouchStartY(touch.pageY);
-            }
-          }}
-          onTouchMove={(e) => {
-            if (touchStartY !== null) {
-              const touch = e.nativeEvent.touches[0];
-              if (touch) {
-                const distance = touch.pageY - touchStartY;
-                if (distance > 0) {
-                  setPullDistance(distance);
-                }
-              }
-            }
-          }}
-          onTouchEnd={() => {
-            if (pullDistance > 100 && !refreshing) {
-              onRefresh();
-            }
-            setTouchStartY(null);
-            setPullDistance(0);
-          }}
           ListHeaderComponent={
             <>
               {loading && <ActivityIndicator color="#333333" />}
