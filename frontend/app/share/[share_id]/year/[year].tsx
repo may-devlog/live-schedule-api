@@ -33,7 +33,7 @@ export default function SharedYearScreen() {
   
   // グルーピング関連
   type GroupingField = "group" | "category" | "area" | "target" | "lineup" | "seller" | "status" | "none";
-  const [groupingField, setGroupingField] = useState<GroupingField>("group");
+  const [groupingField, setGroupingField] = useState<GroupingField>("none");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   
   // 選択肢の並び順情報（グルーピングのソート用）
@@ -359,12 +359,7 @@ export default function SharedYearScreen() {
       return sortedGroups.map(([title, data]) => ({ title, data }));
     };
 
-    // selectOptionsMapが空の場合は、空の配列を返す（selectOptionsMapが設定されるまで待つ）
-    if (selectOptionsMap.size === 0) {
-      console.log("[SharedYear] selectOptionsMap is empty, returning empty array");
-      return [];
-    }
-
+    // selectOptionsMapが空でもグループ化は実行する（ソートは文字列比較にフォールバック）
     return groupSchedules(schedules, groupingField);
   }, [schedules, groupingField, selectOptionsMap]);
 

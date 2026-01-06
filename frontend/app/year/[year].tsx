@@ -37,7 +37,7 @@ export default function YearScreen() {
   
   // グルーピング関連
   type GroupingField = "group" | "category" | "area" | "target" | "lineup" | "seller" | "status" | "none";
-  const [groupingField, setGroupingField] = useState<GroupingField>("group");
+  const [groupingField, setGroupingField] = useState<GroupingField>("none");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   
   // 選択肢の並び順情報（グルーピングのソート用）
