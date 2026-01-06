@@ -17,7 +17,10 @@ import { authenticatedFetch, getApiUrl } from "../../../utils/api";
 import { NotionSelect } from "../../../components/notion-select";
 import { NotionDatePicker } from "../../../components/notion-date-picker";
 import type { SelectOption } from "../../../types/select-option";
-// 動的インポートで循環依存を回避（loadStaySelectOptions, saveStaySelectOptions）
+import {
+  loadStaySelectOptions,
+  saveStaySelectOptions,
+} from "../../../utils/select-options-storage";
 import { PageHeader } from "../../../components/PageHeader";
 
 type Stay = {
@@ -74,9 +77,8 @@ export default function EditStayScreen() {
       const statusesData = await loadStayStatuses();
       setStatuses(statusesData);
       
-      // Website選択肢を取得（動的インポートで循環依存を回避）
+      // Website選択肢を取得
       try {
-        const { loadStaySelectOptions } = await import("../../../utils/select-options-storage");
         const websiteData = await loadStaySelectOptions("WEBSITE");
         setWebsiteOptions(websiteData);
       } catch (e) {
@@ -101,8 +103,6 @@ export default function EditStayScreen() {
   const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
     setWebsiteOptions(newOptions);
     try {
-      // 動的インポートで循環依存を回避
-      const { saveStaySelectOptions } = await import("../../../utils/select-options-storage");
       await saveStaySelectOptions("WEBSITE", newOptions);
     } catch (e) {
       console.error("[EditStay] Failed to save website options:", e);
