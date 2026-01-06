@@ -887,7 +887,6 @@ export default function DetailScreen() {
                 return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
               }, 0) + (schedule.stay_fee || 0)
             )}
-            isLast={false}
           />
           <NotionProperty label="ステータス">
           {schedule.status ? (
