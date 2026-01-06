@@ -32,7 +32,6 @@ export default function SharedYearScreen() {
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   
   // グルーピング関連
-  type GroupingField = "group" | "category" | "area" | "target" | "lineup" | "seller" | "status" | "none";
   const [groupingField, setGroupingField] = useState<GroupingField>("none");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   

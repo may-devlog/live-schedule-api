@@ -19,6 +19,7 @@ import { HomeButton } from "../../components/HomeButton";
 import { NotionTag } from "../../components/notion-tag";
 import { getOptionColor, getOptionColorSync } from "../../utils/get-option-color";
 import { loadSelectOptions } from "../../utils/select-options-storage";
+import { groupSchedules, type GroupingField, type GroupedSchedule } from "../../utils/group-schedules";
 
 export default function YearScreen() {
   const params = useLocalSearchParams<{ year: string }>();
