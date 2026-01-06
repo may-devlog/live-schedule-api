@@ -359,6 +359,12 @@ export default function SharedYearScreen() {
       return sortedGroups.map(([title, data]) => ({ title, data }));
     };
 
+    // selectOptionsMapが空の場合は、空の配列を返す（selectOptionsMapが設定されるまで待つ）
+    if (selectOptionsMap.size === 0) {
+      console.log("[SharedYear] selectOptionsMap is empty, returning empty array");
+      return [];
+    }
+
     return groupSchedules(schedules, groupingField);
   }, [schedules, groupingField, selectOptionsMap]);
 
