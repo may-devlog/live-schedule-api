@@ -36,23 +36,23 @@
 |---------|---------|---------|------------|------|---------------------|------|
 | id | INTEGER | NO | AUTO_INCREMENT | 主キー | - | PRIMARY KEY |
 | title | TEXT | NO | - | タイトル | Title | |
-| group | TEXT | YES | NULL | グループ名 | Text | 未入力時はtitleを使用（年別まとめ用） |
+| group | TEXT | YES | NULL | グループ | Text | 未入力時はtitleを使用（年別まとめ用） |
 | date | TEXT | YES | NULL | 日付 | Date | YYYY-MM-DD形式 |
-| open | TEXT | YES | NULL | 開場時刻 | Time | HH:MM形式 |
-| start | TEXT | YES | NULL | 開演時刻 | Time | HH:MM形式 |
-| end | TEXT | YES | NULL | 終了時刻 | Time | HH:MM形式 |
-| notes | TEXT | YES | NULL | メモ | Text | |
+| open | TEXT | YES | NULL | 開場 | Time | HH:MM形式 |
+| start | TEXT | YES | NULL | 開演 | Time | HH:MM形式 |
+| end | TEXT | YES | NULL | 終演 | Time | HH:MM形式 |
+| notes | TEXT | YES | NULL | 備考 | Text | |
 | category | TEXT | YES | NULL | カテゴリ | Select | ワンマン, 対バン 等 |
-| area | TEXT | NO | - | 都道府県 | Select | |
-| venue | TEXT | NO | - | 会場名 | Text | |
-| target | TEXT | YES | NULL | 対象 | Select | お目当てのアーティスト名 |
+| area | TEXT | NO | - | エリア | Select | |
+| venue | TEXT | NO | - | 会場 | Text | |
+| target | TEXT | YES | NULL | お目当て | Select | お目当てのアーティスト名 |
 | lineup | TEXT | YES | NULL | 出演者 | Text | |
 | seller | TEXT | YES | NULL | 販売元 | Select | チケットぴあ、イープラス 等 |
 | ticket_fee | INTEGER | YES | NULL | チケット代 | Number | 円単位 |
 | drink_fee | INTEGER | YES | NULL | ドリンク代 | Number | 円単位 |
 | total_fare | INTEGER | YES | NULL | 交通費合計 | Number | 円単位（計算値） |
 | stay_fee | INTEGER | YES | NULL | 宿泊費合計 | Number | 円単位（計算値） |
-| travel_cost | INTEGER | YES | NULL | 移動費合計 | Number | 円単位（計算値） |
+| travel_cost | INTEGER | YES | NULL | 遠征費合計 | Number | 円単位（計算値） |
 | total_cost | INTEGER | YES | NULL | 総費用 | Number | 円単位（計算値） |
 | status | TEXT | NO | 'Pending' | ステータス | Select | Canceled, Pending, Keep, Done |
 | created_at | TEXT | YES | NULL | 作成日時 | Created time | ISO 8601形式 |
@@ -114,13 +114,14 @@
 |---------|---------|---------|------------|------|---------------------|------|
 | id | INTEGER | NO | AUTO_INCREMENT | 主キー | - | PRIMARY KEY |
 | schedule_id | INTEGER | NO | - | スケジュールID | Relation | FOREIGN KEY → schedules.id |
-| check_in | TEXT | NO | - | チェックイン日時 | Date | YYYY-MM-DD HH:MM形式 |
-| check_out | TEXT | NO | - | チェックアウト日時 | Date | YYYY-MM-DD HH:MM形式 |
+| check_in | TEXT | NO | - | チェックイン | Date | YYYY-MM-DD HH:MM形式 |
+| check_out | TEXT | NO | - | チェックアウト | Date | YYYY-MM-DD HH:MM形式 |
 | hotel_name | TEXT | NO | - | ホテル名 | Text | |
+| website | TEXT | YES | - | 予約サイト | Select | |
 | fee | INTEGER | NO | - | 宿泊費 | Number | 円単位 |
-| breakfast_flag | INTEGER | NO | 0 | 朝食有無 | Checkbox | 0: 朝食なし, 1: 朝食あり |
-| deadline | TEXT | YES | - | キャンセル発生日時 | Date | YYYY-MM-DD HH:MM形式 |
-| penalty | INTEGER | YES | - | キャンセル料 | Number | パーセント単位 |
+| breakfast_flag | INTEGER | NO | 0 | 朝食 | Checkbox | 0: 朝食なし, 1: 朝食あり |
+| deadline | TEXT | YES | - | 取消料発生日時 | Date | YYYY-MM-DD HH:MM形式 |
+| penalty | INTEGER | YES | - | 取消料 | Number | パーセント単位 |
 | status | TEXT | NO | 'Keep' | ステータス | Select | Canceled, Keep, Done |
 | created_at | TEXT | YES | NULL | 作成日時 | Created time | ISO 8601形式 |
 | updated_at | TEXT | YES | NULL | 更新日時 | Last edited time | ISO 8601形式 |

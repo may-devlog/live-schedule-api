@@ -1,0 +1,32 @@
+# Fly.io設定ファイル（バックアップ用 - シンガポールリージョン）
+app = "live-schedule-api"
+primary_region = "sin"  # シンガポールリージョン
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
+
+[mounts]
+  source = "data_backup"
+  destination = "/app/data"
+
+
+
+
+
+

@@ -16,7 +16,7 @@ import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { HomeButton } from "../../components/HomeButton";
 import { NotionTag } from "../../components/notion-tag";
-import { getOptionColor } from "../../utils/get-option-color";
+import { getOptionColor, getOptionColorSync } from "../../utils/get-option-color";
 
 export default function YearScreen() {
   const params = useLocalSearchParams<{ year: string }>();
@@ -245,7 +245,7 @@ const fetchYear = async (y: string) => {
                 {item.area && (
                   <NotionTag
                     label={item.area}
-                    color={areaColors.get(item.id) || undefined}
+                    color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
                   />
                 )}
                 <Text style={styles.cardSub}>{item.venue}</Text>

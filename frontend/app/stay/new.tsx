@@ -16,10 +16,11 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { NotionSelect } from "../../components/notion-select";
 import { NotionDatePicker } from "../../components/notion-date-picker";
 import type { SelectOption } from "../../types/select-option";
-import {
-  loadStaySelectOptions,
-  saveStaySelectOptions,
-} from "../../utils/select-options-storage";
+// Website機能を一時的に無効化
+// import {
+//   loadStaySelectOptions,
+//   saveStaySelectOptions,
+// } from "../../utils/select-options-storage";
 import { useEffect } from "react";
 import { HomeButton } from "../../components/HomeButton";
 import { NotionRelation } from "../../components/notion-relation";
@@ -52,8 +53,9 @@ export default function NewStayScreen() {
   const [scheduleId, setScheduleId] = useState<string | null>(initialScheduleId || null);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [statuses, setStatuses] = useState<SelectOption[]>([]);
-  const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
-  const [website, setWebsite] = useState<string | null>(null);
+  // Website機能を一時的に無効化
+  // const [websiteOptions, setWebsiteOptions] = useState<SelectOption[]>([]);
+  // const [website, setWebsite] = useState<string | null>(null);
   useEffect(() => {
     const loadOptions = async () => {
 
@@ -83,13 +85,14 @@ export default function NewStayScreen() {
       const statusesData = await loadStayStatuses();
       setStatuses(statusesData);
       
-      // Website選択肢を取得
-      try {
-        const websiteData = await loadStaySelectOptions("WEBSITE");
-        setWebsiteOptions(websiteData);
-      } catch (e) {
-        console.error("[NewStay] Failed to fetch website options:", e);
-      }
+      // Website機能を一時的に無効化
+      // // Website選択肢を取得
+      // try {
+      //   const websiteData = await loadStaySelectOptions("WEBSITE");
+      //   setWebsiteOptions(websiteData);
+      // } catch (e) {
+      //   console.error("[NewStay] Failed to fetch website options:", e);
+      // }
     };
     loadOptions();
     
@@ -128,10 +131,12 @@ export default function NewStayScreen() {
         setCheckIn(data.check_in || null);
         setCheckOut(data.check_out || null);
         setHotelName(data.hotel_name || "");
-        setWebsite(data.website || null);
+        // Website機能を一時的に無効化
+        // setWebsite(data.website || null);
         setFee(data.fee.toString());
         setBreakfastFlag(data.breakfast_flag);
-        setDeadline(data.deadline || null);
+        // Deadline機能を一時的に無効化
+        // setDeadline(data.deadline || null);
         setPenalty(data.penalty?.toString() || "");
         setStatus(data.status || "Keep");
         // scheduleIdも設定（もし指定されていなければ）
@@ -186,14 +191,15 @@ export default function NewStayScreen() {
     }
   };
 
-  const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
-    setWebsiteOptions(newOptions);
-    try {
-      await saveStaySelectOptions("WEBSITE", newOptions);
-    } catch (e) {
-      console.error("[NewStay] Failed to save website options:", e);
-    }
-  };
+  // Website機能を一時的に無効化
+  // const handleWebsiteOptionsChange = async (newOptions: SelectOption[]) => {
+  //   setWebsiteOptions(newOptions);
+  //   try {
+  //     await saveStaySelectOptions("WEBSITE", newOptions);
+  //   } catch (e) {
+  //     console.error("[NewStay] Failed to save website options:", e);
+  //   }
+  // };
 
   // 日付文字列をDateオブジェクトに変換するヘルパー関数
   const parseDateTime = (dateTimeStr: string): Date | null => {
@@ -223,60 +229,62 @@ export default function NewStayScreen() {
     return `${year}-${month}-${day} 00:00`;
   };
 
-  // チェックイン変更時に、キャンセル期限日時がNULLの場合、デフォルト値を設定
-  useEffect(() => {
-    // 初回ロード時はスキップ（既存データから設定されるため）
-    if (isInitialLoad.current) return;
-    
-    // 既にdeadlineが設定されている場合はスキップ（無限ループを防ぐ）
-    if (deadline) return;
-    
-    if (checkIn) {
-      const defaultDeadline = getCheckInDateAtMidnight(checkIn);
-      if (defaultDeadline) {
-        setDeadline(defaultDeadline);
-      }
-    }
-  }, [checkIn]); // deadlineを依存配列に含めない（無限ループを防ぐ）
+  // Deadline機能を一時的に無効化
+  // // チェックイン変更時に、キャンセル期限日時がNULLの場合、デフォルト値を設定
+  // useEffect(() => {
+  //   // 初回ロード時はスキップ（既存データから設定されるため）
+  //   if (isInitialLoad.current) return;
+  //   
+  //   // 既にdeadlineが設定されている場合はスキップ（無限ループを防ぐ）
+  //   if (deadline) return;
+  //   
+  //   if (checkIn) {
+  //     const defaultDeadline = getCheckInDateAtMidnight(checkIn);
+  //     if (defaultDeadline) {
+  //       setDeadline(defaultDeadline);
+  //     }
+  //   }
+  // }, [checkIn]); // deadlineを依存配列に含めない（無限ループを防ぐ）
 
-  // キャンセル期限日時のバリデーション
-  const handleDeadlineChange = (value: string | null) => {
-    setDeadlineError(null);
-    
-    if (!value) {
-      setDeadline(value);
-      return;
-    }
+  // // キャンセル期限日時のバリデーション
+  // const handleDeadlineChange = (value: string | null) => {
+  //   setDeadlineError(null);
+  //   
+  //   if (!value) {
+  //     setDeadline(value);
+  //     return;
+  //   }
 
-    if (!checkIn) {
-      setDeadline(value);
-      return;
-    }
+  //   if (!checkIn) {
+  //     setDeadline(value);
+  //     return;
+  //   }
 
-    const deadlineDate = parseDateTime(value);
-    const checkInDate = parseDateTime(checkIn);
+  //   const deadlineDate = parseDateTime(value);
+  //   const checkInDate = parseDateTime(checkIn);
 
-    if (!deadlineDate || !checkInDate) {
-      setDeadline(value);
-      return;
-    }
+  //   if (!deadlineDate || !checkInDate) {
+  //     setDeadline(value);
+  //     return;
+  //   }
 
-    // キャンセル期限日時がチェックインより後の場合はエラー
-    if (deadlineDate > checkInDate) {
-      setDeadlineError("取消料発生日時はチェックインより前の日時に設定してください。");
-      return;
-    }
+  //   // キャンセル期限日時がチェックインより後の場合はエラー
+  //   if (deadlineDate > checkInDate) {
+  //     setDeadlineError("取消料発生日時はチェックインより前の日時に設定してください。");
+  //     return;
+  //   }
 
-    setDeadline(value);
-  };
+  //   setDeadline(value);
+  // };
 
   const [checkIn, setCheckIn] = useState<string | null>(null);
   const [checkOut, setCheckOut] = useState<string | null>(null);
   const [hotelName, setHotelName] = useState("");
   const [fee, setFee] = useState("");
   const [breakfastFlag, setBreakfastFlag] = useState(false);
-  const [deadline, setDeadline] = useState<string | null>(null);
-  const [deadlineError, setDeadlineError] = useState<string | null>(null);
+  // Deadline機能を一時的に無効化
+  // const [deadline, setDeadline] = useState<string | null>(null);
+  // const [deadlineError, setDeadlineError] = useState<string | null>(null);
   const [penalty, setPenalty] = useState("");
   const [status, setStatus] = useState<string | null>("Keep");
   const [submitting, setSubmitting] = useState(false);
@@ -292,16 +300,17 @@ export default function NewStayScreen() {
       return;
     }
 
-    // キャンセル期限日時のバリデーション
-    if (deadline && checkIn) {
-      const deadlineDate = parseDateTime(deadline);
-      const checkInDate = parseDateTime(checkIn);
-      if (deadlineDate && checkInDate && deadlineDate > checkInDate) {
-        Alert.alert("入力エラー", "取消料発生日時はチェックインより前の日時に設定してください。");
-        setDeadlineError("取消料発生日時はチェックインより前の日時に設定してください。");
-        return;
-      }
-    }
+    // Deadline機能を一時的に無効化
+    // // キャンセル期限日時のバリデーション
+    // if (deadline && checkIn) {
+    //   const deadlineDate = parseDateTime(deadline);
+    //   const checkInDate = parseDateTime(checkIn);
+    //   if (deadlineDate && checkInDate && deadlineDate > checkInDate) {
+    //     Alert.alert("入力エラー", "取消料発生日時はチェックインより前の日時に設定してください。");
+    //     setDeadlineError("取消料発生日時はチェックインより前の日時に設定してください。");
+    //     return;
+    //   }
+    // }
 
     const feeNum = fee ? Number(fee) : NaN;
     if (Number.isNaN(feeNum)) {
@@ -319,10 +328,14 @@ export default function NewStayScreen() {
       check_in: checkIn,
       check_out: checkOut,
       hotel_name: hotelName.trim(),
-      website: website || null,
+      // Website機能を一時的に無効化
+      // website: website || null,
+      website: null,
       fee: feeNum,
       breakfast_flag: breakfastFlag,
-      deadline: deadline || null,
+      // Deadline機能を一時的に無効化
+      // deadline: deadline || null,
+      deadline: null,
       penalty: penaltyNum ?? null,
       status: status || "Keep",
     };
@@ -433,7 +446,8 @@ export default function NewStayScreen() {
         onChangeText={setHotelName}
       />
 
-      {websiteOptions.length > 0 ? (
+      {/* Website機能を一時的に無効化 */}
+      {/* {websiteOptions.length > 0 ? (
         <NotionSelect
           label="予約サイト"
           value={website}
@@ -448,7 +462,7 @@ export default function NewStayScreen() {
           <Text style={styles.label}>予約サイト</Text>
           <Text style={styles.emptyValue}>読み込み中...</Text>
         </View>
-      )}
+      )} */}
 
       <Text style={styles.label}>
         宿泊費 <Text style={styles.required}>*</Text>
@@ -465,7 +479,8 @@ export default function NewStayScreen() {
         <Switch value={breakfastFlag} onValueChange={setBreakfastFlag} />
       </View>
 
-      <NotionDatePicker
+      {/* Deadline機能を一時的に無効化 */}
+      {/* <NotionDatePicker
         label="取消料発生日時"
         value={deadline}
         onValueChange={handleDeadlineChange}
@@ -475,7 +490,7 @@ export default function NewStayScreen() {
       />
       {deadlineError && (
         <Text style={styles.errorText}>{deadlineError}</Text>
-      )}
+      )} */}
 
       <Text style={styles.label}>取消料 (%)</Text>
       <TextInput

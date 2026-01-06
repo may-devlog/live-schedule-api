@@ -16,7 +16,7 @@ import type { Schedule } from "../../../HomeScreen";
 import { getApiUrl } from "../../../../utils/api";
 import { PageHeader } from "../../../../components/PageHeader";
 import { NotionTag } from "../../../../components/notion-tag";
-import { getOptionColor } from "../../../../utils/get-option-color";
+import { getOptionColor, getOptionColorSync } from "../../../../utils/get-option-color";
 
 export default function SharedYearScreen() {
   const { share_id, year } = useLocalSearchParams<{ share_id: string; year: string }>();
@@ -264,7 +264,7 @@ export default function SharedYearScreen() {
                   {item.area && (
                     <NotionTag
                       label={item.area}
-                      color={areaColors.get(item.id) || undefined}
+                      color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
                     />
                   )}
                   <Text style={styles.cardSub}>{item.venue}</Text>
