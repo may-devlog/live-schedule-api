@@ -116,17 +116,24 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install b2 CLI
-        if: success() && secrets.B2_APPLICATION_KEY_ID && secrets.B2_APPLICATION_KEY && secrets.B2_BUCKET_NAME
+        if: success()
         run: |
           pip install b2
 
       - name: Upload backup to Backblaze B2
-        if: success() && secrets.B2_APPLICATION_KEY_ID && secrets.B2_APPLICATION_KEY && secrets.B2_BUCKET_NAME
+        if: success()
         env:
           B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
           B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
           B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
         run: |
+          # 環境変数のチェック
+          if [ -z "$B2_APPLICATION_KEY_ID" ] || [ -z "$B2_APPLICATION_KEY" ] || [ -z "$B2_BUCKET_NAME" ]; then
+            echo "⚠ Backblaze B2の認証情報が設定されていません。B2へのアップロードをスキップします。"
+            echo "設定方法: GitHub Settings → Secrets and variables → Actions"
+            exit 0
+          fi
+          
           cd backend
           BACKUP_FILE=$(ls -t data/backups/app.db.backup.* | head -1)
           
