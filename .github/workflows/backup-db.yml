@@ -105,12 +105,12 @@ jobs:
         if: success()
         with:
           files: backend/data/backups/app.db.backup.*
-          tag_name: backup-$(date +%Y%m%d-%H%M%S)
-          name: Database Backup $(date +'%Y-%m-%d %H:%M:%S')
+          tag_name: backup-${{ github.run_number }}
+          name: Database Backup ${{ github.run_number }}
           body: |
             Automated database backup
             
-            - Backup time: $(date +'%Y-%m-%d %H:%M:%S')
+            - Backup time: ${{ github.run_number }}
             - Integrity: Verified
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
