@@ -41,8 +41,8 @@ export default function YearScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   
-  // アーカイブタイプ（ライブ or 宿泊）
-  const [archiveType, setArchiveType] = useState<"ライブ" | "宿泊">("ライブ");
+  // アーカイブタイプ（イベント or 宿泊）
+  const [archiveType, setArchiveType] = useState<"イベント" | "宿泊">("イベント");
   
   // グルーピング関連
   const [groupingField, setGroupingField] = useState<GroupingField>("none");
@@ -298,22 +298,22 @@ export default function YearScreen() {
           onSelectYear={(year) => handleSelectYear(year)}
         />
 
-        {/* アーカイブタイプ選択（ライブ / 宿泊） */}
+        {/* アーカイブタイプ選択（イベント / 宿泊） */}
         <View style={styles.archiveTypeSelector}>
           <TouchableOpacity
             style={[
               styles.archiveTypeButton,
-              archiveType === "ライブ" && styles.archiveTypeButtonActive,
+              archiveType === "イベント" && styles.archiveTypeButtonActive,
             ]}
-            onPress={() => setArchiveType("ライブ")}
+            onPress={() => setArchiveType("イベント")}
           >
             <Text
               style={[
                 styles.archiveTypeButtonText,
-                archiveType === "ライブ" && styles.archiveTypeButtonTextActive,
+                archiveType === "イベント" && styles.archiveTypeButtonTextActive,
               ]}
             >
-              ライブ
+              イベント
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -335,7 +335,7 @@ export default function YearScreen() {
         </View>
 
       {/* グルーピングフィールド選択 */}
-      {archiveType === "ライブ" ? (
+      {archiveType === "イベント" ? (
         <View style={styles.groupingSelector}>
           <Text style={styles.groupingLabel}>グルーピング:</Text>
           <View style={styles.groupingButtons}>
@@ -399,7 +399,7 @@ export default function YearScreen() {
         </View>
       )}
 
-      {archiveType === "ライブ" ? (
+      {archiveType === "イベント" ? (
         groupingField === "none" ? (
         <FlatList
           data={schedules}
