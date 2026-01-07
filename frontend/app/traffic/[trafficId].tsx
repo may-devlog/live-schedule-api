@@ -445,9 +445,9 @@ const styles = StyleSheet.create({
     minHeight: '100%',
   },
   titleHeader: {
-    flexDirection: "row",
+    flexDirection: Platform.OS === "web" ? "row" : "column",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: Platform.OS === "web" ? "flex-start" : "stretch",
     marginBottom: 24,
     gap: 16,
   },
@@ -459,9 +459,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionButtons: {
-    flexDirection: "row",
+    flexDirection: Platform.OS === "web" ? "row" : "column",
     gap: 8,
-    alignSelf: "flex-start",
+    alignSelf: Platform.OS === "web" ? "flex-start" : "stretch",
   },
   duplicateButton: {
     backgroundColor: "#f7f6f3",
