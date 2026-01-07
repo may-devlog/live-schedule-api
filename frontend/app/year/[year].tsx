@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
-import { HomeButton } from "../../components/HomeButton";
+import { PageHeader } from "../../components/PageHeader";
 import { NotionTag } from "../../components/notion-tag";
 import { getOptionColor, getOptionColorSync } from "../../utils/get-option-color";
 import { groupSchedules, type GroupingField, type GroupedSchedule } from "../../utils/group-schedules";
@@ -288,9 +288,7 @@ export default function YearScreen() {
       {/* ナビゲーションバーのタイトルを非表示 */}
       <Stack.Screen options={{ headerShown: false }} />
       
-      <View style={styles.header}>
-        <HomeButton />
-      </View>
+      <PageHeader showBackButton={true} homePath="/" />
 
       <View style={styles.content}>
         {/* 年選択（プルダウン） */}
