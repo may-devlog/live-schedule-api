@@ -1,17 +1,18 @@
 // 選択肢の順序情報を取得する共通ロジック
 
-import { loadSelectOptions } from "./select-options-storage";
+import { loadSelectOptions, loadStaySelectOptions } from "./select-options-storage";
 
 export async function loadSelectOptionsMap(
   shareId?: string
 ): Promise<Map<string, Map<string, number>>> {
-  const [categories, areas, targets, sellers, statuses, groups] = await Promise.all([
+  const [categories, areas, targets, sellers, statuses, groups, websites] = await Promise.all([
     loadSelectOptions("CATEGORIES", shareId),
     loadSelectOptions("AREAS", shareId),
     loadSelectOptions("TARGETS", shareId),
     loadSelectOptions("SELLERS", shareId),
     loadSelectOptions("STATUSES", shareId),
     loadSelectOptions("GROUPS", shareId),
+    loadStaySelectOptions("WEBSITE", shareId),
   ]);
 
   const orderMap = new Map<string, Map<string, number>>();
@@ -55,6 +56,12 @@ export async function loadSelectOptionsMap(
     groupOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
   });
   orderMap.set("group", groupOrder);
+
+  const websiteOrder = new Map<string, number>();
+  websites.forEach((opt, idx) => {
+    websiteOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+  });
+  orderMap.set("website", websiteOrder);
 
   return orderMap;
 }

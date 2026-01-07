@@ -468,7 +468,7 @@ export default function HomeScreen() {
     >
     <View style={styles.container}>
         <View style={styles.header}>
-      <Text style={styles.title}>SCHEDULES</Text>
+      <Text style={styles.title}>SCHEDULE</Text>
           <TouchableOpacity
             style={styles.loginButton}
             onPress={() => {
@@ -530,7 +530,7 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Years</Text>
+        <Text style={styles.sectionTitle}>ARCHIVE</Text>
         <View style={styles.yearListColumn}>
           {availableYears.map((year) => (
             <TouchableOpacity

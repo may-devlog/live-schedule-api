@@ -22,6 +22,7 @@ import { groupSchedules, type GroupingField, type GroupedSchedule } from "../../
 import { loadSelectOptionsMap } from "../../../../utils/load-select-options-map";
 import { fetchAreaColors } from "../../../../utils/fetch-area-colors";
 import { formatDateTimeUTC } from "../../../../utils/format-datetime";
+import { YearSelector } from "../../../../components/YearSelector";
 
 export default function SharedYearScreen() {
   const { share_id, year } = useLocalSearchParams<{ share_id: string; year: string }>();
@@ -294,30 +295,14 @@ export default function SharedYearScreen() {
       <PageHeader showBackButton={true} homePath={`/share/${share_id}`} />
       
       <View style={styles.content}>
-        {/* 年ボタン */}
-        <View style={styles.yearSelector}>
-          {availableYears.map((y) => (
-            <TouchableOpacity
-              key={y}
-              style={[
-                styles.yearButton,
-                currentYear === String(y) && styles.yearButtonActive,
-              ]}
-              onPress={() => handleSelectYear(y)}
-            >
-              <Text
-                style={[
-                  styles.yearButtonText,
-                  currentYear === String(y) && styles.yearButtonTextActive,
-                ]}
-              >
-                {y}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* 年選択（プルダウン） */}
+        <YearSelector
+          availableYears={availableYears}
+          currentYear={currentYear}
+          onSelectYear={(year) => handleSelectYear(year)}
+        />
 
-      {/* グルーピングフィールド選択 */}
+        {/* グルーピングフィールド選択 */}
       <View style={styles.groupingSelector}>
         <Text style={styles.groupingLabel}>グルーピング:</Text>
         <View style={styles.groupingButtons}>
@@ -519,32 +504,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#37352f",
     marginBottom: 24,
-  },
-  yearSelector: {
-    flexDirection: "row",
-    marginBottom: 16,
-    gap: 8,
-  },
-  yearButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: "#e9e9e7",
-    backgroundColor: "#ffffff",
-  },
-  yearButtonActive: {
-    backgroundColor: "#37352f",
-    borderColor: "#37352f",
-  },
-  yearButtonText: {
-    color: "#37352f",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  yearButtonTextActive: {
-    color: "#ffffff",
-    fontWeight: "600",
   },
   card: {
     padding: 16,

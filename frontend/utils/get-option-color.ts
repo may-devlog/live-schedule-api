@@ -9,7 +9,7 @@ const colorCache: Record<string, string> = {};
 // 選択肢の色を取得（非同期）
 export async function getOptionColor(
   label: string,
-  optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS"
+  optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS" | "WEBSITE"
 ): Promise<string> {
   const cacheKey = `${optionType}:${label}`;
   if (colorCache[cacheKey]) {
@@ -35,7 +35,7 @@ export async function getOptionColor(
 }
 
 // 同期版（キャッシュから取得、なければデフォルト色）
-export function getOptionColorSync(label: string, optionType?: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS"): string {
+export function getOptionColorSync(label: string, optionType?: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS" | "WEBSITE"): string {
   // キャッシュから探す
   if (optionType) {
     const cacheKey = `${optionType}:${label}`;
