@@ -16,11 +16,11 @@ export function PersonIcon({ size = 24, color = '#37352f' }: IconProps) {
         style={[
           styles.personHead,
           {
-            width: 8 * scale,
-            height: 8 * scale,
-            borderRadius: 4 * scale,
+            width: 12 * scale,
+            height: 12 * scale,
+            borderRadius: 6 * scale,
             backgroundColor: color,
-            top: 2 * scale,
+            top: 1 * scale,
           },
         ]}
       />
@@ -29,12 +29,12 @@ export function PersonIcon({ size = 24, color = '#37352f' }: IconProps) {
         style={[
           styles.personBody,
           {
-            width: 12 * scale,
-            height: 10 * scale,
+            width: 16 * scale,
+            height: 12 * scale,
             backgroundColor: color,
-            top: 10 * scale,
-            borderTopLeftRadius: 2 * scale,
-            borderTopRightRadius: 2 * scale,
+            top: 13 * scale,
+            borderTopLeftRadius: 3 * scale,
+            borderTopRightRadius: 3 * scale,
           },
         ]}
       />
