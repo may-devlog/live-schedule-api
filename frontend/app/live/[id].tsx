@@ -753,12 +753,12 @@ export default function DetailScreen() {
         scrollEventThrottle={16}
       >
         {/* タイトル */}
-        <View style={[styles.titleHeader, { flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "flex-start" }]}>
+        <View style={styles.titleHeader}>
         <Text style={styles.mainTitle}>
           {schedule.title}
           </Text>
           {isAuthenticated && (
-            <View style={[styles.actionButtons, { flexDirection: isMobile ? "column" : "row", alignSelf: isMobile ? "stretch" : "flex-start" }]}>
+            <View style={[styles.actionButtons, { flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-end" : "flex-start" }]}>
               <TouchableOpacity
                 style={styles.duplicateButton}
                 onPress={handleDuplicate}
