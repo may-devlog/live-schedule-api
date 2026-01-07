@@ -8,6 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  ScrollView,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -75,104 +77,118 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.form}>
-        <Text style={styles.title}>SKDREC</Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.form}>
+          <Text style={styles.title}>SKDREC</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="メールアドレス"
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            setError(null); // 入力時にエラーをクリア
-          }}
-          onBlur={() => {
-            // フォーカスが外れた時に値を正規化
-            setEmail(email.trim());
-          }}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          editable={!loading}
-        />
-
-        <View style={styles.passwordContainer}>
           <TextInput
-            style={styles.passwordInput}
-            placeholder="パスワード"
-            value={password}
+            style={styles.input}
+            placeholder="メールアドレス"
+            value={email}
             onChangeText={(text) => {
-              setPassword(text);
+              setEmail(text);
               setError(null); // 入力時にエラーをクリア
             }}
             onBlur={() => {
-              // フォーカスが外れた時に値を正規化（パスワードは先頭・末尾のスペースのみ削除）
-              setPassword(password.trim());
+              // フォーカスが外れた時に値を正規化
+              setEmail(email.trim());
             }}
-            secureTextEntry={!showPassword}
+            keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             editable={!loading}
           />
+
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="パスワード"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setError(null); // 入力時にエラーをクリア
+              }}
+              onBlur={() => {
+                // フォーカスが外れた時に値を正規化（パスワードは先頭・末尾のスペースのみ削除）
+                setPassword(password.trim());
+              }}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              style={styles.passwordToggle}
+              onPress={() => setShowPassword(!showPassword)}
+              disabled={loading}
+            >
+              <Text style={{ fontSize: 20 }}>
+                {showPassword ? '🙈' : '👁️'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {error && (
+            <Text style={styles.errorText}>{error}</Text>
+          )}
+
           <TouchableOpacity
-            style={styles.passwordToggle}
-            onPress={() => setShowPassword(!showPassword)}
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleSubmit}
             disabled={loading}
           >
-            <Text style={{ fontSize: 20 }}>
-              {showPassword ? '🙈' : '👁️'}
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>ログイン</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.forgotPasswordButton}
+            onPress={handleForgotPassword}
+            disabled={loading}
+          >
+            <Text style={styles.forgotPasswordText}>
+              パスワードを忘れた場合
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.registerButton}
+            onPress={() => router.push('/register')}
+            disabled={loading}
+          >
+            <Text style={styles.registerButtonText}>
+              新規登録
             </Text>
           </TouchableOpacity>
         </View>
-
-        {error && (
-          <Text style={styles.errorText}>{error}</Text>
-        )}
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>ログイン</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.forgotPasswordButton}
-          onPress={handleForgotPassword}
-          disabled={loading}
-        >
-          <Text style={styles.forgotPasswordText}>
-            パスワードを忘れた場合
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.registerButton}
-          onPress={() => router.push('/register')}
-          disabled={loading}
-        >
-          <Text style={styles.registerButtonText}>
-            新規登録
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
     padding: 20,
+    minHeight: '100%',
   },
   form: {
     width: '100%',
