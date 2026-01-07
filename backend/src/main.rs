@@ -260,6 +260,66 @@ async fn send_password_reset_email(email: &str, token: &str, api_key: &str) -> R
     }
 }
 
+async fn send_deadline_notification_email(
+    email: &str,
+    hotel_name: &str,
+    deadline: &str,
+    schedule_title: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // 環境変数からResend APIキーを取得
+    let api_key = match std::env::var("RESEND_API_KEY") {
+        Ok(key) => key,
+        Err(_) => {
+            // 開発環境: コンソールに出力
+            println!("[DEADLINE_NOTIFICATION] RESEND_API_KEY not found, using development mode (console output)");
+            println!("=== キャンセル期限通知（開発環境） ===");
+            println!("宛先: {}", email);
+            println!("件名: キャンセル期限が近づいています");
+            println!("本文:");
+            println!("宿泊施設「{}」のキャンセル期限が24時間以内に迫っています。", hotel_name);
+            println!("期限日時: {}", deadline);
+            println!("関連イベント: {}", schedule_title);
+            println!("===========================");
+            return Ok(());
+        }
+    };
+
+    // 本番環境: Resend APIを使用
+    println!("[DEADLINE_NOTIFICATION] RESEND_API_KEY found, using Resend API");
+    let email_body = format!(
+        r#"<p>宿泊施設「{}」のキャンセル期限が24時間以内に迫っています。</p><p><strong>期限日時:</strong> {}</p><p><strong>関連イベント:</strong> {}</p><p>キャンセルをご検討の場合は、期限までに手続きをお願いします。</p>"#,
+        hotel_name, deadline, schedule_title
+    );
+    
+    let resend = Resend::new(&api_key);
+    let from = "onboarding@resend.dev";
+    let to = [email];
+    let subject = "キャンセル期限が近づいています";
+    
+    let email_options = CreateEmailBaseOptions::new(from, to, subject)
+        .with_html(&email_body);
+    
+    match resend.emails.send(email_options).await {
+        Ok(result) => {
+            println!("[DEADLINE_NOTIFICATION] Deadline notification email sent successfully to {}: {:?}", email, result);
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("[DEADLINE_NOTIFICATION] Failed to send deadline notification email to {}: {:?}", email, e);
+            // フォールバック: コンソールに出力
+            println!("=== キャンセル期限通知（フォールバック） ===");
+            println!("宛先: {}", email);
+            println!("件名: キャンセル期限が近づいています");
+            println!("本文:");
+            println!("宿泊施設「{}」のキャンセル期限が24時間以内に迫っています。", hotel_name);
+            println!("期限日時: {}", deadline);
+            println!("関連イベント: {}", schedule_title);
+            println!("===========================");
+            Err(e.into())
+        }
+    }
+}
+
 async fn send_email_change_verification_email(new_email: &str, token: &str) {
     let base_url = get_base_url();
     let verification_url = format!("{}/verify-email-change?token={}", base_url, urlencoding::encode(token));
@@ -4610,6 +4670,205 @@ async fn save_stay_select_options(
     Ok(Json(serde_json::json!({ "success": true })))
 }
 
+// ====== 通知機能 ======
+
+// 通知の型定義（API用）
+#[derive(Serialize, Clone)]
+struct Notification {
+    id: i32,
+    user_id: i32,
+    stay_id: i32,
+    schedule_id: i32,
+    title: String,
+    message: String,
+    is_read: bool,
+    created_at: String,
+}
+
+// 通知の行定義（DB用）
+#[derive(sqlx::FromRow)]
+struct NotificationRow {
+    id: i64,
+    user_id: i64,
+    stay_id: i64,
+    schedule_id: i64,
+    title: String,
+    message: String,
+    is_read: i32,
+    created_at: String,
+}
+
+// NotificationRowをNotificationに変換
+fn row_to_notification(row: NotificationRow) -> Notification {
+    Notification {
+        id: row.id as i32,
+        user_id: row.user_id as i32,
+        stay_id: row.stay_id as i32,
+        schedule_id: row.schedule_id as i32,
+        title: row.title,
+        message: row.message,
+        is_read: row.is_read != 0,
+        created_at: row.created_at,
+    }
+}
+
+// 通知一覧を取得
+async fn list_notifications(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Vec<Notification>>, StatusCode> {
+    let rows: Vec<NotificationRow> = sqlx::query_as(
+        "SELECT id, user_id, stay_id, schedule_id, title, message, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC"
+    )
+    .bind(user.user_id as i64)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("Error fetching notifications: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(rows.into_iter().map(row_to_notification).collect()))
+}
+
+// 通知を既読にする
+async fn mark_notification_read(
+    Path(id): Path<i32>,
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let result = sqlx::query(
+        "UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?"
+    )
+    .bind(id as i64)
+    .bind(user.user_id as i64)
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("Error marking notification as read: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    if result.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    Ok(Json(serde_json::json!({ "success": true })))
+}
+
+// キャンセル期限が24時間以内の宿泊情報をチェックし、通知を作成・送信
+async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn std::error::Error>> {
+    let now = Utc::now();
+    let one_day_later = now + chrono::Duration::hours(24);
+    
+    // 期限が24時間以内の宿泊情報を取得
+    // deadlineは "YYYY-MM-DD HH:MM" 形式で保存されていると仮定
+    let stays: Vec<(i64, i64, i64, String, String, String)> = sqlx::query_as(
+        r#"
+        SELECT 
+            st.id,
+            st.schedule_id,
+            s.user_id,
+            st.hotel_name,
+            st.deadline,
+            s.title
+        FROM stays st
+        INNER JOIN schedules s ON st.schedule_id = s.id
+        WHERE st.deadline IS NOT NULL
+          AND st.deadline != ''
+          AND st.status != 'Canceled'
+          AND s.user_id IS NOT NULL
+        "#
+    )
+    .fetch_all(pool)
+    .await?;
+    
+    for (stay_id, schedule_id, user_id, hotel_name, deadline_str, schedule_title) in stays {
+        // deadlineをパース（複数の形式に対応）
+        let deadline = match deadline_str.parse::<DateTime<Utc>>() {
+            Ok(dt) => dt,
+            Err(_) => {
+                // RFC3339形式でパースできない場合は、"YYYY-MM-DD HH:MM" 形式を試す
+                match chrono::NaiveDateTime::parse_from_str(&deadline_str, "%Y-%m-%d %H:%M") {
+                    Ok(naive_dt) => {
+                        // UTCとして扱う（実際のタイムゾーンに応じて調整が必要な場合あり）
+                        DateTime::from_naive_utc_and_offset(naive_dt, Utc)
+                    }
+                    Err(_) => {
+                        eprintln!("[DEADLINE_CHECK] Failed to parse deadline: {}", deadline_str);
+                        continue;
+                    }
+                }
+            }
+        };
+        
+        // 期限が24時間以内かチェック
+        if deadline > now && deadline <= one_day_later {
+            // 既に通知が作成されているかチェック（重複防止）
+            let existing_notification: Option<(i64,)> = sqlx::query_as(
+                "SELECT id FROM notifications WHERE stay_id = ? AND user_id = ? AND created_at > datetime('now', '-1 day')"
+            )
+            .bind(stay_id)
+            .bind(user_id)
+            .fetch_optional(pool)
+            .await?;
+            
+            if existing_notification.is_some() {
+                // 既に通知が作成されている場合はスキップ
+                continue;
+            }
+            
+            // ユーザーのメールアドレスを取得
+            let user_email: Option<(String,)> = sqlx::query_as(
+                "SELECT email FROM users WHERE id = ?"
+            )
+            .bind(user_id)
+            .fetch_optional(pool)
+            .await?;
+            
+            if let Some((email,)) = user_email {
+                // 通知を作成
+                let notification_title = format!("キャンセル期限が近づいています: {}", hotel_name);
+                let notification_message = format!("期限日時: {}\n関連イベント: {}", deadline_str, schedule_title);
+                let created_at = Utc::now().to_rfc3339();
+                
+                sqlx::query(
+                    r#"
+                    INSERT INTO notifications (user_id, stay_id, schedule_id, title, message, is_read, created_at)
+                    VALUES (?, ?, ?, ?, ?, 0, ?)
+                    "#
+                )
+                .bind(user_id)
+                .bind(stay_id)
+                .bind(schedule_id)
+                .bind(&notification_title)
+                .bind(&notification_message)
+                .bind(&created_at)
+                .execute(pool)
+                .await?;
+                
+                // メール送信（バックグラウンドで実行）
+                let email_clone = email.clone();
+                let hotel_name_clone = hotel_name.clone();
+                let deadline_str_clone = deadline_str.clone();
+                let schedule_title_clone = schedule_title.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = send_deadline_notification_email(
+                        &email_clone,
+                        &hotel_name_clone,
+                        &deadline_str_clone,
+                        &schedule_title_clone,
+                    ).await {
+                        eprintln!("[DEADLINE_CHECK] Failed to send notification email: {:?}", e);
+                    }
+                });
+            }
+        }
+    }
+    
+    Ok(())
+}
+
 // ====== メイン ======
 
 // メールアドレスからユーザーIDを取得するヘルパー関数
@@ -5018,8 +5277,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/admin/delete-old-schedules", post(delete_old_schedules)) // 一時的なエンドポイント
         .route("/select-options/:type", get(get_select_options).post(save_select_options))
         .route("/stay-select-options/:type", get(get_stay_select_options).post(save_stay_select_options))
+        .route("/notifications", get(list_notifications))
+        .route("/notifications/:id/read", put(mark_notification_read))
         .layer(cors)
-        .layer(Extension(pool));
+        .layer(Extension(pool.clone()));
 
     // ポート番号を環境変数から読み込む（Fly.ioなどではPORT環境変数が設定される）
     let port = std::env::var("PORT")
@@ -5028,6 +5289,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or(3000);
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("Server running at http://0.0.0.0:{}", port);
+
+    // バックグラウンドでキャンセル期限通知を定期的にチェック
+    let pool_clone = pool.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30 * 60)); // 30分ごと
+        loop {
+            interval.tick().await;
+            eprintln!("[BACKGROUND_TASK] Checking for deadline notifications...");
+            if let Err(e) = check_deadline_notifications(&pool_clone).await {
+                eprintln!("[BACKGROUND_TASK] Error checking deadline notifications: {:?}", e);
+            }
+        }
+    });
 
     println!("Binding to address: {}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await.map_err(|e| {
@@ -5232,12 +5506,29 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     );
     "#;
 
+    let create_notifications = r#"
+    CREATE TABLE IF NOT EXISTS notifications (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id      INTEGER NOT NULL,
+      stay_id      INTEGER NOT NULL,
+      schedule_id  INTEGER NOT NULL,
+      title         TEXT NOT NULL,
+      message       TEXT NOT NULL,
+      is_read       INTEGER NOT NULL DEFAULT 0,
+      created_at    TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (stay_id) REFERENCES stays(id),
+      FOREIGN KEY (schedule_id) REFERENCES schedules(id)
+    );
+    "#;
+
     sqlx::query(create_users).execute(pool).await?;
     sqlx::query(create_schedules).execute(pool).await?;
     sqlx::query(create_traffics).execute(pool).await?;
     sqlx::query(create_stays).execute(pool).await?;
     sqlx::query(create_select_options).execute(pool).await?;
     sqlx::query(create_stay_select_options).execute(pool).await?;
+    sqlx::query(create_notifications).execute(pool).await?;
     
     // 既存のselect_optionsテーブルからFOREIGN KEY制約を削除（マイグレーション）
     // SQLiteではALTER TABLEでFOREIGN KEY制約を削除できないため、
@@ -5277,6 +5568,20 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     let _ = sqlx::query("ALTER TABLE stays ADD COLUMN website TEXT")
         .execute(pool)
         .await;
+
+    // 既存のnotificationsテーブルが存在しない場合は作成（マイグレーション）
+    let notifications_table_exists: Option<String> = sqlx::query_scalar(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='notifications'"
+    )
+    .fetch_optional(pool)
+    .await
+    .ok()
+    .flatten();
+    
+    if notifications_table_exists.is_none() {
+        sqlx::query(create_notifications).execute(pool).await?;
+        eprintln!("[Migration] Created notifications table");
+    }
 
     // targetカラムがNULL許可であることを確認（既存のデータベース用マイグレーション）
     // SQLiteではALTER TABLE MODIFY COLUMNがサポートされていないため、

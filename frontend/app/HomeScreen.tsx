@@ -48,6 +48,17 @@ export type Schedule = {
   is_public?: boolean;
 };
 
+export type Notification = {
+  id: number;
+  user_id: number;
+  stay_id: number;
+  schedule_id: number;
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+};
+
 import { authenticatedFetch, getApiUrl } from "../utils/api";
 import { ScheduleCalendar } from "../components/ScheduleCalendar";
 
@@ -61,8 +72,63 @@ export default function HomeScreen() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchSharingStatus();
+      fetchNotifications();
     }
   }, [isAuthenticated]);
+
+  // 通知を定期的に取得（30秒ごと）
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 30000); // 30秒ごと
+    
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  const fetchNotifications = async () => {
+    if (!isAuthenticated) return;
+    
+    setNotificationLoading(true);
+    setNotificationError(null);
+    try {
+      const url = getApiUrl("/notifications");
+      const res = await authenticatedFetch(url);
+      if (res.ok) {
+        const data: Notification[] = await res.json();
+        setNotifications(data);
+      } else {
+        const errorText = await res.text();
+        console.error("[HomeScreen] Failed to fetch notifications:", res.status, errorText);
+        setNotificationError("通知の取得に失敗しました");
+      }
+    } catch (error: any) {
+      console.error("[HomeScreen] Failed to fetch notifications:", error);
+      setNotificationError(error.message ?? "通知の取得に失敗しました");
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId: number) => {
+    try {
+      const url = getApiUrl(`/notifications/${notificationId}/read`);
+      const res = await authenticatedFetch(url, {
+        method: "PUT",
+      });
+      if (res.ok) {
+        // 通知を更新
+        setNotifications(prev => 
+          prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+        );
+      } else {
+        console.error("[HomeScreen] Failed to mark notification as read:", res.status);
+      }
+    } catch (error) {
+      console.error("[HomeScreen] Failed to mark notification as read:", error);
+    }
+  };
 
   const fetchSharingStatus = async () => {
     try {
@@ -188,6 +254,12 @@ export default function HomeScreen() {
   const [showChangeShareIdModal, setShowChangeShareIdModal] = useState(false);
   const [newShareId, setNewShareId] = useState("");
   const [changeShareIdLoading, setChangeShareIdLoading] = useState(false);
+
+  // 通知関連のstate
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
 
   const fetchUpcoming = async () => {
     try {
@@ -469,22 +541,42 @@ export default function HomeScreen() {
     <View style={styles.container}>
         <View style={styles.header}>
       <Text style={styles.title}>SCHEDULE</Text>
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => {
-              console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
-              if (isAuthenticated) {
-                // ログイン済みの場合、メニューモーダルを表示
-                setShowUserMenuModal(true);
-              } else {
-                setShowLoginModal(true);
-              }
-            }}
-          >
-            <Text style={{ fontSize: 24 }}>
-              {isAuthenticated ? "👤" : "🔐"}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            {isAuthenticated && (
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={() => {
+                  setShowNotificationModal(true);
+                  fetchNotifications();
+                }}
+              >
+                <Text style={{ fontSize: 24 }}>🔔</Text>
+                {notifications.filter(n => !n.is_read).length > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {notifications.filter(n => !n.is_read).length}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => {
+                console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
+                if (isAuthenticated) {
+                  // ログイン済みの場合、メニューモーダルを表示
+                  setShowUserMenuModal(true);
+                } else {
+                  setShowLoginModal(true);
+                }
+              }}
+            >
+              <Text style={{ fontSize: 24 }}>
+                {isAuthenticated ? "👤" : "🔐"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {isAuthenticated && (
@@ -845,6 +937,62 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* 通知モーダル */}
+      <Modal
+        visible={showNotificationModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowNotificationModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>通知</Text>
+              <TouchableOpacity
+                onPress={() => setShowNotificationModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={{ fontSize: 24 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {notificationLoading && <ActivityIndicator color="#333333" />}
+            {notificationError && (
+              <Text style={styles.errorText}>{notificationError}</Text>
+            )}
+            {!notificationLoading && !notificationError && notifications.length === 0 && (
+              <Text style={styles.emptyText}>通知はありません</Text>
+            )}
+            {!notificationLoading && !notificationError && notifications.length > 0 && (
+              <ScrollView style={styles.notificationList}>
+                {notifications.map((notification) => (
+                  <TouchableOpacity
+                    key={notification.id}
+                    style={[
+                      styles.notificationItem,
+                      !notification.is_read && styles.notificationItemUnread,
+                    ]}
+                    onPress={() => {
+                      if (!notification.is_read) {
+                        markNotificationAsRead(notification.id);
+                      }
+                      router.push(`/live/${notification.schedule_id}`);
+                      setShowNotificationModal(false);
+                    }}
+                  >
+                    <Text style={styles.notificationTitle}>{notification.title}</Text>
+                    <Text style={styles.notificationMessage}>{notification.message}</Text>
+                    <Text style={styles.notificationDate}>
+                      {new Date(notification.created_at).toLocaleString("ja-JP")}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -885,6 +1033,63 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 24,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  notificationButton: {
+    padding: 8,
+    position: "relative",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "#d93025",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  notificationBadgeText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  notificationList: {
+    maxHeight: 400,
+  },
+  notificationItem: {
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "#f7f6f3",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e9e9e7",
+  },
+  notificationItemUnread: {
+    backgroundColor: "#fff4e6",
+    borderColor: "#ffd89b",
+  },
+  notificationTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#37352f",
+    marginBottom: 8,
+  },
+  notificationMessage: {
+    fontSize: 14,
+    color: "#787774",
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  notificationDate: {
+    fontSize: 12,
+    color: "#9b9a97",
   },
   title: {
     fontSize: 40,
@@ -1117,5 +1322,62 @@ const styles = StyleSheet.create({
   },
   copyButtonText: {
     fontSize: 16,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  notificationButton: {
+    padding: 8,
+    position: "relative",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "#d93025",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  notificationBadgeText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  notificationList: {
+    maxHeight: 400,
+  },
+  notificationItem: {
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "#f7f6f3",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e9e9e7",
+  },
+  notificationItemUnread: {
+    backgroundColor: "#fff4e6",
+    borderColor: "#ffd89b",
+  },
+  notificationTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#37352f",
+    marginBottom: 8,
+  },
+  notificationMessage: {
+    fontSize: 14,
+    color: "#787774",
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  notificationDate: {
+    fontSize: 12,
+    color: "#9b9a97",
   },
 });
