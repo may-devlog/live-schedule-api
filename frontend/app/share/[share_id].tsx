@@ -216,7 +216,7 @@ export default function SharedScheduleScreen() {
     >
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>SCHEDULES</Text>
+          <Text style={styles.title}>SCHEDULE</Text>
         </View>
 
         {/* カレンダー */}
