@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   ScrollView,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getApiUrl } from '../../utils/api';
