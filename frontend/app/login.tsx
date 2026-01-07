@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
-  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -77,16 +76,14 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    <ScrollView 
+      style={styles.scrollContainer} 
+      contentContainerStyle={styles.scrollContent}
+      scrollEnabled={true}
+      nestedScrollEnabled={true}
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.container}>
         <View style={styles.form}>
           <Text style={styles.title}>SKDREC</Text>
 
@@ -173,22 +170,32 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollContainer: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
   scrollContent: {
+    paddingBottom: 40,
     flexGrow: 1,
+    minHeight: '100%',
+  },
+  container: {
+    paddingTop: 48,
+    paddingHorizontal: 24,
+    backgroundColor: '#f5f5f5',
+    maxWidth: 900,
+    alignSelf: 'center',
+    width: '100%',
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    minHeight: '100%',
   },
   form: {
     width: '100%',
