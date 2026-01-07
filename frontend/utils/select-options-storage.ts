@@ -414,10 +414,19 @@ export async function loadSelectOptions(
         }
         // TRANSPORTATIONSの場合は、色が設定されていない場合のみデフォルトで薄いグレーに
         if (key === "TRANSPORTATIONS") {
-          const options = (parsed as SelectOption[]).map((opt) => ({
-            ...opt,
-            color: opt.color || "#E5E7EB", // 色が設定されていない場合のみ薄いグレー（デフォルト）
-          }));
+          const options = (parsed as SelectOption[]).map((opt) => {
+            // 特急の色を薄い黄色に設定
+            if (opt.label === "🚅 特急") {
+              return {
+                ...opt,
+                color: "#FEF9C3", // 薄い黄色
+              };
+            }
+            return {
+              ...opt,
+              color: opt.color || "#E5E7EB", // 色が設定されていない場合のみ薄いグレー（デフォルト）
+            };
+          });
           // orderでソートして返す
           return options.sort((a, b) => {
             const orderA = a.order !== undefined ? a.order : Infinity;
