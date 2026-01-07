@@ -48,7 +48,7 @@ export default function YearScreen() {
   
   // グルーピング関連
   const [groupingField, setGroupingField] = useState<GroupingField>("none");
-  const [stayGroupingField, setStayGroupingField] = useState<"website" | "none">("none");
+  const [stayGroupingField, setStayGroupingField] = useState<"website" | "status" | "none">("none");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   
   // 選択肢の並び順情報（グルーピングのソート用）
@@ -220,13 +220,13 @@ export default function YearScreen() {
     };
   }, []);
 
-  // 予約サイトの色情報を事前にキャッシュ（宿泊タブ表示用）
+  // 予約サイトとステータスの色情報を事前にキャッシュ（宿泊タブ表示用）
   useEffect(() => {
     if (archiveType !== "宿泊" || stays.length === 0) return;
     
     let isMounted = true;
     
-    const loadWebsiteColors = async () => {
+    const loadColors = async () => {
       try {
         const { getOptionColor } = await import("../../utils/get-option-color");
         
@@ -244,12 +244,27 @@ export default function YearScreen() {
             await getOptionColor(website, "WEBSITE");
           }
         }
+        
+        // ステータスの色情報もキャッシュ（グルーピングで使用される可能性があるため）
+        const uniqueStatuses = new Set<string>();
+        stays.forEach((stay) => {
+          if (stay.status) {
+            uniqueStatuses.add(stay.status);
+          }
+        });
+        
+        // 各ステータスの色をキャッシュ
+        for (const status of uniqueStatuses) {
+          if (isMounted) {
+            await getOptionColor(status, "STATUS");
+          }
+        }
       } catch (error) {
-        console.error("Error loading website colors:", error);
+        console.error("Error loading colors:", error);
       }
     };
     
-    loadWebsiteColors();
+    loadColors();
     
     return () => {
       isMounted = false;
@@ -475,6 +490,7 @@ export default function YearScreen() {
             {[
               { value: "none" as const, label: "なし" },
               { value: "website" as const, label: "予約サイト" },
+              { value: "status" as const, label: "ステータス" },
             ].map((option) => (
               <TouchableOpacity
                 key={option.value}

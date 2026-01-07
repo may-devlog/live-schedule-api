@@ -21,7 +21,7 @@ export type GroupedStay = {
 
 export function groupStays(
   stays: Stay[],
-  field: "website" | "none",
+  field: "website" | "status" | "none",
   selectOptionsMap: Map<string, Map<string, number>>
 ): GroupedStay[] {
   if (field === "none") {
@@ -36,6 +36,9 @@ export function groupStays(
     switch (field) {
       case "website":
         groupKey = stay.website || "未設定";
+        break;
+      case "status":
+        groupKey = stay.status || "未設定";
         break;
       default:
         groupKey = "未設定";
@@ -56,18 +59,21 @@ export function groupStays(
     if (titleA === "未設定") return 1;
     if (titleB === "未設定") return -1;
 
-    // 予約サイトの場合は、選択肢のorderでソート
-    const orderMap = selectOptionsMap.get("website");
-    if (orderMap && orderMap.size > 0) {
-      const orderA = orderMap.get(titleA);
-      const orderB = orderMap.get(titleB);
-      // 両方のorderが存在する場合はorderでソート
-      if (orderA !== undefined && orderB !== undefined) {
-        return orderA - orderB;
+    // 予約サイトまたはステータスの場合は、選択肢のorderでソート
+    const orderMapKey = field === "website" ? "website" : field === "status" ? "stay_status" : null;
+    if (orderMapKey) {
+      const orderMap = selectOptionsMap.get(orderMapKey);
+      if (orderMap && orderMap.size > 0) {
+        const orderA = orderMap.get(titleA);
+        const orderB = orderMap.get(titleB);
+        // 両方のorderが存在する場合はorderでソート
+        if (orderA !== undefined && orderB !== undefined) {
+          return orderA - orderB;
+        }
+        // 片方だけorderがある場合は、orderがある方を前に
+        if (orderA !== undefined) return -1;
+        if (orderB !== undefined) return 1;
       }
-      // 片方だけorderがある場合は、orderがある方を前に
-      if (orderA !== undefined) return -1;
-      if (orderB !== undefined) return 1;
     }
 
     // orderがない場合は文字列比較

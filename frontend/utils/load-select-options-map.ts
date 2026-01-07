@@ -5,7 +5,7 @@ import { loadSelectOptions, loadStaySelectOptions } from "./select-options-stora
 export async function loadSelectOptionsMap(
   shareId?: string
 ): Promise<Map<string, Map<string, number>>> {
-  const [categories, areas, targets, sellers, statuses, groups, websites] = await Promise.all([
+  const [categories, areas, targets, sellers, statuses, groups, websites, stayStatuses] = await Promise.all([
     loadSelectOptions("CATEGORIES", shareId),
     loadSelectOptions("AREAS", shareId),
     loadSelectOptions("TARGETS", shareId),
@@ -13,6 +13,7 @@ export async function loadSelectOptionsMap(
     loadSelectOptions("STATUSES", shareId),
     loadSelectOptions("GROUPS", shareId),
     loadStaySelectOptions("WEBSITE", shareId),
+    loadStaySelectOptions("STATUS", shareId),
   ]);
 
   const orderMap = new Map<string, Map<string, number>>();
@@ -62,6 +63,12 @@ export async function loadSelectOptionsMap(
     websiteOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
   });
   orderMap.set("website", websiteOrder);
+
+  const stayStatusOrder = new Map<string, number>();
+  stayStatuses.forEach((opt, idx) => {
+    stayStatusOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
+  });
+  orderMap.set("stay_status", stayStatusOrder);
 
   return orderMap;
 }
