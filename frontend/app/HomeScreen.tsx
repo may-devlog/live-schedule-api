@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
+import { PersonIcon, LockIcon, NotificationIcon } from "@/components/CustomIcons";
 
 export type Schedule = {
   id: number;
@@ -549,7 +550,7 @@ export default function HomeScreen() {
                   fetchNotifications();
                 }}
               >
-                <Text style={styles.iconText}>●</Text>
+                <NotificationIcon size={24} color="#37352f" />
                 {notifications.filter(n => !n.is_read).length > 0 && (
                   <View style={styles.notificationBadge}>
                     <Text style={styles.notificationBadgeText}>
@@ -571,9 +572,11 @@ export default function HomeScreen() {
                 }
               }}
             >
-              <Text style={styles.iconText}>
-                {isAuthenticated ? "●" : "○"}
-              </Text>
+              {isAuthenticated ? (
+                <PersonIcon size={24} color="#37352f" />
+              ) : (
+                <LockIcon size={24} color="#37352f" />
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -1099,11 +1102,6 @@ const styles = StyleSheet.create({
     padding: 8,
     justifyContent: "center",
     alignItems: "center",
-  },
-  iconText: {
-    fontSize: 20,
-    color: "#37352f",
-    fontWeight: "600",
   },
   newButton: {
     alignSelf: "flex-start",
