@@ -41,8 +41,8 @@ export default function YearScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   
-  // アーカイブタイプ（LIVE or STAY）
-  const [archiveType, setArchiveType] = useState<"LIVE" | "STAY">("LIVE");
+  // アーカイブタイプ（ライブ or 宿泊）
+  const [archiveType, setArchiveType] = useState<"ライブ" | "宿泊">("ライブ");
   
   // グルーピング関連
   const [groupingField, setGroupingField] = useState<GroupingField>("none");
@@ -298,44 +298,44 @@ export default function YearScreen() {
           onSelectYear={(year) => handleSelectYear(year)}
         />
 
-        {/* アーカイブタイプ選択（LIVE / STAY） */}
+        {/* アーカイブタイプ選択（ライブ / 宿泊） */}
         <View style={styles.archiveTypeSelector}>
           <TouchableOpacity
             style={[
               styles.archiveTypeButton,
-              archiveType === "LIVE" && styles.archiveTypeButtonActive,
+              archiveType === "ライブ" && styles.archiveTypeButtonActive,
             ]}
-            onPress={() => setArchiveType("LIVE")}
+            onPress={() => setArchiveType("ライブ")}
           >
             <Text
               style={[
                 styles.archiveTypeButtonText,
-                archiveType === "LIVE" && styles.archiveTypeButtonTextActive,
+                archiveType === "ライブ" && styles.archiveTypeButtonTextActive,
               ]}
             >
-              LIVE
+              ライブ
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.archiveTypeButton,
-              archiveType === "STAY" && styles.archiveTypeButtonActive,
+              archiveType === "宿泊" && styles.archiveTypeButtonActive,
             ]}
-            onPress={() => setArchiveType("STAY")}
+            onPress={() => setArchiveType("宿泊")}
           >
             <Text
               style={[
                 styles.archiveTypeButtonText,
-                archiveType === "STAY" && styles.archiveTypeButtonTextActive,
+                archiveType === "宿泊" && styles.archiveTypeButtonTextActive,
               ]}
             >
-              STAY
+              宿泊
             </Text>
           </TouchableOpacity>
         </View>
 
       {/* グルーピングフィールド選択 */}
-      {archiveType === "LIVE" ? (
+      {archiveType === "ライブ" ? (
         <View style={styles.groupingSelector}>
           <Text style={styles.groupingLabel}>グルーピング:</Text>
           <View style={styles.groupingButtons}>
@@ -399,7 +399,7 @@ export default function YearScreen() {
         </View>
       )}
 
-      {archiveType === "LIVE" ? (
+      {archiveType === "ライブ" ? (
         groupingField === "none" ? (
         <FlatList
           data={schedules}
