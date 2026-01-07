@@ -352,7 +352,7 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
                   style={styles.newScheduleButton}
                   onPress={handleNewSchedule}
                 >
-                  <Text style={styles.newScheduleButtonText}>➕ New Live</Text>
+                  <Text style={styles.newScheduleButtonText}>+ 新しいイベント</Text>
                 </TouchableOpacity>
                 <View style={styles.scheduleListSeparator} />
               </>

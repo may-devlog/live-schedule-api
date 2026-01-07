@@ -550,7 +550,11 @@ export default function HomeScreen() {
                   fetchNotifications();
                 }}
               >
-                <Text style={{ fontSize: 24 }}>🔔</Text>
+                <MaterialIcons
+                  name="notifications"
+                  size={24}
+                  color="#37352f"
+                />
                 {notifications.filter(n => !n.is_read).length > 0 && (
                   <View style={styles.notificationBadge}>
                     <Text style={styles.notificationBadgeText}>
