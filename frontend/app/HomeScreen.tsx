@@ -550,7 +550,7 @@ export default function HomeScreen() {
                   fetchNotifications();
                 }}
               >
-                <NotificationIcon size={32} color="#37352f" />
+                <NotificationIcon size={40} color="#37352f" />
                 {notifications.filter(n => !n.is_read).length > 0 && (
                   <View style={styles.notificationBadge}>
                     <Text style={styles.notificationBadgeText}>
@@ -573,9 +573,9 @@ export default function HomeScreen() {
               }}
             >
               {isAuthenticated ? (
-                <PersonIcon size={32} color="#37352f" />
+                <PersonIcon size={40} color="#37352f" />
               ) : (
-                <LockIcon size={32} color="#37352f" />
+                <LockIcon size={40} color="#37352f" />
               )}
             </TouchableOpacity>
           </View>

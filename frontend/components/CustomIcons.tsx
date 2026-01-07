@@ -88,27 +88,40 @@ export function NotificationIcon({ size = 24, color = '#37352f' }: IconProps) {
         style={[
           styles.bellHandle,
           {
-            width: 4 * scale,
-            height: 2 * scale,
+            width: 5 * scale,
+            height: 2.5 * scale,
             backgroundColor: color,
             top: 0,
             borderRadius: 1 * scale,
           },
         ]}
       />
-      {/* ベルの本体（上部が広い台形） */}
+      {/* ベルの本体（上部が広く、下部が狭い台形） */}
       <View
         style={[
           styles.bellBody,
           {
-            width: 14 * scale,
-            height: 12 * scale,
+            width: 16 * scale,
+            height: 14 * scale,
             backgroundColor: color,
-            top: 2 * scale,
-            borderTopLeftRadius: 2 * scale,
-            borderTopRightRadius: 2 * scale,
-            borderBottomLeftRadius: 7 * scale,
-            borderBottomRightRadius: 7 * scale,
+            top: 2.5 * scale,
+            borderTopLeftRadius: 3 * scale,
+            borderTopRightRadius: 3 * scale,
+            borderBottomLeftRadius: 8 * scale,
+            borderBottomRightRadius: 8 * scale,
+          },
+        ]}
+      />
+      {/* ベルの割れ目（中央の縦線） */}
+      <View
+        style={[
+          styles.bellCrack,
+          {
+            width: 1.5 * scale,
+            height: 10 * scale,
+            backgroundColor: color,
+            top: 4 * scale,
+            opacity: 0.3,
           },
         ]}
       />
@@ -117,11 +130,11 @@ export function NotificationIcon({ size = 24, color = '#37352f' }: IconProps) {
         style={[
           styles.bellClapper,
           {
-            width: 2 * scale,
-            height: 2 * scale,
-            borderRadius: 1 * scale,
+            width: 3 * scale,
+            height: 3 * scale,
+            borderRadius: 1.5 * scale,
             backgroundColor: color,
-            top: 14 * scale,
+            top: 16.5 * scale,
           },
         ]}
       />
@@ -157,6 +170,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   bellBody: {
+    position: 'absolute',
+    alignSelf: 'center',
+  },
+  bellCrack: {
     position: 'absolute',
     alignSelf: 'center',
   },
