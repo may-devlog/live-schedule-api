@@ -428,9 +428,16 @@ export default function YearScreen() {
               style={styles.card}
               onPress={() => handleOpenDetail(item.id)}
             >
-              <Text style={styles.cardDate}>
-                {formatDateTimeUTC(item.datetime)}
-              </Text>
+              <View style={styles.cardRow}>
+                <Text style={styles.cardDate}>
+                  {formatDateTimeUTC(item.datetime)}
+                </Text>
+                {item.total_cost && item.total_cost > 0 && (
+                  <Text style={styles.cardPrice}>
+                    ¥{item.total_cost.toLocaleString()}
+                  </Text>
+                )}
+              </View>
               {/* ツアー名 (Group) */}
               {item.group && (
                 <Text style={styles.cardGroup} numberOfLines={1}>
@@ -514,9 +521,16 @@ export default function YearScreen() {
                 style={styles.card}
                 onPress={() => handleOpenDetail(item.id)}
               >
-                <Text style={styles.cardDate}>
-                  {formatDateTimeUTC(item.datetime)}
-                </Text>
+                <View style={styles.cardRow}>
+                  <Text style={styles.cardDate}>
+                    {formatDateTimeUTC(item.datetime)}
+                  </Text>
+                  {item.total_cost && item.total_cost > 0 && (
+                    <Text style={styles.cardPrice}>
+                      ¥{item.total_cost.toLocaleString()}
+                    </Text>
+                  )}
+                </View>
                 {/* ツアー名 (Group) */}
                 {item.group && (
                   <Text style={styles.cardGroup} numberOfLines={1}>
@@ -570,9 +584,16 @@ export default function YearScreen() {
                 style={styles.card}
                 onPress={() => router.push(`/stay/${item.id}`)}
               >
-                <Text style={styles.cardDate}>
-                  {item.check_in} - {item.check_out}
-                </Text>
+                <View style={styles.cardRow}>
+                  <Text style={styles.cardDate}>
+                    {item.check_in} - {item.check_out}
+                  </Text>
+                  {item.fee && item.fee > 0 && (
+                    <Text style={styles.cardPrice}>
+                      ¥{item.fee.toLocaleString()}
+                    </Text>
+                  )}
+                </View>
                 <Text style={styles.cardTitle} numberOfLines={2}>
                   {item.hotel_name}
                 </Text>
@@ -584,7 +605,6 @@ export default function YearScreen() {
                     />
                   </View>
                 )}
-                <Text style={styles.cardSub}>¥{item.fee.toLocaleString()}</Text>
               </TouchableOpacity>
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -639,9 +659,16 @@ export default function YearScreen() {
                   style={styles.card}
                   onPress={() => router.push(`/stay/${item.id}`)}
                 >
-                  <Text style={styles.cardDate}>
-                    {item.check_in} - {item.check_out}
-                  </Text>
+                  <View style={styles.cardRow}>
+                    <Text style={styles.cardDate}>
+                      {item.check_in} - {item.check_out}
+                    </Text>
+                    {item.fee && item.fee > 0 && (
+                      <Text style={styles.cardPrice}>
+                        ¥{item.fee.toLocaleString()}
+                      </Text>
+                    )}
+                  </View>
                   <Text style={styles.cardTitle} numberOfLines={2}>
                     {item.hotel_name}
                   </Text>
@@ -653,7 +680,6 @@ export default function YearScreen() {
                       />
                     </View>
                   )}
-                  <Text style={styles.cardSub}>¥{item.fee.toLocaleString()}</Text>
                 </TouchableOpacity>
               );
             }}
@@ -721,11 +747,23 @@ const styles = StyleSheet.create({
     borderColor: "#e9e9e7",
     marginBottom: 8,
   },
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
   cardDate: {
     fontSize: 12,
     color: "#787774",
-    marginBottom: 6,
     fontWeight: "500",
+    flex: 1,
+  },
+  cardPrice: {
+    fontSize: 12,
+    color: "#37352f",
+    fontWeight: "500",
+    textAlign: "right",
   },
   cardGroup: {
     fontSize: 12,
