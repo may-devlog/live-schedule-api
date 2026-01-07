@@ -16,7 +16,6 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export type Schedule = {
   id: number;
@@ -550,11 +549,7 @@ export default function HomeScreen() {
                   fetchNotifications();
                 }}
               >
-                <MaterialIcons
-                  name="notifications"
-                  size={24}
-                  color="#37352f"
-                />
+                <Text style={styles.iconText}>●</Text>
                 {notifications.filter(n => !n.is_read).length > 0 && (
                   <View style={styles.notificationBadge}>
                     <Text style={styles.notificationBadgeText}>
@@ -576,11 +571,9 @@ export default function HomeScreen() {
                 }
               }}
             >
-              <MaterialIcons
-                name={isAuthenticated ? "person" : "lock"}
-                size={24}
-                color="#37352f"
-              />
+              <Text style={styles.iconText}>
+                {isAuthenticated ? "●" : "○"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1104,6 +1097,13 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     padding: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconText: {
+    fontSize: 20,
+    color: "#37352f",
+    fontWeight: "600",
   },
   newButton: {
     alignSelf: "flex-start",
