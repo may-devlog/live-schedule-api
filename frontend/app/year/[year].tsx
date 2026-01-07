@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
   },
   cardPrice: {
     fontSize: 12,
-    color: "#37352f",
+    color: "#787774",
     fontWeight: "500",
     textAlign: "right",
   },
