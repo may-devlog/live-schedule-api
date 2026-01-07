@@ -434,6 +434,8 @@ export default function YearScreen() {
         <FlatList
           data={schedules}
           keyExtractor={(item) => item.id.toString()}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
           refreshControl={
             <RefreshControl 
               refreshing={refreshing} 
@@ -494,6 +496,8 @@ export default function YearScreen() {
         <SectionList
           sections={groupedSchedules}
           keyExtractor={(item) => item.id.toString()}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
           refreshControl={
             <RefreshControl 
               refreshing={refreshing} 
@@ -590,6 +594,8 @@ export default function YearScreen() {
           <FlatList
             data={stays}
             keyExtractor={(item) => item.id.toString()}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1 }}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
@@ -643,6 +649,8 @@ export default function YearScreen() {
           <SectionList
             sections={groupedStays}
             keyExtractor={(item) => item.id.toString()}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1 }}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
@@ -733,6 +741,7 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
+    flex: 1,
   },
   title: {
     paddingHorizontal: 24,
