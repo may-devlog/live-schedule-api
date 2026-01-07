@@ -32,6 +32,8 @@ export default function TrafficDetailScreen() {
   const { trafficId } = useLocalSearchParams<{ trafficId: string }>();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const [traffic, setTraffic] = useState<Traffic | null>(null);
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);

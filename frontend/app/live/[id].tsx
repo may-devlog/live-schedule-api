@@ -60,6 +60,8 @@ export default function DetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
 
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);

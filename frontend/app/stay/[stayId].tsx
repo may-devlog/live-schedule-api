@@ -31,6 +31,8 @@ export default function StayDetailScreen() {
   const { stayId } = useLocalSearchParams<{ stayId: string }>();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
 
   const [stay, setStay] = useState<Stay | null>(null);
   const [schedule, setSchedule] = useState<Schedule | null>(null);
