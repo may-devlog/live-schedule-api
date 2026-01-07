@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
-// アイコンは絵文字を使用（フォントに依存しない）
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export type Schedule = {
   id: number;
@@ -572,9 +572,11 @@ export default function HomeScreen() {
                 }
               }}
             >
-              <Text style={{ fontSize: 24 }}>
-                {isAuthenticated ? "👤" : "🔐"}
-              </Text>
+              <MaterialIcons
+                name={isAuthenticated ? "person" : "lock"}
+                size={24}
+                color="#37352f"
+              />
             </TouchableOpacity>
           </View>
         </View>
