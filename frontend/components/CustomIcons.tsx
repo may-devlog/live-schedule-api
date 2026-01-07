@@ -88,53 +88,53 @@ export function NotificationIcon({ size = 24, color = '#37352f' }: IconProps) {
         style={[
           styles.bellHandle,
           {
-            width: 5 * scale,
-            height: 2.5 * scale,
+            width: 6 * scale,
+            height: 3 * scale,
             backgroundColor: color,
             top: 0,
-            borderRadius: 1 * scale,
+            borderRadius: 1.5 * scale,
           },
         ]}
       />
-      {/* ベルの本体（上部が広く、下部が狭い台形） */}
+      {/* ベルの本体（上部が広く、下部が狭い、よりベルらしい形状） */}
       <View
         style={[
           styles.bellBody,
           {
-            width: 16 * scale,
-            height: 14 * scale,
+            width: 18 * scale,
+            height: 16 * scale,
             backgroundColor: color,
-            top: 2.5 * scale,
-            borderTopLeftRadius: 3 * scale,
-            borderTopRightRadius: 3 * scale,
-            borderBottomLeftRadius: 8 * scale,
-            borderBottomRightRadius: 8 * scale,
+            top: 3 * scale,
+            borderTopLeftRadius: 9 * scale,
+            borderTopRightRadius: 9 * scale,
+            borderBottomLeftRadius: 2 * scale,
+            borderBottomRightRadius: 2 * scale,
           },
         ]}
       />
-      {/* ベルの割れ目（中央の縦線） */}
+      {/* ベルの割れ目（中央の縦線、下部に向かって広がる） */}
       <View
         style={[
           styles.bellCrack,
           {
-            width: 1.5 * scale,
-            height: 10 * scale,
-            backgroundColor: color,
-            top: 4 * scale,
-            opacity: 0.3,
+            width: 2 * scale,
+            height: 12 * scale,
+            backgroundColor: '#ffffff',
+            top: 5 * scale,
+            borderRadius: 1 * scale,
           },
         ]}
       />
-      {/* ベルの鈴（小さな円） */}
+      {/* ベルの鈴（下部中央の小さな円） */}
       <View
         style={[
           styles.bellClapper,
           {
-            width: 3 * scale,
-            height: 3 * scale,
-            borderRadius: 1.5 * scale,
+            width: 4 * scale,
+            height: 4 * scale,
+            borderRadius: 2 * scale,
             backgroundColor: color,
-            top: 16.5 * scale,
+            top: 17 * scale,
           },
         ]}
       />
