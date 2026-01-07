@@ -1,7 +1,7 @@
 // app/traffic/[trafficId].tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, RefreshControl, Platform, Alert } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, RefreshControl, Platform, Alert, useWindowDimensions } from "react-native";
 
 type Traffic = {
   id: number;
@@ -280,12 +280,12 @@ export default function TrafficDetailScreen() {
         scrollEventThrottle={16}
       >
         {/* タイトル */}
-        <View style={styles.titleHeader}>
+        <View style={[styles.titleHeader, { flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "flex-start" }]}>
           <Text style={styles.mainTitle}>
             {title}
           </Text>
           {isAuthenticated && (
-            <View style={styles.actionButtons}>
+            <View style={[styles.actionButtons, { flexDirection: isMobile ? "column" : "row", alignSelf: isMobile ? "stretch" : "flex-start" }]}>
               <TouchableOpacity
                 style={styles.duplicateButton}
                 onPress={handleDuplicate}
@@ -445,9 +445,7 @@ const styles = StyleSheet.create({
     minHeight: '100%',
   },
   titleHeader: {
-    flexDirection: Platform.OS === "web" ? "row" : "column",
     justifyContent: "space-between",
-    alignItems: Platform.OS === "web" ? "flex-start" : "stretch",
     marginBottom: 24,
     gap: 16,
   },
@@ -459,9 +457,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionButtons: {
-    flexDirection: Platform.OS === "web" ? "row" : "column",
     gap: 8,
-    alignSelf: Platform.OS === "web" ? "flex-start" : "stretch",
   },
   duplicateButton: {
     backgroundColor: "#f7f6f3",

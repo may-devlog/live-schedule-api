@@ -11,6 +11,7 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  useWindowDimensions,
 } from "react-native";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
@@ -750,12 +751,12 @@ export default function DetailScreen() {
         scrollEventThrottle={16}
       >
         {/* タイトル */}
-        <View style={styles.titleHeader}>
+        <View style={[styles.titleHeader, { flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "flex-start" }]}>
         <Text style={styles.mainTitle}>
           {schedule.title}
           </Text>
           {isAuthenticated && (
-            <View style={styles.actionButtons}>
+            <View style={[styles.actionButtons, { flexDirection: isMobile ? "column" : "row", alignSelf: isMobile ? "stretch" : "flex-start" }]}>
               <TouchableOpacity
                 style={styles.duplicateButton}
                 onPress={handleDuplicate}
@@ -1145,9 +1146,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   titleHeader: {
-    flexDirection: Platform.OS === "web" ? "row" : "column",
     justifyContent: "space-between",
-    alignItems: Platform.OS === "web" ? "flex-start" : "stretch",
     marginBottom: 24,
     gap: 16,
   },
@@ -1159,9 +1158,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionButtons: {
-    flexDirection: Platform.OS === "web" ? "row" : "column",
     gap: 8,
-    alignSelf: "flex-start",
   },
   duplicateButton: {
     backgroundColor: "#f7f6f3",
