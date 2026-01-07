@@ -1,7 +1,7 @@
 // 選択肢の色情報を取得するユーティリティ
 import type { SelectOption } from "../types/select-option";
 import { getDefaultColorForLabel } from "../types/select-option";
-import { loadSelectOptions } from "./select-options-storage";
+import { loadSelectOptions, loadStaySelectOptions } from "./select-options-storage";
 
 // キャッシュ用
 const colorCache: Record<string, string> = {};
@@ -17,7 +17,13 @@ export async function getOptionColor(
   }
 
   try {
-    const options = await loadSelectOptions(optionType);
+    let options: SelectOption[];
+    if (optionType === "WEBSITE") {
+      // WEBSITEはSTAY_STORAGE_KEYSに属するため、loadStaySelectOptionsを使用
+      options = await loadStaySelectOptions("WEBSITE");
+    } else {
+      options = await loadSelectOptions(optionType);
+    }
     const option = options.find((opt) => opt.label === label);
     // AREASの場合は都道府県として扱う
     // CATEGORIESの場合はカテゴリとして扱う

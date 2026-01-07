@@ -203,6 +203,36 @@ export default function YearScreen() {
     };
   }, []);
 
+  // 予約サイトの色情報を事前にキャッシュ（宿泊タブ表示用）
+  useEffect(() => {
+    if (archiveType !== "宿泊" || stays.length === 0) return;
+    
+    let isMounted = true;
+    
+    const loadWebsiteColors = async () => {
+      try {
+        const { loadStaySelectOptions } = await import("../../utils/select-options-storage");
+        const { getOptionColor } = await import("../../utils/get-option-color");
+        const websites = await loadStaySelectOptions("WEBSITE");
+        
+        // 各予約サイトの色をキャッシュ
+        for (const website of websites) {
+          if (isMounted) {
+            await getOptionColor(website.label, "WEBSITE");
+          }
+        }
+      } catch (error) {
+        console.error("Error loading website colors:", error);
+      }
+    };
+    
+    loadWebsiteColors();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [archiveType, stays]);
+
   const handleSelectYear = (y: number) => {
     const yStr = String(y);
     setCurrentYear(yStr);
