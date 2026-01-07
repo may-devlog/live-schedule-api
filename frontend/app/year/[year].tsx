@@ -40,6 +40,8 @@ export default function YearScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
+  // 各スケジュールの交通情報（往復フラグを考慮した金額計算用）
+  const [trafficBySchedule, setTrafficBySchedule] = useState<Map<number, Array<{ fare: number; return_flag: boolean }>>>(new Map());
   
   // アーカイブタイプ（イベント or 宿泊）
   const [archiveType, setArchiveType] = useState<"イベント" | "宿泊">("イベント");
@@ -122,6 +124,21 @@ export default function YearScreen() {
         console.log("YEAR SCHEDULES FROM API:", currentYear, data);
         if (isMounted) {
           setSchedules(data);
+          
+          // 各スケジュールの交通情報を取得（往復フラグを考慮した金額計算用）
+          const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
+          for (const schedule of data) {
+            try {
+              const trafficRes = await authenticatedFetch(getApiUrl(`/traffic?schedule_id=${schedule.id}`));
+              if (trafficRes.ok) {
+                const trafficList: Array<{ fare: number; return_flag: boolean }> = await trafficRes.json();
+                trafficMap.set(schedule.id, trafficList);
+              }
+            } catch (e) {
+              console.error(`Error fetching traffic for schedule ${schedule.id}:`, e);
+            }
+          }
+          setTrafficBySchedule(trafficMap);
         }
 
         // 宿泊情報を取得
@@ -287,6 +304,21 @@ export default function YearScreen() {
           if (yearRes.ok) {
             const yearData: Schedule[] = await yearRes.json();
             setSchedules(yearData);
+            
+            // 各スケジュールの交通情報を取得（往復フラグを考慮した金額計算用）
+            const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
+            for (const schedule of yearData) {
+              try {
+                const trafficRes = await authenticatedFetch(getApiUrl(`/traffic?schedule_id=${schedule.id}`));
+                if (trafficRes.ok) {
+                  const trafficList: Array<{ fare: number; return_flag: boolean }> = await trafficRes.json();
+                  trafficMap.set(schedule.id, trafficList);
+                }
+              } catch (e) {
+                console.error(`Error fetching traffic for schedule ${schedule.id}:`, e);
+              }
+            }
+            setTrafficBySchedule(trafficMap);
           }
         } catch (e: any) {
           setError(e.message ?? "Unknown error");
@@ -317,6 +349,37 @@ export default function YearScreen() {
       newCollapsed.add(title);
     }
     setCollapsedSections(newCollapsed);
+  };
+
+  // 往復フラグを考慮した総費用を計算
+  const calculateTotalCostWithReturnFlag = (schedule: Schedule): number | null => {
+    if (!schedule.total_cost) return null;
+    
+    // 交通情報を取得
+    const traffics = trafficBySchedule.get(schedule.id);
+    if (!traffics || traffics.length === 0) {
+      // 交通情報がない場合は、既存のtotal_costをそのまま返す
+      return schedule.total_cost;
+    }
+    
+    // 往復フラグを考慮した交通費を計算
+    const trafficCostWithReturn = traffics.reduce((sum, traffic) => {
+      return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
+    }, 0);
+    
+    // 既存のtotal_costから、元のtotal_fareを引いて、新しいtrafficCostWithReturnを足す
+    // total_cost = ticket_fee + drink_fee + travel_cost
+    // travel_cost = total_fare + stay_fee
+    // つまり、total_cost = ticket_fee + drink_fee + total_fare + stay_fee
+    const ticketFee = schedule.ticket_fee || 0;
+    const drinkFee = schedule.drink_fee || 0;
+    const stayFee = schedule.stay_fee || 0;
+    const originalTotalFare = schedule.total_fare || 0;
+    
+    // 新しいtotal_cost = ticket_fee + drink_fee + (trafficCostWithReturn) + stay_fee
+    const newTotalCost = ticketFee + drinkFee + trafficCostWithReturn + stayFee;
+    
+    return newTotalCost;
   };
 
   return (
@@ -470,11 +533,14 @@ export default function YearScreen() {
                 <Text style={styles.cardDate}>
                   {formatDateTimeUTC(item.datetime)}
                 </Text>
-                {item.total_cost && item.total_cost > 0 && (
-                  <Text style={styles.cardPrice}>
-                    ¥{item.total_cost.toLocaleString()}
-                  </Text>
-                )}
+                {(() => {
+                  const totalCost = calculateTotalCostWithReturnFlag(item);
+                  return totalCost && totalCost > 0 ? (
+                    <Text style={styles.cardPrice}>
+                      ¥{totalCost.toLocaleString()}
+                    </Text>
+                  ) : null;
+                })()}
               </View>
               {/* ツアー名 (Group) */}
               {item.group && (
@@ -525,9 +591,10 @@ export default function YearScreen() {
           }
           renderSectionHeader={({ section: { title, data } }) => {
             const isCollapsed = collapsedSections.has(title);
-            // 総費用の合計を計算
+            // 総費用の合計を計算（往復フラグを考慮）
             const totalCost = data.reduce((sum, schedule) => {
-              return sum + (schedule.total_cost ?? 0);
+              const cost = calculateTotalCostWithReturnFlag(schedule);
+              return sum + (cost ?? 0);
             }, 0);
             
             return (
@@ -565,11 +632,14 @@ export default function YearScreen() {
                   <Text style={styles.cardDate}>
                     {formatDateTimeUTC(item.datetime)}
                   </Text>
-                  {item.total_cost && item.total_cost > 0 && (
-                    <Text style={styles.cardPrice}>
-                      ¥{item.total_cost.toLocaleString()}
-                    </Text>
-                  )}
+                  {(() => {
+                    const totalCost = calculateTotalCostWithReturnFlag(item);
+                    return totalCost && totalCost > 0 ? (
+                      <Text style={styles.cardPrice}>
+                        ¥{totalCost.toLocaleString()}
+                      </Text>
+                    ) : null;
+                  })()}
                 </View>
                 {/* ツアー名 (Group) */}
                 {item.group && (
