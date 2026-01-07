@@ -315,7 +315,7 @@ export default function StayDetailScreen() {
             {maskHotelName(stay.hotel_name, isAuthenticated)}
           </Text>
           {isAuthenticated && (
-            <View style={[styles.actionButtons, { flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-end" : "flex-start" }]}>
+            <View style={[styles.actionButtons, { flexDirection: isMobile ? "column" : "row" }]}>
               <TouchableOpacity
                 style={styles.duplicateButton}
                 onPress={handleDuplicate}
