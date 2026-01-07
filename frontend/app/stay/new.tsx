@@ -450,6 +450,7 @@ export default function NewStayScreen() {
           onValueChange={(ids) => {
             setScheduleId(ids.length > 0 ? ids[0].toString() : null);
           }}
+          singleSelect={true}
           placeholder="↗ スケジュールにリンク"
           hideSelectedCards={false}
         />

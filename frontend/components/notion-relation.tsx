@@ -20,6 +20,7 @@ type NotionRelationProps = {
   currentScheduleId?: number; // 現在編集中のスケジュールID（自分自身を除外するため）
   placeholder?: string;
   hideSelectedCards?: boolean; // 選択されたカードを非表示にするか
+  singleSelect?: boolean; // 単一選択モード（trueの場合、新しい選択時に既存の選択を解除）
 };
 
 export function NotionRelation({
@@ -29,6 +30,7 @@ export function NotionRelation({
   currentScheduleId,
   placeholder = "関連スケジュールを選択",
   hideSelectedCards = false,
+  singleSelect = false,
 }: NotionRelationProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
@@ -77,12 +79,24 @@ export function NotionRelation({
   const selectedSchedules = allSchedules.filter((s) => value.includes(s.id));
 
   const handleToggleSchedule = (scheduleId: number) => {
-    if (value.includes(scheduleId)) {
-      // 削除
-      onValueChange(value.filter((id) => id !== scheduleId));
+    if (singleSelect) {
+      // 単一選択モード: 既に選択されている場合は解除、そうでない場合は選択（既存の選択を解除）
+      if (value.includes(scheduleId)) {
+        // 削除
+        onValueChange([]);
+      } else {
+        // 新しい選択（既存の選択を解除）
+        onValueChange([scheduleId]);
+      }
     } else {
-      // 追加
-      onValueChange([...value, scheduleId]);
+      // 複数選択モード: 既存の動作
+      if (value.includes(scheduleId)) {
+        // 削除
+        onValueChange(value.filter((id) => id !== scheduleId));
+      } else {
+        // 追加
+        onValueChange([...value, scheduleId]);
+      }
     }
   };
 

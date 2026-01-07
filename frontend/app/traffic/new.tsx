@@ -252,6 +252,7 @@ export default function NewTrafficScreen() {
           }}
           placeholder="↗ スケジュールにリンク"
           hideSelectedCards={false}
+          singleSelect={true}
         />
       </View>
 
