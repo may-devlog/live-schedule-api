@@ -167,7 +167,25 @@ export function NotionRelation({
           <View
             style={styles.modalContent}
             onStartShouldSetResponder={() => true}
-            onTouchEnd={(e) => e.stopPropagation()}
+            onResponderTerminationRequest={() => false}
+            onTouchStart={(e) => {
+              // モーダルコンテンツ内のタッチでモーダルが閉じないようにする
+              if (e && e.nativeEvent) {
+                e.stopPropagation();
+              }
+            }}
+            onTouchEnd={(e) => {
+              // モーダルコンテンツ内のタッチでモーダルが閉じないようにする
+              if (e && e.nativeEvent) {
+                e.stopPropagation();
+              }
+            }}
+            onClick={(e) => {
+              // Web環境でのクリックイベント伝播を防止
+              if (e) {
+                e.stopPropagation();
+              }
+            }}
           >
             <Text style={styles.modalTitle}>{label}</Text>
 
@@ -185,7 +203,11 @@ export function NotionRelation({
             {loading ? (
               <Text style={styles.loadingText}>読み込み中...</Text>
             ) : (
-              <ScrollView style={styles.optionsList}>
+              <ScrollView 
+                style={styles.optionsList}
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+              >
                 {filteredSchedules.length === 0 ? (
                   <Text style={styles.emptyText}>
                     {searchText ? "検索結果がありません" : "スケジュールはありません"}
@@ -200,7 +222,10 @@ export function NotionRelation({
                           styles.optionItem,
                           isSelected && styles.optionItemSelected,
                         ]}
-                        onPress={() => handleToggleSchedule(schedule.id)}
+                        onPress={() => {
+                          handleToggleSchedule(schedule.id);
+                        }}
+                        activeOpacity={0.7}
                       >
                         <View style={styles.optionContent}>
                           {schedule.date && (
