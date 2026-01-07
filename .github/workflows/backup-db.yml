@@ -9,6 +9,8 @@ on:
 jobs:
   backup:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # GitHub Releasesを作成するために必要
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
