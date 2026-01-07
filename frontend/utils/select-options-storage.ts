@@ -128,7 +128,7 @@ const DEFAULT_AREAS = [
 const DEFAULT_TARGETS: string[] = [];
 const DEFAULT_SELLERS = ["チケットぴあ", "イープラス", "ローチケ", "その他"];
 const DEFAULT_STATUSES = ["Canceled", "Pending", "Keep", "Done"];
-const DEFAULT_TRANSPORTATIONS = ["🚄 新幹線", "✈️ 飛行機", "🚃 在来線", "🚌 バス", "🚗 車", "🚕 タクシー", "その他"];
+const DEFAULT_TRANSPORTATIONS = ["✈️ 飛行機", "🚄 新幹線", "🚅 特急", "🚃 在来線", "🚌 バス", "🚗 車", "🚕 タクシー", "その他"];
 const DEFAULT_GROUPS: string[] = [];
 
 // デフォルト選択肢を取得する関数
@@ -154,10 +154,19 @@ function getDefaultOptions(
     order: index,
   }));
   if (key === "TRANSPORTATIONS") {
-    return optionsWithOrder.map((opt) => ({
-      ...opt,
-      color: opt.color || "#E5E7EB",
-    }));
+    return optionsWithOrder.map((opt) => {
+      // 特急の色を薄い黄色に設定
+      if (opt.label === "🚅 特急") {
+        return {
+          ...opt,
+          color: "#FEF9C3", // 薄い黄色
+        };
+      }
+      return {
+        ...opt,
+        color: opt.color || "#E5E7EB",
+      };
+    });
   }
   return optionsWithOrder;
 }
