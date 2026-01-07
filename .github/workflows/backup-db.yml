@@ -26,9 +26,10 @@ jobs:
             echo "Error: FLY_API_TOKEN is not set"
             exit 1
           fi
-          echo "$FLY_API_TOKEN" | flyctl auth login --stdin || {
+          echo "✓ FLY_API_TOKEN is set (length: ${#FLY_API_TOKEN})"
+          # FLY_API_TOKEN環境変数が設定されていれば、flyctlは自動的にそれを使用します
+          flyctl auth whoami || {
             echo "Error: Authentication failed"
-            echo "Token length: ${#FLY_API_TOKEN}"
             exit 1
           }
           echo "✓ Authentication successful"
