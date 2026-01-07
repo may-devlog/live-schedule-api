@@ -1148,7 +1148,9 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   titleHeader: {
+    flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 24,
     gap: 16,
   },
