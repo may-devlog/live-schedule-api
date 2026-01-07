@@ -115,6 +115,49 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install b2 CLI
+        if: success() && secrets.B2_APPLICATION_KEY_ID && secrets.B2_APPLICATION_KEY && secrets.B2_BUCKET_NAME
+        run: |
+          pip install b2
+
+      - name: Upload backup to Backblaze B2
+        if: success() && secrets.B2_APPLICATION_KEY_ID && secrets.B2_APPLICATION_KEY && secrets.B2_BUCKET_NAME
+        env:
+          B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+          B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+        run: |
+          cd backend
+          BACKUP_FILE=$(ls -t data/backups/app.db.backup.* | head -1)
+          
+          if [ -z "$BACKUP_FILE" ]; then
+            echo "Error: Backup file not found"
+            exit 1
+          fi
+          
+          echo "[$(date +'%Y-%m-%d %H:%M:%S')] Backblaze B2へのアップロードを開始..."
+          
+          # B2認証
+          b2 authorize-account "$B2_APPLICATION_KEY_ID" "$B2_APPLICATION_KEY"
+          
+          if [ $? -eq 0 ]; then
+            # ファイル名を取得
+            FILENAME=$(basename "$BACKUP_FILE")
+            
+            # B2にアップロード
+            b2 upload-file --no-progress "$B2_BUCKET_NAME" "$BACKUP_FILE" "$FILENAME"
+            
+            if [ $? -eq 0 ]; then
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✓ Backblaze B2へのアップロードが完了しました: $FILENAME"
+            else
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✗ Backblaze B2へのアップロードに失敗しました"
+              exit 1
+            fi
+          else
+            echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✗ Backblaze B2認証に失敗しました"
+            exit 1
+          fi
+
       - name: Cleanup old backups
         run: |
           cd backend
