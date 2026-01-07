@@ -211,14 +211,20 @@ export default function YearScreen() {
     
     const loadWebsiteColors = async () => {
       try {
-        const { loadStaySelectOptions } = await import("../../utils/select-options-storage");
         const { getOptionColor } = await import("../../utils/get-option-color");
-        const websites = await loadStaySelectOptions("WEBSITE");
+        
+        // 実際に表示されている宿泊データに含まれる予約サイトの色をキャッシュ
+        const uniqueWebsites = new Set<string>();
+        stays.forEach((stay) => {
+          if (stay.website) {
+            uniqueWebsites.add(stay.website);
+          }
+        });
         
         // 各予約サイトの色をキャッシュ
-        for (const website of websites) {
+        for (const website of uniqueWebsites) {
           if (isMounted) {
-            await getOptionColor(website.label, "WEBSITE");
+            await getOptionColor(website, "WEBSITE");
           }
         }
       } catch (error) {
