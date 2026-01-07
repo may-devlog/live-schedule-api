@@ -162,6 +162,13 @@ function getDefaultOptions(
           color: "#FEF9C3", // 薄い黄色
         };
       }
+      // その他の色をグレーに設定
+      if (opt.label === "その他") {
+        return {
+          ...opt,
+          color: "#E5E7EB", // グレー
+        };
+      }
       return {
         ...opt,
         color: opt.color || "#E5E7EB",
@@ -420,6 +427,13 @@ export async function loadSelectOptions(
               return {
                 ...opt,
                 color: "#FEF9C3", // 薄い黄色
+              };
+            }
+            // その他の色をグレーに設定
+            if (opt.label === "その他") {
+              return {
+                ...opt,
+                color: "#E5E7EB", // グレー
               };
             }
             return {
