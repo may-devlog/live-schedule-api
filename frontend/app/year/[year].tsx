@@ -516,9 +516,9 @@ export default function YearScreen() {
         <FlatList
           data={schedules}
           keyExtractor={(item) => item.id.toString()}
-          style={Platform.OS === 'web' ? { height: '100%' } : { flex: 1 }}
-          contentContainerStyle={Platform.OS === 'web' ? { paddingBottom: 40 } : { flexGrow: 1 }}
-          scrollEnabled={true}
+          style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
+          contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
+          scrollEnabled={Platform.OS !== 'web'}
           nestedScrollEnabled={Platform.OS === 'web'}
           refreshControl={
             Platform.OS !== 'web' ? (
@@ -585,9 +585,9 @@ export default function YearScreen() {
         <SectionList
           sections={groupedSchedules}
           keyExtractor={(item) => item.id.toString()}
-          style={Platform.OS === 'web' ? { height: '100%' } : { flex: 1 }}
-          contentContainerStyle={Platform.OS === 'web' ? { paddingBottom: 40 } : { flexGrow: 1 }}
-          scrollEnabled={true}
+          style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
+          contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
+          scrollEnabled={Platform.OS !== 'web'}
           nestedScrollEnabled={Platform.OS === 'web'}
           refreshControl={
             Platform.OS !== 'web' ? (
@@ -833,7 +833,12 @@ export default function YearScreen() {
           </View>
         </ScrollView>
       ) : (
-        <View style={[styles.content, Platform.OS === 'web' && { height: '100vh', overflow: 'auto' }]}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          scrollEnabled={true}
+          nestedScrollEnabled={true}
+        >
+          <View style={styles.content}>
         {/* 年選択（プルダウン） */}
         <YearSelector
           availableYears={availableYears}
@@ -948,9 +953,9 @@ export default function YearScreen() {
         <FlatList
           data={schedules}
           keyExtractor={(item) => item.id.toString()}
-          style={Platform.OS === 'web' ? { height: '100%' } : { flex: 1 }}
-          contentContainerStyle={Platform.OS === 'web' ? { paddingBottom: 40 } : { flexGrow: 1 }}
-          scrollEnabled={true}
+          style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
+          contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
+          scrollEnabled={Platform.OS !== 'web'}
           nestedScrollEnabled={Platform.OS === 'web'}
           ListHeaderComponent={
             <>
@@ -1007,9 +1012,9 @@ export default function YearScreen() {
         <SectionList
           sections={groupedSchedules}
           keyExtractor={(item) => item.id.toString()}
-          style={Platform.OS === 'web' ? { height: '100%' } : { flex: 1 }}
-          contentContainerStyle={Platform.OS === 'web' ? { paddingBottom: 40 } : { flexGrow: 1 }}
-          scrollEnabled={true}
+          style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
+          contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
+          scrollEnabled={Platform.OS !== 'web'}
           nestedScrollEnabled={Platform.OS === 'web'}
           ListHeaderComponent={
             <>
@@ -1222,7 +1227,8 @@ export default function YearScreen() {
           />
         )
       )}
-        </View>
+          </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -1239,7 +1245,7 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
-    ...(Platform.OS === 'web' ? { minHeight: '100vh', height: '100vh', overflow: 'auto' } : { flex: 1 }),
+    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : { flex: 1 }),
   },
   scrollContent: {
     padding: 24,
