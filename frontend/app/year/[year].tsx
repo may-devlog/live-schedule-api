@@ -162,13 +162,14 @@ export default function YearScreen() {
             setStays(filteredStays);
             // 予約サイトの色情報を即座に取得（エリアと同様に）
             if (filteredStays.length > 0) {
-              fetchWebsiteColors(filteredStays).then((colorMap) => {
+              try {
+                const colorMap = await fetchWebsiteColors(filteredStays);
                 if (isMounted) {
                   setWebsiteColors(colorMap);
                 }
-              }).catch((error) => {
+              } catch (error) {
                 console.error("Error loading website colors:", error);
-              });
+              }
             }
           }
         }
