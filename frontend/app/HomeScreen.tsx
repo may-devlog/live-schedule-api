@@ -640,7 +640,6 @@ export default function HomeScreen() {
       </View>
       <View style={styles.bottomSpacer} />
       </View>
-    </View>
       </ScrollView>
       ) : (
         <View style={styles.scrollContent}>
