@@ -1,8 +1,9 @@
+#[allow(unused_imports)]
 use axum::{
     extract::{Extension, Path, Query},
     http::{header::AUTHORIZATION, HeaderValue, StatusCode, HeaderMap, request::Parts},
     response::Json,
-    routing::{get, post, put, delete},
+    routing::{get, post, put, delete}, // delete is used in route definitions (line 5269)
     Router,
 };
 use axum::async_trait;
