@@ -640,17 +640,39 @@ export default function HomeScreen() {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}
-                onPress={() => router.push(`/live/${item.id}`)}
+                onPress={() => handleOpenDetail(item.id)}
               >
-                <Text style={styles.cardDate}>
-                  {formatDateTimeUTC(item.datetime)}
-                </Text>
+                <View style={styles.cardRow}>
+                  <Text style={styles.cardDate}>
+                    {formatDateTimeUTC(item.datetime)}
+                  </Text>
+                  {(() => {
+                    const totalCost = calculateTotalCostWithReturnFlag(item);
+                    return totalCost && totalCost > 0 ? (
+                      <Text style={styles.cardPrice}>
+                        ¥{totalCost.toLocaleString()}
+                      </Text>
+                    ) : null;
+                  })()}
+                </View>
+                {/* ツアー名 (Group) */}
+                {item.group && (
+                  <Text style={styles.cardGroup} numberOfLines={1}>
+                    {item.group}
+                  </Text>
+                )}
                 <Text style={styles.cardTitle} numberOfLines={2}>
                   {item.title}
                 </Text>
-                <Text style={styles.cardSub}>
-                  {item.area} / {item.venue}
-                </Text>
+                <View style={styles.cardSubContainer}>
+                  {item.area && (
+                    <NotionTag
+                      label={item.area}
+                      color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
+                    />
+                  )}
+                  <Text style={styles.cardSub}>{item.venue}</Text>
+                </View>
               </TouchableOpacity>
             )}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
