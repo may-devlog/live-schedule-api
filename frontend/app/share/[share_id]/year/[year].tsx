@@ -297,6 +297,51 @@ export default function SharedYearScreen() {
       
       {Platform.OS !== 'web' ? (
         <View style={styles.content}>
+          {/* 年選択（プルダウン） */}
+          <YearSelector
+            availableYears={availableYears}
+            currentYear={currentYear}
+            onSelectYear={(year) => handleSelectYear(year)}
+          />
+
+          {/* グルーピングフィールド選択 */}
+          <View style={styles.groupingSelector}>
+            <Text style={styles.groupingLabel}>グルーピング:</Text>
+            <View style={styles.groupingButtons}>
+              {[
+                { value: "none" as GroupingField, label: "なし" },
+                { value: "group" as GroupingField, label: "グループ" },
+                { value: "category" as GroupingField, label: "カテゴリ" },
+                { value: "area" as GroupingField, label: "エリア" },
+                { value: "target" as GroupingField, label: "お目当て" },
+                { value: "lineup" as GroupingField, label: "出演者" },
+                { value: "seller" as GroupingField, label: "販売元" },
+                { value: "status" as GroupingField, label: "ステータス" },
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.groupingButton,
+                    groupingField === option.value && styles.groupingButtonActive,
+                  ]}
+                  onPress={() => setGroupingField(option.value)}
+                >
+                  <Text
+                    style={[
+                      styles.groupingButtonText,
+                      groupingField === option.value && styles.groupingButtonTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {loading && <ActivityIndicator color="#333333" />}
+          {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+
           {groupingField === "none" ? (
             <FlatList
               data={schedules}
@@ -311,53 +356,6 @@ export default function SharedYearScreen() {
                   tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
                   colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
                 />
-              }
-              ListHeaderComponent={
-                <>
-                  {/* 年選択（プルダウン） */}
-                  <YearSelector
-                    availableYears={availableYears}
-                    currentYear={currentYear}
-                    onSelectYear={(year) => handleSelectYear(year)}
-                  />
-
-                  {/* グルーピングフィールド選択 */}
-                  <View style={styles.groupingSelector}>
-                    <Text style={styles.groupingLabel}>グルーピング:</Text>
-                    <View style={styles.groupingButtons}>
-                      {[
-                        { value: "none" as GroupingField, label: "なし" },
-                        { value: "group" as GroupingField, label: "グループ" },
-                        { value: "category" as GroupingField, label: "カテゴリ" },
-                        { value: "area" as GroupingField, label: "エリア" },
-                        { value: "target" as GroupingField, label: "お目当て" },
-                        { value: "lineup" as GroupingField, label: "出演者" },
-                        { value: "seller" as GroupingField, label: "販売元" },
-                        { value: "status" as GroupingField, label: "ステータス" },
-                      ].map((option) => (
-                        <TouchableOpacity
-                          key={option.value}
-                          style={[
-                            styles.groupingButton,
-                            groupingField === option.value && styles.groupingButtonActive,
-                          ]}
-                          onPress={() => setGroupingField(option.value)}
-                        >
-                          <Text
-                            style={[
-                              styles.groupingButtonText,
-                              groupingField === option.value && styles.groupingButtonTextActive,
-                            ]}
-                          >
-                            {option.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                  {loading && <ActivityIndicator color="#333333" />}
-                  {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-                </>
               }
             ListEmptyComponent={
               !loading && !error ? (
@@ -398,9 +396,9 @@ export default function SharedYearScreen() {
           <SectionList
             sections={groupedSchedules}
             keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={{ paddingBottom: 20 }}
-              scrollEnabled={true}
-              nestedScrollEnabled={true}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            scrollEnabled={true}
+            nestedScrollEnabled={true}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
@@ -408,53 +406,6 @@ export default function SharedYearScreen() {
                 tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
                 colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
               />
-            }
-            ListHeaderComponent={
-              <>
-                {/* 年選択（プルダウン） */}
-                <YearSelector
-                  availableYears={availableYears}
-                  currentYear={currentYear}
-                  onSelectYear={(year) => handleSelectYear(year)}
-                />
-
-                {/* グルーピングフィールド選択 */}
-                <View style={styles.groupingSelector}>
-                  <Text style={styles.groupingLabel}>グルーピング:</Text>
-                  <View style={styles.groupingButtons}>
-                    {[
-                      { value: "none" as GroupingField, label: "なし" },
-                      { value: "group" as GroupingField, label: "グループ" },
-                      { value: "category" as GroupingField, label: "カテゴリ" },
-                      { value: "area" as GroupingField, label: "エリア" },
-                      { value: "target" as GroupingField, label: "お目当て" },
-                      { value: "lineup" as GroupingField, label: "出演者" },
-                      { value: "seller" as GroupingField, label: "販売元" },
-                      { value: "status" as GroupingField, label: "ステータス" },
-                    ].map((option) => (
-                      <TouchableOpacity
-                        key={option.value}
-                        style={[
-                          styles.groupingButton,
-                          groupingField === option.value && styles.groupingButtonActive,
-                        ]}
-                        onPress={() => setGroupingField(option.value)}
-                      >
-                        <Text
-                          style={[
-                            styles.groupingButtonText,
-                            groupingField === option.value && styles.groupingButtonTextActive,
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                {loading && <ActivityIndicator color="#333333" />}
-                {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-              </>
             }
             ListEmptyComponent={
               !loading && !error ? (
@@ -723,7 +674,7 @@ const styles = StyleSheet.create({
   content: {
     ...(Platform.OS === 'web' 
       ? { padding: 24, minHeight: '100vh' }
-      : { paddingHorizontal: 16, paddingVertical: 24 }
+      : { paddingHorizontal: 12, paddingVertical: 24 }
     ),
     maxWidth: 900,
     alignSelf: "center",
@@ -732,7 +683,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     ...(Platform.OS === 'web' 
       ? { padding: 24 }
-      : { paddingHorizontal: 16, paddingVertical: 24 }
+      : { paddingHorizontal: 12, paddingVertical: 24 }
     ),
     maxWidth: 900,
     alignSelf: "center",
