@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Platform,
-  ScrollView,
 } from "react-native";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
@@ -387,639 +386,7 @@ export default function YearScreen() {
       
       <PageHeader showBackButton={true} homePath="/" />
 
-      {Platform.OS !== 'web' ? (
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-            />
-          }
-        >
-          <View style={styles.content}>
-          {archiveType === "イベント" ? (
-            groupingField === "none" ? (
-            <FlatList
-              data={schedules}
-              keyExtractor={(item) => item.id.toString()}
-              style={{ flex: 1 }}
-              contentContainerStyle={{ flexGrow: 1 }}
-              scrollEnabled={true}
-              refreshControl={
-                <RefreshControl 
-                  refreshing={refreshing} 
-                  onRefresh={onRefresh}
-                  tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                  colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-                />
-              }
-              ListHeaderComponent={
-                <>
-                  {/* 年選択（プルダウン） */}
-                  <YearSelector
-                    availableYears={availableYears}
-                    currentYear={currentYear}
-                    onSelectYear={(year) => handleSelectYear(year)}
-                  />
-
-                  {/* アーカイブタイプ選択（イベント / 宿泊） */}
-                  <View style={styles.archiveTypeSelector}>
-                    <TouchableOpacity
-                      style={[
-                        styles.archiveTypeButton,
-                        archiveType === "イベント" && styles.archiveTypeButtonActive,
-                      ]}
-                      onPress={() => setArchiveType("イベント")}
-                    >
-                      <Text
-                        style={[
-                          styles.archiveTypeButtonText,
-                          archiveType === "イベント" && styles.archiveTypeButtonTextActive,
-                        ]}
-                      >
-                        イベント
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.archiveTypeButton,
-                        archiveType === "宿泊" && styles.archiveTypeButtonActive,
-                      ]}
-                      onPress={() => setArchiveType("宿泊")}
-                    >
-                      <Text
-                        style={[
-                          styles.archiveTypeButtonText,
-                          archiveType === "宿泊" && styles.archiveTypeButtonTextActive,
-                        ]}
-                      >
-                        宿泊
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* グルーピングフィールド選択 */}
-                  <View style={styles.groupingSelector}>
-                    <Text style={styles.groupingLabel}>グルーピング:</Text>
-                    <View style={styles.groupingButtons}>
-                      {[
-                        { value: "none" as GroupingField, label: "なし" },
-                        { value: "group" as GroupingField, label: "グループ" },
-                        { value: "category" as GroupingField, label: "カテゴリ" },
-                        { value: "area" as GroupingField, label: "エリア" },
-                        { value: "target" as GroupingField, label: "お目当て" },
-                        { value: "lineup" as GroupingField, label: "出演者" },
-                        { value: "seller" as GroupingField, label: "販売元" },
-                        { value: "status" as GroupingField, label: "ステータス" },
-                      ].map((option) => (
-                        <TouchableOpacity
-                          key={option.value}
-                          style={[
-                            styles.groupingButton,
-                            groupingField === option.value && styles.groupingButtonActive,
-                          ]}
-                          onPress={() => setGroupingField(option.value)}
-                        >
-                          <Text
-                            style={[
-                              styles.groupingButtonText,
-                              groupingField === option.value && styles.groupingButtonTextActive,
-                            ]}
-                          >
-                            {option.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                  {loading && <ActivityIndicator color="#333333" />}
-                  {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-                </>
-              }
-          ListEmptyComponent={
-            !loading && !error ? (
-              <Text style={styles.emptyText}>スケジュールはありません</Text>
-            ) : null
-          }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => handleOpenDetail(item.id)}
-            >
-              <View style={styles.cardRow}>
-                <Text style={styles.cardDate}>
-                  {formatDateTimeUTC(item.datetime)}
-                </Text>
-                {(() => {
-                  const totalCost = calculateTotalCostWithReturnFlag(item);
-                  return totalCost && totalCost > 0 ? (
-                    <Text style={styles.cardPrice}>
-                      ¥{totalCost.toLocaleString()}
-                    </Text>
-                  ) : null;
-                })()}
-              </View>
-              {/* ツアー名 (Group) */}
-              {item.group && (
-                <Text style={styles.cardGroup} numberOfLines={1}>
-                  {item.group}
-                </Text>
-              )}
-              <Text style={styles.cardTitle} numberOfLines={2}>
-                {item.title}
-              </Text>
-              <View style={styles.cardSubContainer}>
-                {item.area && (
-                  <NotionTag
-                    label={item.area}
-                    color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
-                  />
-                )}
-                <Text style={styles.cardSub}>{item.venue}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-        />
-        ) : (
-          <SectionList
-            sections={groupedSchedules}
-            keyExtractor={(item) => item.id.toString()}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
-            scrollEnabled={true}
-            refreshControl={
-              <RefreshControl 
-                refreshing={refreshing} 
-                onRefresh={onRefresh}
-                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-              />
-            }
-            ListHeaderComponent={
-              <>
-                {/* 年選択（プルダウン） */}
-                <YearSelector
-                  availableYears={availableYears}
-                  currentYear={currentYear}
-                  onSelectYear={(year) => handleSelectYear(year)}
-                />
-
-                {/* アーカイブタイプ選択（イベント / 宿泊） */}
-                <View style={styles.archiveTypeSelector}>
-                  <TouchableOpacity
-                    style={[
-                      styles.archiveTypeButton,
-                      archiveType === "イベント" && styles.archiveTypeButtonActive,
-                    ]}
-                    onPress={() => setArchiveType("イベント")}
-                  >
-                    <Text
-                      style={[
-                        styles.archiveTypeButtonText,
-                        archiveType === "イベント" && styles.archiveTypeButtonTextActive,
-                      ]}
-                    >
-                      イベント
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.archiveTypeButton,
-                      archiveType === "宿泊" && styles.archiveTypeButtonActive,
-                    ]}
-                    onPress={() => setArchiveType("宿泊")}
-                  >
-                    <Text
-                      style={[
-                        styles.archiveTypeButtonText,
-                        archiveType === "宿泊" && styles.archiveTypeButtonTextActive,
-                      ]}
-                    >
-                      宿泊
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* グルーピングフィールド選択 */}
-                <View style={styles.groupingSelector}>
-                  <Text style={styles.groupingLabel}>グルーピング:</Text>
-                  <View style={styles.groupingButtons}>
-                    {[
-                      { value: "none" as GroupingField, label: "なし" },
-                      { value: "group" as GroupingField, label: "グループ" },
-                      { value: "category" as GroupingField, label: "カテゴリ" },
-                      { value: "area" as GroupingField, label: "エリア" },
-                      { value: "target" as GroupingField, label: "お目当て" },
-                      { value: "lineup" as GroupingField, label: "出演者" },
-                      { value: "seller" as GroupingField, label: "販売元" },
-                      { value: "status" as GroupingField, label: "ステータス" },
-                    ].map((option) => (
-                      <TouchableOpacity
-                        key={option.value}
-                        style={[
-                          styles.groupingButton,
-                          groupingField === option.value && styles.groupingButtonActive,
-                        ]}
-                        onPress={() => setGroupingField(option.value)}
-                      >
-                        <Text
-                          style={[
-                            styles.groupingButtonText,
-                            groupingField === option.value && styles.groupingButtonTextActive,
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                {loading && <ActivityIndicator color="#333333" />}
-                {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-              </>
-            }
-          ListEmptyComponent={
-            !loading && !error ? (
-              <Text style={styles.emptyText}>スケジュールはありません</Text>
-            ) : null
-          }
-          renderSectionHeader={({ section: { title, data } }) => {
-            const isCollapsed = collapsedSections.has(title);
-            // 総費用の合計を計算（往復フラグを考慮）
-            const totalCost = data.reduce((sum, schedule) => {
-              const cost = calculateTotalCostWithReturnFlag(schedule);
-              return sum + (cost ?? 0);
-            }, 0);
-            
-            return (
-              <View>
-                <TouchableOpacity
-                  style={styles.sectionHeader}
-                  onPress={() => toggleSection(title)}
-                >
-                  <Text style={styles.sectionHeaderIcon}>
-                    {isCollapsed ? "▶" : "▼"}
-                  </Text>
-                  <Text style={styles.sectionHeaderTitle}>{title}</Text>
-                  <Text style={styles.sectionHeaderCount}>({data.length})</Text>
-                </TouchableOpacity>
-                {totalCost > 0 && (
-                  <View style={styles.sectionTotalCost}>
-                    <Text style={styles.sectionTotalCostText}>
-                      ¥{totalCost.toLocaleString()}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            );
-          }}
-          renderItem={({ item, section }) => {
-            const isCollapsed = collapsedSections.has(section.title);
-            if (isCollapsed) return null;
-            
-            return (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => handleOpenDetail(item.id)}
-              >
-                <View style={styles.cardRow}>
-                  <Text style={styles.cardDate}>
-                    {formatDateTimeUTC(item.datetime)}
-                  </Text>
-                  {(() => {
-                    const totalCost = calculateTotalCostWithReturnFlag(item);
-                    return totalCost && totalCost > 0 ? (
-                      <Text style={styles.cardPrice}>
-                        ¥{totalCost.toLocaleString()}
-                      </Text>
-                    ) : null;
-                  })()}
-                </View>
-                {/* ツアー名 (Group) */}
-                {item.group && (
-                  <Text style={styles.cardGroup} numberOfLines={1}>
-                    {item.group}
-                  </Text>
-                )}
-                <Text style={styles.cardTitle} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                <View style={styles.cardSubContainer}>
-                  {item.area && (
-                    <NotionTag
-                      label={item.area}
-                      color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
-                    />
-                  )}
-                  <Text style={styles.cardSub}>{item.venue}</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          }}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-        />
-        )
-      ) : (
-        stayGroupingField === "none" ? (
-          <FlatList
-            data={stays}
-            keyExtractor={(item) => item.id.toString()}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
-            scrollEnabled={true}
-            refreshControl={
-              <RefreshControl 
-                refreshing={refreshing} 
-                onRefresh={onRefresh}
-                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-              />
-            }
-            ListHeaderComponent={
-              <>
-                {/* 年選択（プルダウン） */}
-                <YearSelector
-                  availableYears={availableYears}
-                  currentYear={currentYear}
-                  onSelectYear={(year) => handleSelectYear(year)}
-                />
-
-                {/* アーカイブタイプ選択（イベント / 宿泊） */}
-                <View style={styles.archiveTypeSelector}>
-                  <TouchableOpacity
-                    style={[
-                      styles.archiveTypeButton,
-                      archiveType === "イベント" && styles.archiveTypeButtonActive,
-                    ]}
-                    onPress={() => setArchiveType("イベント")}
-                  >
-                    <Text
-                      style={[
-                        styles.archiveTypeButtonText,
-                        archiveType === "イベント" && styles.archiveTypeButtonTextActive,
-                      ]}
-                    >
-                      イベント
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.archiveTypeButton,
-                      archiveType === "宿泊" && styles.archiveTypeButtonActive,
-                    ]}
-                    onPress={() => setArchiveType("宿泊")}
-                  >
-                    <Text
-                      style={[
-                        styles.archiveTypeButtonText,
-                        archiveType === "宿泊" && styles.archiveTypeButtonTextActive,
-                      ]}
-                    >
-                      宿泊
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* グルーピングフィールド選択 */}
-                <View style={styles.groupingSelector}>
-                  <Text style={styles.groupingLabel}>グルーピング:</Text>
-                  <View style={styles.groupingButtons}>
-                    {[
-                      { value: "none" as const, label: "なし" },
-                      { value: "website" as const, label: "予約サイト" },
-                      { value: "status" as const, label: "ステータス" },
-                    ].map((option) => (
-                      <TouchableOpacity
-                        key={option.value}
-                        style={[
-                          styles.groupingButton,
-                          stayGroupingField === option.value && styles.groupingButtonActive,
-                        ]}
-                        onPress={() => setStayGroupingField(option.value)}
-                      >
-                        <Text
-                          style={[
-                            styles.groupingButtonText,
-                            stayGroupingField === option.value && styles.groupingButtonTextActive,
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                {loading && <ActivityIndicator color="#333333" />}
-                {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-              </>
-            }
-            ListEmptyComponent={
-              !loading && !error ? (
-                <Text style={styles.emptyText}>宿泊情報はありません</Text>
-              ) : null
-            }
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => router.push(`/stay/${item.id}`)}
-              >
-                <View style={styles.cardRow}>
-                  <Text style={styles.cardDate}>
-                    {item.check_in} - {item.check_out}
-                  </Text>
-                  {item.fee && item.fee > 0 && (
-                    <Text style={styles.cardPrice}>
-                      ¥{item.fee.toLocaleString()}
-                    </Text>
-                  )}
-                </View>
-                <Text style={styles.cardTitle} numberOfLines={2}>
-                  {item.hotel_name}
-                </Text>
-                {item.website && (
-                  <View style={styles.cardSubContainer}>
-                    <NotionTag
-                      label={item.website}
-                      color={websiteColors.get(item.website) || getOptionColorSync(item.website, "WEBSITE")}
-                    />
-                  </View>
-                )}
-              </TouchableOpacity>
-            )}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-          />
-        ) : (
-          <SectionList
-            sections={groupedStays}
-            keyExtractor={(item) => item.id.toString()}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
-            scrollEnabled={true}
-            refreshControl={
-              <RefreshControl 
-                refreshing={refreshing} 
-                onRefresh={onRefresh}
-                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-              />
-            }
-            ListHeaderComponent={
-              <>
-                {/* 年選択（プルダウン） */}
-                <YearSelector
-                  availableYears={availableYears}
-                  currentYear={currentYear}
-                  onSelectYear={(year) => handleSelectYear(year)}
-                />
-
-                {/* アーカイブタイプ選択（イベント / 宿泊） */}
-                <View style={styles.archiveTypeSelector}>
-                  <TouchableOpacity
-                    style={[
-                      styles.archiveTypeButton,
-                      archiveType === "イベント" && styles.archiveTypeButtonActive,
-                    ]}
-                    onPress={() => setArchiveType("イベント")}
-                  >
-                    <Text
-                      style={[
-                        styles.archiveTypeButtonText,
-                        archiveType === "イベント" && styles.archiveTypeButtonTextActive,
-                      ]}
-                    >
-                      イベント
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.archiveTypeButton,
-                      archiveType === "宿泊" && styles.archiveTypeButtonActive,
-                    ]}
-                    onPress={() => setArchiveType("宿泊")}
-                  >
-                    <Text
-                      style={[
-                        styles.archiveTypeButtonText,
-                        archiveType === "宿泊" && styles.archiveTypeButtonTextActive,
-                      ]}
-                    >
-                      宿泊
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* グルーピングフィールド選択 */}
-                <View style={styles.groupingSelector}>
-                  <Text style={styles.groupingLabel}>グルーピング:</Text>
-                  <View style={styles.groupingButtons}>
-                    {[
-                      { value: "none" as const, label: "なし" },
-                      { value: "website" as const, label: "予約サイト" },
-                      { value: "status" as const, label: "ステータス" },
-                    ].map((option) => (
-                      <TouchableOpacity
-                        key={option.value}
-                        style={[
-                          styles.groupingButton,
-                          stayGroupingField === option.value && styles.groupingButtonActive,
-                        ]}
-                        onPress={() => setStayGroupingField(option.value)}
-                      >
-                        <Text
-                          style={[
-                            styles.groupingButtonText,
-                            stayGroupingField === option.value && styles.groupingButtonTextActive,
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                {loading && <ActivityIndicator color="#333333" />}
-                {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-              </>
-            }
-            ListEmptyComponent={
-              !loading && !error ? (
-                <Text style={styles.emptyText}>宿泊情報はありません</Text>
-              ) : null
-            }
-            renderSectionHeader={({ section: { title, data } }) => {
-              const isCollapsed = collapsedSections.has(title);
-              
-              return (
-                <View>
-                  <TouchableOpacity
-                    style={styles.sectionHeader}
-                    onPress={() => toggleSection(title)}
-                  >
-                    <Text style={styles.sectionHeaderIcon}>
-                      {isCollapsed ? "▶" : "▼"}
-                    </Text>
-                    <Text style={styles.sectionHeaderTitle}>{title}</Text>
-                    <Text style={styles.sectionHeaderCount}>({data.length})</Text>
-                  </TouchableOpacity>
-                </View>
-              );
-            }}
-            renderItem={({ item, section }) => {
-              const isCollapsed = collapsedSections.has(section.title);
-              if (isCollapsed) return null;
-              
-              return (
-                <TouchableOpacity
-                  style={styles.card}
-                  onPress={() => router.push(`/stay/${item.id}`)}
-                >
-                  <View style={styles.cardRow}>
-                    <Text style={styles.cardDate}>
-                      {item.check_in} - {item.check_out}
-                    </Text>
-                    {item.fee && item.fee > 0 && (
-                      <Text style={styles.cardPrice}>
-                        ¥{item.fee.toLocaleString()}
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={styles.cardTitle} numberOfLines={2}>
-                    {item.hotel_name}
-                  </Text>
-                  {item.website && (
-                    <View style={styles.cardSubContainer}>
-                      <NotionTag
-                        label={item.website}
-                        color={websiteColors.get(item.website) || getOptionColorSync(item.website, "WEBSITE")}
-                      />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            }}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-          />
-        )
-      )}
-          </View>
-        </ScrollView>
-      ) : (
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-            />
-          }
-        >
-          <View style={styles.content}>
+      <View style={styles.content}>
         {/* 年選択（プルダウン） */}
         <YearSelector
           availableYears={availableYears}
@@ -1134,9 +501,16 @@ export default function YearScreen() {
         <FlatList
           data={schedules}
           keyExtractor={(item) => item.id.toString()}
-          style={{ flexGrow: 1 }}
+          style={{ flex: 1 }}
           contentContainerStyle={{ flexGrow: 1 }}
-          scrollEnabled={false}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            />
+          }
           ListHeaderComponent={
             <>
               {loading && <ActivityIndicator color="#333333" />}
@@ -1192,9 +566,16 @@ export default function YearScreen() {
         <SectionList
           sections={groupedSchedules}
           keyExtractor={(item) => item.id.toString()}
-          style={{ flexGrow: 1 }}
+          style={{ flex: 1 }}
           contentContainerStyle={{ flexGrow: 1 }}
-          scrollEnabled={false}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            />
+          }
           ListHeaderComponent={
             <>
               {loading && <ActivityIndicator color="#333333" />}
@@ -1287,9 +668,16 @@ export default function YearScreen() {
           <FlatList
             data={stays}
             keyExtractor={(item) => item.id.toString()}
-            style={{ flexGrow: 1 }}
+            style={{ flex: 1 }}
             contentContainerStyle={{ flexGrow: 1 }}
-            scrollEnabled={false}
+            refreshControl={
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh}
+                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+              />
+            }
             ListHeaderComponent={
               <>
                 {loading && <ActivityIndicator color="#333333" />}
@@ -1335,9 +723,16 @@ export default function YearScreen() {
           <SectionList
             sections={groupedStays}
             keyExtractor={(item) => item.id.toString()}
-            style={{ flexGrow: 1 }}
+            style={{ flex: 1 }}
             contentContainerStyle={{ flexGrow: 1 }}
-            scrollEnabled={false}
+            refreshControl={
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh}
+                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+              />
+            }
             ListHeaderComponent={
               <>
                 {loading && <ActivityIndicator color="#333333" />}
@@ -1404,9 +799,7 @@ export default function YearScreen() {
           />
         )
       )}
-          </View>
-        </ScrollView>
-      )}
+      </View>
     </View>
   );
 }
@@ -1422,16 +815,7 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
-    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : { flex: 1 }),
-  },
-  scrollContent: {
-    ...(Platform.OS === 'web' 
-      ? { paddingHorizontal: 24, paddingVertical: 24 }
-      : { paddingHorizontal: 12, paddingVertical: 24 }
-    ),
-    maxWidth: 900,
-    alignSelf: "center",
-    width: "100%",
+    flex: 1,
   },
   title: {
     paddingHorizontal: 24,
