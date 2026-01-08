@@ -491,6 +491,12 @@ export default function HomeScreen() {
     console.log('[HomeScreen] Email changed to:', email);
   }, [email]);
 
+  // 往復フラグを考慮した総費用を計算（簡易版：交通情報がない場合はtotal_costをそのまま返す）
+  const calculateTotalCostWithReturnFlag = (schedule: Schedule): number | null => {
+    // HomeScreenでは交通情報を取得していないため、total_costをそのまま返す
+    return schedule.total_cost || null;
+  };
+
   return (
     <View style={styles.scrollContainer}>
       {Platform.OS !== 'web' ? (
