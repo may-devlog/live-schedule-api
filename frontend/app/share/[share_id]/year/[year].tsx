@@ -296,21 +296,35 @@ export default function SharedYearScreen() {
       <PageHeader showBackButton={true} homePath={`/share/${share_id}`} />
       
       {Platform.OS !== 'web' ? (
-        <View style={styles.content}>
-          {groupingField === "none" ? (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            />
+          }
+        >
+          <View style={styles.content}>
+            {groupingField === "none" ? (
             <FlatList
               data={schedules}
               keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={{ paddingBottom: 20 }}
-              scrollEnabled={true}
-              nestedScrollEnabled={true}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ flexGrow: 1 }}
+              scrollEnabled={Platform.OS !== 'web'}
+              nestedScrollEnabled={Platform.OS === 'web'}
               refreshControl={
-                <RefreshControl 
-                  refreshing={refreshing} 
-                  onRefresh={onRefresh}
-                  tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                  colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-                />
+                Platform.OS !== 'web' ? (
+                  <RefreshControl 
+                    refreshing={refreshing} 
+                    onRefresh={onRefresh}
+                    tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                    colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+                  />
+                ) : undefined
               }
               ListHeaderComponent={
                 <>
@@ -398,16 +412,19 @@ export default function SharedYearScreen() {
           <SectionList
             sections={groupedSchedules}
             keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={{ paddingBottom: 20 }}
-            scrollEnabled={true}
-            nestedScrollEnabled={true}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1 }}
+            scrollEnabled={Platform.OS !== 'web'}
+            nestedScrollEnabled={Platform.OS === 'web'}
             refreshControl={
-              <RefreshControl 
-                refreshing={refreshing} 
-                onRefresh={onRefresh}
-                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-              />
+              Platform.OS !== 'web' ? (
+                <RefreshControl 
+                  refreshing={refreshing} 
+                  onRefresh={onRefresh}
+                  tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                  colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+                />
+              ) : undefined
             }
             ListHeaderComponent={
               <>
@@ -526,12 +543,11 @@ export default function SharedYearScreen() {
             ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
         )}
-        </View>
+          </View>
+        </ScrollView>
       ) : (
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
-          scrollEnabled={true}
-          nestedScrollEnabled={true}
         >
           <View style={styles.content}>
             {/* 年選択（プルダウン） */}

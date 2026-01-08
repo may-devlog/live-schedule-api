@@ -394,9 +394,9 @@ export default function YearScreen() {
             <FlatList
               data={schedules}
               keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={{ paddingBottom: 20 }}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ flexGrow: 1 }}
               scrollEnabled={true}
-              nestedScrollEnabled={true}
               refreshControl={
                 <RefreshControl 
                   refreshing={refreshing} 
@@ -537,9 +537,9 @@ export default function YearScreen() {
           <SectionList
             sections={groupedSchedules}
             keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={{ paddingBottom: 20 }}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1 }}
             scrollEnabled={true}
-            nestedScrollEnabled={true}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
@@ -717,9 +717,9 @@ export default function YearScreen() {
           <FlatList
             data={stays}
             keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={{ paddingBottom: 20 }}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1 }}
             scrollEnabled={true}
-            nestedScrollEnabled={true}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
@@ -727,6 +727,84 @@ export default function YearScreen() {
                 tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
                 colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
               />
+            }
+            ListHeaderComponent={
+              <>
+                {/* 年選択（プルダウン） */}
+                <YearSelector
+                  availableYears={availableYears}
+                  currentYear={currentYear}
+                  onSelectYear={(year) => handleSelectYear(year)}
+                />
+
+                {/* アーカイブタイプ選択（イベント / 宿泊） */}
+                <View style={styles.archiveTypeSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.archiveTypeButton,
+                      archiveType === "イベント" && styles.archiveTypeButtonActive,
+                    ]}
+                    onPress={() => setArchiveType("イベント")}
+                  >
+                    <Text
+                      style={[
+                        styles.archiveTypeButtonText,
+                        archiveType === "イベント" && styles.archiveTypeButtonTextActive,
+                      ]}
+                    >
+                      イベント
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.archiveTypeButton,
+                      archiveType === "宿泊" && styles.archiveTypeButtonActive,
+                    ]}
+                    onPress={() => setArchiveType("宿泊")}
+                  >
+                    <Text
+                      style={[
+                        styles.archiveTypeButtonText,
+                        archiveType === "宿泊" && styles.archiveTypeButtonTextActive,
+                      ]}
+                    >
+                      宿泊
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* グルーピングフィールド選択 */}
+                <View style={styles.groupingSelector}>
+                  <Text style={styles.groupingLabel}>グルーピング:</Text>
+                  <View style={styles.groupingButtons}>
+                    {[
+                      { value: "none" as const, label: "なし" },
+                      { value: "website" as const, label: "予約サイト" },
+                      { value: "status" as const, label: "ステータス" },
+                    ].map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[
+                          styles.groupingButton,
+                          stayGroupingField === option.value && styles.groupingButtonActive,
+                        ]}
+                        onPress={() => setStayGroupingField(option.value)}
+                      >
+                        <Text
+                          style={[
+                            styles.groupingButtonText,
+                            stayGroupingField === option.value && styles.groupingButtonTextActive,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                {loading && <ActivityIndicator color="#333333" />}
+                {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+              </>
             }
             ListEmptyComponent={
               !loading && !error ? (
@@ -767,9 +845,9 @@ export default function YearScreen() {
           <SectionList
             sections={groupedStays}
             keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={{ paddingBottom: 20 }}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1 }}
             scrollEnabled={true}
-            nestedScrollEnabled={true}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
@@ -920,8 +998,14 @@ export default function YearScreen() {
       ) : (
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
-          scrollEnabled={true}
-          nestedScrollEnabled={true}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            />
+          }
         >
           <View style={styles.content}>
         {/* 年選択（プルダウン） */}
