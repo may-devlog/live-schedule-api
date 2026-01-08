@@ -355,8 +355,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
-    flexGrow: 1,
-    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : { minHeight: '100%' }),
+    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {}),
   },
   container: {
     paddingTop: 48,

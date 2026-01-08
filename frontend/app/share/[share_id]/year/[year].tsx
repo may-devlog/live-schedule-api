@@ -301,9 +301,9 @@ export default function SharedYearScreen() {
             <FlatList
               data={schedules}
               keyExtractor={(item) => item.id.toString()}
-              style={{ flex: 1 }}
-              contentContainerStyle={{ flexGrow: 1 }}
+              contentContainerStyle={{ paddingBottom: 20 }}
               scrollEnabled={true}
+              nestedScrollEnabled={true}
               refreshControl={
                 <RefreshControl 
                   refreshing={refreshing} 
@@ -398,9 +398,9 @@ export default function SharedYearScreen() {
           <SectionList
             sections={groupedSchedules}
             keyExtractor={(item) => item.id.toString()}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
-            scrollEnabled={true}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
   content: {
     ...(Platform.OS === 'web' 
       ? { padding: 24, minHeight: '100vh' }
-      : { paddingHorizontal: 16, paddingVertical: 24, flex: 1 }
+      : { paddingHorizontal: 16, paddingVertical: 24 }
     ),
     maxWidth: 900,
     alignSelf: "center",
