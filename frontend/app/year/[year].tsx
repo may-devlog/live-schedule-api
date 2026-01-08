@@ -1406,13 +1406,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   content: {
-    ...(Platform.OS === 'web' 
-      ? { paddingHorizontal: 24, paddingVertical: 24, minHeight: '100vh' }
-      : { paddingHorizontal: 12, paddingVertical: 24 }
-    ),
+    padding: 24,
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
+    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : { flex: 1 }),
   },
   scrollContent: {
     ...(Platform.OS === 'web' 
