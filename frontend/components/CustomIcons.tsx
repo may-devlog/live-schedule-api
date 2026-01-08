@@ -6,35 +6,42 @@ type IconProps = {
   color?: string;
 };
 
-// 人のアイコン（シンプルなシルエット）
-export function PersonIcon({ size = 24, color = '#37352f' }: IconProps) {
-  const scale = size / 24;
+// 人のアイコン（シンプルなシルエット、アウトラインスタイル）
+export function PersonIcon({ size = 40, color = '#37352f' }: IconProps) {
+  const scale = size / 40; // ベースサイズを40に変更
+  const containerSize = size;
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
-      {/* 頭（円） */}
+    <View style={[styles.container, { width: containerSize, height: containerSize }]}>
+      {/* 頭（円、アウトライン） */}
       <View
         style={[
           styles.personHead,
           {
-            width: 12 * scale,
-            height: 12 * scale,
-            borderRadius: 6 * scale,
-            backgroundColor: color,
-            top: 1 * scale,
+            width: 14 * scale,
+            height: 14 * scale,
+            borderRadius: 7 * scale,
+            borderWidth: 2 * scale,
+            borderColor: color,
+            backgroundColor: 'transparent',
+            top: (containerSize - 14 * scale - 14 * scale) / 2 - 1 * scale, // 中央揃え
           },
         ]}
       />
-      {/* 体（台形） */}
+      {/* 体（台形、アウトライン） */}
       <View
         style={[
           styles.personBody,
           {
-            width: 16 * scale,
-            height: 12 * scale,
-            backgroundColor: color,
-            top: 13 * scale,
-            borderTopLeftRadius: 3 * scale,
-            borderTopRightRadius: 3 * scale,
+            width: 18 * scale,
+            height: 14 * scale,
+            borderWidth: 2 * scale,
+            borderColor: color,
+            backgroundColor: 'transparent',
+            top: (containerSize - 14 * scale - 14 * scale) / 2 + 13 * scale, // 頭の下に配置
+            borderTopLeftRadius: 4 * scale,
+            borderTopRightRadius: 4 * scale,
+            borderBottomLeftRadius: 2 * scale,
+            borderBottomRightRadius: 2 * scale,
           },
         ]}
       />
@@ -78,63 +85,72 @@ export function LockIcon({ size = 24, color = '#37352f' }: IconProps) {
   );
 }
 
-// 通知ベルのアイコン
-export function NotificationIcon({ size = 24, color = '#37352f' }: IconProps) {
-  const scale = size / 24;
+// 通知ベルのアイコン（アウトラインスタイル）
+export function NotificationIcon({ size = 40, color = '#37352f' }: IconProps) {
+  const scale = size / 40; // ベースサイズを40に変更
+  const containerSize = size;
+  const bellHeight = 4 * scale + 18 * scale + 5 * scale; // ハンドル + 本体 + 鈴
+  const topOffset = (containerSize - bellHeight) / 2; // 中央揃えのためのオフセット
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
-      {/* ベルのハンドル（上部の小さな長方形） */}
+    <View style={[styles.container, { width: containerSize, height: containerSize }]}>
+      {/* ベルのハンドル（上部の小さな長方形、アウトライン） */}
       <View
         style={[
           styles.bellHandle,
           {
-            width: 6 * scale,
-            height: 3 * scale,
-            backgroundColor: color,
-            top: 0,
-            borderRadius: 1.5 * scale,
+            width: 8 * scale,
+            height: 4 * scale,
+            borderWidth: 2 * scale,
+            borderColor: color,
+            backgroundColor: 'transparent',
+            top: topOffset,
+            borderRadius: 2 * scale,
           },
         ]}
       />
-      {/* ベルの本体（上部が広く、下部が狭い、よりベルらしい形状） */}
+      {/* ベルの本体（上部が広く、下部が狭い、アウトライン） */}
       <View
         style={[
           styles.bellBody,
           {
-            width: 18 * scale,
-            height: 16 * scale,
-            backgroundColor: color,
-            top: 3 * scale,
-            borderTopLeftRadius: 9 * scale,
-            borderTopRightRadius: 9 * scale,
-            borderBottomLeftRadius: 2 * scale,
-            borderBottomRightRadius: 2 * scale,
+            width: 20 * scale,
+            height: 18 * scale,
+            borderWidth: 2 * scale,
+            borderColor: color,
+            backgroundColor: 'transparent',
+            top: topOffset + 4 * scale,
+            borderTopLeftRadius: 10 * scale,
+            borderTopRightRadius: 10 * scale,
+            borderBottomLeftRadius: 3 * scale,
+            borderBottomRightRadius: 3 * scale,
           },
         ]}
       />
-      {/* ベルの割れ目（中央の縦線、下部に向かって広がる） */}
+      {/* ベルの割れ目（中央の縦線、白い背景で見えるように） */}
       <View
         style={[
           styles.bellCrack,
           {
-            width: 2 * scale,
-            height: 12 * scale,
+            width: 2.5 * scale,
+            height: 14 * scale,
             backgroundColor: '#ffffff',
-            top: 5 * scale,
-            borderRadius: 1 * scale,
+            top: topOffset + 6 * scale,
+            borderRadius: 1.25 * scale,
           },
         ]}
       />
-      {/* ベルの鈴（下部中央の小さな円） */}
+      {/* ベルの鈴（下部中央の小さな円、アウトライン） */}
       <View
         style={[
           styles.bellClapper,
           {
-            width: 4 * scale,
-            height: 4 * scale,
-            borderRadius: 2 * scale,
-            backgroundColor: color,
-            top: 17 * scale,
+            width: 5 * scale,
+            height: 5 * scale,
+            borderRadius: 2.5 * scale,
+            borderWidth: 2 * scale,
+            borderColor: color,
+            backgroundColor: 'transparent',
+            top: topOffset + 20 * scale,
           },
         ]}
       />

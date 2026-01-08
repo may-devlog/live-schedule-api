@@ -712,7 +712,6 @@ export default function YearScreen() {
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
         )
-        )
       ) : (
         stayGroupingField === "none" ? (
           <FlatList
