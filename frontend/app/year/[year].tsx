@@ -518,7 +518,7 @@ export default function YearScreen() {
           keyExtractor={(item) => item.id.toString()}
           style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
           contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-          scrollEnabled={Platform.OS !== 'web'}
+          scrollEnabled={true}
           nestedScrollEnabled={Platform.OS === 'web'}
           refreshControl={
             Platform.OS !== 'web' ? (
@@ -587,7 +587,7 @@ export default function YearScreen() {
           keyExtractor={(item) => item.id.toString()}
           style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
           contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-          scrollEnabled={Platform.OS !== 'web'}
+          scrollEnabled={true}
           nestedScrollEnabled={Platform.OS === 'web'}
           refreshControl={
             Platform.OS !== 'web' ? (
@@ -693,7 +693,7 @@ export default function YearScreen() {
             keyExtractor={(item) => item.id.toString()}
             style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
             contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-            scrollEnabled={Platform.OS !== 'web'}
+            scrollEnabled={true}
             nestedScrollEnabled={Platform.OS === 'web'}
             refreshControl={
               Platform.OS !== 'web' ? (
@@ -752,7 +752,7 @@ export default function YearScreen() {
             keyExtractor={(item) => item.id.toString()}
             style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
             contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-            scrollEnabled={Platform.OS !== 'web'}
+            scrollEnabled={true}
             nestedScrollEnabled={Platform.OS === 'web'}
             refreshControl={
               Platform.OS !== 'web' ? (
@@ -950,7 +950,7 @@ export default function YearScreen() {
           keyExtractor={(item) => item.id.toString()}
           style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
           contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-          scrollEnabled={Platform.OS !== 'web'}
+          scrollEnabled={true}
           nestedScrollEnabled={Platform.OS === 'web'}
           ListHeaderComponent={
             <>
@@ -1009,7 +1009,7 @@ export default function YearScreen() {
           keyExtractor={(item) => item.id.toString()}
           style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
           contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-          scrollEnabled={Platform.OS !== 'web'}
+          scrollEnabled={true}
           nestedScrollEnabled={Platform.OS === 'web'}
           ListHeaderComponent={
             <>
@@ -1105,7 +1105,7 @@ export default function YearScreen() {
             keyExtractor={(item) => item.id.toString()}
             style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
             contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-            scrollEnabled={Platform.OS !== 'web'}
+            scrollEnabled={true}
             nestedScrollEnabled={Platform.OS === 'web'}
             ListHeaderComponent={
               <>
@@ -1154,7 +1154,7 @@ export default function YearScreen() {
             keyExtractor={(item) => item.id.toString()}
             style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
             contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-            scrollEnabled={Platform.OS !== 'web'}
+            scrollEnabled={true}
             nestedScrollEnabled={Platform.OS === 'web'}
             ListHeaderComponent={
               <>
