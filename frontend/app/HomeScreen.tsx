@@ -521,6 +521,10 @@ export default function HomeScreen() {
     return schedule.total_cost || null;
   };
 
+  const handleOpenDetail = (id: number) => {
+    router.push(`/live/${id}`);
+  };
+
   return (
     <View style={styles.scrollContainer}>
       {Platform.OS !== 'web' ? (
@@ -1303,10 +1307,28 @@ const styles = StyleSheet.create({
     borderColor: "#e9e9e7",
     marginBottom: 8,
   },
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
   cardDate: {
     fontSize: 12,
     color: "#787774",
-    marginBottom: 6,
+    fontWeight: "500",
+    flex: 1,
+  },
+  cardPrice: {
+    fontSize: 12,
+    color: "#787774",
+    fontWeight: "500",
+    textAlign: "right",
+  },
+  cardGroup: {
+    fontSize: 12,
+    color: "#787774",
+    marginBottom: 4,
     fontWeight: "500",
   },
   cardTitle: {
@@ -1316,10 +1338,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     lineHeight: 22,
   },
+  cardSubContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
   cardSub: {
     fontSize: 14,
     color: "#787774",
-    marginTop: 4,
   },
   separator: {
     height: 0,

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Platform,
+  ScrollView,
 } from "react-native";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
@@ -386,7 +387,21 @@ export default function YearScreen() {
       
       <PageHeader showBackButton={true} homePath="/" />
 
-      <View style={styles.content}>
+      {Platform.OS !== 'web' ? (
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            />
+          }
+          scrollEnabled={true}
+          nestedScrollEnabled={true}
+        >
+          <View style={styles.content}>
         {/* 年選択（プルダウン） */}
         <YearSelector
           availableYears={availableYears}
@@ -503,7 +518,7 @@ export default function YearScreen() {
           keyExtractor={(item) => item.id.toString()}
           style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
           contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-          scrollEnabled={true}
+          scrollEnabled={Platform.OS !== 'web'}
           nestedScrollEnabled={Platform.OS === 'web'}
           refreshControl={
             Platform.OS !== 'web' ? (
@@ -572,7 +587,7 @@ export default function YearScreen() {
           keyExtractor={(item) => item.id.toString()}
           style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
           contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-          scrollEnabled={true}
+          scrollEnabled={Platform.OS !== 'web'}
           nestedScrollEnabled={Platform.OS === 'web'}
           refreshControl={
             Platform.OS !== 'web' ? (
@@ -678,7 +693,7 @@ export default function YearScreen() {
             keyExtractor={(item) => item.id.toString()}
             style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
             contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-            scrollEnabled={true}
+            scrollEnabled={Platform.OS !== 'web'}
             nestedScrollEnabled={Platform.OS === 'web'}
             refreshControl={
               Platform.OS !== 'web' ? (
@@ -737,7 +752,7 @@ export default function YearScreen() {
             keyExtractor={(item) => item.id.toString()}
             style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
             contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
-            scrollEnabled={true}
+            scrollEnabled={Platform.OS !== 'web'}
             nestedScrollEnabled={Platform.OS === 'web'}
             refreshControl={
               Platform.OS !== 'web' ? (
@@ -832,6 +847,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
     ...(Platform.OS === 'web' ? { minHeight: '100vh' } : { flex: 1 }),
+  },
+  scrollContent: {
+    padding: 24,
+    maxWidth: 900,
+    alignSelf: "center",
+    width: "100%",
   },
   title: {
     paddingHorizontal: 24,
