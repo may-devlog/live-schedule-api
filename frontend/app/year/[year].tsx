@@ -42,6 +42,8 @@ export default function YearScreen() {
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   // 各スケジュールの交通情報（往復フラグを考慮した金額計算用）
   const [trafficBySchedule, setTrafficBySchedule] = useState<Map<number, Array<{ fare: number; return_flag: boolean }>>>(new Map());
+  // 予約サイトの色情報（初回表示時の色取得用）
+  const [websiteColors, setWebsiteColors] = useState<Map<string, string>>(new Map());
   
   // アーカイブタイプ（イベント or 宿泊）
   const [archiveType, setArchiveType] = useState<"イベント" | "宿泊">("イベント");
@@ -238,11 +240,16 @@ export default function YearScreen() {
           }
         });
         
-        // 各予約サイトの色をキャッシュ
+        // 各予約サイトの色を取得してstateに保存
+        const newWebsiteColors = new Map<string, string>();
         for (const website of uniqueWebsites) {
           if (isMounted) {
-            await getOptionColor(website, "WEBSITE");
+            const color = await getOptionColor(website, "WEBSITE");
+            newWebsiteColors.set(website, color);
           }
+        }
+        if (isMounted) {
+          setWebsiteColors(newWebsiteColors);
         }
         
         // ステータスの色情報もキャッシュ（グルーピングで使用される可能性があるため）
@@ -729,7 +736,7 @@ export default function YearScreen() {
                   <View style={styles.cardSubContainer}>
                     <NotionTag
                       label={item.website}
-                      color={getOptionColorSync(item.website, "WEBSITE")}
+                      color={websiteColors.get(item.website) || getOptionColorSync(item.website, "WEBSITE")}
                     />
                   </View>
                 )}
@@ -806,7 +813,7 @@ export default function YearScreen() {
                     <View style={styles.cardSubContainer}>
                       <NotionTag
                         label={item.website}
-                        color={getOptionColorSync(item.website, "WEBSITE")}
+                        color={websiteColors.get(item.website) || getOptionColorSync(item.website, "WEBSITE")}
                       />
                     </View>
                   )}
