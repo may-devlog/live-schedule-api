@@ -170,54 +170,54 @@ export default function SharedScheduleScreen() {
   }
 
   return (
-    <ScrollView 
-      style={styles.scrollContainer} 
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={
-        Platform.OS !== 'web' ? (
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh}
-            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-          />
-        ) : undefined
-      }
-      scrollEnabled={true}
-      nestedScrollEnabled={Platform.OS === 'web'}
-      onTouchStart={(e) => {
-        const touch = e.nativeEvent.touches[0];
-        if (touch) {
-          setTouchStartY(touch.pageY);
-        }
-      }}
-      onTouchMove={(e) => {
-        if (touchStartY !== null) {
-          const touch = e.nativeEvent.touches[0];
-          if (touch) {
-            const distance = touch.pageY - touchStartY;
-            if (distance > 0) {
-              setPullDistance(distance);
-            }
+    <View style={styles.scrollContainer}>
+      {Platform.OS !== 'web' ? (
+        <ScrollView 
+          style={styles.scrollContainer} 
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            />
           }
-        }
-      }}
-      onTouchEnd={() => {
-        if (pullDistance > 100 && !refreshing) {
-          onRefresh();
-        }
-        setTouchStartY(null);
-        setPullDistance(0);
-      }}
-      onScroll={(e) => {
-        const { contentOffset } = e.nativeEvent;
-        if (contentOffset.y === 0 && pullDistance > 100 && !refreshing) {
-          onRefresh();
-        }
-      }}
-      scrollEventThrottle={16}
-    >
-      <View style={styles.container}>
+          scrollEnabled={true}
+          nestedScrollEnabled={true}
+          onTouchStart={(e) => {
+            const touch = e.nativeEvent.touches[0];
+            if (touch) {
+              setTouchStartY(touch.pageY);
+            }
+          }}
+          onTouchMove={(e) => {
+            if (touchStartY !== null) {
+              const touch = e.nativeEvent.touches[0];
+              if (touch) {
+                const distance = touch.pageY - touchStartY;
+                if (distance > 0) {
+                  setPullDistance(distance);
+                }
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (pullDistance > 100 && !refreshing) {
+              onRefresh();
+            }
+            setTouchStartY(null);
+            setPullDistance(0);
+          }}
+          onScroll={(e) => {
+            const { contentOffset } = e.nativeEvent;
+            if (contentOffset.y === 0 && pullDistance > 100 && !refreshing) {
+              onRefresh();
+            }
+          }}
+          scrollEventThrottle={16}
+        >
+          <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>SCHEDULE</Text>
         </View>
@@ -278,7 +278,73 @@ export default function SharedScheduleScreen() {
         </View>
         <View style={styles.bottomSpacer} />
       </View>
-    </ScrollView>
+      </ScrollView>
+      ) : (
+        <View style={styles.scrollContent}>
+          <View style={styles.container}>
+            <View style={styles.header}>
+          <Text style={styles.title}>SCHEDULE</Text>
+        </View>
+
+        {/* カレンダー */}
+        <ScheduleCalendar 
+          schedules={schedules} 
+          isPublic={true}
+          onSchedulePress={handleSchedulePress}
+        />
+
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>NEXT</Text>
+          {loading && <ActivityIndicator color="#333333" />}
+          {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+          {!loading && !error && nextSchedules.length === 0 && (
+            <Text style={styles.emptyText}>今後のスケジュールはありません</Text>
+          )}
+          {!loading && !error && nextSchedules.length > 0 && (
+            <FlatList
+              data={nextSchedules}
+              keyExtractor={(item) => item.id.toString()}
+              scrollEnabled={false}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.card}
+                  onPress={() => handleSchedulePress(item)}
+                >
+                  <Text style={styles.cardDate}>
+                    {formatDateTimeUTC(item.datetime)}
+                  </Text>
+                  <Text style={styles.cardTitle} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.cardSub}>
+                    {item.area} / {item.venue}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
+          )}
+        </View>
+
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>ARCHIVE</Text>
+          <View style={styles.yearListColumn}>
+            {availableYears.map((year) => (
+              <TouchableOpacity
+                key={year}
+                style={styles.yearRow}
+                onPress={() => router.push(`/share/${share_id}/year/${year}`)}
+              >
+                <Text style={styles.yearRowText}>{year}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        <View style={styles.bottomSpacer} />
+      </View>
+        </View>
+      )}
+    </View>
   );
 }
 

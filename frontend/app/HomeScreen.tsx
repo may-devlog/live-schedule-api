@@ -492,55 +492,54 @@ export default function HomeScreen() {
   }, [email]);
 
   return (
-    <>
-    <ScrollView 
-      style={styles.scrollContainer} 
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={
-        Platform.OS !== 'web' ? (
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh}
-            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-          />
-        ) : undefined
-      }
-      scrollEnabled={true}
-      nestedScrollEnabled={Platform.OS === 'web'}
-      onTouchStart={(e) => {
-        const touch = e.nativeEvent.touches[0];
-        if (touch) {
-          setTouchStartY(touch.pageY);
-        }
-      }}
-      onTouchMove={(e) => {
-        if (touchStartY !== null) {
-          const touch = e.nativeEvent.touches[0];
-          if (touch) {
-            const distance = touch.pageY - touchStartY;
-            if (distance > 0) {
-              setPullDistance(distance);
-            }
+    <View style={styles.scrollContainer}>
+      {Platform.OS !== 'web' ? (
+        <ScrollView 
+          style={styles.scrollContainer} 
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            />
           }
-        }
-      }}
-      onTouchEnd={() => {
-        if (pullDistance > 100 && !refreshing) {
-          onRefresh();
-        }
-        setTouchStartY(null);
-        setPullDistance(0);
-      }}
-      onScroll={(e) => {
-        const { contentOffset } = e.nativeEvent;
-        if (contentOffset.y === 0 && pullDistance > 100 && !refreshing) {
-          onRefresh();
-        }
-      }}
-      scrollEventThrottle={16}
-    >
-    <View style={styles.container}>
+          scrollEnabled={true}
+          nestedScrollEnabled={true}
+          onTouchStart={(e) => {
+            const touch = e.nativeEvent.touches[0];
+            if (touch) {
+              setTouchStartY(touch.pageY);
+            }
+          }}
+          onTouchMove={(e) => {
+            if (touchStartY !== null) {
+              const touch = e.nativeEvent.touches[0];
+              if (touch) {
+                const distance = touch.pageY - touchStartY;
+                if (distance > 0) {
+                  setPullDistance(distance);
+                }
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (pullDistance > 100 && !refreshing) {
+              onRefresh();
+            }
+            setTouchStartY(null);
+            setPullDistance(0);
+          }}
+          onScroll={(e) => {
+            const { contentOffset } = e.nativeEvent;
+            if (contentOffset.y === 0 && pullDistance > 100 && !refreshing) {
+              onRefresh();
+            }
+          }}
+          scrollEventThrottle={16}
+        >
+          <View style={styles.container}>
         <View style={styles.header}>
       <Text style={styles.title}>SCHEDULE</Text>
           <View style={styles.headerRight}>
@@ -641,9 +640,137 @@ export default function HomeScreen() {
       </View>
       <View style={styles.bottomSpacer} />
       </View>
-    </ScrollView>
+    </View>
+      </ScrollView>
+      ) : (
+        <View style={styles.scrollContent}>
+          <View style={styles.container}>
+            <View style={styles.header}>
+      <Text style={styles.title}>SCHEDULE</Text>
+          <View style={styles.headerRight}>
+            {isAuthenticated && (
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={() => {
+                  setShowNotificationModal(true);
+                  fetchNotifications();
+                }}
+              >
+                <NotificationIcon size={40} color="#37352f" />
+                {notifications.filter(n => !n.is_read).length > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {notifications.filter(n => !n.is_read).length}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => {
+                console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
+                if (isAuthenticated) {
+                  // ログイン済みの場合、メニューモーダルを表示
+                  setShowUserMenuModal(true);
+                } else {
+                  setShowLoginModal(true);
+                }
+              }}
+            >
+              {isAuthenticated ? (
+                <PersonIcon size={40} color="#37352f" />
+              ) : (
+                <LockIcon size={40} color="#37352f" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
 
-    {/* ログインモーダル */}
+        {isAuthenticated && (
+      <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
+        <Text style={styles.newButtonText}>+ 新規イベント</Text>
+      </TouchableOpacity>
+        )}
+
+        {/* カレンダー */}
+        <ScheduleCalendar schedules={allSchedules} />
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>NEXT</Text>
+        {loadingNext && <ActivityIndicator color="#333333" />}
+        {errorNext && <Text style={styles.errorText}>エラー: {errorNext}</Text>}
+        {!loadingNext && !errorNext && nextSchedules.length === 0 && (
+          <Text style={styles.emptyText}>今後のスケジュールはありません</Text>
+        )}
+        {!loadingNext && !errorNext && nextSchedules.length > 0 && (
+          <FlatList
+            data={nextSchedules}
+            keyExtractor={(item) => item.id.toString()}
+            scrollEnabled={false}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => handleOpenDetail(item.id)}
+              >
+                <View style={styles.cardRow}>
+                  <Text style={styles.cardDate}>
+                    {formatDateTimeUTC(item.datetime)}
+                  </Text>
+                  {(() => {
+                    const totalCost = calculateTotalCostWithReturnFlag(item);
+                    return totalCost && totalCost > 0 ? (
+                      <Text style={styles.cardPrice}>
+                        ¥{totalCost.toLocaleString()}
+                      </Text>
+                    ) : null;
+                  })()}
+                </View>
+                {/* ツアー名 (Group) */}
+                {item.group && (
+                  <Text style={styles.cardGroup} numberOfLines={1}>
+                    {item.group}
+                  </Text>
+                )}
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <View style={styles.cardSubContainer}>
+                  {item.area && (
+                    <NotionTag
+                      label={item.area}
+                      color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
+                    />
+                  )}
+                  <Text style={styles.cardSub}>{item.venue}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+        )}
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>ARCHIVE</Text>
+        <View style={styles.yearListColumn}>
+          {availableYears.map((year) => (
+            <TouchableOpacity
+              key={year}
+              style={styles.yearRow}
+              onPress={() => handleOpenYearPage(year)}
+            >
+              <Text style={styles.yearRowText}>{year}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+      <View style={styles.bottomSpacer} />
+      </View>
+        </View>
+      )}
+
+      {/* ログインモーダル */}
       <Modal
         visible={showLoginModal}
         animationType="slide"
@@ -994,6 +1121,118 @@ export default function HomeScreen() {
                 ))}
               </ScrollView>
             )}
+          </View>
+        </View>
+      </Modal>
+      </>
+    );
+  }
+
+  return (
+    <>
+    <ScrollView 
+      style={styles.scrollContainer} 
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh}
+          tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+          colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+        />
+      }
+      scrollEnabled={true}
+      nestedScrollEnabled={true}
+      onTouchStart={(e) => {
+        const touch = e.nativeEvent.touches[0];
+        if (touch) {
+          setTouchStartY(touch.pageY);
+        }
+      }}
+      onTouchMove={(e) => {
+        if (touchStartY !== null) {
+          const touch = e.nativeEvent.touches[0];
+          if (touch) {
+            const distance = touch.pageY - touchStartY;
+            if (distance > 0) {
+              setPullDistance(distance);
+            }
+          }
+        }
+      }}
+      onTouchEnd={() => {
+        if (pullDistance > 100 && !refreshing) {
+          onRefresh();
+        }
+        setTouchStartY(null);
+        setPullDistance(0);
+      }}
+      onScroll={(e) => {
+        const { contentOffset } = e.nativeEvent;
+        if (contentOffset.y === 0 && pullDistance > 100 && !refreshing) {
+          onRefresh();
+        }
+      }}
+      scrollEventThrottle={16}
+    >
+      {content}
+    </ScrollView>
+    {/* ログインモーダル */}
+      <Modal
+        visible={showLoginModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowLoginModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>ログイン</Text>
+              <TouchableOpacity
+                onPress={() => setShowLoginModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="メールアドレス"
+              value={loginEmail}
+              onChangeText={(text) => {
+                setLoginEmail(text);
+                setLoginError(null);
+              }}
+              autoComplete="email"
+              keyboardType="email-address"
+            />
+            <TextInput
+              style={styles.modalInput}
+              placeholder="パスワード"
+              value={loginPassword}
+              onChangeText={(text) => {
+                setLoginPassword(text);
+                setLoginError(null);
+              }}
+              secureTextEntry
+              autoComplete="password"
+            />
+
+            {loginError && (
+              <Text style={styles.loginErrorText}>{loginError}</Text>
+            )}
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={handleLogin}
+              disabled={loginLoading}
+            >
+              {loginLoading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.modalButtonText}>ログイン</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
