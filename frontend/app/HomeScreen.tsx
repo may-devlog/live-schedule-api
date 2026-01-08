@@ -676,7 +676,11 @@ export default function HomeScreen() {
       </View>
       </ScrollView>
       ) : (
-        <View style={styles.scrollContent}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          scrollEnabled={true}
+          nestedScrollEnabled={true}
+        >
           <View style={styles.container}>
             <View style={styles.header}>
       <Text style={styles.title}>SCHEDULE</Text>
@@ -800,7 +804,7 @@ export default function HomeScreen() {
       </View>
       <View style={styles.bottomSpacer} />
       </View>
-        </View>
+        </ScrollView>
       )}
 
       {/* ログインモーダル */}
