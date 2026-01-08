@@ -389,118 +389,6 @@ export default function YearScreen() {
 
       {Platform.OS !== 'web' ? (
         <View style={styles.content}>
-          {/* 年選択（プルダウン） */}
-          <YearSelector
-            availableYears={availableYears}
-            currentYear={currentYear}
-            onSelectYear={(year) => handleSelectYear(year)}
-          />
-
-          {/* アーカイブタイプ選択（イベント / 宿泊） */}
-          <View style={styles.archiveTypeSelector}>
-            <TouchableOpacity
-              style={[
-                styles.archiveTypeButton,
-                archiveType === "イベント" && styles.archiveTypeButtonActive,
-              ]}
-              onPress={() => setArchiveType("イベント")}
-            >
-              <Text
-                style={[
-                  styles.archiveTypeButtonText,
-                  archiveType === "イベント" && styles.archiveTypeButtonTextActive,
-                ]}
-              >
-                イベント
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.archiveTypeButton,
-                archiveType === "宿泊" && styles.archiveTypeButtonActive,
-              ]}
-              onPress={() => setArchiveType("宿泊")}
-            >
-              <Text
-                style={[
-                  styles.archiveTypeButtonText,
-                  archiveType === "宿泊" && styles.archiveTypeButtonTextActive,
-                ]}
-              >
-                宿泊
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* グルーピングフィールド選択 */}
-          {archiveType === "イベント" ? (
-            <View style={styles.groupingSelector}>
-              <Text style={styles.groupingLabel}>グルーピング:</Text>
-              <View style={styles.groupingButtons}>
-                {[
-                  { value: "none" as GroupingField, label: "なし" },
-                  { value: "group" as GroupingField, label: "グループ" },
-                  { value: "category" as GroupingField, label: "カテゴリ" },
-                  { value: "area" as GroupingField, label: "エリア" },
-                  { value: "target" as GroupingField, label: "お目当て" },
-                  { value: "lineup" as GroupingField, label: "出演者" },
-                  { value: "seller" as GroupingField, label: "販売元" },
-                  { value: "status" as GroupingField, label: "ステータス" },
-                ].map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.groupingButton,
-                      groupingField === option.value && styles.groupingButtonActive,
-                    ]}
-                    onPress={() => setGroupingField(option.value)}
-                  >
-                    <Text
-                      style={[
-                        styles.groupingButtonText,
-                        groupingField === option.value && styles.groupingButtonTextActive,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          ) : (
-            <View style={styles.groupingSelector}>
-              <Text style={styles.groupingLabel}>グルーピング:</Text>
-              <View style={styles.groupingButtons}>
-                {[
-                  { value: "none" as const, label: "なし" },
-                  { value: "website" as const, label: "予約サイト" },
-                  { value: "status" as const, label: "ステータス" },
-                ].map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.groupingButton,
-                      stayGroupingField === option.value && styles.groupingButtonActive,
-                    ]}
-                    onPress={() => setStayGroupingField(option.value)}
-                  >
-                    <Text
-                      style={[
-                        styles.groupingButtonText,
-                        stayGroupingField === option.value && styles.groupingButtonTextActive,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {loading && <ActivityIndicator color="#333333" />}
-          {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-
           {archiveType === "イベント" ? (
             groupingField === "none" ? (
             <FlatList
@@ -516,6 +404,89 @@ export default function YearScreen() {
                   tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
                   colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
                 />
+              }
+              ListHeaderComponent={
+                <>
+                  {/* 年選択（プルダウン） */}
+                  <YearSelector
+                    availableYears={availableYears}
+                    currentYear={currentYear}
+                    onSelectYear={(year) => handleSelectYear(year)}
+                  />
+
+                  {/* アーカイブタイプ選択（イベント / 宿泊） */}
+                  <View style={styles.archiveTypeSelector}>
+                    <TouchableOpacity
+                      style={[
+                        styles.archiveTypeButton,
+                        archiveType === "イベント" && styles.archiveTypeButtonActive,
+                      ]}
+                      onPress={() => setArchiveType("イベント")}
+                    >
+                      <Text
+                        style={[
+                          styles.archiveTypeButtonText,
+                          archiveType === "イベント" && styles.archiveTypeButtonTextActive,
+                        ]}
+                      >
+                        イベント
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.archiveTypeButton,
+                        archiveType === "宿泊" && styles.archiveTypeButtonActive,
+                      ]}
+                      onPress={() => setArchiveType("宿泊")}
+                    >
+                      <Text
+                        style={[
+                          styles.archiveTypeButtonText,
+                          archiveType === "宿泊" && styles.archiveTypeButtonTextActive,
+                        ]}
+                      >
+                        宿泊
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* グルーピングフィールド選択 */}
+                  <View style={styles.groupingSelector}>
+                    <Text style={styles.groupingLabel}>グルーピング:</Text>
+                    <View style={styles.groupingButtons}>
+                      {[
+                        { value: "none" as GroupingField, label: "なし" },
+                        { value: "group" as GroupingField, label: "グループ" },
+                        { value: "category" as GroupingField, label: "カテゴリ" },
+                        { value: "area" as GroupingField, label: "エリア" },
+                        { value: "target" as GroupingField, label: "お目当て" },
+                        { value: "lineup" as GroupingField, label: "出演者" },
+                        { value: "seller" as GroupingField, label: "販売元" },
+                        { value: "status" as GroupingField, label: "ステータス" },
+                      ].map((option) => (
+                        <TouchableOpacity
+                          key={option.value}
+                          style={[
+                            styles.groupingButton,
+                            groupingField === option.value && styles.groupingButtonActive,
+                          ]}
+                          onPress={() => setGroupingField(option.value)}
+                        >
+                          <Text
+                            style={[
+                              styles.groupingButtonText,
+                              groupingField === option.value && styles.groupingButtonTextActive,
+                            ]}
+                          >
+                            {option.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  {loading && <ActivityIndicator color="#333333" />}
+                  {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+                </>
               }
           ListEmptyComponent={
             !loading && !error ? (
@@ -576,6 +547,89 @@ export default function YearScreen() {
                 tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
                 colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
               />
+            }
+            ListHeaderComponent={
+              <>
+                {/* 年選択（プルダウン） */}
+                <YearSelector
+                  availableYears={availableYears}
+                  currentYear={currentYear}
+                  onSelectYear={(year) => handleSelectYear(year)}
+                />
+
+                {/* アーカイブタイプ選択（イベント / 宿泊） */}
+                <View style={styles.archiveTypeSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.archiveTypeButton,
+                      archiveType === "イベント" && styles.archiveTypeButtonActive,
+                    ]}
+                    onPress={() => setArchiveType("イベント")}
+                  >
+                    <Text
+                      style={[
+                        styles.archiveTypeButtonText,
+                        archiveType === "イベント" && styles.archiveTypeButtonTextActive,
+                      ]}
+                    >
+                      イベント
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.archiveTypeButton,
+                      archiveType === "宿泊" && styles.archiveTypeButtonActive,
+                    ]}
+                    onPress={() => setArchiveType("宿泊")}
+                  >
+                    <Text
+                      style={[
+                        styles.archiveTypeButtonText,
+                        archiveType === "宿泊" && styles.archiveTypeButtonTextActive,
+                      ]}
+                    >
+                      宿泊
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* グルーピングフィールド選択 */}
+                <View style={styles.groupingSelector}>
+                  <Text style={styles.groupingLabel}>グルーピング:</Text>
+                  <View style={styles.groupingButtons}>
+                    {[
+                      { value: "none" as GroupingField, label: "なし" },
+                      { value: "group" as GroupingField, label: "グループ" },
+                      { value: "category" as GroupingField, label: "カテゴリ" },
+                      { value: "area" as GroupingField, label: "エリア" },
+                      { value: "target" as GroupingField, label: "お目当て" },
+                      { value: "lineup" as GroupingField, label: "出演者" },
+                      { value: "seller" as GroupingField, label: "販売元" },
+                      { value: "status" as GroupingField, label: "ステータス" },
+                    ].map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[
+                          styles.groupingButton,
+                          groupingField === option.value && styles.groupingButtonActive,
+                        ]}
+                        onPress={() => setGroupingField(option.value)}
+                      >
+                        <Text
+                          style={[
+                            styles.groupingButtonText,
+                            groupingField === option.value && styles.groupingButtonTextActive,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                {loading && <ActivityIndicator color="#333333" />}
+                {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+              </>
             }
           ListEmptyComponent={
             !loading && !error ? (
@@ -723,6 +777,84 @@ export default function YearScreen() {
                 tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
                 colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
               />
+            }
+            ListHeaderComponent={
+              <>
+                {/* 年選択（プルダウン） */}
+                <YearSelector
+                  availableYears={availableYears}
+                  currentYear={currentYear}
+                  onSelectYear={(year) => handleSelectYear(year)}
+                />
+
+                {/* アーカイブタイプ選択（イベント / 宿泊） */}
+                <View style={styles.archiveTypeSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.archiveTypeButton,
+                      archiveType === "イベント" && styles.archiveTypeButtonActive,
+                    ]}
+                    onPress={() => setArchiveType("イベント")}
+                  >
+                    <Text
+                      style={[
+                        styles.archiveTypeButtonText,
+                        archiveType === "イベント" && styles.archiveTypeButtonTextActive,
+                      ]}
+                    >
+                      イベント
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.archiveTypeButton,
+                      archiveType === "宿泊" && styles.archiveTypeButtonActive,
+                    ]}
+                    onPress={() => setArchiveType("宿泊")}
+                  >
+                    <Text
+                      style={[
+                        styles.archiveTypeButtonText,
+                        archiveType === "宿泊" && styles.archiveTypeButtonTextActive,
+                      ]}
+                    >
+                      宿泊
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* グルーピングフィールド選択 */}
+                <View style={styles.groupingSelector}>
+                  <Text style={styles.groupingLabel}>グルーピング:</Text>
+                  <View style={styles.groupingButtons}>
+                    {[
+                      { value: "none" as const, label: "なし" },
+                      { value: "website" as const, label: "予約サイト" },
+                      { value: "status" as const, label: "ステータス" },
+                    ].map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[
+                          styles.groupingButton,
+                          stayGroupingField === option.value && styles.groupingButtonActive,
+                        ]}
+                        onPress={() => setStayGroupingField(option.value)}
+                      >
+                        <Text
+                          style={[
+                            styles.groupingButtonText,
+                            stayGroupingField === option.value && styles.groupingButtonTextActive,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                {loading && <ActivityIndicator color="#333333" />}
+                {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+              </>
             }
             ListEmptyComponent={
               !loading && !error ? (
