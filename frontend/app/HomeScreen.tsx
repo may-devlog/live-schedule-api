@@ -61,6 +61,9 @@ export type Notification = {
 
 import { authenticatedFetch, getApiUrl } from "../utils/api";
 import { ScheduleCalendar } from "../components/ScheduleCalendar";
+import { NotionTag } from "../components/notion-tag";
+import { getOptionColorSync } from "../utils/get-option-color";
+import { fetchAreaColors } from "../utils/fetch-area-colors";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -237,6 +240,7 @@ export default function HomeScreen() {
   const [loadingNext, setLoadingNext] = useState(false);
   const [errorNext, setErrorNext] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -490,6 +494,26 @@ export default function HomeScreen() {
   useEffect(() => {
     console.log('[HomeScreen] Email changed to:', email);
   }, [email]);
+
+  // Areaの色情報を取得
+  useEffect(() => {
+    if (nextSchedules.length === 0) return;
+    
+    let isMounted = true;
+    
+    const loadAreaColors = async () => {
+      const colorMap = await fetchAreaColors(nextSchedules);
+      if (isMounted) {
+        setAreaColors(colorMap);
+      }
+    };
+    
+    loadAreaColors();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [nextSchedules]);
 
   // 往復フラグを考慮した総費用を計算（簡易版：交通情報がない場合はtotal_costをそのまま返す）
   const calculateTotalCostWithReturnFlag = (schedule: Schedule): number | null => {
