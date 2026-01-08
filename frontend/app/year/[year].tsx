@@ -388,7 +388,18 @@ export default function YearScreen() {
       <PageHeader showBackButton={true} homePath="/" />
 
       {Platform.OS !== 'web' ? (
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            />
+          }
+        >
+          <View style={styles.content}>
           {archiveType === "イベント" ? (
             groupingField === "none" ? (
             <FlatList
@@ -994,7 +1005,8 @@ export default function YearScreen() {
           />
         )
       )}
-        </View>
+          </View>
+        </ScrollView>
       ) : (
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
