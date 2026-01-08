@@ -501,15 +501,18 @@ export default function YearScreen() {
         <FlatList
           data={schedules}
           keyExtractor={(item) => item.id.toString()}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1 }}
+          style={Platform.OS === 'web' ? undefined : { flex: 1 }}
+          contentContainerStyle={Platform.OS === 'web' ? undefined : { flexGrow: 1 }}
+          scrollEnabled={Platform.OS !== 'web'}
           refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={onRefresh}
-              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-            />
+            Platform.OS !== 'web' ? (
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh}
+                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+              />
+            ) : undefined
           }
           ListHeaderComponent={
             <>
@@ -566,15 +569,18 @@ export default function YearScreen() {
         <SectionList
           sections={groupedSchedules}
           keyExtractor={(item) => item.id.toString()}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1 }}
+          style={Platform.OS === 'web' ? undefined : { flex: 1 }}
+          contentContainerStyle={Platform.OS === 'web' ? undefined : { flexGrow: 1 }}
+          scrollEnabled={Platform.OS !== 'web'}
           refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={onRefresh}
-              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-            />
+            Platform.OS !== 'web' ? (
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh}
+                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+              />
+            ) : undefined
           }
           ListHeaderComponent={
             <>
@@ -668,15 +674,18 @@ export default function YearScreen() {
           <FlatList
             data={stays}
             keyExtractor={(item) => item.id.toString()}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
+            style={Platform.OS === 'web' ? undefined : { flex: 1 }}
+            contentContainerStyle={Platform.OS === 'web' ? undefined : { flexGrow: 1 }}
+            scrollEnabled={Platform.OS !== 'web'}
             refreshControl={
-              <RefreshControl 
-                refreshing={refreshing} 
-                onRefresh={onRefresh}
-                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-              />
+              Platform.OS !== 'web' ? (
+                <RefreshControl 
+                  refreshing={refreshing} 
+                  onRefresh={onRefresh}
+                  tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                  colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+                />
+              ) : undefined
             }
             ListHeaderComponent={
               <>
@@ -723,15 +732,18 @@ export default function YearScreen() {
           <SectionList
             sections={groupedStays}
             keyExtractor={(item) => item.id.toString()}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
+            style={Platform.OS === 'web' ? undefined : { flex: 1 }}
+            contentContainerStyle={Platform.OS === 'web' ? undefined : { flexGrow: 1 }}
+            scrollEnabled={Platform.OS !== 'web'}
             refreshControl={
-              <RefreshControl 
-                refreshing={refreshing} 
-                onRefresh={onRefresh}
-                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-              />
+              Platform.OS !== 'web' ? (
+                <RefreshControl 
+                  refreshing={refreshing} 
+                  onRefresh={onRefresh}
+                  tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                  colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+                />
+              ) : undefined
             }
             ListHeaderComponent={
               <>
@@ -807,7 +819,7 @@ export default function YearScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    ...(Platform.OS === 'web' ? {} : { flex: 1 }),
     backgroundColor: "#ffffff",
   },
   content: {
@@ -815,7 +827,7 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
-    flex: 1,
+    ...(Platform.OS === 'web' ? {} : { flex: 1 }),
   },
   title: {
     paddingHorizontal: 24,
