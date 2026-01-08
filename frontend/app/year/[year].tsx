@@ -994,8 +994,7 @@ export default function YearScreen() {
           />
         )
       )}
-          </View>
-        </ScrollView>
+        </View>
       ) : (
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
