@@ -395,8 +395,9 @@ export default function YearScreen() {
               data={schedules}
               keyExtractor={(item) => item.id.toString()}
               style={{ flex: 1 }}
-              contentContainerStyle={{ flexGrow: 1 }}
+              contentContainerStyle={{ paddingBottom: 20 }}
               scrollEnabled={true}
+              nestedScrollEnabled={true}
               refreshControl={
                 <RefreshControl 
                   refreshing={refreshing} 
@@ -537,9 +538,10 @@ export default function YearScreen() {
           <SectionList
             sections={groupedSchedules}
             keyExtractor={(item) => item.id.toString()}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
-            scrollEnabled={true}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
@@ -717,9 +719,10 @@ export default function YearScreen() {
           <FlatList
             data={stays}
             keyExtractor={(item) => item.id.toString()}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
-            scrollEnabled={true}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
@@ -845,9 +848,10 @@ export default function YearScreen() {
           <SectionList
             sections={groupedStays}
             keyExtractor={(item) => item.id.toString()}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
-            scrollEnabled={true}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
