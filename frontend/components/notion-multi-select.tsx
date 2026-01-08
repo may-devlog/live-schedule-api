@@ -50,15 +50,15 @@ export function NotionMultiSelect({
   const [displayedOptions, setDisplayedOptions] = useState<SelectOption[]>(options);
   const [isSaving, setIsSaving] = useState(false);
 
-  // 選択された値を配列に変換
+  // 選択された値を配列に変換（選択順を保持）
   const selectedValues = value
     ? value.split(",").map((v) => v.trim()).filter((v) => v)
     : [];
 
-  // 選択されたオプションを取得
-  const selectedOptions = tempOptions.filter((opt) =>
-    selectedValues.includes(opt.label)
-  );
+  // 選択されたオプションを取得（選択順を保持）
+  const selectedOptions = selectedValues
+    .map((label) => tempOptions.find((opt) => opt.label === label))
+    .filter((opt): opt is SelectOption => opt !== undefined);
 
   useEffect(() => {
     setTempOptions(options);
