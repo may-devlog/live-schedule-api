@@ -1404,14 +1404,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   content: {
-    padding: 24,
+    ...(Platform.OS === 'web' 
+      ? { padding: 24, minHeight: '100vh' }
+      : { paddingHorizontal: 16, paddingVertical: 24, flex: 1 }
+    ),
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
-    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : { flex: 1 }),
   },
   scrollContent: {
-    padding: 24,
+    ...(Platform.OS === 'web' 
+      ? { padding: 24 }
+      : { paddingHorizontal: 16, paddingVertical: 24 }
+    ),
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
