@@ -137,6 +137,7 @@ fn get_base_url() -> String {
 }
 
 // フロントエンドURL（環境変数から読み込む、未設定の場合はBASE_URLを使用）
+#[allow(dead_code)]
 fn get_frontend_url() -> String {
     match std::env::var("FRONTEND_URL") {
         Ok(url) => {
@@ -4611,7 +4612,7 @@ async fn save_stay_select_options(
 
     let now = Utc::now().to_rfc3339();
 
-    let result = if let Some((existing_id,)) = sqlx::query_as::<_, (i64,)>(
+    if let Some((_existing_id,)) = sqlx::query_as::<_, (i64,)>(
         "SELECT id FROM stay_select_options WHERE user_id = ? AND option_type = ?"
     )
     .bind(user_id_i64)
