@@ -22,6 +22,7 @@ import { groupSchedules, type GroupingField, type GroupedSchedule } from "../../
 import { groupStays, type GroupedStay } from "../../utils/group-stays";
 import { loadSelectOptionsMap } from "../../utils/load-select-options-map";
 import { fetchAreaColors } from "../../utils/fetch-area-colors";
+import { fetchWebsiteColors } from "../../utils/fetch-website-colors";
 import { formatDateTimeUTC } from "../../utils/format-datetime";
 import { YearSelector } from "../../components/YearSelector";
 
@@ -159,6 +160,16 @@ export default function YearScreen() {
           });
           if (isMounted) {
             setStays(filteredStays);
+            // 予約サイトの色情報を即座に取得（エリアと同様に）
+            if (filteredStays.length > 0) {
+              fetchWebsiteColors(filteredStays).then((colorMap) => {
+                if (isMounted) {
+                  setWebsiteColors(colorMap);
+                }
+              }).catch((error) => {
+                console.error("Error loading website colors:", error);
+              });
+            }
           }
         }
       } catch (e: any) {
@@ -222,56 +233,20 @@ export default function YearScreen() {
     };
   }, []);
 
-  // 予約サイトとステータスの色情報を事前にキャッシュ（宿泊タブ表示用）
+  // 予約サイトの色情報を取得（staysが変更されたときに再取得）
   useEffect(() => {
     if (archiveType !== "宿泊" || stays.length === 0) return;
     
     let isMounted = true;
     
-    const loadColors = async () => {
-      try {
-        const { getOptionColor } = await import("../../utils/get-option-color");
-        
-        // 実際に表示されている宿泊データに含まれる予約サイトの色をキャッシュ
-        const uniqueWebsites = new Set<string>();
-        stays.forEach((stay) => {
-          if (stay.website) {
-            uniqueWebsites.add(stay.website);
-          }
-        });
-        
-        // 各予約サイトの色を取得してstateに保存
-        const newWebsiteColors = new Map<string, string>();
-        for (const website of uniqueWebsites) {
-          if (isMounted) {
-            const color = await getOptionColor(website, "WEBSITE");
-            newWebsiteColors.set(website, color);
-          }
-        }
-        if (isMounted) {
-          setWebsiteColors(newWebsiteColors);
-        }
-        
-        // ステータスの色情報もキャッシュ（グルーピングで使用される可能性があるため）
-        const uniqueStatuses = new Set<string>();
-        stays.forEach((stay) => {
-          if (stay.status) {
-            uniqueStatuses.add(stay.status);
-          }
-        });
-        
-        // 各ステータスの色をキャッシュ
-        for (const status of uniqueStatuses) {
-          if (isMounted) {
-            await getOptionColor(status, "STATUS");
-          }
-        }
-      } catch (error) {
-        console.error("Error loading colors:", error);
+    const loadWebsiteColors = async () => {
+      const colorMap = await fetchWebsiteColors(stays);
+      if (isMounted) {
+        setWebsiteColors(colorMap);
       }
     };
     
-    loadColors();
+    loadWebsiteColors();
     
     return () => {
       isMounted = false;
