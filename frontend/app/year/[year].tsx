@@ -451,9 +451,9 @@ export default function YearScreen() {
                   </View>
 
                   {/* グルーピングフィールド選択 */}
-                  <View style={styles.groupingSelector}>
+                  <View style={styles.groupingSelector} pointerEvents="box-none">
                     <Text style={styles.groupingLabel}>グルーピング:</Text>
-                    <View style={styles.groupingButtons}>
+                    <View style={styles.groupingButtons} pointerEvents="box-none">
                       {[
                         { value: "none" as GroupingField, label: "なし" },
                         { value: "group" as GroupingField, label: "グループ" },
@@ -594,9 +594,9 @@ export default function YearScreen() {
                 </View>
 
                 {/* グルーピングフィールド選択 */}
-                <View style={styles.groupingSelector}>
+                <View style={styles.groupingSelector} pointerEvents="box-none">
                   <Text style={styles.groupingLabel}>グルーピング:</Text>
-                  <View style={styles.groupingButtons}>
+                  <View style={styles.groupingButtons} pointerEvents="box-none">
                     {[
                       { value: "none" as GroupingField, label: "なし" },
                       { value: "group" as GroupingField, label: "グループ" },
@@ -774,9 +774,9 @@ export default function YearScreen() {
                 </View>
 
                 {/* グルーピングフィールド選択 */}
-                <View style={styles.groupingSelector}>
+                <View style={styles.groupingSelector} pointerEvents="box-none">
                   <Text style={styles.groupingLabel}>グルーピング:</Text>
-                  <View style={styles.groupingButtons}>
+                  <View style={styles.groupingButtons} pointerEvents="box-none">
                     {[
                       { value: "none" as const, label: "なし" },
                       { value: "website" as const, label: "予約サイト" },
@@ -902,9 +902,9 @@ export default function YearScreen() {
                 </View>
 
                 {/* グルーピングフィールド選択 */}
-                <View style={styles.groupingSelector}>
+                <View style={styles.groupingSelector} pointerEvents="box-none">
                   <Text style={styles.groupingLabel}>グルーピング:</Text>
-                  <View style={styles.groupingButtons}>
+                  <View style={styles.groupingButtons} pointerEvents="box-none">
                     {[
                       { value: "none" as const, label: "なし" },
                       { value: "website" as const, label: "予約サイト" },
@@ -1401,7 +1401,7 @@ const styles = StyleSheet.create({
   },
   content: {
     ...(Platform.OS === 'web' 
-      ? { padding: 24, minHeight: '100vh' }
+      ? { paddingHorizontal: 24, paddingVertical: 24, minHeight: '100vh' }
       : { paddingHorizontal: 16, paddingVertical: 24 }
     ),
     maxWidth: 900,
@@ -1410,7 +1410,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     ...(Platform.OS === 'web' 
-      ? { padding: 24 }
+      ? { paddingHorizontal: 24, paddingVertical: 24 }
       : { paddingHorizontal: 16, paddingVertical: 24 }
     ),
     maxWidth: 900,
