@@ -394,7 +394,6 @@ export default function YearScreen() {
             <FlatList
               data={schedules}
               keyExtractor={(item) => item.id.toString()}
-              style={{ flex: 1 }}
               contentContainerStyle={{ paddingBottom: 20 }}
               scrollEnabled={true}
               nestedScrollEnabled={true}
@@ -538,10 +537,9 @@ export default function YearScreen() {
           <SectionList
             sections={groupedSchedules}
             keyExtractor={(item) => item.id.toString()}
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingBottom: 20 }}
-              scrollEnabled={true}
-              nestedScrollEnabled={true}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            scrollEnabled={true}
+            nestedScrollEnabled={true}
             refreshControl={
               <RefreshControl 
                 refreshing={refreshing} 
@@ -719,7 +717,6 @@ export default function YearScreen() {
           <FlatList
             data={stays}
             keyExtractor={(item) => item.id.toString()}
-              style={{ flex: 1 }}
               contentContainerStyle={{ paddingBottom: 20 }}
               scrollEnabled={true}
               nestedScrollEnabled={true}
@@ -848,7 +845,6 @@ export default function YearScreen() {
           <SectionList
             sections={groupedStays}
             keyExtractor={(item) => item.id.toString()}
-              style={{ flex: 1 }}
               contentContainerStyle={{ paddingBottom: 20 }}
               scrollEnabled={true}
               nestedScrollEnabled={true}
@@ -1406,7 +1402,7 @@ const styles = StyleSheet.create({
   content: {
     ...(Platform.OS === 'web' 
       ? { padding: 24, minHeight: '100vh' }
-      : { paddingHorizontal: 16, paddingVertical: 24, flex: 1 }
+      : { paddingHorizontal: 16, paddingVertical: 24 }
     ),
     maxWidth: 900,
     alignSelf: "center",
