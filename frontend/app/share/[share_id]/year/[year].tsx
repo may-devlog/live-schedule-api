@@ -296,35 +296,21 @@ export default function SharedYearScreen() {
       <PageHeader showBackButton={true} homePath={`/share/${share_id}`} />
       
       {Platform.OS !== 'web' ? (
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-            />
-          }
-        >
-          <View style={styles.content}>
+        <View style={styles.content}>
             {groupingField === "none" ? (
             <FlatList
               data={schedules}
               keyExtractor={(item) => item.id.toString()}
               style={{ flex: 1 }}
               contentContainerStyle={{ flexGrow: 1 }}
-              scrollEnabled={Platform.OS !== 'web'}
-              nestedScrollEnabled={Platform.OS === 'web'}
+              scrollEnabled={true}
               refreshControl={
-                Platform.OS !== 'web' ? (
-                  <RefreshControl 
-                    refreshing={refreshing} 
-                    onRefresh={onRefresh}
-                    tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                    colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-                  />
-                ) : undefined
+                <RefreshControl 
+                  refreshing={refreshing} 
+                  onRefresh={onRefresh}
+                  tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                  colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+                />
               }
               ListHeaderComponent={
                 <>
@@ -414,17 +400,14 @@ export default function SharedYearScreen() {
             keyExtractor={(item) => item.id.toString()}
             style={{ flex: 1 }}
             contentContainerStyle={{ flexGrow: 1 }}
-            scrollEnabled={Platform.OS !== 'web'}
-            nestedScrollEnabled={Platform.OS === 'web'}
+            scrollEnabled={true}
             refreshControl={
-              Platform.OS !== 'web' ? (
-                <RefreshControl 
-                  refreshing={refreshing} 
-                  onRefresh={onRefresh}
-                  tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                  colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-                />
-              ) : undefined
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh}
+                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+              />
             }
             ListHeaderComponent={
               <>
@@ -543,8 +526,7 @@ export default function SharedYearScreen() {
             ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
         )}
-          </View>
-        </ScrollView>
+        </View>
       ) : (
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
