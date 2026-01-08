@@ -830,7 +830,400 @@ export default function YearScreen() {
           />
         )
       )}
-      </View>
+          </View>
+        </ScrollView>
+      ) : (
+        <View style={styles.content}>
+        {/* 年選択（プルダウン） */}
+        <YearSelector
+          availableYears={availableYears}
+          currentYear={currentYear}
+          onSelectYear={(year) => handleSelectYear(year)}
+        />
+
+        {/* アーカイブタイプ選択（イベント / 宿泊） */}
+        <View style={styles.archiveTypeSelector}>
+          <TouchableOpacity
+            style={[
+              styles.archiveTypeButton,
+              archiveType === "イベント" && styles.archiveTypeButtonActive,
+            ]}
+            onPress={() => setArchiveType("イベント")}
+          >
+            <Text
+              style={[
+                styles.archiveTypeButtonText,
+                archiveType === "イベント" && styles.archiveTypeButtonTextActive,
+              ]}
+            >
+              イベント
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.archiveTypeButton,
+              archiveType === "宿泊" && styles.archiveTypeButtonActive,
+            ]}
+            onPress={() => setArchiveType("宿泊")}
+          >
+            <Text
+              style={[
+                styles.archiveTypeButtonText,
+                archiveType === "宿泊" && styles.archiveTypeButtonTextActive,
+              ]}
+            >
+              宿泊
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+      {/* グルーピングフィールド選択 */}
+      {archiveType === "イベント" ? (
+        <View style={styles.groupingSelector}>
+          <Text style={styles.groupingLabel}>グルーピング:</Text>
+          <View style={styles.groupingButtons}>
+            {[
+              { value: "none" as GroupingField, label: "なし" },
+              { value: "group" as GroupingField, label: "グループ" },
+              { value: "category" as GroupingField, label: "カテゴリ" },
+              { value: "area" as GroupingField, label: "エリア" },
+              { value: "target" as GroupingField, label: "お目当て" },
+              { value: "lineup" as GroupingField, label: "出演者" },
+              { value: "seller" as GroupingField, label: "販売元" },
+              { value: "status" as GroupingField, label: "ステータス" },
+            ].map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  styles.groupingButton,
+                  groupingField === option.value && styles.groupingButtonActive,
+                ]}
+                onPress={() => setGroupingField(option.value)}
+              >
+                <Text
+                  style={[
+                    styles.groupingButtonText,
+                    groupingField === option.value && styles.groupingButtonTextActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.groupingSelector}>
+          <Text style={styles.groupingLabel}>グルーピング:</Text>
+          <View style={styles.groupingButtons}>
+            {[
+              { value: "none" as const, label: "なし" },
+              { value: "website" as const, label: "予約サイト" },
+              { value: "status" as const, label: "ステータス" },
+            ].map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  styles.groupingButton,
+                  stayGroupingField === option.value && styles.groupingButtonActive,
+                ]}
+                onPress={() => setStayGroupingField(option.value)}
+              >
+                <Text
+                  style={[
+                    styles.groupingButtonText,
+                    stayGroupingField === option.value && styles.groupingButtonTextActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {archiveType === "イベント" ? (
+        groupingField === "none" ? (
+        <FlatList
+          data={schedules}
+          keyExtractor={(item) => item.id.toString()}
+          style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
+          contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
+          scrollEnabled={Platform.OS !== 'web'}
+          nestedScrollEnabled={Platform.OS === 'web'}
+          ListHeaderComponent={
+            <>
+              {loading && <ActivityIndicator color="#333333" />}
+              {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+            </>
+          }
+          ListEmptyComponent={
+            !loading && !error ? (
+              <Text style={styles.emptyText}>スケジュールはありません</Text>
+            ) : null
+          }
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => handleOpenDetail(item.id)}
+            >
+              <View style={styles.cardRow}>
+                <Text style={styles.cardDate}>
+                  {formatDateTimeUTC(item.datetime)}
+                </Text>
+                {(() => {
+                  const totalCost = calculateTotalCostWithReturnFlag(item);
+                  return totalCost && totalCost > 0 ? (
+                    <Text style={styles.cardPrice}>
+                      ¥{totalCost.toLocaleString()}
+                    </Text>
+                  ) : null;
+                })()}
+              </View>
+              {/* ツアー名 (Group) */}
+              {item.group && (
+                <Text style={styles.cardGroup} numberOfLines={1}>
+                  {item.group}
+                </Text>
+              )}
+              <Text style={styles.cardTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+              <View style={styles.cardSubContainer}>
+                {item.area && (
+                  <NotionTag
+                    label={item.area}
+                    color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
+                  />
+                )}
+                <Text style={styles.cardSub}>{item.venue}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+      ) : (
+        <SectionList
+          sections={groupedSchedules}
+          keyExtractor={(item) => item.id.toString()}
+          style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
+          contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
+          scrollEnabled={Platform.OS !== 'web'}
+          nestedScrollEnabled={Platform.OS === 'web'}
+          ListHeaderComponent={
+            <>
+              {loading && <ActivityIndicator color="#333333" />}
+              {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+            </>
+          }
+          ListEmptyComponent={
+            !loading && !error ? (
+              <Text style={styles.emptyText}>スケジュールはありません</Text>
+            ) : null
+          }
+          renderSectionHeader={({ section: { title, data } }) => {
+            const isCollapsed = collapsedSections.has(title);
+            // 総費用の合計を計算（往復フラグを考慮）
+            const totalCost = data.reduce((sum, schedule) => {
+              const cost = calculateTotalCostWithReturnFlag(schedule);
+              return sum + (cost ?? 0);
+            }, 0);
+            
+            return (
+              <View>
+                <TouchableOpacity
+                  style={styles.sectionHeader}
+                  onPress={() => toggleSection(title)}
+                >
+                  <Text style={styles.sectionHeaderIcon}>
+                    {isCollapsed ? "▶" : "▼"}
+                  </Text>
+                  <Text style={styles.sectionHeaderTitle}>{title}</Text>
+                  <Text style={styles.sectionHeaderCount}>({data.length})</Text>
+                </TouchableOpacity>
+                {totalCost > 0 && (
+                  <View style={styles.sectionTotalCost}>
+                    <Text style={styles.sectionTotalCostText}>
+                      ¥{totalCost.toLocaleString()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          }}
+          renderItem={({ item, section }) => {
+            const isCollapsed = collapsedSections.has(section.title);
+            if (isCollapsed) return null;
+            
+            return (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => handleOpenDetail(item.id)}
+              >
+                <View style={styles.cardRow}>
+                  <Text style={styles.cardDate}>
+                    {formatDateTimeUTC(item.datetime)}
+                  </Text>
+                  {(() => {
+                    const totalCost = calculateTotalCostWithReturnFlag(item);
+                    return totalCost && totalCost > 0 ? (
+                      <Text style={styles.cardPrice}>
+                        ¥{totalCost.toLocaleString()}
+                      </Text>
+                    ) : null;
+                  })()}
+                </View>
+                {/* ツアー名 (Group) */}
+                {item.group && (
+                  <Text style={styles.cardGroup} numberOfLines={1}>
+                    {item.group}
+                  </Text>
+                )}
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <View style={styles.cardSubContainer}>
+                  {item.area && (
+                    <NotionTag
+                      label={item.area}
+                      color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
+                    />
+                  )}
+                  <Text style={styles.cardSub}>{item.venue}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+        )
+      ) : (
+        stayGroupingField === "none" ? (
+          <FlatList
+            data={stays}
+            keyExtractor={(item) => item.id.toString()}
+            style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
+            contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
+            scrollEnabled={Platform.OS !== 'web'}
+            nestedScrollEnabled={Platform.OS === 'web'}
+            ListHeaderComponent={
+              <>
+                {loading && <ActivityIndicator color="#333333" />}
+                {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+              </>
+            }
+            ListEmptyComponent={
+              !loading && !error ? (
+                <Text style={styles.emptyText}>宿泊情報はありません</Text>
+              ) : null
+            }
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => router.push(`/stay/${item.id}`)}
+              >
+                <View style={styles.cardRow}>
+                  <Text style={styles.cardDate}>
+                    {item.check_in} - {item.check_out}
+                  </Text>
+                  {item.fee && item.fee > 0 && (
+                    <Text style={styles.cardPrice}>
+                      ¥{item.fee.toLocaleString()}
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.hotel_name}
+                </Text>
+                {item.website && (
+                  <View style={styles.cardSubContainer}>
+                    <NotionTag
+                      label={item.website}
+                      color={websiteColors.get(item.website) || getOptionColorSync(item.website, "WEBSITE")}
+                    />
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+        ) : (
+          <SectionList
+            sections={groupedStays}
+            keyExtractor={(item) => item.id.toString()}
+            style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
+            contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
+            scrollEnabled={Platform.OS !== 'web'}
+            nestedScrollEnabled={Platform.OS === 'web'}
+            ListHeaderComponent={
+              <>
+                {loading && <ActivityIndicator color="#333333" />}
+                {error && <Text style={styles.errorText}>エラー: {error}</Text>}
+              </>
+            }
+            ListEmptyComponent={
+              !loading && !error ? (
+                <Text style={styles.emptyText}>宿泊情報はありません</Text>
+              ) : null
+            }
+            renderSectionHeader={({ section: { title, data } }) => {
+              const isCollapsed = collapsedSections.has(title);
+              
+              return (
+                <View>
+                  <TouchableOpacity
+                    style={styles.sectionHeader}
+                    onPress={() => toggleSection(title)}
+                  >
+                    <Text style={styles.sectionHeaderIcon}>
+                      {isCollapsed ? "▶" : "▼"}
+                    </Text>
+                    <Text style={styles.sectionHeaderTitle}>{title}</Text>
+                    <Text style={styles.sectionHeaderCount}>({data.length})</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }}
+            renderItem={({ item, section }) => {
+              const isCollapsed = collapsedSections.has(section.title);
+              if (isCollapsed) return null;
+              
+              return (
+                <TouchableOpacity
+                  style={styles.card}
+                  onPress={() => router.push(`/stay/${item.id}`)}
+                >
+                  <View style={styles.cardRow}>
+                    <Text style={styles.cardDate}>
+                      {item.check_in} - {item.check_out}
+                    </Text>
+                    {item.fee && item.fee > 0 && (
+                      <Text style={styles.cardPrice}>
+                        ¥{item.fee.toLocaleString()}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={styles.cardTitle} numberOfLines={2}>
+                    {item.hotel_name}
+                  </Text>
+                  {item.website && (
+                    <View style={styles.cardSubContainer}>
+                      <NotionTag
+                        label={item.website}
+                        color={websiteColors.get(item.website) || getOptionColorSync(item.website, "WEBSITE")}
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            }}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+        )
+      )}
+        </View>
+      )}
     </View>
   );
 }
