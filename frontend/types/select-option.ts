@@ -85,9 +85,9 @@ const PREFECTURE_REGIONS: Record<string, string> = {
 const REGION_COLORS: Record<string, string> = {
   "北海道": "#DBEAFE", // blue (薄い青)
   "東北": "#E9D5FF", // violet (薄い紫)
-  "関東": "#FEE2E2", // red (薄い赤)
+  "関東": "#FCA5A5", // red (より赤みが強い)
   "甲信越": "#FED7AA", // orange (薄いオレンジ)
-  "東海": "#D1FAE5", // emerald (薄い緑)
+  "東海": "#86EFAC", // emerald (より緑っぽい)
   "近畿": "#FEF3C7", // amber (薄い黄色)
   "中国": "#CCFBF1", // teal (薄いティール)
   "四国": "#ECFCCB", // lime (薄いライム)
@@ -96,6 +96,7 @@ const REGION_COLORS: Record<string, string> = {
 
 // カテゴリごとの色マッピング（Notion風の薄いパステルカラー）
 const CATEGORY_COLORS: Record<string, string> = {
+  "ワンマン": "#FED7AA", // orange (オレンジ)
   "フェス": "#FEE2E2", // red (薄い赤)
   "イベント": "#D1FAE5", // emerald (薄い緑)
   "舞台": "#E9D5FF", // violet (薄い紫)

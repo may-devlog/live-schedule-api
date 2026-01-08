@@ -91,12 +91,12 @@ function getDefaultColorForLabel(
   };
 
   const REGION_COLORS: Record<string, string> = {
-    "北海道": "#DBEAFE", "東北": "#E9D5FF", "関東": "#FEE2E2", "甲信越": "#FED7AA",
-    "東海": "#D1FAE5", "近畿": "#FEF3C7", "中国": "#CCFBF1", "四国": "#ECFCCB", "九州": "#FCE7F3",
+    "北海道": "#DBEAFE", "東北": "#E9D5FF", "関東": "#FCA5A5", "甲信越": "#FED7AA",
+    "東海": "#86EFAC", "近畿": "#FEF3C7", "中国": "#CCFBF1", "四国": "#ECFCCB", "九州": "#FCE7F3",
   };
 
   const CATEGORY_COLORS: Record<string, string> = {
-    "フェス": "#FEE2E2", "イベント": "#D1FAE5", "舞台": "#E9D5FF", "その他": "#E5E7EB",
+    "ワンマン": "#FED7AA", "フェス": "#FEE2E2", "イベント": "#D1FAE5", "舞台": "#E9D5FF", "その他": "#E5E7EB",
   };
 
   // ステータス名に対しては固定色を優先的に適用（ライブ予定・宿泊で共通）
