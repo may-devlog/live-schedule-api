@@ -341,13 +341,19 @@ export default function SharedYearScreen() {
           <FlatList
             data={schedules}
             keyExtractor={(item) => item.id.toString()}
+            style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
+            contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
+            scrollEnabled={true}
+            nestedScrollEnabled={Platform.OS === 'web'}
             refreshControl={
-              <RefreshControl 
-                refreshing={refreshing} 
-                onRefresh={onRefresh}
-                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-              />
+              Platform.OS !== 'web' ? (
+                <RefreshControl 
+                  refreshing={refreshing} 
+                  onRefresh={onRefresh}
+                  tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                  colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+                />
+              ) : undefined
             }
             ListHeaderComponent={
               <>
@@ -394,15 +400,19 @@ export default function SharedYearScreen() {
           <SectionList
             sections={groupedSchedules}
             keyExtractor={(item) => item.id.toString()}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
+            style={Platform.OS === 'web' ? { flexGrow: 1 } : { flex: 1 }}
+            contentContainerStyle={Platform.OS === 'web' ? { flexGrow: 1 } : { flexGrow: 1 }}
+            scrollEnabled={true}
+            nestedScrollEnabled={Platform.OS === 'web'}
             refreshControl={
-              <RefreshControl 
-                refreshing={refreshing} 
-                onRefresh={onRefresh}
-                tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-                colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-              />
+              Platform.OS !== 'web' ? (
+                <RefreshControl 
+                  refreshing={refreshing} 
+                  onRefresh={onRefresh}
+                  tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+                  colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+                />
+              ) : undefined
             }
             ListHeaderComponent={
               <>
@@ -496,7 +506,7 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
-    flex: 1,
+    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : { flex: 1 }),
   },
   title: {
     paddingHorizontal: 24,

@@ -125,15 +125,17 @@ export default function SharedStayDetailScreen() {
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh}
-            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-          />
+          Platform.OS !== 'web' ? (
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            />
+          ) : undefined
         }
         scrollEnabled={true}
-        nestedScrollEnabled={true}
+        nestedScrollEnabled={Platform.OS === 'web'}
         onTouchStart={(e) => {
           const touch = e.nativeEvent.touches[0];
           if (touch) {

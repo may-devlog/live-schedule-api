@@ -497,15 +497,17 @@ export default function HomeScreen() {
       style={styles.scrollContainer} 
       contentContainerStyle={styles.scrollContent}
       refreshControl={
-        <RefreshControl 
-          refreshing={refreshing} 
-          onRefresh={onRefresh}
-          tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-          colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-        />
+        Platform.OS !== 'web' ? (
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
+            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+          />
+        ) : undefined
       }
       scrollEnabled={true}
-      nestedScrollEnabled={true}
+      nestedScrollEnabled={Platform.OS === 'web'}
       onTouchStart={(e) => {
         const touch = e.nativeEvent.touches[0];
         if (touch) {
@@ -1020,7 +1022,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
     flexGrow: 1,
-    minHeight: '100%',
+    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : { minHeight: '100%' }),
   },
   container: {
     paddingTop: 48,
