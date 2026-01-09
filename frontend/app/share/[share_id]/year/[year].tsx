@@ -312,21 +312,31 @@ export default function SharedYearScreen() {
               }
               return false;
             });
-            setSchedules(filtered);
             
-            // 各スケジュールの交通情報を取得（往復フラグを考慮した金額計算用）
-            const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
-            for (const schedule of filtered) {
+            // 各スケジュールの交通情報を並列で取得（往復フラグを考慮した金額計算用）
+            const trafficPromises = filtered.map(async (schedule) => {
               try {
                 const trafficRes = await fetch(getApiUrl(`/public/traffic?schedule_id=${schedule.id}`));
                 if (trafficRes.ok) {
                   const trafficList: Array<{ fare: number; return_flag: boolean }> = await trafficRes.json();
-                  trafficMap.set(schedule.id, trafficList);
+                  return { scheduleId: schedule.id, trafficList };
                 }
+                return { scheduleId: schedule.id, trafficList: [] };
               } catch (e) {
                 console.error(`Error fetching traffic for schedule ${schedule.id}:`, e);
+                return { scheduleId: schedule.id, trafficList: [] };
               }
-            }
+            });
+            
+            const trafficResults = await Promise.all(trafficPromises);
+            const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
+            trafficResults.forEach(({ scheduleId, trafficList }) => {
+              if (trafficList.length > 0) {
+                trafficMap.set(scheduleId, trafficList);
+              }
+            });
+            
+            setSchedules(filtered);
             setTrafficBySchedule(trafficMap);
           }
         } catch (e: any) {
