@@ -7,6 +7,8 @@ export type TrafficInfo = {
   return_flag: boolean;
 };
 
+export type TrafficBySchedule = Map<number, TrafficInfo[]>;
+
 /**
  * 往復フラグを考慮した総費用を計算
  * @param schedule スケジュール情報

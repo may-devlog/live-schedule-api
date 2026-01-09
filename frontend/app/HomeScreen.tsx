@@ -64,7 +64,7 @@ import { ScheduleCalendar } from "../components/ScheduleCalendar";
 import { NotionTag } from "../components/notion-tag";
 import { getOptionColorSync } from "../utils/get-option-color";
 import { fetchAreaColors } from "../utils/fetch-area-colors";
-import { calculateTotalCostWithReturnFlag } from "../utils/calculate-total-cost";
+import { calculateTotalCostWithReturnFlag, type TrafficBySchedule } from "../utils/calculate-total-cost";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -518,7 +518,7 @@ export default function HomeScreen() {
 
   // 往復フラグを考慮した総費用を計算（共通関数を使用、HomeScreenでは交通情報を取得していないため空のMapを渡す）
   const calculateTotalCost = (schedule: Schedule): number | null => {
-    const emptyTrafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
+    const emptyTrafficMap: TrafficBySchedule = new Map();
     return calculateTotalCostWithReturnFlag(schedule, emptyTrafficMap);
   };
 

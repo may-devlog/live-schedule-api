@@ -23,7 +23,7 @@ import { loadSelectOptionsMap } from "../../../../utils/load-select-options-map"
 import { fetchAreaColors } from "../../../../utils/fetch-area-colors";
 import { formatDateTimeUTC } from "../../../../utils/format-datetime";
 import { YearSelector } from "../../../../components/YearSelector";
-import { calculateTotalCostWithReturnFlag } from "../../../../utils/calculate-total-cost";
+import { calculateTotalCostWithReturnFlag, type TrafficBySchedule } from "../../../../utils/calculate-total-cost";
 import { fetchTrafficBySchedule } from "../../../../utils/fetch-traffic-by-schedule";
 
 export default function SharedYearScreen() {
@@ -38,7 +38,7 @@ export default function SharedYearScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   // 各スケジュールの交通情報（往復フラグを考慮した金額計算用）
-  const [trafficBySchedule, setTrafficBySchedule] = useState<Map<number, Array<{ fare: number; return_flag: boolean }>>>(new Map());
+  const [trafficBySchedule, setTrafficBySchedule] = useState<TrafficBySchedule>(new Map());
   
   // グルーピング関連
   const [groupingField, setGroupingField] = useState<GroupingField>("none");
