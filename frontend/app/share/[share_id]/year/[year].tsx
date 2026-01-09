@@ -137,7 +137,7 @@ export default function SharedYearScreen() {
           const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
           for (const schedule of filtered) {
             try {
-              const trafficRes = await fetch(getApiUrl(`/share/${share_id}/traffic?schedule_id=${schedule.id}`));
+              const trafficRes = await fetch(getApiUrl(`/public/traffic?schedule_id=${schedule.id}`));
               if (trafficRes.ok) {
                 const trafficList: Array<{ fare: number; return_flag: boolean }> = await trafficRes.json();
                 trafficMap.set(schedule.id, trafficList);
@@ -308,7 +308,7 @@ export default function SharedYearScreen() {
             const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
             for (const schedule of filtered) {
               try {
-                const trafficRes = await fetch(getApiUrl(`/share/${share_id}/traffic?schedule_id=${schedule.id}`));
+                const trafficRes = await fetch(getApiUrl(`/public/traffic?schedule_id=${schedule.id}`));
                 if (trafficRes.ok) {
                   const trafficList: Array<{ fare: number; return_flag: boolean }> = await trafficRes.json();
                   trafficMap.set(schedule.id, trafficList);
