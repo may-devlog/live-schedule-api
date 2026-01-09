@@ -23,6 +23,8 @@ import { loadSelectOptionsMap } from "../../../../utils/load-select-options-map"
 import { fetchAreaColors } from "../../../../utils/fetch-area-colors";
 import { formatDateTimeUTC } from "../../../../utils/format-datetime";
 import { YearSelector } from "../../../../components/YearSelector";
+import { calculateTotalCostWithReturnFlag } from "../../../../utils/calculate-total-cost";
+import { fetchTrafficBySchedule } from "../../../../utils/fetch-traffic-by-schedule";
 
 export default function SharedYearScreen() {
   const { share_id, year } = useLocalSearchParams<{ share_id: string; year: string }>();
@@ -132,27 +134,7 @@ export default function SharedYearScreen() {
         console.log("YEAR SCHEDULES FROM API:", currentYear, filtered);
         
         // 各スケジュールの交通情報を並列で取得（往復フラグを考慮した金額計算用）
-        const trafficPromises = filtered.map(async (schedule) => {
-          try {
-            const trafficRes = await fetch(getApiUrl(`/public/traffic?schedule_id=${schedule.id}`));
-            if (trafficRes.ok) {
-              const trafficList: Array<{ fare: number; return_flag: boolean }> = await trafficRes.json();
-              return { scheduleId: schedule.id, trafficList };
-            }
-            return { scheduleId: schedule.id, trafficList: [] };
-          } catch (e) {
-            console.error(`Error fetching traffic for schedule ${schedule.id}:`, e);
-            return { scheduleId: schedule.id, trafficList: [] };
-          }
-        });
-        
-        const trafficResults = await Promise.all(trafficPromises);
-        const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
-        trafficResults.forEach(({ scheduleId, trafficList }) => {
-          if (trafficList.length > 0) {
-            trafficMap.set(scheduleId, trafficList);
-          }
-        });
+        const trafficMap = await fetchTrafficBySchedule(filtered, false, share_id);
         
         if (isMounted) {
           setSchedules(filtered);
@@ -231,35 +213,9 @@ export default function SharedYearScreen() {
     router.push(`/share/${share_id}/schedules/${id}`);
   };
 
-  // 往復フラグを考慮した総費用を計算
-  const calculateTotalCostWithReturnFlag = (schedule: Schedule): number | null => {
-    if (!schedule.total_cost) return null;
-    
-    // 交通情報を取得
-    const traffics = trafficBySchedule.get(schedule.id);
-    if (!traffics || traffics.length === 0) {
-      // 交通情報がない場合は、既存のtotal_costをそのまま返す
-      return schedule.total_cost;
-    }
-    
-    // 往復フラグを考慮した交通費を計算
-    const trafficCostWithReturn = traffics.reduce((sum, traffic) => {
-      return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
-    }, 0);
-    
-    // 既存のtotal_costから、元のtotal_fareを引いて、新しいtrafficCostWithReturnを足す
-    // total_cost = ticket_fee + drink_fee + travel_cost
-    // travel_cost = total_fare + stay_fee
-    // つまり、total_cost = ticket_fee + drink_fee + total_fare + stay_fee
-    const ticketFee = schedule.ticket_fee || 0;
-    const drinkFee = schedule.drink_fee || 0;
-    const stayFee = schedule.stay_fee || 0;
-    const originalTotalFare = schedule.total_fare || 0;
-    
-    // 新しいtotal_cost = ticket_fee + drink_fee + (trafficCostWithReturn) + stay_fee
-    const newTotalCost = ticketFee + drinkFee + trafficCostWithReturn + stayFee;
-    
-    return newTotalCost;
+  // 往復フラグを考慮した総費用を計算（共通関数を使用）
+  const calculateTotalCost = (schedule: Schedule): number | null => {
+    return calculateTotalCostWithReturnFlag(schedule, trafficBySchedule);
   };
 
   const onRefresh = async () => {
@@ -314,27 +270,7 @@ export default function SharedYearScreen() {
             });
             
             // 各スケジュールの交通情報を並列で取得（往復フラグを考慮した金額計算用）
-            const trafficPromises = filtered.map(async (schedule) => {
-              try {
-                const trafficRes = await fetch(getApiUrl(`/public/traffic?schedule_id=${schedule.id}`));
-                if (trafficRes.ok) {
-                  const trafficList: Array<{ fare: number; return_flag: boolean }> = await trafficRes.json();
-                  return { scheduleId: schedule.id, trafficList };
-                }
-                return { scheduleId: schedule.id, trafficList: [] };
-              } catch (e) {
-                console.error(`Error fetching traffic for schedule ${schedule.id}:`, e);
-                return { scheduleId: schedule.id, trafficList: [] };
-              }
-            });
-            
-            const trafficResults = await Promise.all(trafficPromises);
-            const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
-            trafficResults.forEach(({ scheduleId, trafficList }) => {
-              if (trafficList.length > 0) {
-                trafficMap.set(scheduleId, trafficList);
-              }
-            });
+            const trafficMap = await fetchTrafficBySchedule(filtered, false, share_id);
             
             setSchedules(filtered);
             setTrafficBySchedule(trafficMap);
@@ -453,7 +389,7 @@ export default function SharedYearScreen() {
                     {formatDateTimeUTC(item.datetime)}
                   </Text>
                   {(() => {
-                    const totalCost = calculateTotalCostWithReturnFlag(item);
+                    const totalCost = calculateTotalCost(item);
                     return totalCost && totalCost > 0 ? (
                       <Text style={styles.cardPrice}>
                         ¥{totalCost.toLocaleString()}
@@ -512,7 +448,7 @@ export default function SharedYearScreen() {
               const isCollapsed = collapsedSections.has(title);
               // 総費用の合計を計算（往復フラグを考慮）
               const totalCost = data.reduce((sum, schedule) => {
-                const cost = calculateTotalCostWithReturnFlag(schedule);
+                const cost = calculateTotalCost(schedule);
                 return sum + (cost ?? 0);
               }, 0);
               
@@ -552,7 +488,7 @@ export default function SharedYearScreen() {
                       {formatDateTimeUTC(item.datetime)}
                     </Text>
                     {(() => {
-                      const totalCost = calculateTotalCostWithReturnFlag(item);
+                      const totalCost = calculateTotalCost(item);
                       return totalCost && totalCost > 0 ? (
                         <Text style={styles.cardPrice}>
                           ¥{totalCost.toLocaleString()}

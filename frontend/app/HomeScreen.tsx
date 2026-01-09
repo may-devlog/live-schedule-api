@@ -64,6 +64,7 @@ import { ScheduleCalendar } from "../components/ScheduleCalendar";
 import { NotionTag } from "../components/notion-tag";
 import { getOptionColorSync } from "../utils/get-option-color";
 import { fetchAreaColors } from "../utils/fetch-area-colors";
+import { calculateTotalCostWithReturnFlag } from "../utils/calculate-total-cost";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -515,10 +516,10 @@ export default function HomeScreen() {
     };
   }, [nextSchedules]);
 
-  // 往復フラグを考慮した総費用を計算（簡易版：交通情報がない場合はtotal_costをそのまま返す）
-  const calculateTotalCostWithReturnFlag = (schedule: Schedule): number | null => {
-    // HomeScreenでは交通情報を取得していないため、total_costをそのまま返す
-    return schedule.total_cost || null;
+  // 往復フラグを考慮した総費用を計算（共通関数を使用、HomeScreenでは交通情報を取得していないため空のMapを渡す）
+  const calculateTotalCost = (schedule: Schedule): number | null => {
+    const emptyTrafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
+    return calculateTotalCostWithReturnFlag(schedule, emptyTrafficMap);
   };
 
   const handleOpenDetail = (id: number) => {
@@ -647,7 +648,7 @@ export default function HomeScreen() {
                     {formatDateTimeUTC(item.datetime)}
                   </Text>
                   {(() => {
-                    const totalCost = calculateTotalCostWithReturnFlag(item);
+                    const totalCost = calculateTotalCost(item);
                     return totalCost && totalCost > 0 ? (
                       <Text style={styles.cardPrice}>
                         ¥{totalCost.toLocaleString()}
@@ -777,7 +778,7 @@ export default function HomeScreen() {
                     {formatDateTimeUTC(item.datetime)}
                   </Text>
                   {(() => {
-                    const totalCost = calculateTotalCostWithReturnFlag(item);
+                    const totalCost = calculateTotalCost(item);
                     return totalCost && totalCost > 0 ? (
                       <Text style={styles.cardPrice}>
                         ¥{totalCost.toLocaleString()}
