@@ -125,22 +125,32 @@ export default function YearScreen() {
 
         const data: Schedule[] = await res.json();
         console.log("YEAR SCHEDULES FROM API:", currentYear, data);
+        
+        // 各スケジュールの交通情報を並列で取得（往復フラグを考慮した金額計算用）
+        const trafficPromises = data.map(async (schedule) => {
+          try {
+            const trafficRes = await authenticatedFetch(getApiUrl(`/traffic?schedule_id=${schedule.id}`));
+            if (trafficRes.ok) {
+              const trafficList: Array<{ fare: number; return_flag: boolean }> = await trafficRes.json();
+              return { scheduleId: schedule.id, trafficList };
+            }
+            return { scheduleId: schedule.id, trafficList: [] };
+          } catch (e) {
+            console.error(`Error fetching traffic for schedule ${schedule.id}:`, e);
+            return { scheduleId: schedule.id, trafficList: [] };
+          }
+        });
+        
+        const trafficResults = await Promise.all(trafficPromises);
+        const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
+        trafficResults.forEach(({ scheduleId, trafficList }) => {
+          if (trafficList.length > 0) {
+            trafficMap.set(scheduleId, trafficList);
+          }
+        });
+        
         if (isMounted) {
           setSchedules(data);
-          
-          // 各スケジュールの交通情報を取得（往復フラグを考慮した金額計算用）
-          const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
-          for (const schedule of data) {
-            try {
-              const trafficRes = await authenticatedFetch(getApiUrl(`/traffic?schedule_id=${schedule.id}`));
-              if (trafficRes.ok) {
-                const trafficList: Array<{ fare: number; return_flag: boolean }> = await trafficRes.json();
-                trafficMap.set(schedule.id, trafficList);
-              }
-            } catch (e) {
-              console.error(`Error fetching traffic for schedule ${schedule.id}:`, e);
-            }
-          }
           setTrafficBySchedule(trafficMap);
         }
 
@@ -301,21 +311,31 @@ export default function YearScreen() {
           const yearRes = await authenticatedFetch(yearUrl);
           if (yearRes.ok) {
             const yearData: Schedule[] = await yearRes.json();
-            setSchedules(yearData);
             
-            // 各スケジュールの交通情報を取得（往復フラグを考慮した金額計算用）
-            const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
-            for (const schedule of yearData) {
+            // 各スケジュールの交通情報を並列で取得（往復フラグを考慮した金額計算用）
+            const trafficPromises = yearData.map(async (schedule) => {
               try {
                 const trafficRes = await authenticatedFetch(getApiUrl(`/traffic?schedule_id=${schedule.id}`));
                 if (trafficRes.ok) {
                   const trafficList: Array<{ fare: number; return_flag: boolean }> = await trafficRes.json();
-                  trafficMap.set(schedule.id, trafficList);
+                  return { scheduleId: schedule.id, trafficList };
                 }
+                return { scheduleId: schedule.id, trafficList: [] };
               } catch (e) {
                 console.error(`Error fetching traffic for schedule ${schedule.id}:`, e);
+                return { scheduleId: schedule.id, trafficList: [] };
               }
-            }
+            });
+            
+            const trafficResults = await Promise.all(trafficPromises);
+            const trafficMap = new Map<number, Array<{ fare: number; return_flag: boolean }>>();
+            trafficResults.forEach(({ scheduleId, trafficList }) => {
+              if (trafficList.length > 0) {
+                trafficMap.set(scheduleId, trafficList);
+              }
+            });
+            
+            setSchedules(yearData);
             setTrafficBySchedule(trafficMap);
           }
         } catch (e: any) {
