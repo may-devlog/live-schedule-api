@@ -796,6 +796,17 @@ async fn register(
 ) -> Result<Json<AuthResponse>, (StatusCode, Json<ErrorResponse>)> {
     println!("[REGISTER] Received registration request for email: {}", payload.email);
     
+    // 環境変数で新規ユーザー登録を制御
+    if std::env::var("ALLOW_USER_REGISTRATION").is_err() {
+        println!("[REGISTER] User registration is disabled");
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(ErrorResponse {
+                error: "新規ユーザー登録は現在受け付けていません".to_string(),
+            }),
+        ));
+    }
+    
     // バリデーション
     if payload.email.is_empty() || payload.password.is_empty() {
         println!("[REGISTER] Validation failed: empty email or password");
