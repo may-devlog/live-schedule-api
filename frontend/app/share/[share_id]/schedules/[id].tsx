@@ -68,6 +68,7 @@ export default function SharedScheduleDetailScreen() {
   const [targetColor, setTargetColor] = useState<string | null>(null);
   const [sellerColor, setSellerColor] = useState<string | null>(null);
   const [statusColor, setStatusColor] = useState<string | null>(null);
+  const [groupColor, setGroupColor] = useState<string | null>(null);
   
   // フィルタリング後のTargetとLineup
   const [filteredTarget, setFilteredTarget] = useState<string | null>(null);
@@ -140,6 +141,10 @@ export default function SharedScheduleDetailScreen() {
       setFilteredLineup(lineupOptions.length > 0 ? lineupOptions.map(opt => opt.label).join(", ") : null);
       
       // 選択肢の色情報を取得
+      if (found.group) {
+        const color = await getOptionColor(found.group, "GROUPS");
+        setGroupColor(color);
+      }
       if (found.category) {
         const color = await getOptionColor(found.category, "CATEGORIES");
         setCategoryColor(color);
@@ -348,7 +353,13 @@ export default function SharedScheduleDetailScreen() {
 
         {/* [Event Info] */}
         <NotionPropertyBlock title="イベント情報">
-          <NotionProperty label="グループ" value={schedule.group || "-"} />
+          <NotionProperty label="グループ">
+            {schedule.group ? (
+              <NotionTag label={schedule.group} color={groupColor || undefined} />
+            ) : (
+              <Text style={styles.emptyValue}>-</Text>
+            )}
+          </NotionProperty>
           <NotionProperty
             label="日付"
             value={schedule.date ?? formatDateTimeUTC(schedule.datetime)}
