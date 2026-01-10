@@ -123,7 +123,7 @@ export function NotionMultiSelect({
 
     const updatedOptions = [...tempOptions, newOption];
     setTempOptions(updatedOptions);
-    onOptionsChange(updatedOptions);
+    // モーダルを閉じないように、onOptionsChangeは呼ばない（モーダルを閉じる時に呼ぶ）
     setNewOptionText("");
     setNewOptionColor(getDefaultColorForLabel(""));
 
@@ -177,7 +177,7 @@ export function NotionMultiSelect({
       }
       
       setTempOptions(updatedOptions);
-      onOptionsChange(updatedOptions);
+      // モーダルを閉じないように、onOptionsChangeは呼ばない（モーダルを閉じる時に呼ぶ）
       
       // 選択されていた場合は選択も更新
       if (selectedValues.includes(oldLabel)) {
@@ -200,7 +200,7 @@ export function NotionMultiSelect({
       console.log("Delete confirmed for:", option.label);
       const updatedOptions = tempOptions.filter((opt) => opt.label !== option.label);
       setTempOptions(updatedOptions);
-      onOptionsChange(updatedOptions);
+      // モーダルを閉じないように、onOptionsChangeは呼ばない（モーダルを閉じる時に呼ぶ）
 
       // 選択されていた場合は選択からも削除
       if (selectedValues.includes(option.label)) {
@@ -275,7 +275,7 @@ export function NotionMultiSelect({
       opt.order = i;
     });
     setTempOptions(updatedOptions);
-    onOptionsChange(updatedOptions);
+    // モーダルを閉じないように、onOptionsChangeは呼ばない（モーダルを閉じる時に呼ぶ）
   };
 
   const handleMoveDown = (index: number) => {
@@ -293,7 +293,7 @@ export function NotionMultiSelect({
       opt.order = i;
     });
     setTempOptions(updatedOptions);
-    onOptionsChange(updatedOptions);
+    // モーダルを閉じないように、onOptionsChangeは呼ばない（モーダルを閉じる時に呼ぶ）
   };
 
   // 保存ボタンのハンドラー
@@ -312,7 +312,7 @@ export function NotionMultiSelect({
       await saveSelectOptions(optionType, updatedOptions, isKanaOrder ? 'kana' : 'custom');
       Alert.alert("保存完了", "並び順を保存しました");
       setTempOptions(updatedOptions);
-      onOptionsChange(updatedOptions);
+      // モーダルを閉じないように、onOptionsChangeは呼ばない（モーダルを閉じる時に呼ぶ）
     } catch (error) {
       console.error("Failed to save order:", error);
       Alert.alert("エラー", "並び順の保存に失敗しました");
