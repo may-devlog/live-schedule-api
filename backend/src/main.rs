@@ -4593,6 +4593,7 @@ async fn update_stay(
 #[derive(Deserialize)]
 struct SelectOptionsRequest {
     options: Vec<serde_json::Value>,
+    sort_order: Option<String>, // 'kana' または 'custom'
 }
 
 // GET /select-options/:type - 選択肢を取得
@@ -4761,6 +4762,8 @@ async fn save_select_options(
     
     eprintln!("[SaveSelectOptions] Existing record check result: {:?}", existing);
     
+    let sort_order = payload.sort_order.unwrap_or_else(|| "custom".to_string());
+    
     let result = if existing.is_some() {
         // 既存のレコードを更新
         eprintln!("[SaveSelectOptions] Updating existing record for user_id: {}, option_type: {}", actual_user_id, option_type);
@@ -4768,11 +4771,13 @@ async fn save_select_options(
             r#"
             UPDATE select_options
             SET options_json = ?,
+                sort_order = ?,
                 updated_at = ?
             WHERE user_id = ? AND option_type = ?
             "#
         )
         .bind(&options_json)
+        .bind(&sort_order)
         .bind(&now)
         .bind(user_id_i64)
         .bind(&option_type)
@@ -4783,13 +4788,14 @@ async fn save_select_options(
         eprintln!("[SaveSelectOptions] Inserting new record for user_id: {}, option_type: {}", user_id_i64, option_type);
         sqlx::query(
             r#"
-            INSERT INTO select_options (user_id, option_type, options_json, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO select_options (user_id, option_type, options_json, sort_order, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
             "#
         )
         .bind(user_id_i64)
         .bind(&option_type)
         .bind(&options_json)
+        .bind(&sort_order)
         .bind(&now)
         .bind(&now)
         .execute(&pool)
@@ -6013,6 +6019,11 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     
     // 既存のstaysテーブルにwebsiteカラムを追加（マイグレーション）
     let _ = sqlx::query("ALTER TABLE stays ADD COLUMN website TEXT")
+        .execute(pool)
+        .await;
+    
+    // 既存のselect_optionsテーブルにsort_orderカラムを追加（マイグレーション）
+    let _ = sqlx::query("ALTER TABLE select_options ADD COLUMN sort_order TEXT DEFAULT 'custom'")
         .execute(pool)
         .await;
 

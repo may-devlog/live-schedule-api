@@ -250,7 +250,11 @@ export async function loadSelectOptions(
         res = await authenticatedFetch(getApiUrl(`/select-options/${key.toLowerCase()}`));
       }
       if (res.ok) {
-        const options: SelectOption[] = await res.json();
+        const data = await res.json();
+        // 新しい形式（{ options, sort_order }）と古い形式（配列）の両方に対応
+        const options: SelectOption[] = Array.isArray(data) ? data : (data.options || []);
+        const sortOrder = Array.isArray(data) ? 'custom' : (data.sort_order || 'custom');
+        
         if (options.length > 0) {
           console.log(`[SelectOptions] Loaded ${options.length} options from ${shareId ? 'shared' : 'database'} for ${key}:`, options.map(opt => ({ label: opt.label, order: opt.order })));
           // データベースの選択肢とデフォルト選択肢をマージ
@@ -258,6 +262,8 @@ export async function loadSelectOptions(
           console.log(`[SelectOptions] Merged ${merged.length} options for ${key}:`, merged.map(opt => ({ label: opt.label, order: opt.order })));
           // データベースに保存されている場合は、ローカルストレージにも保存（キャッシュ）
           await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(merged));
+          // sort_orderも保存
+          await AsyncStorage.setItem(`${STORAGE_KEYS[key]}_sort_order`, sortOrder);
           return merged;
         }
       }
@@ -524,14 +530,25 @@ export async function loadStaySelectOptions(
 // 選択肢を保存する（データベースに保存し、成功した場合のみローカルストレージにも保存）
 export async function saveSelectOptions(
   key: keyof typeof STORAGE_KEYS,
-  options: SelectOption[]
+  options: SelectOption[],
+  sortOrder?: string // 'kana' または 'custom'
 ): Promise<void> {
   // 動的インポートで循環依存を回避
   const { authenticatedFetch, getApiUrl } = await import("./api");
   const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
   // まずデータベースに保存
   const url = getApiUrl(`/select-options/${key.toLowerCase()}`);
-  const payload = { options };
+  // sortOrderが指定されていない場合は、ローカルストレージから取得を試みる
+  let finalSortOrder = sortOrder;
+  if (!finalSortOrder) {
+    try {
+      const stored = await AsyncStorage.getItem(`${STORAGE_KEYS[key]}_sort_order`);
+      finalSortOrder = stored || 'custom';
+    } catch {
+      finalSortOrder = 'custom';
+    }
+  }
+  const payload = { options, sort_order: finalSortOrder };
   console.log(`[SelectOptions] Saving ${key} to database:`, url);
   console.log(`[SelectOptions] Payload:`, JSON.stringify(payload, null, 2));
   
@@ -556,7 +573,30 @@ export async function saveSelectOptions(
   
   // データベースへの保存が成功した場合のみ、ローカルストレージにも保存
   await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(options));
+  await AsyncStorage.setItem(`${STORAGE_KEYS[key]}_sort_order`, finalSortOrder);
   console.log(`[SelectOptions] Saved ${key} to local storage`);
+}
+
+// 選択肢の並び順を取得する
+export async function loadSelectOptionsSortOrder(
+  key: keyof typeof STORAGE_KEYS
+): Promise<string> {
+  const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+  try {
+    const stored = await AsyncStorage.getItem(`${STORAGE_KEYS[key]}_sort_order`);
+    return stored || 'custom';
+  } catch {
+    return 'custom';
+  }
+}
+
+// 選択肢の並び順を保存する
+export async function saveSelectOptionsSortOrder(
+  key: keyof typeof STORAGE_KEYS,
+  sortOrder: string
+): Promise<void> {
+  const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+  await AsyncStorage.setItem(`${STORAGE_KEYS[key]}_sort_order`, sortOrder);
 }
 
 // ホテル用選択肢を保存する（データベースに保存し、成功した場合のみローカルストレージにも保存）

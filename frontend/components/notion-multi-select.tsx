@@ -15,7 +15,7 @@ import type { SelectOption } from "../types/select-option";
 import { getDefaultColorForLabel, sortByKanaOrder, sortByOrder } from "../types/select-option";
 import { NotionTag } from "./notion-tag";
 import { ColorPicker } from "./color-picker";
-import { saveSelectOptions } from "../utils/select-options-storage";
+import { saveSelectOptions, loadSelectOptionsSortOrder, saveSelectOptionsSortOrder } from "../utils/select-options-storage";
 
 type NotionMultiSelectProps = {
   label: string;
@@ -49,6 +49,7 @@ export function NotionMultiSelect({
   const [isKanaOrder, setIsKanaOrder] = useState(false); // 五十音順かどうか
   const [displayedOptions, setDisplayedOptions] = useState<SelectOption[]>(options);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingSortOrder, setIsLoadingSortOrder] = useState(true);
 
   // 選択された値を配列に変換（選択順を保持）
   const selectedValues = value
@@ -64,6 +65,21 @@ export function NotionMultiSelect({
     setTempOptions(options);
     setDisplayedOptions(options);
   }, [options]);
+
+  // 並び順の設定を読み込む
+  useEffect(() => {
+    if (optionType) {
+      loadSelectOptionsSortOrder(optionType).then((sortOrder) => {
+        setIsKanaOrder(sortOrder === 'kana');
+        setIsLoadingSortOrder(false);
+      }).catch(() => {
+        setIsKanaOrder(false);
+        setIsLoadingSortOrder(false);
+      });
+    } else {
+      setIsLoadingSortOrder(false);
+    }
+  }, [optionType]);
 
   // 五十音順/カスタム順の切り替え
   useEffect(() => {
@@ -230,6 +246,19 @@ export function NotionMultiSelect({
     setShowModal(false);
   };
 
+  // 五十音順の切り替えハンドラー
+  const handleToggleKanaOrder = async () => {
+    const newKanaOrder = !isKanaOrder;
+    setIsKanaOrder(newKanaOrder);
+    if (optionType) {
+      try {
+        await saveSelectOptionsSortOrder(optionType, newKanaOrder ? 'kana' : 'custom');
+      } catch (error) {
+        console.error("Failed to save sort order:", error);
+      }
+    }
+  };
+
   // 並び替えボタンのハンドラー
   const handleMoveUp = (index: number) => {
     if (index === 0 || !onOptionsChange) return;
@@ -280,7 +309,7 @@ export function NotionMultiSelect({
           order: index,
         };
       });
-      await saveSelectOptions(optionType, updatedOptions);
+      await saveSelectOptions(optionType, updatedOptions, isKanaOrder ? 'kana' : 'custom');
       Alert.alert("保存完了", "並び順を保存しました");
       setTempOptions(updatedOptions);
       onOptionsChange(updatedOptions);
@@ -372,7 +401,8 @@ export function NotionMultiSelect({
                 <View style={styles.sortToggle}>
                   <TouchableOpacity
                     style={styles.checkbox}
-                    onPress={() => setIsKanaOrder(!isKanaOrder)}
+                    onPress={handleToggleKanaOrder}
+                    disabled={isLoadingSortOrder}
                   >
                     <Text style={styles.checkboxText}>
                       {isKanaOrder ? "☑" : "☐"} 五十音順

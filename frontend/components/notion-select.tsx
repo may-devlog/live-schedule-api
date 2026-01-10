@@ -15,21 +15,32 @@ import { NotionTag } from "./notion-tag";
 import { ColorPicker } from "./color-picker";
 import type { SelectOption } from "../types/select-option";
 // 動的インポートで循環依存を回避
-type SaveFunction = (key: string, options: SelectOption[]) => Promise<void>;
+type SaveFunction = (key: string, options: SelectOption[], sortOrder?: string) => Promise<void>;
+type LoadSortOrderFunction = (key: string) => Promise<string>;
+type SaveSortOrderFunction = (key: string, sortOrder: string) => Promise<void>;
 let saveSelectOptions: SaveFunction | null = null;
 let saveStaySelectOptions: SaveFunction | null = null;
+let loadSelectOptionsSortOrder: LoadSortOrderFunction | null = null;
+let saveSelectOptionsSortOrder: SaveSortOrderFunction | null = null;
 
-const loadSaveFunctions = async (): Promise<{ saveSelectOptions: SaveFunction | null; saveStaySelectOptions: SaveFunction | null }> => {
-  if (!saveSelectOptions || !saveStaySelectOptions) {
+const loadSaveFunctions = async (): Promise<{ 
+  saveSelectOptions: SaveFunction | null; 
+  saveStaySelectOptions: SaveFunction | null;
+  loadSelectOptionsSortOrder: LoadSortOrderFunction | null;
+  saveSelectOptionsSortOrder: SaveSortOrderFunction | null;
+}> => {
+  if (!saveSelectOptions || !saveStaySelectOptions || !loadSelectOptionsSortOrder || !saveSelectOptionsSortOrder) {
     try {
       const module = await import("../utils/select-options-storage");
       saveSelectOptions = module.saveSelectOptions;
       saveStaySelectOptions = module.saveStaySelectOptions;
+      loadSelectOptionsSortOrder = module.loadSelectOptionsSortOrder;
+      saveSelectOptionsSortOrder = module.saveSelectOptionsSortOrder;
     } catch (e) {
       console.error("[NotionSelect] Error loading save functions:", e);
     }
   }
-  return { saveSelectOptions, saveStaySelectOptions };
+  return { saveSelectOptions, saveStaySelectOptions, loadSelectOptionsSortOrder, saveSelectOptionsSortOrder };
 };
 
 // ソート関数をコンポーネント内に直接実装して循環依存を回避
@@ -169,6 +180,7 @@ export function NotionSelect({
     }
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingSortOrder, setIsLoadingSortOrder] = useState(true);
   // カテゴリの場合はデフォルト色を取得、それ以外は空文字列から取得
   // Transportationの場合はデフォルトで薄いグレー
   // 初期化エラーを避けるため、初期色は常にデフォルト値を使用
@@ -196,6 +208,28 @@ export function NotionSelect({
       setDisplayedOptions(Array.isArray(options) ? options : []);
     }
   }, [isKanaOrder, options]);
+
+  // 並び順の設定を読み込む
+  useEffect(() => {
+    if (optionType || stayOptionType) {
+      const key = (optionType || stayOptionType) as string;
+      loadSaveFunctions().then(({ loadSelectOptionsSortOrder }) => {
+        if (loadSelectOptionsSortOrder) {
+          loadSelectOptionsSortOrder(key.toUpperCase() as any).then((sortOrder) => {
+            setIsKanaOrder(sortOrder === 'kana');
+            setIsLoadingSortOrder(false);
+          }).catch(() => {
+            setIsKanaOrder(false);
+            setIsLoadingSortOrder(false);
+          });
+        } else {
+          setIsLoadingSortOrder(false);
+        }
+      });
+    } else {
+      setIsLoadingSortOrder(false);
+    }
+  }, [optionType, stayOptionType]);
 
   const handleSelect = (optionLabel: string) => {
     onValueChange(optionLabel);
@@ -350,6 +384,21 @@ export function NotionSelect({
     onValueChange(null);
   };
 
+  // 五十音順の切り替えハンドラー
+  const handleToggleKanaOrder = async () => {
+    const newKanaOrder = !isKanaOrder;
+    setIsKanaOrder(newKanaOrder);
+    const { saveSelectOptionsSortOrder } = await loadSaveFunctions();
+    if ((optionType || stayOptionType) && saveSelectOptionsSortOrder) {
+      const key = (optionType || stayOptionType) as string;
+      try {
+        await saveSelectOptionsSortOrder(key.toUpperCase() as any, newKanaOrder ? 'kana' : 'custom');
+      } catch (error) {
+        console.error("Failed to save sort order:", error);
+      }
+    }
+  };
+
   // 並び替えボタンのハンドラー
   const handleMoveUp = (index: number) => {
     if (index === 0 || !onOptionsChange) return;
@@ -403,10 +452,11 @@ export function NotionSelect({
           order: index,
         };
       });
+      const sortOrder = isKanaOrder ? 'kana' : 'custom';
       if (stayOptionType && saveStay) {
-        await saveStay(stayOptionType, updatedOptions);
+        await saveStay(stayOptionType, updatedOptions, sortOrder);
       } else if (optionType && saveSelect) {
-        await saveSelect(optionType, updatedOptions);
+        await saveSelect(optionType, updatedOptions, sortOrder);
       }
       Alert.alert("保存完了", "並び順を保存しました");
       onOptionsChange(updatedOptions);
@@ -492,7 +542,8 @@ export function NotionSelect({
                 <View style={styles.sortToggle}>
                   <TouchableOpacity
                     style={styles.checkbox}
-                    onPress={() => setIsKanaOrder(!isKanaOrder)}
+                    onPress={handleToggleKanaOrder}
+                    disabled={isLoadingSortOrder}
                   >
                     <Text style={styles.checkboxText}>
                       {isKanaOrder ? "☑" : "☐"} 五十音順
