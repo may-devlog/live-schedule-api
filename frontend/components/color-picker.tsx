@@ -102,7 +102,7 @@ export function ColorPicker({
 
         <Text style={styles.sectionTitle}>カスタム色</Text>
         <View style={styles.customColorContainer}>
-          <TouchableOpacity
+          <View
             style={[
               styles.colorPreviewLarge,
               {
@@ -111,17 +111,6 @@ export function ColorPicker({
                   : "#E5E7EB",
               },
             ]}
-            onPress={(e) => {
-              if (e && e.nativeEvent) {
-                e.stopPropagation();
-              }
-              // 色見本をクリックしたときにカラーピッカーを表示
-              if (inline) {
-                setShowInlinePicker(true);
-              } else {
-                setModalVisible(true);
-              }
-            }}
           />
           <TextInput
             style={[
