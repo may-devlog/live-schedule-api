@@ -643,6 +643,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     minHeight: 40,
+    width: "100%",
+    maxWidth: "100%",
   },
   selectedContainer: {
     flex: 1,
