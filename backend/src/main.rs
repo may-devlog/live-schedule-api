@@ -2184,11 +2184,11 @@ async fn get_shared_schedules(
               status,
               related_schedule_ids,
               user_id,
-              is_public,
+              CAST(is_public AS INTEGER) as is_public,
               created_at,
               updated_at
             FROM schedules
-            WHERE user_id = ? AND is_public = 1
+            WHERE user_id = ? AND CAST(is_public AS INTEGER) = 1
             ORDER BY date ASC, start ASC
             "#
         )
@@ -2276,11 +2276,11 @@ async fn get_shared_schedule(
               status,
               related_schedule_ids,
               user_id,
-              is_public,
+              CAST(is_public AS INTEGER) as is_public,
               created_at,
               updated_at
             FROM schedules
-            WHERE id = ? AND user_id = ? AND is_public = 1
+            WHERE id = ? AND user_id = ? AND CAST(is_public AS INTEGER) = 1
             "#
         )
         .bind(id)
@@ -2350,7 +2350,7 @@ async fn list_schedules(
           status,
           related_schedule_ids,
           user_id,
-          is_public,
+          CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
         FROM schedules
@@ -2402,7 +2402,7 @@ async fn list_schedules(
           status,
           related_schedule_ids,
           user_id,
-          is_public,
+          CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
         FROM schedules
@@ -2471,7 +2471,7 @@ async fn list_upcoming(
           status,
           related_schedule_ids,
           user_id,
-          is_public,
+          CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
         FROM schedules
@@ -2515,7 +2515,7 @@ async fn list_upcoming(
           status,
           related_schedule_ids,
           user_id,
-          is_public,
+          CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
         FROM schedules
@@ -2725,7 +2725,7 @@ async fn create_schedule(
           status,
           related_schedule_ids,
           user_id,
-          is_public,
+          CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
         FROM schedules
@@ -2777,7 +2777,7 @@ async fn create_schedule(
                   status,
                   related_schedule_ids,
                   user_id,
-                  is_public,
+                  CAST(is_public AS INTEGER) as is_public,
                   created_at,
                   updated_at
                 FROM schedules
@@ -3024,7 +3024,7 @@ async fn update_schedule(
           status,
           related_schedule_ids,
           user_id,
-          is_public,
+          CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
         FROM schedules
@@ -3074,7 +3074,7 @@ async fn update_schedule(
               status,
               related_schedule_ids,
               user_id,
-              is_public,
+              CAST(is_public AS INTEGER) as is_public,
               created_at,
               updated_at
             FROM schedules
@@ -3409,7 +3409,7 @@ async fn list_public_schedules(
               status,
               related_schedule_ids,
               user_id,
-              is_public,
+              CAST(is_public AS INTEGER) as is_public,
               created_at,
               updated_at
             FROM schedules
@@ -3458,11 +3458,11 @@ async fn list_public_schedules(
               status,
               related_schedule_ids,
               user_id,
-              is_public,
+              CAST(is_public AS INTEGER) as is_public,
               created_at,
               updated_at
             FROM schedules
-            WHERE is_public = 1
+            WHERE CAST(is_public AS INTEGER) = 1
             "#,
         )
         .fetch_all(&pool)
@@ -3559,11 +3559,11 @@ async fn get_public_schedule(
               status,
               related_schedule_ids,
               user_id,
-              is_public,
+              CAST(is_public AS INTEGER) as is_public,
               created_at,
               updated_at
             FROM schedules
-            WHERE id = ? AND is_public = 1
+            WHERE id = ? AND CAST(is_public AS INTEGER) = 1
             "#,
         )
         .bind(id)
@@ -3590,7 +3590,7 @@ async fn list_public_traffics(
             .await
             .expect("failed to check schedule")
     } else {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND is_public = 1")
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND CAST(is_public AS INTEGER) = 1")
             .bind(params.schedule_id)
             .fetch_optional(&pool)
             .await
@@ -3664,7 +3664,7 @@ async fn list_public_stays(
             .await
             .expect("failed to check schedule")
     } else {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND is_public = 1")
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND CAST(is_public AS INTEGER) = 1")
             .bind(params.schedule_id)
             .fetch_optional(&pool)
             .await
@@ -3742,7 +3742,7 @@ async fn get_public_traffic(
             .await
             .expect("failed to check schedule")
     } else {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND is_public = 1")
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND CAST(is_public AS INTEGER) = 1")
             .bind(row.schedule_id)
             .fetch_optional(&pool)
             .await
@@ -3810,7 +3810,7 @@ async fn get_public_stay(
             .await
             .expect("failed to check schedule")
     } else {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND is_public = 1")
+        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND CAST(is_public AS INTEGER) = 1")
             .bind(row.schedule_id)
             .fetch_optional(&pool)
             .await
@@ -3899,7 +3899,7 @@ async fn get_shared_traffic(
 
         // 関連するスケジュールがこのユーザーの公開スケジュールか確認
         let schedule_is_valid: Option<i64> = sqlx::query_scalar(
-            "SELECT id FROM schedules WHERE id = ? AND user_id = ? AND is_public = 1"
+            "SELECT id FROM schedules WHERE id = ? AND user_id = ? AND CAST(is_public AS INTEGER) = 1"
         )
         .bind(row.schedule_id)
         .bind(user_id)
@@ -4015,7 +4015,7 @@ async fn get_shared_stay(
 
         // 関連するスケジュールがこのユーザーの公開スケジュールか確認
         let schedule_is_valid: Option<i64> = sqlx::query_scalar(
-            "SELECT id FROM schedules WHERE id = ? AND user_id = ? AND is_public = 1"
+            "SELECT id FROM schedules WHERE id = ? AND user_id = ? AND CAST(is_public AS INTEGER) = 1"
         )
         .bind(row.schedule_id)
         .bind(user_id)
