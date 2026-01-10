@@ -2976,11 +2976,12 @@ async fn update_schedule(
     .bind(user.user_id)
     .execute(&pool)
     .await
-    .map_err(|_| {
+    .map_err(|e| {
+        eprintln!("[UpdateSchedule] Database error when updating schedule: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "データベースエラーが発生しました".to_string(),
+                error: format!("データベースエラーが発生しました: {}", e),
             }),
         )
     })?;
