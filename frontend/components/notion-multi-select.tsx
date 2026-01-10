@@ -242,6 +242,9 @@ export function NotionMultiSelect({
   };
 
   const handleConfirm = () => {
+    // モーダルを閉じる前にonOptionsChangeを呼び出す
+    // これにより、親コンポーネントがデータベースに保存する
+    // エラーハンドリングは親コンポーネントで行われる
     onOptionsChange(tempOptions);
     setShowModal(false);
   };

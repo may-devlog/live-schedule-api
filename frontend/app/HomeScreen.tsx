@@ -279,7 +279,14 @@ export default function HomeScreen() {
         ? await authenticatedFetch(url)
         : await fetch(url);
       if (!res.ok) {
-        throw new Error(`status: ${res.status}`);
+        const errorText = await res.text();
+        console.error("[HomeScreen] Failed to fetch schedules:", res.status, errorText);
+        if (res.status === 401) {
+          // 認証エラーの場合はログアウト
+          logout();
+          throw new Error("認証に失敗しました。再度ログインしてください。");
+        }
+        throw new Error(`status: ${res.status} - ${errorText}`);
       }
       const data: Schedule[] = await res.json();
       console.log("Schedules received:", data.length, "items");

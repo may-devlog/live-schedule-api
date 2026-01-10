@@ -123,7 +123,17 @@ export default function YearScreen() {
         const url = getApiUrl(`/schedules?year=${currentYear}`);
         const res = await authenticatedFetch(url);
 
-        if (!res.ok) throw new Error(`status: ${res.status}`);
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("[YearScreen] Failed to fetch schedules:", res.status, errorText);
+          if (res.status === 401) {
+            // 認証エラーの場合はログアウト
+            const { logout } = await import("../../contexts/AuthContext");
+            logout();
+            throw new Error("認証に失敗しました。再度ログインしてください。");
+          }
+          throw new Error(`status: ${res.status} - ${errorText}`);
+        }
 
         const data: Schedule[] = await res.json();
         console.log("YEAR SCHEDULES FROM API:", currentYear, data);

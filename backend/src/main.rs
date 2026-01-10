@@ -403,8 +403,12 @@ fn verify_token(token: &str) -> Result<i32, StatusCode> {
         &DecodingKey::from_secret(jwt_secret.as_ref()),
         &Validation::default(),
     )
-    .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    .map_err(|e| {
+        eprintln!("[VerifyToken] Token verification failed: {}", e);
+        StatusCode::UNAUTHORIZED
+    })?;
 
+    eprintln!("[VerifyToken] Token verified successfully, user_id: {}", token_data.claims.user_id);
     Ok(token_data.claims.user_id)
 }
 
@@ -2318,7 +2322,8 @@ async fn list_schedules(
     Query(params): Query<ScheduleQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
     user: AuthenticatedUser,
-) -> Json<Vec<Schedule>> {
+) -> Result<Json<Vec<Schedule>>, (StatusCode, Json<ErrorResponse>)> {
+    eprintln!("[ListSchedules] User ID: {}", user.user_id);
     let rows: Vec<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
         r#"
         SELECT
@@ -2355,7 +2360,15 @@ async fn list_schedules(
     .bind(user.user_id)
     .fetch_all(&pool)
     .await
-    .expect("failed to fetch schedules");
+    .map_err(|e| {
+        eprintln!("[ListSchedules] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: format!("データベースエラーが発生しました: {}", e),
+            }),
+        )
+    })?;
 
     // 各スケジュールに対してロールアップ計算を実行
     for row in &rows {
@@ -2399,7 +2412,15 @@ async fn list_schedules(
     .bind(user.user_id)
     .fetch_all(&pool)
     .await
-    .expect("failed to fetch schedules");
+    .map_err(|e| {
+        eprintln!("[ListSchedules] Database error on second fetch: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: format!("データベースエラーが発生しました: {}", e),
+            }),
+        )
+    })?;
 
     let mut schedules: Vec<Schedule> = rows.into_iter().map(row_to_schedule).collect();
 
@@ -2415,7 +2436,8 @@ async fn list_schedules(
         .filter(|s| s.status != "Canceled")
         .collect();
 
-    Json(schedules)
+    eprintln!("[ListSchedules] Returning {} schedules for user_id: {}", schedules.len(), user.user_id);
+    Ok(Json(schedules))
 }
 
 // GET /schedules/upcoming
