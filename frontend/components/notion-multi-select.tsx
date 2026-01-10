@@ -339,9 +339,11 @@ export function NotionMultiSelect({
           ) : (
             <View style={styles.tagsContainer}>
               {selectedOptions.map((opt) => (
-                <View key={opt.label} style={[styles.tag, { backgroundColor: opt.color }]}>
-                  <Text style={styles.tagText}>{opt.label}</Text>
-                </View>
+                <NotionTag
+                  key={opt.label}
+                  label={opt.label}
+                  color={opt.color}
+                />
               ))}
             </View>
           )}
