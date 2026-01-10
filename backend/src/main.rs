@@ -631,6 +631,36 @@ struct NewTraffic {
     return_flag: bool,
 }
 
+// ====== MaskedLocation 型定義 ======
+
+#[derive(Serialize, Clone)]
+struct MaskedLocation {
+    id: i32,
+    user_id: i32,
+    location_name: String,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(sqlx::FromRow)]
+struct MaskedLocationRow {
+    id: i64,
+    user_id: i64,
+    location_name: String,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct NewMaskedLocation {
+    location_name: String,
+}
+
+#[derive(Deserialize)]
+struct UpdateMaskedLocation {
+    location_name: String,
+}
+
 // ====== Stay 型定義 ======
 
 #[derive(Serialize, Clone)]
@@ -762,6 +792,16 @@ fn row_to_traffic(row: TrafficRow) -> Traffic {
     }
 }
 
+fn row_to_masked_location(row: MaskedLocationRow) -> MaskedLocation {
+    MaskedLocation {
+        id: row.id as i32,
+        user_id: row.user_id as i32,
+        location_name: row.location_name,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    }
+}
+
 fn row_to_stay(row: StayRow) -> Stay {
     Stay {
         id: row.id as i32,
@@ -776,6 +816,37 @@ fn row_to_stay(row: StayRow) -> Stay {
         penalty: row.penalty,
         status: row.status,
     }
+}
+
+// ====== マスク処理ヘルパー ======
+
+// ユーザーのマスク設定を取得
+async fn get_masked_locations_for_user(
+    pool: &Pool<Sqlite>,
+    user_id: i64,
+) -> Result<Vec<String>, sqlx::Error> {
+    let rows: Vec<(String,)> = sqlx::query_as(
+        "SELECT location_name FROM masked_locations WHERE user_id = ?"
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await?;
+    
+    Ok(rows.into_iter().map(|(name,)| name).collect())
+}
+
+// 交通情報にマスク処理を適用
+fn apply_mask_to_traffic(mut traffic: Traffic, masked_locations: &[String]) -> Traffic {
+    let mask_text = "***";
+    
+    if masked_locations.contains(&traffic.from) {
+        traffic.from = mask_text.to_string();
+    }
+    if masked_locations.contains(&traffic.to) {
+        traffic.to = mask_text.to_string();
+    }
+    
+    traffic
 }
 
 // ====== ハンドラ ======
@@ -1745,6 +1816,308 @@ async fn get_sharing_status(
                 error: "ユーザーが見つかりません".to_string(),
             }),
         ))
+    }
+}
+
+// ====== MaskedLocation API ======
+
+// GET /masked-locations - マスク設定一覧取得
+async fn list_masked_locations(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Vec<MaskedLocation>>, (StatusCode, Json<ErrorResponse>)> {
+    let rows: Vec<MaskedLocationRow> = sqlx::query_as::<_, MaskedLocationRow>(
+        "SELECT id, user_id, location_name, created_at, updated_at FROM masked_locations WHERE user_id = ? ORDER BY location_name ASC"
+    )
+    .bind(user.user_id as i64)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[ListMaskedLocations] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    let locations = rows.into_iter().map(row_to_masked_location).collect();
+    Ok(Json(locations))
+}
+
+// POST /masked-locations - マスク設定追加
+async fn create_masked_location(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<NewMaskedLocation>,
+) -> Result<Json<MaskedLocation>, (StatusCode, Json<ErrorResponse>)> {
+    if payload.location_name.trim().is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "駅名は必須です".to_string(),
+            }),
+        ));
+    }
+
+    let now = Utc::now().to_rfc3339();
+    let result = sqlx::query(
+        r#"
+        INSERT INTO masked_locations (user_id, location_name, created_at, updated_at)
+        VALUES (?, ?, ?, ?)
+        "#
+    )
+    .bind(user.user_id as i64)
+    .bind(payload.location_name.trim())
+    .bind(&now)
+    .bind(&now)
+    .execute(&pool)
+    .await;
+
+    let inserted_id = match result {
+        Ok(result) => result.last_insert_rowid(),
+        Err(e) => {
+            return match e {
+                sqlx::Error::Database(db_err) if db_err.message().contains("UNIQUE constraint") => {
+                    Err((
+                        StatusCode::CONFLICT,
+                        Json(ErrorResponse {
+                            error: "この駅名は既に登録されています".to_string(),
+                        }),
+                    ))
+                }
+                _ => {
+                    eprintln!("[CreateMaskedLocation] Database error: {}", e);
+                    Err((
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ErrorResponse {
+                            error: "Database error".to_string(),
+                        }),
+                    ))
+                }
+            };
+        }
+    };
+
+    // 挿入したレコードを取得
+    let row: Option<MaskedLocationRow> = sqlx::query_as::<_, MaskedLocationRow>(
+        "SELECT id, user_id, location_name, created_at, updated_at FROM masked_locations WHERE id = ?"
+    )
+    .bind(inserted_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[CreateMaskedLocation] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    match row {
+        Some(row) => Ok(Json(row_to_masked_location(row))),
+        None => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Failed to create masked location".to_string(),
+            }),
+        )),
+    }
+}
+
+// PUT /masked-locations/:id - マスク設定更新
+async fn update_masked_location(
+    user: AuthenticatedUser,
+    Path(id): Path<i32>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<UpdateMaskedLocation>,
+) -> Result<Json<MaskedLocation>, (StatusCode, Json<ErrorResponse>)> {
+    if payload.location_name.trim().is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "駅名は必須です".to_string(),
+            }),
+        ));
+    }
+
+    // ユーザーが所有しているか確認
+    let existing: Option<(i64,)> = sqlx::query_as(
+        "SELECT user_id FROM masked_locations WHERE id = ?"
+    )
+    .bind(id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[UpdateMaskedLocation] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    let existing = existing.ok_or((
+        StatusCode::NOT_FOUND,
+        Json(ErrorResponse {
+            error: "マスク設定が見つかりません".to_string(),
+        }),
+    ))?;
+
+    if existing.0 != user.user_id as i64 {
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(ErrorResponse {
+                error: "このマスク設定を編集する権限がありません".to_string(),
+            }),
+        ));
+    }
+
+    let now = Utc::now().to_rfc3339();
+    let result = sqlx::query(
+        r#"
+        UPDATE masked_locations
+        SET location_name = ?, updated_at = ?
+        WHERE id = ? AND user_id = ?
+        "#
+    )
+    .bind(payload.location_name.trim())
+    .bind(&now)
+    .bind(id as i64)
+    .bind(user.user_id as i64)
+    .execute(&pool)
+    .await;
+
+    let updated = match result {
+        Ok(result) if result.rows_affected() > 0 => true,
+        Ok(_) => false,
+        Err(sqlx::Error::Database(e)) if e.message().contains("UNIQUE constraint") => {
+            return Err((
+                StatusCode::CONFLICT,
+                Json(ErrorResponse {
+                    error: "この駅名は既に登録されています".to_string(),
+                }),
+            ));
+        }
+        Err(e) => {
+            eprintln!("[UpdateMaskedLocation] Database error: {}", e);
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            ));
+        }
+    };
+
+    if !updated {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "マスク設定が見つかりません".to_string(),
+            }),
+        ));
+    }
+
+    // 更新したレコードを取得
+    let row: Option<MaskedLocationRow> = sqlx::query_as::<_, MaskedLocationRow>(
+        "SELECT id, user_id, location_name, created_at, updated_at FROM masked_locations WHERE id = ?"
+    )
+    .bind(id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[UpdateMaskedLocation] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    match row {
+        Some(row) => Ok(Json(row_to_masked_location(row))),
+        None => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "マスク設定が見つかりません".to_string(),
+            }),
+        )),
+    }
+}
+
+// DELETE /masked-locations/:id - マスク設定削除
+async fn delete_masked_location(
+    user: AuthenticatedUser,
+    Path(id): Path<i32>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    // ユーザーが所有しているか確認
+    let existing: Option<(i64,)> = sqlx::query_as(
+        "SELECT user_id FROM masked_locations WHERE id = ?"
+    )
+    .bind(id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[DeleteMaskedLocation] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    let existing = existing.ok_or((
+        StatusCode::NOT_FOUND,
+        Json(ErrorResponse {
+            error: "マスク設定が見つかりません".to_string(),
+        }),
+    ))?;
+
+    if existing.0 != user.user_id as i64 {
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(ErrorResponse {
+                error: "このマスク設定を削除する権限がありません".to_string(),
+            }),
+        ));
+    }
+
+    let result = sqlx::query("DELETE FROM masked_locations WHERE id = ? AND user_id = ?")
+        .bind(id as i64)
+        .bind(user.user_id as i64)
+        .execute(&pool)
+        .await;
+
+    match result {
+        Ok(result) if result.rows_affected() > 0 => {
+            Ok(Json(serde_json::json!({
+                "success": true,
+                "message": "マスク設定を削除しました"
+            })))
+        }
+        Ok(_) => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "マスク設定が見つかりません".to_string(),
+            }),
+        )),
+        Err(e) => {
+            eprintln!("[DeleteMaskedLocation] Database error: {}", e);
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Database error".to_string(),
+                }),
+            ))
+        }
     }
 }
 
@@ -3231,7 +3604,26 @@ async fn list_public_traffics(
     .await
     .expect("failed to fetch traffics");
 
-    let traffics = rows.into_iter().map(row_to_traffic).collect();
+    let mut traffics: Vec<Traffic> = rows.into_iter().map(row_to_traffic).collect();
+    
+    // スケジュールのユーザーIDを取得してマスク処理を適用
+    if let Some(schedule_id) = schedule_exists {
+        let user_id: Option<i64> = sqlx::query_scalar("SELECT user_id FROM schedules WHERE id = ?")
+            .bind(schedule_id)
+            .fetch_optional(&pool)
+            .await
+            .ok()
+            .flatten();
+        
+        if let Some(uid) = user_id {
+            if let Ok(masked_locations) = get_masked_locations_for_user(&pool, uid).await {
+                traffics = traffics.into_iter()
+                    .map(|t| apply_mask_to_traffic(t, &masked_locations))
+                    .collect();
+            }
+        }
+    }
+    
     Json(traffics)
 }
 
@@ -3338,7 +3730,23 @@ async fn get_public_traffic(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    Ok(Json(row_to_traffic(row)))
+    let mut traffic = row_to_traffic(row);
+    
+    // スケジュールのユーザーIDを取得してマスク処理を適用
+    let user_id: Option<i64> = sqlx::query_scalar("SELECT user_id FROM schedules WHERE id = ?")
+        .bind(traffic.schedule_id as i64)
+        .fetch_optional(&pool)
+        .await
+        .ok()
+        .flatten();
+    
+    if let Some(uid) = user_id {
+        if let Ok(masked_locations) = get_masked_locations_for_user(&pool, uid).await {
+            traffic = apply_mask_to_traffic(traffic, &masked_locations);
+        }
+    }
+    
+    Ok(Json(traffic))
 }
 
 // GET /public/stay/:id - 公開スケジュールの宿泊情報（個別）
@@ -3493,7 +3901,14 @@ async fn get_shared_traffic(
             ));
         }
 
-        Ok(Json(row_to_traffic(row)))
+        let mut traffic = row_to_traffic(row);
+        
+        // マスク処理を適用
+        if let Ok(masked_locations) = get_masked_locations_for_user(&pool, user_id).await {
+            traffic = apply_mask_to_traffic(traffic, &masked_locations);
+        }
+        
+        Ok(Json(traffic))
     } else {
         Err((
             StatusCode::NOT_FOUND,
@@ -5269,6 +5684,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/auth/change-share-id", post(change_share_id))
         .route("/auth/toggle-sharing", post(toggle_sharing))
         .route("/auth/sharing-status", get(get_sharing_status))
+        .route("/masked-locations", get(list_masked_locations).post(create_masked_location))
+        .route("/masked-locations/:id", put(update_masked_location).delete(delete_masked_location))
         .route("/share/:share_id", get(get_shared_schedules))
         .route("/share/:share_id/schedules/:id", get(get_shared_schedule))
         .route("/share/:share_id/traffic/:id", get(get_shared_traffic))
@@ -5539,6 +5956,18 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     );
     "#;
 
+    let create_masked_locations = r#"
+    CREATE TABLE IF NOT EXISTS masked_locations (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id       INTEGER NOT NULL,
+      location_name TEXT NOT NULL,
+      created_at     TEXT,
+      updated_at     TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      UNIQUE(user_id, location_name)
+    );
+    "#;
+
     sqlx::query(create_users).execute(pool).await?;
     sqlx::query(create_schedules).execute(pool).await?;
     sqlx::query(create_traffics).execute(pool).await?;
@@ -5546,6 +5975,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     sqlx::query(create_select_options).execute(pool).await?;
     sqlx::query(create_stay_select_options).execute(pool).await?;
     sqlx::query(create_notifications).execute(pool).await?;
+    sqlx::query(create_masked_locations).execute(pool).await?;
     
     // 既存のselect_optionsテーブルからFOREIGN KEY制約を削除（マイグレーション）
     // SQLiteではALTER TABLEでFOREIGN KEY制約を削除できないため、

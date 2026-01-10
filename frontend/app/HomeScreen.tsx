@@ -1003,6 +1003,16 @@ export default function HomeScreen() {
               <Text style={styles.menuButtonText}>🆔 ユーザーID変更</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={[styles.menuButton, { marginBottom: 12 }]}
+              onPress={() => {
+                setShowUserMenuModal(false);
+                router.push("/settings/masked-locations");
+              }}
+            >
+              <Text style={styles.menuButtonText}>🔒 出発地・到着地マスク設定</Text>
+            </TouchableOpacity>
+
             <View style={[styles.menuButton, { marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 }]}>
               <Text style={styles.menuButtonText}>🔗 共有化</Text>
               <TouchableOpacity
