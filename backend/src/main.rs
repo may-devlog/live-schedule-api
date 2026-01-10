@@ -2158,6 +2158,7 @@ async fn get_shared_schedules(
         }
         
         // 共有されているスケジュールを取得（is_public = 1 のみ）
+        eprintln!("[GetSharedSchedules] Fetching schedules for user_id: {}, checking is_public = 1", user_id);
         let rows: Vec<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
             r#"
             SELECT
@@ -2205,6 +2206,7 @@ async fn get_shared_schedules(
             )
         })?;
         
+        eprintln!("[GetSharedSchedules] Found {} schedules with is_public = 1", rows.len());
         let schedules: Vec<Schedule> = rows.into_iter().map(|row| row_to_schedule(row)).collect();
         Ok(Json(schedules))
     } else {
