@@ -647,8 +647,8 @@ const styles = StyleSheet.create({
   selectedContainer: {
     flex: 1,
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
+    minWidth: 0, // flexアイテムが親要素の幅を超えないようにする
   },
   selectText: {
     fontSize: 14,
@@ -658,9 +658,11 @@ const styles = StyleSheet.create({
     color: "#9b9a97",
   },
   tagsContainer: {
+    flex: 1,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
+    minWidth: 0, // flexアイテムが親要素の幅を超えないようにする
   },
   tag: {
     paddingHorizontal: 8,
