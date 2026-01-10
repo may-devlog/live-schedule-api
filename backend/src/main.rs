@@ -545,7 +545,7 @@ struct ScheduleRow {
     status: String,
     related_schedule_ids: Option<String>, // JSON形式で保存
     user_id: Option<i64>,
-    is_public: i32, // 0/1
+    is_public: String, // TEXT型として読み込む（"0"または"1"）
     created_at: Option<String>,
     updated_at: Option<String>,
 }
@@ -774,7 +774,7 @@ fn row_to_schedule(row: ScheduleRow) -> Schedule {
         traffic_ids: vec![],
         stay_ids: vec![],
         user_id: row.user_id.map(|id| id as i32),
-        is_public: row.is_public != 0,
+        is_public: row.is_public == "1" || row.is_public == "true" || row.is_public.parse::<i32>().unwrap_or(0) != 0,
     }
 }
 
@@ -2895,7 +2895,8 @@ async fn update_schedule(
     }
 
     let now = Utc::now().to_rfc3339();
-    let is_public = payload.is_public.unwrap_or(existing.is_public != 0) as i32;
+    let existing_is_public = existing.is_public == "1" || existing.is_public == "true" || existing.is_public.parse::<i32>().unwrap_or(0) != 0;
+    let is_public = payload.is_public.unwrap_or(existing_is_public) as i32;
     
     // 既存のrelated_schedule_idsを取得
     let existing_related_ids: Vec<i32> = existing.related_schedule_ids
