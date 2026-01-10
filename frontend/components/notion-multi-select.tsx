@@ -66,7 +66,7 @@ export function NotionMultiSelect({
     setDisplayedOptions(options);
   }, [options]);
 
-  // 並び順の設定を読み込む
+  // 並び順の設定を読み込む（optionTypeまたはoptionsが変更されたときに再読み込み）
   useEffect(() => {
     if (optionType) {
       loadSelectOptionsSortOrder(optionType).then((sortOrder) => {
@@ -79,7 +79,7 @@ export function NotionMultiSelect({
     } else {
       setIsLoadingSortOrder(false);
     }
-  }, [optionType]);
+  }, [optionType, options]);
 
   // 五十音順/カスタム順の切り替え
   useEffect(() => {

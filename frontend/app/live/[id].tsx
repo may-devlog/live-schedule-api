@@ -22,7 +22,7 @@ import { NotionTrafficRelation } from "../../components/notion-traffic-relation"
 import { NotionStayRelation } from "../../components/notion-stay-relation";
 import { getOptionColor } from "../../utils/get-option-color";
 // アイコンは絵文字を使用（フォントに依存しない）
-import { loadSelectOptions } from "../../utils/select-options-storage";
+import { loadSelectOptions, loadSelectOptionsSortOrder } from "../../utils/select-options-storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "../../components/PageHeader";
 import { maskHotelName } from "../../utils/mask-hotel-name";
@@ -151,6 +151,14 @@ export default function DetailScreen() {
       setTargetColor(targetColor);
       
       // Lineup: データベースに保存されている値があれば表示（選択肢に存在しない場合でも表示）
+      // 並び順の設定を取得して、五十音順またはカスタム順でソート
+      let lineupSortOrder = 'custom';
+      try {
+        lineupSortOrder = await loadSelectOptionsSortOrder("TARGETS"); // LINEUPSはTARGETSと同じ選択肢を使用
+      } catch (error) {
+        console.log("[LiveDetail] Failed to load lineup sort order:", error);
+      }
+      
       const lineupOptionLabels = targets.map(opt => opt.label); // LineupもTargetと同じ選択肢を使用
       let validLineup: string | null = null;
       let validLineupOptions: Array<{ label: string; color: string }> = [];
@@ -168,6 +176,23 @@ export default function DetailScreen() {
             color: option?.color || "#E5E7EB"
           };
         });
+        
+        // 並び順の設定に基づいてソート
+        if (lineupSortOrder === 'kana') {
+          // 五十音順でソート
+          validLineupOptions.sort((a, b) => a.label.localeCompare(b.label, "ja"));
+        } else {
+          // カスタム順でソート（選択肢のorderに基づく）
+          const targetOptionsMap = new Map(targets.map(opt => [opt.label, opt]));
+          validLineupOptions.sort((a, b) => {
+            const optA = targetOptionsMap.get(a.label);
+            const optB = targetOptionsMap.get(b.label);
+            const orderA = optA?.order !== undefined ? optA.order : Infinity;
+            const orderB = optB?.order !== undefined ? optB.order : Infinity;
+            return orderA - orderB;
+          });
+        }
+        
         console.log("Valid lineup values:", validLineupOptions);
         if (validLineupOptions.length > 0) {
           validLineup = validLineupOptions.map(opt => opt.label).join(", ");

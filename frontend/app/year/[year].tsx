@@ -210,7 +210,7 @@ export default function YearScreen() {
     
     const loadOptionsOrder = async () => {
       try {
-        const orderMap = await loadSelectOptionsMap();
+        const { orderMap } = await loadSelectOptionsMap();
         if (isMounted) {
           setSelectOptionsMap(orderMap);
         }

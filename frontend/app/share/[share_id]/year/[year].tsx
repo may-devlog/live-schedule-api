@@ -187,7 +187,7 @@ export default function SharedYearScreen() {
     
     const loadOptionsOrder = async () => {
       try {
-        const orderMap = await loadSelectOptionsMap(share_id);
+        const { orderMap } = await loadSelectOptionsMap(share_id);
         if (isMounted) {
           setSelectOptionsMap(orderMap);
         }

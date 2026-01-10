@@ -15,7 +15,8 @@ import { getApiUrl } from "../../../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../../../components/notion-property";
 import { NotionTag } from "../../../../components/notion-tag";
 import { getOptionColor } from "../../../../utils/get-option-color";
-import { loadSelectOptions } from "../../../../utils/select-options-storage";
+import { loadSelectOptions, loadSelectOptionsSortOrder } from "../../../../utils/select-options-storage";
+import { sortByKanaOrder, sortByOrder } from "../../../../types/select-option";
 import type { Schedule } from "../../../HomeScreen";
 import { maskHotelName } from "../../../../utils/mask-hotel-name";
 import { PageHeader } from "../../../../components/PageHeader";
@@ -124,6 +125,14 @@ export default function SharedScheduleDetailScreen() {
       setFilteredTarget(found.target && targetOptionLabels.includes(found.target) ? found.target : null);
       
       // Lineup: 選択肢に存在する場合のみ表示
+      // 並び順の設定を取得して、五十音順またはカスタム順でソート
+      let lineupSortOrder = 'custom';
+      try {
+        lineupSortOrder = await loadSelectOptionsSortOrder("TARGETS"); // LINEUPSはTARGETSと同じ選択肢を使用
+      } catch (error) {
+        console.log("[SharedScheduleDetail] Failed to load lineup sort order:", error);
+      }
+      
       const lineupOptions: Array<{ label: string; color: string }> = [];
       if (found.lineup) {
         const lineupValues = found.lineup.split(',').map(v => v.trim()).filter(v => v);
@@ -135,6 +144,22 @@ export default function SharedScheduleDetailScreen() {
               color: lineupOption?.color || "#E5E7EB"
             });
           }
+        }
+        
+        // 並び順の設定に基づいてソート
+        if (lineupSortOrder === 'kana') {
+          // 五十音順でソート
+          lineupOptions.sort((a, b) => a.label.localeCompare(b.label, "ja"));
+        } else {
+          // カスタム順でソート（選択肢のorderに基づく）
+          const targetOptionsMap = new Map(targets.map(opt => [opt.label, opt]));
+          lineupOptions.sort((a, b) => {
+            const optA = targetOptionsMap.get(a.label);
+            const optB = targetOptionsMap.get(b.label);
+            const orderA = optA?.order !== undefined ? optA.order : Infinity;
+            const orderB = optB?.order !== undefined ? optB.order : Infinity;
+            return orderA - orderB;
+          });
         }
       }
       setFilteredLineupOptions(lineupOptions);
