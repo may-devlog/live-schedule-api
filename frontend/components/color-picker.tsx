@@ -1,5 +1,5 @@
 // カラーピッカーコンポーネント
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Modal,
   StyleSheet,
   ScrollView,
+  Platform,
 } from "react-native";
 // DEFAULT_COLORSを直接定義して循環依存を回避
 const DEFAULT_COLORS = [
@@ -31,6 +32,7 @@ export function ColorPicker({
   const [modalVisible, setModalVisible] = useState(false);
   const [showInlinePicker, setShowInlinePicker] = useState(false);
   const [customColor, setCustomColor] = useState(value || "#3B82F6");
+  const colorInputRef = useRef<HTMLInputElement | null>(null);
 
   // valueが変更されたときにcustomColorも更新
   useEffect(() => {
@@ -102,16 +104,61 @@ export function ColorPicker({
 
         <Text style={styles.sectionTitle}>カスタム色</Text>
         <View style={styles.customColorContainer}>
-          <View
-            style={[
-              styles.colorPreviewLarge,
-              {
-                backgroundColor: isValidColor(customColor)
-                  ? customColor
-                  : "#E5E7EB",
-              },
-            ]}
-          />
+          {Platform.OS === "web" ? (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.colorPreviewLarge,
+                  {
+                    backgroundColor: isValidColor(customColor)
+                      ? customColor
+                      : "#E5E7EB",
+                  },
+                ]}
+                onPress={() => {
+                  // Web環境では、隠されたinput[type="color"]をクリック
+                  if (colorInputRef.current) {
+                    colorInputRef.current.click();
+                  }
+                }}
+              />
+              {/* Web環境では、隠されたinput[type="color"]を使用 */}
+              {/* @ts-ignore - Web環境でのみ使用されるHTML要素 */}
+              <input
+                ref={colorInputRef}
+                type="color"
+                value={isValidColor(customColor) ? customColor : "#E5E7EB"}
+                onChange={(e: any) => {
+                  const newColor = e.target.value.toUpperCase();
+                  setCustomColor(newColor);
+                  onValueChange(newColor);
+                  if (inline) {
+                    setShowInlinePicker(false);
+                  } else {
+                    setModalVisible(false);
+                  }
+                }}
+                style={{
+                  position: "absolute",
+                  opacity: 0,
+                  width: 0,
+                  height: 0,
+                  pointerEvents: "none",
+                }}
+              />
+            </>
+          ) : (
+            <View
+              style={[
+                styles.colorPreviewLarge,
+                {
+                  backgroundColor: isValidColor(customColor)
+                    ? customColor
+                    : "#E5E7EB",
+                },
+              ]}
+            />
+          )}
           <TextInput
             style={[
               styles.colorInput,
