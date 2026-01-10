@@ -160,7 +160,7 @@ export function ColorPicker({
 
   // カラーピッカーのCanvasを描画
   useEffect(() => {
-    if (Platform.OS === "web" && canvasRef.current && showAdvancedPicker) {
+    if (canvasRef.current && showAdvancedPicker) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
@@ -188,7 +188,7 @@ export function ColorPicker({
 
   // 色相スライダーのCanvasを描画
   useEffect(() => {
-    if (Platform.OS === "web" && hueSliderRef.current && showAdvancedPicker) {
+    if (hueSliderRef.current && showAdvancedPicker) {
       const canvas = hueSliderRef.current;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
@@ -207,21 +207,22 @@ export function ColorPicker({
     }
   }, [showAdvancedPicker]);
 
-  // カラーピッカーのクリック/ドラッグ処理
+  // カラーピッカーのクリック/ドラッグ処理（Web用）
   const handleCanvasMouseDown = (e: any) => {
-    if (Platform.OS !== "web" || !canvasRef.current) return;
+    if (!canvasRef.current) return;
     isDragging.current = true;
     handleCanvasMouseMove(e);
   };
 
   const handleCanvasMouseMove = (e: any) => {
-    if (Platform.OS !== "web" || !canvasRef.current || !isDragging.current) return;
+    if (!canvasRef.current || !isDragging.current) return;
     const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const width = canvas.width;
-    const height = canvas.height;
+    // Web環境とモバイル環境で座標の取得方法が異なる
+    const rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
+    const x = (e.clientX || e.nativeEvent?.locationX || 0) - rect.left;
+    const y = (e.clientY || e.nativeEvent?.locationY || 0) - rect.top;
+    const width = canvas.width || 200;
+    const height = canvas.height || 200;
 
     if (x >= 0 && x <= width && y >= 0 && y <= height) {
       const s = Math.max(0, Math.min(100, (x / width) * 100));
@@ -236,19 +237,53 @@ export function ColorPicker({
     isDragging.current = false;
   };
 
-  // 色相スライダーのクリック/ドラッグ処理
+  // カラーピッカーのタッチ処理（モバイル用）
+  const handleCanvasTouchStart = (e: any) => {
+    if (!canvasRef.current) return;
+    isDragging.current = true;
+    handleCanvasTouchMove(e);
+  };
+
+  const handleCanvasTouchMove = (e: any) => {
+    if (!canvasRef.current || !isDragging.current) return;
+    const canvas = canvasRef.current;
+    const touch = e.nativeEvent?.touches?.[0];
+    if (!touch) return;
+    
+    // モバイル環境では、Viewの位置を取得する必要がある
+    const viewRef = canvas as any;
+    const layout = viewRef._layout || { x: 0, y: 0, width: 200, height: 200 };
+    const x = touch.pageX - layout.x;
+    const y = touch.pageY - layout.y;
+    const width = layout.width || 200;
+    const height = layout.height || 200;
+
+    if (x >= 0 && x <= width && y >= 0 && y <= height) {
+      const s = Math.max(0, Math.min(100, (x / width) * 100));
+      const v = Math.max(0, Math.min(100, 100 - (y / height) * 100));
+      setSaturation(s);
+      setBrightness(v);
+      updateColorFromHsv(hue, s, v);
+    }
+  };
+
+  const handleCanvasTouchEnd = () => {
+    isDragging.current = false;
+  };
+
+  // 色相スライダーのクリック/ドラッグ処理（Web用）
   const handleHueSliderMouseDown = (e: any) => {
-    if (Platform.OS !== "web" || !hueSliderRef.current) return;
+    if (!hueSliderRef.current) return;
     isDraggingHue.current = true;
     handleHueSliderMouseMove(e);
   };
 
   const handleHueSliderMouseMove = (e: any) => {
-    if (Platform.OS !== "web" || !hueSliderRef.current || !isDraggingHue.current) return;
+    if (!hueSliderRef.current || !isDraggingHue.current) return;
     const canvas = hueSliderRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const width = canvas.width;
+    const rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0 };
+    const x = (e.clientX || e.nativeEvent?.locationX || 0) - rect.left;
+    const width = canvas.width || 200;
 
     if (x >= 0 && x <= width) {
       const h = Math.max(0, Math.min(360, (x / width) * 360));
@@ -258,6 +293,35 @@ export function ColorPicker({
   };
 
   const handleHueSliderMouseUp = () => {
+    isDraggingHue.current = false;
+  };
+
+  // 色相スライダーのタッチ処理（モバイル用）
+  const handleHueSliderTouchStart = (e: any) => {
+    if (!hueSliderRef.current) return;
+    isDraggingHue.current = true;
+    handleHueSliderTouchMove(e);
+  };
+
+  const handleHueSliderTouchMove = (e: any) => {
+    if (!hueSliderRef.current || !isDraggingHue.current) return;
+    const canvas = hueSliderRef.current;
+    const touch = e.nativeEvent?.touches?.[0];
+    if (!touch) return;
+    
+    const viewRef = canvas as any;
+    const layout = viewRef._layout || { x: 0, width: 200 };
+    const x = touch.pageX - layout.x;
+    const width = layout.width || 200;
+
+    if (x >= 0 && x <= width) {
+      const h = Math.max(0, Math.min(360, (x / width) * 360));
+      setHue(h);
+      updateColorFromHsv(h, saturation, brightness);
+    }
+  };
+
+  const handleHueSliderTouchEnd = () => {
     isDraggingHue.current = false;
   };
 
@@ -378,8 +442,8 @@ export function ColorPicker({
           </TouchableOpacity>
         </View>
         
-        {/* カスタムカラーピッカー（Web環境のみ） */}
-        {Platform.OS === "web" && showAdvancedPicker && (
+        {/* カスタムカラーピッカー */}
+        {showAdvancedPicker && (
           <View style={styles.advancedPickerContainer}>
             {/* 彩度と明度の2Dカラーピッカー */}
             <View style={styles.canvasWrapper}>
@@ -393,6 +457,15 @@ export function ColorPicker({
                 onMouseMove={handleCanvasMouseMove}
                 onMouseUp={handleCanvasMouseUp}
                 onMouseLeave={handleCanvasMouseUp}
+                onTouchStart={handleCanvasTouchStart}
+                onTouchMove={handleCanvasTouchMove}
+                onTouchEnd={handleCanvasTouchEnd}
+                onLayout={(e) => {
+                  // モバイル環境でレイアウト情報を保存
+                  if (canvasRef.current) {
+                    (canvasRef.current as any)._layout = e.nativeEvent.layout;
+                  }
+                }}
               />
               {/* 選択位置のインジケーター */}
               <View
@@ -418,6 +491,15 @@ export function ColorPicker({
                 onMouseMove={handleHueSliderMouseMove}
                 onMouseUp={handleHueSliderMouseUp}
                 onMouseLeave={handleHueSliderMouseUp}
+                onTouchStart={handleHueSliderTouchStart}
+                onTouchMove={handleHueSliderTouchMove}
+                onTouchEnd={handleHueSliderTouchEnd}
+                onLayout={(e) => {
+                  // モバイル環境でレイアウト情報を保存
+                  if (hueSliderRef.current) {
+                    (hueSliderRef.current as any)._layout = e.nativeEvent.layout;
+                  }
+                }}
               />
               {/* 選択位置のインジケーター */}
               <View
