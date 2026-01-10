@@ -2619,6 +2619,7 @@ async fn create_schedule(
     // 必須項目のバリデーション（targetはNULL許可）
     let now = Utc::now().to_rfc3339();
     let is_public = payload.is_public.unwrap_or(true) as i32;
+    eprintln!("[CreateSchedule] is_public value: {} (from payload: {:?})", is_public, payload.is_public);
     let result = sqlx::query(
         r#"
         INSERT INTO schedules (
