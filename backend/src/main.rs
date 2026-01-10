@@ -797,8 +797,12 @@ async fn register(
     println!("[REGISTER] Received registration request for email: {}", payload.email);
     
     // 環境変数で新規ユーザー登録を制御
-    if std::env::var("ALLOW_USER_REGISTRATION").is_err() {
-        println!("[REGISTER] User registration is disabled");
+    let allow_registration = std::env::var("ALLOW_USER_REGISTRATION")
+        .unwrap_or_else(|_| "0".to_string())
+        .to_lowercase();
+    
+    if allow_registration != "1" && allow_registration != "true" && allow_registration != "yes" {
+        println!("[REGISTER] User registration is disabled (ALLOW_USER_REGISTRATION={})", allow_registration);
         return Err((
             StatusCode::FORBIDDEN,
             Json(ErrorResponse {
