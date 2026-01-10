@@ -457,6 +457,7 @@ export function NotionMultiSelect({
                     value={newOptionColor}
                     onValueChange={setNewOptionColor}
                     label="色"
+                    inline={true}
                   />
                 </View>
                 <View style={styles.editActions}>
@@ -507,6 +508,7 @@ export function NotionMultiSelect({
                     value={newOptionColor}
                     onValueChange={setNewOptionColor}
                     label="色"
+                    inline={true}
                   />
                   <TouchableOpacity
                     style={[

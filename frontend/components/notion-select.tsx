@@ -673,6 +673,7 @@ export function NotionSelect({
                     value={newOptionColor}
                     onValueChange={setNewOptionColor}
                     label="色"
+                    inline={true}
                   />
                 </View>
                 {isPrefecture && (
