@@ -590,13 +590,73 @@ export async function loadSelectOptionsSortOrder(
   }
 }
 
-// 選択肢の並び順を保存する
+// 選択肢の並び順を保存する（データベースにも保存）
 export async function saveSelectOptionsSortOrder(
   key: keyof typeof STORAGE_KEYS,
   sortOrder: string
 ): Promise<void> {
+  // 動的インポートで循環依存を回避
+  const { authenticatedFetch, getApiUrl } = await import("./api");
   const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+  
+  // 現在の選択肢を取得（データベースから、またはローカルストレージから）
+  let currentOptions: SelectOption[] = [];
+  try {
+    // まずデータベースから取得を試みる
+    const res = await authenticatedFetch(getApiUrl(`/select-options/${key.toLowerCase()}`));
+    if (res.ok) {
+      const data = await res.json();
+      // 新しい形式（{ options, sort_order }）と古い形式（配列）の両方に対応
+      currentOptions = Array.isArray(data) ? data : (data.options || []);
+    }
+  } catch (error) {
+    console.log(`[SelectOptions] Failed to load from database, trying local storage:`, error);
+  }
+  
+  // データベースにない場合は、ローカルストレージから読み込む
+  if (currentOptions.length === 0) {
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS[key]);
+      if (stored) {
+        currentOptions = JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error(`[SelectOptions] Failed to load from local storage:`, error);
+    }
+  }
+  
+  // 選択肢が空の場合は、デフォルト選択肢を使用
+  if (currentOptions.length === 0) {
+    const defaultOptions = getDefaultOptions(key);
+    currentOptions = defaultOptions;
+  }
+  
+  // データベースに保存（選択肢とsort_orderの両方を更新）
+  const url = getApiUrl(`/select-options/${key.toLowerCase()}`);
+  const payload = { options: currentOptions, sort_order: sortOrder };
+  console.log(`[SelectOptions] Saving sort order for ${key} to database:`, url);
+  console.log(`[SelectOptions] Payload:`, JSON.stringify(payload, null, 2));
+  
+  const res = await authenticatedFetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  
+  console.log(`[SelectOptions] Response status:`, res.status);
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`[SelectOptions] Failed to save sort order for ${key} to database:`, res.status, errorText);
+    throw new Error(`Failed to save sort order for ${key} to database: ${res.status} ${errorText}`);
+  }
+  
+  // データベースへの保存が成功した場合のみ、ローカルストレージにも保存（キャッシュ）
+  const result = await res.json();
+  console.log(`[SelectOptions] Successfully saved sort order for ${key} to database:`, result);
+  
   await AsyncStorage.setItem(`${STORAGE_KEYS[key]}_sort_order`, sortOrder);
+  console.log(`[SelectOptions] Saved sort order for ${key} to local storage`);
 }
 
 // ホテル用選択肢を保存する（データベースに保存し、成功した場合のみローカルストレージにも保存）
