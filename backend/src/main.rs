@@ -2860,7 +2860,7 @@ async fn update_schedule(
           status,
           related_schedule_ids,
           user_id,
-          is_public,
+          CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
         FROM schedules
@@ -2870,11 +2870,12 @@ async fn update_schedule(
     .bind(id)
     .fetch_optional(&pool)
     .await
-    .map_err(|_| {
+    .map_err(|e| {
+        eprintln!("[UpdateSchedule] Database error when fetching existing schedule: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
-                error: "データベースエラーが発生しました".to_string(),
+                error: format!("データベースエラーが発生しました: {}", e),
             }),
         )
     })?;
