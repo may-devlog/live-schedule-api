@@ -1221,18 +1221,22 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   groupingSelector: {
-    marginBottom: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
   },
   groupingLabel: {
     fontSize: 14,
     fontWeight: "600",
     color: "#37352f",
-    marginBottom: 8,
+    marginRight: 12,
+    minWidth: 40,
   },
   groupingButtons: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+    flex: 1,
   },
   groupingButton: {
     paddingHorizontal: 12,
