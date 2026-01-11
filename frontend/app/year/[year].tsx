@@ -231,6 +231,27 @@ export default function YearScreen() {
         if (isMounted) {
           setSelectOptionsMap(orderMap);
         }
+        
+        // 選択肢の色情報を事前に取得してキャッシュに保存
+        const { preloadOptionColors } = await import("../../utils/get-option-color");
+        const { loadSelectOptions, loadStaySelectOptions } = await import("../../utils/select-options-storage");
+        
+        // グルーピングで使用される選択肢の色を事前読み込み
+        const [targets, groups, categories, areas, sellers, statuses] = await Promise.all([
+          loadSelectOptions("TARGETS"),
+          loadSelectOptions("GROUPS"),
+          loadSelectOptions("CATEGORIES"),
+          loadSelectOptions("AREAS"),
+          loadSelectOptions("SELLERS"),
+          loadSelectOptions("STATUSES"),
+        ]);
+        
+        preloadOptionColors(targets, "TARGETS");
+        preloadOptionColors(groups, "GROUPS");
+        preloadOptionColors(categories, "CATEGORIES");
+        preloadOptionColors(areas, "AREAS");
+        preloadOptionColors(sellers, "SELLERS");
+        preloadOptionColors(statuses, "STATUSES");
       } catch (error) {
         console.error("Error loading select options order:", error);
       }

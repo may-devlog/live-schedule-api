@@ -6,6 +6,24 @@ import { loadSelectOptions, loadStaySelectOptions } from "./select-options-stora
 // キャッシュ用
 const colorCache: Record<string, string> = {};
 
+// 選択肢の色情報をキャッシュに保存する関数（事前読み込み用）
+export function preloadOptionColors(
+  options: SelectOption[],
+  optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS" | "WEBSITE"
+): void {
+  const isPrefecture = optionType === "AREAS";
+  const isCategory = optionType === "CATEGORIES";
+  
+  options.forEach((option) => {
+    const cacheKey = `${optionType}:${option.label}`;
+    if (!colorCache[cacheKey]) {
+      // 選択肢に色が設定されている場合はそれを使用、なければデフォルト色
+      const color = option.color || getDefaultColorForLabel(option.label, isPrefecture, isCategory);
+      colorCache[cacheKey] = color;
+    }
+  });
+}
+
 // 選択肢の色を取得（非同期）
 export async function getOptionColor(
   label: string,
