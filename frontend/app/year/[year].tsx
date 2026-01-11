@@ -402,7 +402,7 @@ export default function YearScreen() {
       {archiveType === "イベント" ? (
         <>
           <View style={styles.groupingSelector}>
-            <Text style={styles.groupingLabel}>メイン:</Text>
+            <Text style={styles.groupingLabel}>メイン</Text>
             <View style={styles.groupingButtons}>
               {[
                 { value: "none" as MainGroupingField, label: "なし" },
@@ -430,7 +430,7 @@ export default function YearScreen() {
             </View>
           </View>
           <View style={styles.groupingSelector}>
-            <Text style={styles.groupingLabel}>サブ:</Text>
+            <Text style={styles.groupingLabel}>サブ</Text>
             <View style={styles.groupingButtons}>
               {[
                 { value: "none" as SubGroupingField, label: "なし" },
