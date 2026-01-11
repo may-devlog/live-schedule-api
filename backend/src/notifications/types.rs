@@ -39,3 +39,4 @@ pub fn row_to_notification(row: NotificationRow) -> Notification {
     }
 }
 
+

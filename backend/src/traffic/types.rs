@@ -77,3 +77,4 @@ pub fn row_to_traffic(row: TrafficRow) -> Traffic {
     }
 }
 
+

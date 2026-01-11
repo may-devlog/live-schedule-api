@@ -68,3 +68,4 @@ pub fn row_to_stay(row: StayRow) -> Stay {
     }
 }
 
+

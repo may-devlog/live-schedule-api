@@ -40,3 +40,4 @@ pub fn row_to_masked_location(row: MaskedLocationRow) -> MaskedLocation {
     }
 }
 
+

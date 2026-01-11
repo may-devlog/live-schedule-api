@@ -9,3 +9,4 @@ pub fn generate_token() -> String {
     hex::encode(bytes)
 }
 
+
