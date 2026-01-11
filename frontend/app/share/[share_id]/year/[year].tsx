@@ -47,6 +47,9 @@ export default function SharedYearScreen() {
   
   // 選択肢の並び順情報（グルーピングのソート用）
   const [selectOptionsMap, setSelectOptionsMap] = useState<Map<string, Map<string, number>>>(new Map());
+  
+  // グルーピング結果のタイトルの色を保持（非同期で取得）
+  const [groupTitleColors, setGroupTitleColors] = useState<Map<string, string>>(new Map());
 
 
   // 利用可能な年を取得
@@ -291,6 +294,130 @@ export default function SharedYearScreen() {
   const nestedGroupedSchedules = useMemo(() => {
     return groupSchedulesNested(schedules, mainGroupingField, subGroupingField, selectOptionsMap);
   }, [schedules, mainGroupingField, subGroupingField, selectOptionsMap]);
+  
+  // グルーピング結果のタイトルの色を非同期で取得（年別ページと同じ方法）
+  useEffect(() => {
+    // nestedGroupedSchedulesの代わりに、その依存関係を直接使用して初期化順序の問題を回避
+    if (schedules.length === 0 || (mainGroupingField === "none" && subGroupingField === "none")) {
+      setGroupTitleColors(new Map());
+      return;
+    }
+    
+    let isMounted = true;
+    
+    const loadGroupTitleColors = async () => {
+      // グルーピングを再計算（useMemoの結果を直接使用せず、依存関係から再計算）
+      const currentNestedGroupedSchedules = groupSchedulesNested(schedules, mainGroupingField, subGroupingField, selectOptionsMap);
+      if (currentNestedGroupedSchedules.length === 0) {
+        if (isMounted) {
+          setGroupTitleColors(new Map());
+        }
+        return;
+      }
+      
+      // まず、キャッシュから即座に色を取得して表示（テキスト表示を避けるため）
+      const initialColorMap = new Map<string, string>();
+      const colorPromises: Promise<void>[] = [];
+      
+      for (const mainGroup of currentNestedGroupedSchedules) {
+        // メイングループの色を取得
+        if (mainGroup.title && mainGroupingField !== "none") {
+          let optionType: "TARGETS" | undefined;
+          if (mainGroupingField === "target") {
+            optionType = "TARGETS";
+          } else if (mainGroupingField === "lineup") {
+            optionType = "TARGETS"; // LINEUPSはTARGETSと同じ選択肢を使用
+          }
+          
+          if (optionType) {
+            // キャッシュから即座に色を取得
+            const cachedColor = getOptionColorSync(mainGroup.title, optionType);
+            if (cachedColor) {
+              initialColorMap.set(`main-${mainGroup.title}`, cachedColor);
+            }
+            
+            // 非同期で最新の色を取得（並列化）
+            colorPromises.push(
+              getOptionColor(mainGroup.title, optionType).then((color) => {
+                if (isMounted) {
+                  initialColorMap.set(`main-${mainGroup.title}`, color);
+                  setGroupTitleColors(new Map(initialColorMap));
+                }
+              })
+            );
+          }
+        }
+        
+        // サブグループの色を取得
+        for (const subGroup of mainGroup.subGroups) {
+          if (subGroup.title && subGroupingField !== "none") {
+            let optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "GROUPS" | undefined;
+            switch (subGroupingField) {
+              case "group":
+                // グループが選択肢として存在するかチェック
+                const groupOrderMap = selectOptionsMap.get("group");
+                if (!groupOrderMap || !groupOrderMap.has(subGroup.title)) {
+                  // 選択肢に存在しない場合はタイトルから取っているので色を取得しない
+                  continue;
+                }
+                optionType = "GROUPS";
+                break;
+              case "category":
+                optionType = "CATEGORIES";
+                break;
+              case "area":
+                optionType = "AREAS";
+                break;
+              case "seller":
+                optionType = "SELLERS";
+                break;
+              case "status":
+                optionType = "STATUSES";
+                break;
+              default:
+                continue;
+            }
+            
+            if (optionType) {
+              const key = mainGroup.title 
+                ? `sub-${mainGroup.title}-${subGroup.title}`
+                : `sub-${subGroup.title}`;
+              
+              // キャッシュから即座に色を取得
+              const cachedColor = getOptionColorSync(subGroup.title, optionType);
+              if (cachedColor) {
+                initialColorMap.set(key, cachedColor);
+              }
+              
+              // 非同期で最新の色を取得（並列化）
+              colorPromises.push(
+                getOptionColor(subGroup.title, optionType).then((color) => {
+                  if (isMounted) {
+                    initialColorMap.set(key, color);
+                    setGroupTitleColors(new Map(initialColorMap));
+                  }
+                })
+              );
+            }
+          }
+        }
+      }
+      
+      // キャッシュから取得した色を即座に設定
+      if (isMounted && initialColorMap.size > 0) {
+        setGroupTitleColors(new Map(initialColorMap));
+      }
+      
+      // 並列で最新の色を取得して更新
+      await Promise.all(colorPromises);
+    };
+    
+    loadGroupTitleColors();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [schedules, mainGroupingField, subGroupingField, selectOptionsMap]);
 
   const toggleSection = (title: string) => {
     const newCollapsed = new Set(collapsedSections);
@@ -497,7 +624,17 @@ export default function SharedYearScreen() {
                       <Text style={styles.mainGroupHeaderIcon}>
                         {isMainCollapsed ? "▶" : "▼"}
                       </Text>
-                      <Text style={styles.mainGroupHeaderTitle}>{mainGroup.title}</Text>
+                      {(() => {
+                        const color = groupTitleColors.get(`main-${mainGroup.title}`);
+                        return color ? (
+                          <NotionTag
+                            label={mainGroup.title}
+                            color={color}
+                          />
+                        ) : (
+                          <Text style={styles.mainGroupHeaderTitle}>{mainGroup.title}</Text>
+                        );
+                      })()}
                       <Text style={styles.mainGroupHeaderCount}>
                         ({mainGroup.subGroups.reduce((sum, sg) => sum + sg.data.length, 0)})
                       </Text>
@@ -537,9 +674,22 @@ export default function SharedYearScreen() {
                             <Text style={isMainNone ? styles.sectionHeaderIcon : styles.subGroupHeaderIcon}>
                               {isSubCollapsed ? "▶" : "▼"}
                             </Text>
-                            <Text style={isMainNone ? styles.sectionHeaderTitle : styles.subGroupHeaderTitle}>
-                              {subGroup.title}
-                            </Text>
+                            {(() => {
+                              const key = mainGroup.title 
+                                ? `sub-${mainGroup.title}-${subGroup.title}`
+                                : `sub-${subGroup.title}`;
+                              const color = groupTitleColors.get(key);
+                              return color ? (
+                                <NotionTag
+                                  label={subGroup.title}
+                                  color={color}
+                                />
+                              ) : (
+                                <Text style={isMainNone ? styles.sectionHeaderTitle : styles.subGroupHeaderTitle}>
+                                  {subGroup.title}
+                                </Text>
+                              );
+                            })()}
                             <Text style={isMainNone ? styles.sectionHeaderCount : styles.subGroupHeaderCount}>
                               ({subGroup.data.length})
                             </Text>
