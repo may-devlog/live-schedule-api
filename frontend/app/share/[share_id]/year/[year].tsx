@@ -5,7 +5,6 @@ import React from "react";
 import { View, StyleSheet, Text } from "react-native";
 import type { Schedule } from "../../../HomeScreen";
 import { getApiUrl } from "../../../../utils/api";
-import { PageHeader } from "../../../../components/PageHeader";
 import { YearPageContent } from "../../../../components/YearPageContent";
 
 export default function SharedYearScreen() {
@@ -14,7 +13,7 @@ export default function SharedYearScreen() {
 
   if (!share_id) {
     return (
-      <View style={styles.container}>
+      <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Share ID not found</Text>
       </View>
     );
@@ -83,27 +82,25 @@ export default function SharedYearScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <PageHeader showBackButton={true} homePath={`/share/${share_id}`} />
-      
-      <YearPageContent
-        isShared={true}
-        shareId={share_id}
-        fetchSchedules={fetchSchedules}
-        fetchAvailableYears={fetchAvailableYears}
-        showStayTab={false}
-        homePath={`/share/${share_id}`}
-        onSchedulePress={handleOpenDetail}
-        initialYear={year ?? null}
-      />
-    </View>
+    <YearPageContent
+      isShared={true}
+      shareId={share_id}
+      fetchSchedules={fetchSchedules}
+      fetchAvailableYears={fetchAvailableYears}
+      showStayTab={false}
+      homePath={`/share/${share_id}`}
+      onSchedulePress={handleOpenDetail}
+      initialYear={year ?? null}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  errorContainer: {
     flex: 1,
     backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
   },
   errorText: {
     color: "#d93025",

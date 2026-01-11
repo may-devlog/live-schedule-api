@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import type { Schedule } from "../app/HomeScreen";
 import { getApiUrl } from "../utils/api";
+import { PageHeader } from "./PageHeader";
 import { NotionTag } from "./notion-tag";
 import { getOptionColor, getOptionColorSync } from "../utils/get-option-color";
 import { groupSchedulesNested, type MainGroupingField, type SubGroupingField, type NestedGroupedSchedule } from "../utils/group-schedules";
@@ -506,7 +507,10 @@ export function YearPageContent({
 
   // レンダリング部分
   return (
-    <View style={styles.content}>
+    <View style={styles.container}>
+      <PageHeader showBackButton={true} homePath={homePath} />
+
+      <View style={styles.content}>
       {/* 年選択（プルダウン） */}
       <YearSelector
         availableYears={availableYears}
@@ -1036,11 +1040,16 @@ export function YearPageContent({
           )
         )
       )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
   content: {
     padding: 24,
     maxWidth: 900,

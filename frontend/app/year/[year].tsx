@@ -2,10 +2,8 @@
 
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import React from "react";
-import { View, StyleSheet } from "react-native";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
-import { PageHeader } from "../../components/PageHeader";
 import { YearPageContent } from "../../components/YearPageContent";
 
 export default function YearScreen() {
@@ -96,12 +94,10 @@ export default function YearScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <>
       {/* ナビゲーションバーのタイトルを非表示 */}
       <Stack.Screen options={{ headerShown: false }} />
       
-      <PageHeader showBackButton={true} homePath="/" />
-
       <YearPageContent
         isShared={false}
         fetchSchedules={fetchSchedules}
@@ -113,13 +109,7 @@ export default function YearScreen() {
         onStayPress={handleOpenStay}
         initialYear={params.year ?? null}
       />
-    </View>
+    </>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-  },
-});
