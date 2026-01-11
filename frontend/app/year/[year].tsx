@@ -358,7 +358,9 @@ export default function YearScreen() {
         return;
       }
       
-      const colorMap = new Map<string, string>();
+      // まず、キャッシュから即座に色を取得して表示（テキスト表示を避けるため）
+      const initialColorMap = new Map<string, string>();
+      const colorPromises: Promise<void>[] = [];
       
       for (const mainGroup of currentNestedGroupedSchedules) {
         // メイングループの色を取得
@@ -371,10 +373,21 @@ export default function YearScreen() {
           }
           
           if (optionType) {
-            const color = await getOptionColor(mainGroup.title, optionType);
-            if (isMounted) {
-              colorMap.set(`main-${mainGroup.title}`, color);
+            // キャッシュから即座に色を取得
+            const cachedColor = getOptionColorSync(mainGroup.title, optionType);
+            if (cachedColor) {
+              initialColorMap.set(`main-${mainGroup.title}`, cachedColor);
             }
+            
+            // 非同期で最新の色を取得（並列化）
+            colorPromises.push(
+              getOptionColor(mainGroup.title, optionType).then((color) => {
+                if (isMounted) {
+                  initialColorMap.set(`main-${mainGroup.title}`, color);
+                  setGroupTitleColors(new Map(initialColorMap));
+                }
+              })
+            );
           }
         }
         
@@ -412,18 +425,34 @@ export default function YearScreen() {
               const key = mainGroup.title 
                 ? `sub-${mainGroup.title}-${subGroup.title}`
                 : `sub-${subGroup.title}`;
-              const color = await getOptionColor(subGroup.title, optionType);
-              if (isMounted) {
-                colorMap.set(key, color);
+              
+              // キャッシュから即座に色を取得
+              const cachedColor = getOptionColorSync(subGroup.title, optionType);
+              if (cachedColor) {
+                initialColorMap.set(key, cachedColor);
               }
+              
+              // 非同期で最新の色を取得（並列化）
+              colorPromises.push(
+                getOptionColor(subGroup.title, optionType).then((color) => {
+                  if (isMounted) {
+                    initialColorMap.set(key, color);
+                    setGroupTitleColors(new Map(initialColorMap));
+                  }
+                })
+              );
             }
           }
         }
       }
       
-      if (isMounted) {
-        setGroupTitleColors(colorMap);
+      // キャッシュから取得した色を即座に設定
+      if (isMounted && initialColorMap.size > 0) {
+        setGroupTitleColors(new Map(initialColorMap));
       }
+      
+      // 並列で最新の色を取得して更新
+      await Promise.all(colorPromises);
     };
     
     loadGroupTitleColors();
@@ -443,27 +472,44 @@ export default function YearScreen() {
     let isMounted = true;
     
     const loadStayGroupTitleColors = async () => {
-      const colorMap = new Map<string, string>();
+      // まず、キャッシュから即座に色を取得して表示（テキスト表示を避けるため）
+      const initialColorMap = new Map<string, string>();
+      const colorPromises: Promise<void>[] = [];
       
       for (const group of groupedStays) {
         if (group.title && group.title !== "未設定") {
           if (stayGroupingField === "website") {
-            const color = await getOptionColor(group.title, "WEBSITE");
-            if (isMounted) {
-              colorMap.set(group.title, color);
+            // キャッシュから即座に色を取得
+            const cachedColor = getOptionColorSync(group.title, "WEBSITE");
+            if (cachedColor) {
+              initialColorMap.set(group.title, cachedColor);
             }
+            
+            // 非同期で最新の色を取得（並列化）
+            colorPromises.push(
+              getOptionColor(group.title, "WEBSITE").then((color) => {
+                if (isMounted) {
+                  initialColorMap.set(group.title, color);
+                  setStayGroupTitleColors(new Map(initialColorMap));
+                }
+              })
+            );
           } else if (stayGroupingField === "status") {
             // 宿泊情報のステータスは選択肢から色を取得できないので、デフォルト色を使用
             if (isMounted) {
-              colorMap.set(group.title, "#E5E7EB"); // グレー
+              initialColorMap.set(group.title, "#E5E7EB"); // グレー
             }
           }
         }
       }
       
-      if (isMounted) {
-        setStayGroupTitleColors(colorMap);
+      // キャッシュから取得した色を即座に設定
+      if (isMounted && initialColorMap.size > 0) {
+        setStayGroupTitleColors(new Map(initialColorMap));
       }
+      
+      // 並列で最新の色を取得して更新
+      await Promise.all(colorPromises);
     };
     
     loadStayGroupTitleColors();
