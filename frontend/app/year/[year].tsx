@@ -237,13 +237,15 @@ export default function YearScreen() {
         const { loadSelectOptions, loadStaySelectOptions } = await import("../../utils/select-options-storage");
         
         // グルーピングで使用される選択肢の色を事前読み込み
-        const [targets, groups, categories, areas, sellers, statuses] = await Promise.all([
+        const [targets, groups, categories, areas, sellers, statuses, stayStatuses, websites] = await Promise.all([
           loadSelectOptions("TARGETS"),
           loadSelectOptions("GROUPS"),
           loadSelectOptions("CATEGORIES"),
           loadSelectOptions("AREAS"),
           loadSelectOptions("SELLERS"),
           loadSelectOptions("STATUSES"),
+          loadStaySelectOptions("STATUS"),
+          loadStaySelectOptions("WEBSITE"),
         ]);
         
         preloadOptionColors(targets, "TARGETS");
@@ -252,6 +254,8 @@ export default function YearScreen() {
         preloadOptionColors(areas, "AREAS");
         preloadOptionColors(sellers, "SELLERS");
         preloadOptionColors(statuses, "STATUSES");
+        preloadOptionColors(stayStatuses, "STAY_STATUS");
+        preloadOptionColors(websites, "WEBSITE");
       } catch (error) {
         console.error("Error loading select options order:", error);
       }
@@ -516,10 +520,21 @@ export default function YearScreen() {
               })
             );
           } else if (stayGroupingField === "status") {
-            // 宿泊情報のステータスは選択肢から色を取得できないので、デフォルト色を使用
-            if (isMounted) {
-              initialColorMap.set(group.title, "#E5E7EB"); // グレー
+            // キャッシュから即座に色を取得
+            const cachedColor = getOptionColorSync(group.title, "STAY_STATUS");
+            if (cachedColor) {
+              initialColorMap.set(group.title, cachedColor);
             }
+            
+            // 非同期で最新の色を取得（並列化）
+            colorPromises.push(
+              getOptionColor(group.title, "STAY_STATUS").then((color) => {
+                if (isMounted) {
+                  initialColorMap.set(group.title, color);
+                  setStayGroupTitleColors(new Map(initialColorMap));
+                }
+              })
+            );
           }
         }
       }

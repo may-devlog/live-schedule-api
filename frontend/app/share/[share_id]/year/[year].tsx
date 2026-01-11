@@ -201,13 +201,16 @@ export default function SharedYearScreen() {
         const { loadSelectOptions } = await import("../../../../utils/select-options-storage");
         
         // グルーピングで使用される選択肢の色を事前読み込み
-        const [targets, groups, categories, areas, sellers, statuses] = await Promise.all([
+        const { loadStaySelectOptions } = await import("../../../../utils/select-options-storage");
+        const [targets, groups, categories, areas, sellers, statuses, stayStatuses, websites] = await Promise.all([
           loadSelectOptions("TARGETS", share_id),
           loadSelectOptions("GROUPS", share_id),
           loadSelectOptions("CATEGORIES", share_id),
           loadSelectOptions("AREAS", share_id),
           loadSelectOptions("SELLERS", share_id),
           loadSelectOptions("STATUSES", share_id),
+          loadStaySelectOptions("STATUS", share_id),
+          loadStaySelectOptions("WEBSITE", share_id),
         ]);
         
         preloadOptionColors(targets, "TARGETS");
@@ -216,6 +219,8 @@ export default function SharedYearScreen() {
         preloadOptionColors(areas, "AREAS");
         preloadOptionColors(sellers, "SELLERS");
         preloadOptionColors(statuses, "STATUSES");
+        preloadOptionColors(stayStatuses, "STAY_STATUS");
+        preloadOptionColors(websites, "WEBSITE");
       } catch (error) {
         console.error("Error loading select options order:", error);
       }
