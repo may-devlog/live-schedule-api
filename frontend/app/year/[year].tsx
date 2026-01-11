@@ -1244,6 +1244,7 @@ const styles = StyleSheet.create({
   sectionHeaderCount: {
     fontSize: 12,
     color: "#787774",
+    marginLeft: 8,
   },
   sectionTotalCost: {
     paddingHorizontal: 24,
@@ -1283,6 +1284,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#787774",
     fontWeight: "500",
+    marginLeft: 8,
   },
   mainGroupTotalCost: {
     paddingHorizontal: 32,
@@ -1320,6 +1322,7 @@ const styles = StyleSheet.create({
   subGroupHeaderCount: {
     fontSize: 12,
     color: "#787774",
+    marginLeft: 8,
   },
   subGroupTotalCost: {
     paddingHorizontal: 40,
