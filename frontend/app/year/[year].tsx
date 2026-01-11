@@ -59,6 +59,12 @@ export default function YearScreen() {
   
   // 選択肢の並び順情報（グルーピングのソート用）
   const [selectOptionsMap, setSelectOptionsMap] = useState<Map<string, Map<string, number>>>(new Map());
+  
+  // グルーピング結果のタイトルの色を保持（非同期で取得）
+  const [groupTitleColors, setGroupTitleColors] = useState<Map<string, string>>(new Map());
+  
+  // 宿泊情報のグルーピングタイトルの色を保持（非同期で取得）
+  const [stayGroupTitleColors, setStayGroupTitleColors] = useState<Map<string, string>>(new Map());
 
 
   // 利用可能な年を取得
@@ -607,7 +613,17 @@ export default function YearScreen() {
                     <Text style={styles.mainGroupHeaderIcon}>
                       {isMainCollapsed ? "▶" : "▼"}
                     </Text>
-                    <Text style={styles.mainGroupHeaderTitle}>{mainGroup.title}</Text>
+                    {(() => {
+                      const color = groupTitleColors.get(`main-${mainGroup.title}`);
+                      return color ? (
+                        <NotionTag
+                          label={mainGroup.title}
+                          color={color}
+                        />
+                      ) : (
+                        <Text style={styles.mainGroupHeaderTitle}>{mainGroup.title}</Text>
+                      );
+                    })()}
                     <Text style={styles.mainGroupHeaderCount}>
                       ({mainGroup.subGroups.reduce((sum, sg) => sum + sg.data.length, 0)})
                     </Text>
@@ -647,9 +663,22 @@ export default function YearScreen() {
                           <Text style={isMainNone ? styles.sectionHeaderIcon : styles.subGroupHeaderIcon}>
                             {isSubCollapsed ? "▶" : "▼"}
                           </Text>
-                          <Text style={isMainNone ? styles.sectionHeaderTitle : styles.subGroupHeaderTitle}>
-                            {subGroup.title}
-                          </Text>
+                          {(() => {
+                            const key = mainGroup.title 
+                              ? `sub-${mainGroup.title}-${subGroup.title}`
+                              : `sub-${subGroup.title}`;
+                            const color = groupTitleColors.get(key);
+                            return color ? (
+                              <NotionTag
+                                label={subGroup.title}
+                                color={color}
+                              />
+                            ) : (
+                              <Text style={isMainNone ? styles.sectionHeaderTitle : styles.subGroupHeaderTitle}>
+                                {subGroup.title}
+                              </Text>
+                            );
+                          })()}
                           <Text style={isMainNone ? styles.sectionHeaderCount : styles.subGroupHeaderCount}>
                             ({subGroup.data.length})
                           </Text>
@@ -795,6 +824,7 @@ export default function YearScreen() {
             }
             renderSectionHeader={({ section: { title, data } }) => {
               const isCollapsed = collapsedSections.has(title);
+              const color = stayGroupTitleColors.get(title);
               
               return (
                 <View>
@@ -805,7 +835,14 @@ export default function YearScreen() {
                     <Text style={styles.sectionHeaderIcon}>
                       {isCollapsed ? "▶" : "▼"}
                     </Text>
-                    <Text style={styles.sectionHeaderTitle}>{title}</Text>
+                    {color ? (
+                      <NotionTag
+                        label={title}
+                        color={color}
+                      />
+                    ) : (
+                      <Text style={styles.sectionHeaderTitle}>{title}</Text>
+                    )}
                     <Text style={styles.sectionHeaderCount}>({data.length})</Text>
                   </TouchableOpacity>
                 </View>
