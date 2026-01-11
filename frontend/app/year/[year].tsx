@@ -559,16 +559,9 @@ export default function YearScreen() {
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
       ) : (
-        <SectionList
-          sections={nestedGroupedSchedules.flatMap(mainGroup => 
-            mainGroup.subGroups.map(subGroup => ({
-              title: mainGroup.title === "" ? subGroup.title : `${mainGroup.title} > ${subGroup.title}`,
-              mainTitle: mainGroup.title,
-              subTitle: subGroup.title,
-              data: subGroup.data
-            }))
-          )}
-          keyExtractor={(item) => item.id.toString()}
+        <FlatList
+          data={nestedGroupedSchedules}
+          keyExtractor={(item, index) => `main-${index}-${item.title}`}
           style={{ flex: 1 }}
           contentContainerStyle={{ flexGrow: 1 }}
           refreshControl={
@@ -590,83 +583,118 @@ export default function YearScreen() {
               <Text style={styles.emptyText}>スケジュールはありません</Text>
             ) : null
           }
-          renderSectionHeader={({ section }) => {
-            if (!section || !section.title || !section.data) {
-              return null;
-            }
-            const isCollapsed = collapsedSections.has(section.title);
-            // 総費用の合計を計算（往復フラグを考慮）
-            const totalCost = section.data.reduce((sum, schedule) => {
-              const cost = calculateTotalCost(schedule);
-              return sum + (cost ?? 0);
+          renderItem={({ item: mainGroup }) => {
+            const mainGroupKey = mainGroup.title || "未設定";
+            const isMainCollapsed = collapsedSections.has(`main-${mainGroupKey}`);
+            
+            // メイングループの総費用を計算
+            const mainTotalCost = mainGroup.subGroups.reduce((sum, subGroup) => {
+              return sum + subGroup.data.reduce((subSum, schedule) => {
+                const cost = calculateTotalCost(schedule);
+                return subSum + (cost ?? 0);
+              }, 0);
             }, 0);
             
             return (
               <View>
-                <TouchableOpacity
-                  style={styles.sectionHeader}
-                  onPress={() => toggleSection(section.title)}
-                >
-                  <Text style={styles.sectionHeaderIcon}>
-                    {isCollapsed ? "▶" : "▼"}
-                  </Text>
-                  <Text style={styles.sectionHeaderTitle}>{section.title}</Text>
-                  <Text style={styles.sectionHeaderCount}>({section.data.length})</Text>
-                </TouchableOpacity>
-                {totalCost > 0 && (
-                  <View style={styles.sectionTotalCost}>
-                    <Text style={styles.sectionTotalCostText}>
-                      ¥{totalCost.toLocaleString()}
+                {/* メイングループヘッダー */}
+                {mainGroup.title && (
+                  <TouchableOpacity
+                    style={styles.mainGroupHeader}
+                    onPress={() => toggleSection(`main-${mainGroupKey}`)}
+                  >
+                    <Text style={styles.mainGroupHeaderIcon}>
+                      {isMainCollapsed ? "▶" : "▼"}
+                    </Text>
+                    <Text style={styles.mainGroupHeaderTitle}>{mainGroup.title}</Text>
+                    <Text style={styles.mainGroupHeaderCount}>
+                      ({mainGroup.subGroups.reduce((sum, sg) => sum + sg.data.length, 0)})
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {mainTotalCost > 0 && !isMainCollapsed && (
+                  <View style={styles.mainGroupTotalCost}>
+                    <Text style={styles.mainGroupTotalCostText}>
+                      ¥{mainTotalCost.toLocaleString()}
                     </Text>
                   </View>
                 )}
+                
+                {/* サブグループ */}
+                {!isMainCollapsed && mainGroup.subGroups.map((subGroup, subIndex) => {
+                  const subGroupKey = `${mainGroupKey}-${subGroup.title || "未設定"}`;
+                  const isSubCollapsed = collapsedSections.has(subGroupKey);
+                  
+                  // サブグループの総費用を計算
+                  const subTotalCost = subGroup.data.reduce((sum, schedule) => {
+                    const cost = calculateTotalCost(schedule);
+                    return sum + (cost ?? 0);
+                  }, 0);
+                  
+                  return (
+                    <View key={`sub-${subIndex}`}>
+                      <TouchableOpacity
+                        style={styles.subGroupHeader}
+                        onPress={() => toggleSection(subGroupKey)}
+                      >
+                        <Text style={styles.subGroupHeaderIcon}>
+                          {isSubCollapsed ? "▶" : "▼"}
+                        </Text>
+                        <Text style={styles.subGroupHeaderTitle}>{subGroup.title || "未設定"}</Text>
+                        <Text style={styles.subGroupHeaderCount}>({subGroup.data.length})</Text>
+                      </TouchableOpacity>
+                      {subTotalCost > 0 && !isSubCollapsed && (
+                        <View style={styles.subGroupTotalCost}>
+                          <Text style={styles.subGroupTotalCostText}>
+                            ¥{subTotalCost.toLocaleString()}
+                          </Text>
+                        </View>
+                      )}
+                      
+                      {/* スケジュールアイテム */}
+                      {!isSubCollapsed && subGroup.data.map((schedule) => (
+                        <TouchableOpacity
+                          key={schedule.id}
+                          style={styles.card}
+                          onPress={() => handleOpenDetail(schedule.id)}
+                        >
+                          <View style={styles.cardRow}>
+                            <Text style={styles.cardDate}>
+                              {formatDateTimeUTC(schedule.datetime)}
+                            </Text>
+                            {(() => {
+                              const totalCost = calculateTotalCost(schedule);
+                              return totalCost && totalCost > 0 ? (
+                                <Text style={styles.cardPrice}>
+                                  ¥{totalCost.toLocaleString()}
+                                </Text>
+                              ) : null;
+                            })()}
+                          </View>
+                          {/* ツアー名 (Group) */}
+                          {schedule.group && (
+                            <Text style={styles.cardGroup} numberOfLines={1}>
+                              {schedule.group}
+                            </Text>
+                          )}
+                          <Text style={styles.cardTitle} numberOfLines={2}>
+                            {schedule.title}
+                          </Text>
+                          <View style={styles.cardSubContainer}>
+                            {schedule.area && (
+                              <NotionTag
+                                label={schedule.area}
+                                color={areaColors.get(schedule.id) || getOptionColorSync(schedule.area, "AREAS")}
+                              />
+                            )}
+                            <Text style={styles.cardSub}>{schedule.venue}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  );
+                })}
               </View>
-            );
-          }}
-          renderItem={({ item, section }) => {
-            if (!section || !section.title) {
-              return null;
-            }
-            const isCollapsed = collapsedSections.has(section.title);
-            if (isCollapsed) return null;
-            
-            return (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => handleOpenDetail(item.id)}
-              >
-                <View style={styles.cardRow}>
-                  <Text style={styles.cardDate}>
-                    {formatDateTimeUTC(item.datetime)}
-                  </Text>
-                  {(() => {
-                    const totalCost = calculateTotalCost(item);
-                    return totalCost && totalCost > 0 ? (
-                      <Text style={styles.cardPrice}>
-                        ¥{totalCost.toLocaleString()}
-                      </Text>
-                    ) : null;
-                  })()}
-                </View>
-                {/* ツアー名 (Group) */}
-                {item.group && (
-                  <Text style={styles.cardGroup} numberOfLines={1}>
-                    {item.group}
-                  </Text>
-                )}
-                <Text style={styles.cardTitle} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                <View style={styles.cardSubContainer}>
-                  {item.area && (
-                    <NotionTag
-                      label={item.area}
-                      color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
-                    />
-                  )}
-                  <Text style={styles.cardSub}>{item.venue}</Text>
-                </View>
-              </TouchableOpacity>
             );
           }}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -996,6 +1024,82 @@ const styles = StyleSheet.create({
   },
   sectionTotalCostText: {
     fontSize: 14,
+    color: "#37352f",
+    fontWeight: "600",
+  },
+  mainGroupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: "#f7f6f3",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+    marginTop: 8,
+  },
+  mainGroupHeaderIcon: {
+    fontSize: 14,
+    color: "#787774",
+    marginRight: 8,
+    width: 20,
+  },
+  mainGroupHeaderTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#37352f",
+    flex: 1,
+  },
+  mainGroupHeaderCount: {
+    fontSize: 14,
+    color: "#787774",
+    fontWeight: "500",
+  },
+  mainGroupTotalCost: {
+    paddingHorizontal: 32,
+    paddingVertical: 8,
+    backgroundColor: "#f7f6f3",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+  },
+  mainGroupTotalCostText: {
+    fontSize: 15,
+    color: "#37352f",
+    fontWeight: "700",
+  },
+  subGroupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    backgroundColor: "#fafafa",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+  },
+  subGroupHeaderIcon: {
+    fontSize: 12,
+    color: "#787774",
+    marginRight: 8,
+    width: 16,
+  },
+  subGroupHeaderTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#37352f",
+    flex: 1,
+  },
+  subGroupHeaderCount: {
+    fontSize: 12,
+    color: "#787774",
+  },
+  subGroupTotalCost: {
+    paddingHorizontal: 40,
+    paddingVertical: 6,
+    backgroundColor: "#fafafa",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9e9e7",
+  },
+  subGroupTotalCostText: {
+    fontSize: 13,
     color: "#37352f",
     fontWeight: "600",
   },
