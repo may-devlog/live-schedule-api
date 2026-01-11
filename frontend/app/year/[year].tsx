@@ -337,6 +337,141 @@ export default function YearScreen() {
   const groupedStays = useMemo(() => {
     return groupStays(stays, stayGroupingField, selectOptionsMap);
   }, [stays, stayGroupingField, selectOptionsMap]);
+  
+  // グルーピング結果のタイトルの色を非同期で取得（ライブ詳細画面と同じ方法）
+  useEffect(() => {
+    // nestedGroupedSchedulesの代わりに、その依存関係を直接使用して初期化順序の問題を回避
+    if (schedules.length === 0 || (mainGroupingField === "none" && subGroupingField === "none")) {
+      setGroupTitleColors(new Map());
+      return;
+    }
+    
+    let isMounted = true;
+    
+    const loadGroupTitleColors = async () => {
+      // グルーピングを再計算（useMemoの結果を直接使用せず、依存関係から再計算）
+      const currentNestedGroupedSchedules = groupSchedulesNested(schedules, mainGroupingField, subGroupingField, selectOptionsMap);
+      if (currentNestedGroupedSchedules.length === 0) {
+        if (isMounted) {
+          setGroupTitleColors(new Map());
+        }
+        return;
+      }
+      
+      const colorMap = new Map<string, string>();
+      
+      for (const mainGroup of currentNestedGroupedSchedules) {
+        // メイングループの色を取得
+        if (mainGroup.title && mainGroupingField !== "none") {
+          let optionType: "TARGETS" | undefined;
+          if (mainGroupingField === "target") {
+            optionType = "TARGETS";
+          } else if (mainGroupingField === "lineup") {
+            optionType = "TARGETS"; // LINEUPSはTARGETSと同じ選択肢を使用
+          }
+          
+          if (optionType) {
+            const color = await getOptionColor(mainGroup.title, optionType);
+            if (isMounted) {
+              colorMap.set(`main-${mainGroup.title}`, color);
+            }
+          }
+        }
+        
+        // サブグループの色を取得
+        for (const subGroup of mainGroup.subGroups) {
+          if (subGroup.title && subGroupingField !== "none") {
+            let optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "GROUPS" | undefined;
+            switch (subGroupingField) {
+              case "group":
+                // グループが選択肢として存在するかチェック
+                const groupOrderMap = selectOptionsMap.get("group");
+                if (!groupOrderMap || !groupOrderMap.has(subGroup.title)) {
+                  // 選択肢に存在しない場合はタイトルから取っているので色を取得しない
+                  continue;
+                }
+                optionType = "GROUPS";
+                break;
+              case "category":
+                optionType = "CATEGORIES";
+                break;
+              case "area":
+                optionType = "AREAS";
+                break;
+              case "seller":
+                optionType = "SELLERS";
+                break;
+              case "status":
+                optionType = "STATUSES";
+                break;
+              default:
+                continue;
+            }
+            
+            if (optionType) {
+              const key = mainGroup.title 
+                ? `sub-${mainGroup.title}-${subGroup.title}`
+                : `sub-${subGroup.title}`;
+              const color = await getOptionColor(subGroup.title, optionType);
+              if (isMounted) {
+                colorMap.set(key, color);
+              }
+            }
+          }
+        }
+      }
+      
+      if (isMounted) {
+        setGroupTitleColors(colorMap);
+      }
+    };
+    
+    loadGroupTitleColors();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [schedules, mainGroupingField, subGroupingField, selectOptionsMap]);
+  
+  // 宿泊情報のグルーピングタイトルの色を非同期で取得
+  useEffect(() => {
+    if (archiveType !== "宿泊" || groupedStays.length === 0 || stayGroupingField === "none") {
+      setStayGroupTitleColors(new Map());
+      return;
+    }
+    
+    let isMounted = true;
+    
+    const loadStayGroupTitleColors = async () => {
+      const colorMap = new Map<string, string>();
+      
+      for (const group of groupedStays) {
+        if (group.title && group.title !== "未設定") {
+          if (stayGroupingField === "website") {
+            const color = await getOptionColor(group.title, "WEBSITE");
+            if (isMounted) {
+              colorMap.set(group.title, color);
+            }
+          } else if (stayGroupingField === "status") {
+            // 宿泊情報のステータスは選択肢から色を取得できないので、デフォルト色を使用
+            if (isMounted) {
+              colorMap.set(group.title, "#E5E7EB"); // グレー
+            }
+          }
+        }
+      }
+      
+      if (isMounted) {
+        setStayGroupTitleColors(colorMap);
+      }
+    };
+    
+    loadStayGroupTitleColors();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [groupedStays, stayGroupingField, archiveType]);
 
   const toggleSection = (title: string) => {
     const newCollapsed = new Set(collapsedSections);
