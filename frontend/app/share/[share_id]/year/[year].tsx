@@ -589,7 +589,7 @@ export default function SharedYearScreen() {
                   {item.title}
                 </Text>
                 <View style={styles.cardSubContainer}>
-                  {item.area && (
+                  {item.area && subGroupingField !== "area" && (
                     <NotionTag
                       label={item.area}
                       color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
