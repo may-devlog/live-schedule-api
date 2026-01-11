@@ -125,6 +125,14 @@ export function stringArrayToOptions(
   }));
 }
 
+// ステータス用の固定カラー（ライブ予定・宿泊で共通）
+const STATUS_COLORS: Record<string, string> = {
+  Canceled: "#E5E7EB", // gray
+  Keep: "#BFDBFE",     // blue
+  Done: "#D1FAE5",     // green
+  // Pending は既存のロジックのまま
+};
+
 // ラベルからデフォルト色を生成
 // isPrefectureがtrueの場合、都道府県として地方ごとに同じ色を割り当て
 // isCategoryがtrueの場合、カテゴリとして特定の色を割り当て
@@ -135,6 +143,11 @@ export function getDefaultColorForLabel(
   isCategory: boolean = false,
   isSeller: boolean = false
 ): string {
+  // ステータス用の固定カラーをチェック（Done, Keep, Canceledなど）
+  if (STATUS_COLORS[label]) {
+    return STATUS_COLORS[label];
+  }
+  
   if (isPrefecture) {
     const region = PREFECTURE_REGIONS[label];
     if (region && REGION_COLORS[region]) {
