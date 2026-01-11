@@ -44,6 +44,8 @@ Thumbs.db
 *.db-shm
 *.db-wal
 data/*.db
+backend/data/*.db
+backend/data/*.db.backup.*
 
 # Build artifacts
 *.log

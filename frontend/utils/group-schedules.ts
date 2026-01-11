@@ -152,7 +152,7 @@ function getGroupKey(schedule: Schedule, field: GroupingField | MainGroupingFiel
     case "status":
       return [schedule.status || "未設定"];
     case "none":
-      return ["未設定"];
+      return [""];
     default:
       return ["未設定"];
   }
