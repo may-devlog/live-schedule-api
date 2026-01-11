@@ -161,7 +161,7 @@ function getGroupKey(schedule: Schedule, field: GroupingField | MainGroupingFiel
 // グループをソートするヘルパー関数
 function sortGroups(
   groups: Array<[string, Schedule[]]>,
-  field: GroupingField,
+  field: GroupingField | MainGroupingField | SubGroupingField,
   selectOptionsMap: Map<string, Map<string, number>>
 ): Array<[string, Schedule[]]> {
   return groups.sort((a, b) => {
