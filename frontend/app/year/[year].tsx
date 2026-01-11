@@ -1268,7 +1268,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   sectionTotalCost: {
-    paddingHorizontal: 24,
+    paddingLeft: 40, // ヘッダーのpadding(16) + アイコンのwidth(16) + アイコンのmarginRight(8) = 40
+    paddingRight: 16,
     paddingVertical: 8,
     backgroundColor: "#f7f6f3",
     borderBottomWidth: 1,
@@ -1308,7 +1309,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   mainGroupTotalCost: {
-    paddingHorizontal: 32,
+    paddingLeft: 44, // ヘッダーのpadding(16) + アイコンのwidth(20) + アイコンのmarginRight(8) = 44
+    paddingRight: 16,
     paddingVertical: 8,
     backgroundColor: "#f7f6f3",
     borderBottomWidth: 1,
@@ -1346,7 +1348,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   subGroupTotalCost: {
-    paddingHorizontal: 40,
+    paddingLeft: 56, // ヘッダーのpadding(32) + アイコンのwidth(16) + アイコンのmarginRight(8) = 56
+    paddingRight: 32,
     paddingVertical: 6,
     backgroundColor: "#fafafa",
     borderBottomWidth: 1,
