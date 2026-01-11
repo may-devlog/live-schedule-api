@@ -514,7 +514,21 @@ export async function loadStaySelectOptions(
       if (Array.isArray(parsed) && parsed.length > 0) {
         if (typeof parsed[0] === "string") {
           // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
-          return parsed.map((str: string) => ({ label: str }));
+          // STATUSの場合は色を設定
+          if (key === "STATUS") {
+            return (parsed as string[]).map((str: string) => ({
+              label: str,
+              color: getDefaultColorForLabel(str, false, false, false),
+            }));
+          }
+          return (parsed as string[]).map((str: string) => ({ label: str }));
+        }
+        // STATUSの場合は色が設定されていない場合にデフォルト色を設定
+        if (key === "STATUS") {
+          return (parsed as SelectOption[]).map((opt) => ({
+            ...opt,
+            color: opt.color || getDefaultColorForLabel(opt.label, false, false, false),
+          }));
         }
         return parsed as SelectOption[];
       }

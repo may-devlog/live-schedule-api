@@ -77,6 +77,12 @@ export function getOptionColorSync(label: string, optionType?: "CATEGORIES" | "A
     }
   }
   // キャッシュになければデフォルト色
+  // STAY_STATUSとSTATUSESの場合はステータス用の色を取得
+  if (optionType === "STAY_STATUS" || optionType === "STATUSES") {
+    const isPrefecture = false;
+    const isCategory = false;
+    return getDefaultColorForLabel(label, isPrefecture, isCategory);
+  }
   const isPrefecture = optionType === "AREAS";
   const isCategory = optionType === "CATEGORIES";
   return getDefaultColorForLabel(label, isPrefecture, isCategory);
