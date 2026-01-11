@@ -570,7 +570,7 @@ export default function SharedYearScreen() {
                   <Text style={styles.cardDate}>
                     {formatDateTimeUTC(item.datetime)}
                   </Text>
-                  {(() => {
+                  {mainGroupingField !== "lineup" && (() => {
                     const totalCost = calculateTotalCost(item);
                     return totalCost && totalCost > 0 ? (
                       <Text style={styles.cardPrice}>
@@ -666,7 +666,7 @@ export default function SharedYearScreen() {
                       </Text>
                     </TouchableOpacity>
                   )}
-                  {!isMainNone && mainTotalCost > 0 && !isMainCollapsed && (
+                  {!isMainNone && mainTotalCost > 0 && !isMainCollapsed && mainGroupingField !== "lineup" && (
                     <View style={styles.mainGroupTotalCost}>
                       <Text style={styles.mainGroupTotalCostText}>
                         ¥{mainTotalCost.toLocaleString()}
@@ -721,7 +721,7 @@ export default function SharedYearScreen() {
                             </Text>
                           </TouchableOpacity>
                         )}
-                        {!isSubNone && subTotalCost > 0 && !isSubCollapsed && (
+                        {!isSubNone && subTotalCost > 0 && !isSubCollapsed && mainGroupingField !== "lineup" && (
                           <View style={isMainNone ? styles.sectionTotalCost : styles.subGroupTotalCost}>
                             <Text style={isMainNone ? styles.sectionTotalCostText : styles.subGroupTotalCostText}>
                               ¥{subTotalCost.toLocaleString()}
@@ -740,14 +740,14 @@ export default function SharedYearScreen() {
                               <Text style={styles.cardDate}>
                                 {formatDateTimeUTC(schedule.datetime)}
                               </Text>
-                              {(() => {
-                                const totalCost = calculateTotalCost(schedule);
-                                return totalCost && totalCost > 0 ? (
-                                  <Text style={styles.cardPrice}>
-                                    ¥{totalCost.toLocaleString()}
-                                  </Text>
-                                ) : null;
-                              })()}
+                            {mainGroupingField !== "lineup" && (() => {
+                              const totalCost = calculateTotalCost(schedule);
+                              return totalCost && totalCost > 0 ? (
+                                <Text style={styles.cardPrice}>
+                                  ¥{totalCost.toLocaleString()}
+                                </Text>
+                              ) : null;
+                            })()}
                             </View>
                             {/* ツアー名 (Group) */}
                             {schedule.group && (
@@ -759,7 +759,7 @@ export default function SharedYearScreen() {
                               {schedule.title}
                             </Text>
                             <View style={styles.cardSubContainer}>
-                              {schedule.area && (
+                              {schedule.area && subGroupingField !== "area" && (
                                 <NotionTag
                                   label={schedule.area}
                                   color={areaColors.get(schedule.id) || getOptionColorSync(schedule.area, "AREAS")}
