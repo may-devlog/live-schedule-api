@@ -749,7 +749,7 @@ export default function YearScreen() {
                 <Text style={styles.cardDate}>
                   {formatDateTimeUTC(item.datetime)}
                 </Text>
-                {(() => {
+                {mainGroupingField !== "lineup" && (() => {
                   const totalCost = calculateTotalCost(item);
                   return totalCost && totalCost > 0 ? (
                     <Text style={styles.cardPrice}>
@@ -768,7 +768,7 @@ export default function YearScreen() {
                 {item.title}
               </Text>
               <View style={styles.cardSubContainer}>
-                {item.area && (
+                {item.area && subGroupingField !== "area" && (
                   <NotionTag
                     label={item.area}
                     color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
@@ -845,7 +845,7 @@ export default function YearScreen() {
                     </Text>
                   </TouchableOpacity>
                 )}
-                {!isMainNone && mainTotalCost > 0 && !isMainCollapsed && (
+                {!isMainNone && mainTotalCost > 0 && !isMainCollapsed && mainGroupingField !== "lineup" && (
                   <View style={styles.mainGroupTotalCost}>
                     <Text style={styles.mainGroupTotalCostText}>
                       ¥{mainTotalCost.toLocaleString()}
@@ -900,13 +900,13 @@ export default function YearScreen() {
                           </Text>
                         </TouchableOpacity>
                       )}
-                      {!isSubNone && subTotalCost > 0 && !isSubCollapsed && (
-                        <View style={isMainNone ? styles.sectionTotalCost : styles.subGroupTotalCost}>
-                          <Text style={isMainNone ? styles.sectionTotalCostText : styles.subGroupTotalCostText}>
-                            ¥{subTotalCost.toLocaleString()}
-                          </Text>
-                        </View>
-                      )}
+                        {!isSubNone && subTotalCost > 0 && !isSubCollapsed && mainGroupingField !== "lineup" && (
+                          <View style={isMainNone ? styles.sectionTotalCost : styles.subGroupTotalCost}>
+                            <Text style={isMainNone ? styles.sectionTotalCostText : styles.subGroupTotalCostText}>
+                              ¥{subTotalCost.toLocaleString()}
+                            </Text>
+                          </View>
+                        )}
                       
                       {/* スケジュールアイテム */}
                       {(!isSubNone ? !isSubCollapsed : true) && subGroup.data.map((schedule) => (
@@ -919,7 +919,7 @@ export default function YearScreen() {
                             <Text style={styles.cardDate}>
                               {formatDateTimeUTC(schedule.datetime)}
                             </Text>
-                            {(() => {
+                            {mainGroupingField !== "lineup" && (() => {
                               const totalCost = calculateTotalCost(schedule);
                               return totalCost && totalCost > 0 ? (
                                 <Text style={styles.cardPrice}>
@@ -937,15 +937,15 @@ export default function YearScreen() {
                           <Text style={styles.cardTitle} numberOfLines={2}>
                             {schedule.title}
                           </Text>
-                          <View style={styles.cardSubContainer}>
-                            {schedule.area && (
-                              <NotionTag
-                                label={schedule.area}
-                                color={areaColors.get(schedule.id) || getOptionColorSync(schedule.area, "AREAS")}
-                              />
-                            )}
-                            <Text style={styles.cardSub}>{schedule.venue}</Text>
-                          </View>
+                            <View style={styles.cardSubContainer}>
+                              {schedule.area && subGroupingField !== "area" && (
+                                <NotionTag
+                                  label={schedule.area}
+                                  color={areaColors.get(schedule.id) || getOptionColorSync(schedule.area, "AREAS")}
+                                />
+                              )}
+                              <Text style={styles.cardSub}>{schedule.venue}</Text>
+                            </View>
                         </TouchableOpacity>
                       ))}
                     </View>
