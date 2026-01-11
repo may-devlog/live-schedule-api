@@ -590,7 +590,10 @@ export default function YearScreen() {
               <Text style={styles.emptyText}>スケジュールはありません</Text>
             ) : null
           }
-          renderSectionHeader={({ section: { title, data } }) => {
+          renderSectionHeader={({ section }) => {
+            if (!section || !section.title || !section.data) {
+              return null;
+            }
             const isCollapsed = collapsedSections.has(section.title);
             // 総費用の合計を計算（往復フラグを考慮）
             const totalCost = section.data.reduce((sum, schedule) => {
@@ -620,7 +623,10 @@ export default function YearScreen() {
               </View>
             );
           }}
-          renderItem={({ item, section }: { item: Schedule; section: { title: string; mainTitle: string; subTitle: string; data: Schedule[] } }) => {
+          renderItem={({ item, section }) => {
+            if (!section || !section.title) {
+              return null;
+            }
             const isCollapsed = collapsedSections.has(section.title);
             if (isCollapsed) return null;
             

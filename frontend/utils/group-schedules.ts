@@ -131,7 +131,7 @@ export function groupSchedules(
 }
 
 // スケジュールからグループキーを取得するヘルパー関数
-function getGroupKey(schedule: Schedule, field: GroupingField): string[] {
+function getGroupKey(schedule: Schedule, field: GroupingField | MainGroupingField | SubGroupingField): string[] {
   switch (field) {
     case "group":
       return [schedule.group || schedule.title || "未設定"];
@@ -151,6 +151,8 @@ function getGroupKey(schedule: Schedule, field: GroupingField): string[] {
       return [schedule.seller || "未設定"];
     case "status":
       return [schedule.status || "未設定"];
+    case "none":
+      return ["未設定"];
     default:
       return ["未設定"];
   }
