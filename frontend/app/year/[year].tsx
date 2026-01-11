@@ -686,7 +686,6 @@ export default function YearScreen() {
         </>
       ) : (
         <View style={styles.groupingSelector}>
-          <Text style={styles.groupingLabel}>グルーピング:</Text>
           <View style={styles.groupingButtons}>
             {[
               { value: "none" as const, label: "なし" },
