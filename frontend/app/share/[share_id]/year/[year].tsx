@@ -476,6 +476,7 @@ export default function SharedYearScreen() {
             renderItem={({ item: mainGroup }) => {
               const mainGroupKey = mainGroup.title || "未設定";
               const isMainCollapsed = collapsedSections.has(`main-${mainGroupKey}`);
+              const isMainNone = !mainGroup.title;
               
               // メイングループの総費用を計算
               const mainTotalCost = mainGroup.subGroups.reduce((sum, subGroup) => {
@@ -487,8 +488,8 @@ export default function SharedYearScreen() {
               
               return (
                 <View>
-                  {/* メイングループヘッダー */}
-                  {mainGroup.title && (
+                  {/* メイングループヘッダー（メインが「なし」の場合は表示しない） */}
+                  {!isMainNone && mainGroup.title && (
                     <TouchableOpacity
                       style={styles.mainGroupHeader}
                       onPress={() => toggleSection(`main-${mainGroupKey}`)}
@@ -502,7 +503,7 @@ export default function SharedYearScreen() {
                       </Text>
                     </TouchableOpacity>
                   )}
-                  {mainTotalCost > 0 && !isMainCollapsed && (
+                  {!isMainNone && mainTotalCost > 0 && !isMainCollapsed && (
                     <View style={styles.mainGroupTotalCost}>
                       <Text style={styles.mainGroupTotalCostText}>
                         ¥{mainTotalCost.toLocaleString()}
@@ -511,8 +512,12 @@ export default function SharedYearScreen() {
                   )}
                   
                   {/* サブグループ */}
-                  {!isMainCollapsed && mainGroup.subGroups.map((subGroup, subIndex) => {
-                    const subGroupKey = `${mainGroupKey}-${subGroup.title || "未設定"}`;
+                  {(!isMainNone ? !isMainCollapsed : true) && mainGroup.subGroups.map((subGroup, subIndex) => {
+                    // サブが「なし」の場合はサブグループヘッダーを表示しない
+                    const isSubNone = !subGroup.title;
+                    const subGroupKey = isMainNone 
+                      ? subGroup.title || "未設定"
+                      : `${mainGroupKey}-${subGroup.title || "未設定"}`;
                     const isSubCollapsed = collapsedSections.has(subGroupKey);
                     
                     // サブグループの総費用を計算
@@ -523,26 +528,33 @@ export default function SharedYearScreen() {
                     
                     return (
                       <View key={`sub-${subIndex}`}>
-                        <TouchableOpacity
-                          style={styles.subGroupHeader}
-                          onPress={() => toggleSection(subGroupKey)}
-                        >
-                          <Text style={styles.subGroupHeaderIcon}>
-                            {isSubCollapsed ? "▶" : "▼"}
-                          </Text>
-                          <Text style={styles.subGroupHeaderTitle}>{subGroup.title || "未設定"}</Text>
-                          <Text style={styles.subGroupHeaderCount}>({subGroup.data.length})</Text>
-                        </TouchableOpacity>
-                        {subTotalCost > 0 && !isSubCollapsed && (
-                          <View style={styles.subGroupTotalCost}>
-                            <Text style={styles.subGroupTotalCostText}>
+                        {/* サブグループヘッダー（サブが「なし」の場合は表示しない） */}
+                        {!isSubNone && (
+                          <TouchableOpacity
+                            style={isMainNone ? styles.sectionHeader : styles.subGroupHeader}
+                            onPress={() => toggleSection(subGroupKey)}
+                          >
+                            <Text style={isMainNone ? styles.sectionHeaderIcon : styles.subGroupHeaderIcon}>
+                              {isSubCollapsed ? "▶" : "▼"}
+                            </Text>
+                            <Text style={isMainNone ? styles.sectionHeaderTitle : styles.subGroupHeaderTitle}>
+                              {subGroup.title}
+                            </Text>
+                            <Text style={isMainNone ? styles.sectionHeaderCount : styles.subGroupHeaderCount}>
+                              ({subGroup.data.length})
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                        {!isSubNone && subTotalCost > 0 && !isSubCollapsed && (
+                          <View style={isMainNone ? styles.sectionTotalCost : styles.subGroupTotalCost}>
+                            <Text style={isMainNone ? styles.sectionTotalCostText : styles.subGroupTotalCostText}>
                               ¥{subTotalCost.toLocaleString()}
                             </Text>
                           </View>
                         )}
                         
                         {/* スケジュールアイテム */}
-                        {!isSubCollapsed && subGroup.data.map((schedule) => (
+                        {(!isSubNone ? !isSubCollapsed : true) && subGroup.data.map((schedule) => (
                           <TouchableOpacity
                             key={schedule.id}
                             style={styles.card}
