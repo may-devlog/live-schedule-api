@@ -13,6 +13,9 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getApiUrl } from '../../utils/api';
 import { ScheduleCalendar } from '../../components/ScheduleCalendar';
+import { NotionTag } from '../../components/notion-tag';
+import { getOptionColorSync } from '../../utils/get-option-color';
+import { fetchAreaColors } from '../../utils/fetch-area-colors';
 import type { Schedule } from '../HomeScreen';
 
 function formatDateTimeUTC(iso: string): string {
@@ -39,6 +42,7 @@ export default function SharedScheduleScreen() {
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
 
   useEffect(() => {
     console.log('[SharedScheduleScreen] share_id:', share_id);
@@ -126,6 +130,26 @@ export default function SharedScheduleScreen() {
   const handleSchedulePress = (scheduleId: number) => {
     router.push(`/share/${share_id}/schedules/${scheduleId}`);
   };
+
+  // Areaの色情報を取得
+  useEffect(() => {
+    if (nextSchedules.length === 0) return;
+    
+    let isMounted = true;
+    
+    const loadAreaColors = async () => {
+      const colorMap = await fetchAreaColors(nextSchedules);
+      if (isMounted) {
+        setAreaColors(colorMap);
+      }
+    };
+    
+    loadAreaColors();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [nextSchedules]);
 
   const onRefresh = async () => {
     console.log('[SharedScheduleScreen] onRefresh called');
@@ -244,7 +268,7 @@ export default function SharedScheduleScreen() {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.card}
-                  onPress={() => handleSchedulePress(item)}
+                  onPress={() => handleSchedulePress(item.id)}
                 >
                   <Text style={styles.cardDate}>
                     {formatDateTimeUTC(item.datetime)}
@@ -252,9 +276,15 @@ export default function SharedScheduleScreen() {
                   <Text style={styles.cardTitle} numberOfLines={2}>
                     {item.title}
                   </Text>
-                  <Text style={styles.cardSub}>
-                    {item.area} / {item.venue}
-                  </Text>
+                  <View style={styles.cardSubContainer}>
+                    {item.area && (
+                      <NotionTag
+                        label={item.area}
+                        color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
+                      />
+                    )}
+                    <Text style={styles.cardSub}>{item.venue}</Text>
+                  </View>
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -312,7 +342,7 @@ export default function SharedScheduleScreen() {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.card}
-                  onPress={() => handleSchedulePress(item)}
+                  onPress={() => handleSchedulePress(item.id)}
                 >
                   <Text style={styles.cardDate}>
                     {formatDateTimeUTC(item.datetime)}
@@ -320,9 +350,15 @@ export default function SharedScheduleScreen() {
                   <Text style={styles.cardTitle} numberOfLines={2}>
                     {item.title}
                   </Text>
-                  <Text style={styles.cardSub}>
-                    {item.area} / {item.venue}
-                  </Text>
+                  <View style={styles.cardSubContainer}>
+                    {item.area && (
+                      <NotionTag
+                        label={item.area}
+                        color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
+                      />
+                    )}
+                    <Text style={styles.cardSub}>{item.venue}</Text>
+                  </View>
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -485,10 +521,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     lineHeight: 22,
   },
+  cardSubContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
   cardSub: {
     fontSize: 14,
-    color: '#787774',
-    marginTop: 4,
+    color: "#787774",
   },
 });
 
