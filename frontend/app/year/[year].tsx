@@ -18,7 +18,7 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { PageHeader } from "../../components/PageHeader";
 import { NotionTag } from "../../components/notion-tag";
 import { getOptionColor, getOptionColorSync } from "../../utils/get-option-color";
-import { groupSchedules, type GroupingField, type GroupedSchedule } from "../../utils/group-schedules";
+import { groupSchedules, groupSchedulesNested, type GroupingField, type GroupedSchedule, type MainGroupingField, type SubGroupingField, type NestedGroupedSchedule } from "../../utils/group-schedules";
 import { groupStays, type GroupedStay } from "../../utils/group-stays";
 import { loadSelectOptionsMap } from "../../utils/load-select-options-map";
 import { fetchAreaColors } from "../../utils/fetch-area-colors";
@@ -52,7 +52,8 @@ export default function YearScreen() {
   const [archiveType, setArchiveType] = useState<"イベント" | "宿泊">("イベント");
   
   // グルーピング関連
-  const [groupingField, setGroupingField] = useState<GroupingField>("none");
+  const [mainGroupingField, setMainGroupingField] = useState<MainGroupingField>("none");
+  const [subGroupingField, setSubGroupingField] = useState<SubGroupingField>("none");
   const [stayGroupingField, setStayGroupingField] = useState<"website" | "status" | "none">("none");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   
@@ -321,10 +322,10 @@ export default function YearScreen() {
     }
   };
 
-  // グルーピングロジック
-  const groupedSchedules = useMemo(() => {
-    return groupSchedules(schedules, groupingField, selectOptionsMap);
-  }, [schedules, groupingField, selectOptionsMap]);
+  // グルーピングロジック（2段階グルーピング）
+  const nestedGroupedSchedules = useMemo(() => {
+    return groupSchedulesNested(schedules, mainGroupingField, subGroupingField, selectOptionsMap);
+  }, [schedules, mainGroupingField, subGroupingField, selectOptionsMap]);
 
   // 宿泊情報のグルーピングロジック
   const groupedStays = useMemo(() => {
@@ -399,39 +400,67 @@ export default function YearScreen() {
 
       {/* グルーピングフィールド選択 */}
       {archiveType === "イベント" ? (
-        <View style={styles.groupingSelector}>
-          <Text style={styles.groupingLabel}>グルーピング:</Text>
-          <View style={styles.groupingButtons}>
-            {[
-              { value: "none" as GroupingField, label: "なし" },
-              { value: "group" as GroupingField, label: "グループ" },
-              { value: "category" as GroupingField, label: "カテゴリ" },
-              { value: "area" as GroupingField, label: "エリア" },
-              { value: "target" as GroupingField, label: "お目当て" },
-              { value: "lineup" as GroupingField, label: "出演者" },
-              { value: "seller" as GroupingField, label: "販売元" },
-              { value: "status" as GroupingField, label: "ステータス" },
-            ].map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.groupingButton,
-                  groupingField === option.value && styles.groupingButtonActive,
-                ]}
-                onPress={() => setGroupingField(option.value)}
-              >
-                <Text
+        <>
+          <View style={styles.groupingSelector}>
+            <Text style={styles.groupingLabel}>メイン:</Text>
+            <View style={styles.groupingButtons}>
+              {[
+                { value: "none" as MainGroupingField, label: "なし" },
+                { value: "target" as MainGroupingField, label: "お目当て" },
+                { value: "lineup" as MainGroupingField, label: "出演者" },
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.value}
                   style={[
-                    styles.groupingButtonText,
-                    groupingField === option.value && styles.groupingButtonTextActive,
+                    styles.groupingButton,
+                    mainGroupingField === option.value && styles.groupingButtonActive,
                   ]}
+                  onPress={() => setMainGroupingField(option.value)}
                 >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.groupingButtonText,
+                      mainGroupingField === option.value && styles.groupingButtonTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+          <View style={styles.groupingSelector}>
+            <Text style={styles.groupingLabel}>サブ:</Text>
+            <View style={styles.groupingButtons}>
+              {[
+                { value: "none" as SubGroupingField, label: "なし" },
+                { value: "group" as SubGroupingField, label: "グループ" },
+                { value: "category" as SubGroupingField, label: "カテゴリ" },
+                { value: "area" as SubGroupingField, label: "エリア" },
+                { value: "seller" as SubGroupingField, label: "販売元" },
+                { value: "status" as SubGroupingField, label: "ステータス" },
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.groupingButton,
+                    subGroupingField === option.value && styles.groupingButtonActive,
+                  ]}
+                  onPress={() => setSubGroupingField(option.value)}
+                >
+                  <Text
+                    style={[
+                      styles.groupingButtonText,
+                      subGroupingField === option.value && styles.groupingButtonTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </>
       ) : (
         <View style={styles.groupingSelector}>
           <Text style={styles.groupingLabel}>グルーピング:</Text>
@@ -464,7 +493,7 @@ export default function YearScreen() {
       )}
 
       {archiveType === "イベント" ? (
-        groupingField === "none" ? (
+        mainGroupingField === "none" && subGroupingField === "none" ? (
         <FlatList
           data={schedules}
           keyExtractor={(item) => item.id.toString()}
@@ -531,7 +560,14 @@ export default function YearScreen() {
         />
       ) : (
         <SectionList
-          sections={groupedSchedules}
+          sections={nestedGroupedSchedules.flatMap(mainGroup => 
+            mainGroup.subGroups.map(subGroup => ({
+              title: mainGroup.title === "" ? subGroup.title : `${mainGroup.title} > ${subGroup.title}`,
+              mainTitle: mainGroup.title,
+              subTitle: subGroup.title,
+              data: subGroup.data
+            }))
+          )}
           keyExtractor={(item) => item.id.toString()}
           style={{ flex: 1 }}
           contentContainerStyle={{ flexGrow: 1 }}
@@ -555,9 +591,9 @@ export default function YearScreen() {
             ) : null
           }
           renderSectionHeader={({ section: { title, data } }) => {
-            const isCollapsed = collapsedSections.has(title);
+            const isCollapsed = collapsedSections.has(section.title);
             // 総費用の合計を計算（往復フラグを考慮）
-            const totalCost = data.reduce((sum, schedule) => {
+            const totalCost = section.data.reduce((sum, schedule) => {
               const cost = calculateTotalCost(schedule);
               return sum + (cost ?? 0);
             }, 0);
@@ -566,13 +602,13 @@ export default function YearScreen() {
               <View>
                 <TouchableOpacity
                   style={styles.sectionHeader}
-                  onPress={() => toggleSection(title)}
+                  onPress={() => toggleSection(section.title)}
                 >
                   <Text style={styles.sectionHeaderIcon}>
                     {isCollapsed ? "▶" : "▼"}
                   </Text>
-                  <Text style={styles.sectionHeaderTitle}>{title}</Text>
-                  <Text style={styles.sectionHeaderCount}>({data.length})</Text>
+                  <Text style={styles.sectionHeaderTitle}>{section.title}</Text>
+                  <Text style={styles.sectionHeaderCount}>({section.data.length})</Text>
                 </TouchableOpacity>
                 {totalCost > 0 && (
                   <View style={styles.sectionTotalCost}>
@@ -584,7 +620,7 @@ export default function YearScreen() {
               </View>
             );
           }}
-          renderItem={({ item, section }) => {
+          renderItem={({ item, section }: { item: Schedule; section: { title: string; mainTitle: string; subTitle: string; data: Schedule[] } }) => {
             const isCollapsed = collapsedSections.has(section.title);
             if (isCollapsed) return null;
             
