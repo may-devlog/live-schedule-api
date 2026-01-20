@@ -1,0 +1,57 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch: # 手動実行も可能
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          JWT_SECRET: test-secret-key-for-testing-only-do-not-use-in-production
+          DATABASE_URL: sqlite::memory:
+          ALLOW_USER_REGISTRATION: 1
+        run: |
+          cargo test --verbose
+
+      - name: Run tests with coverage (optional)
+        working-directory: backend
+        env:
+          JWT_SECRET: test-secret-key-for-testing-only-do-not-use-in-production
+          DATABASE_URL: sqlite::memory:
+          ALLOW_USER_REGISTRATION: 1
+        run: |
+          # カバレッジツールがインストールされている場合のみ実行
+          # cargo install cargo-tarpaulin
+          # cargo tarpaulin --out Xml
+          echo "Coverage report (if tarpaulin is installed)"
+
