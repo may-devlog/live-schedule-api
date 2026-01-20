@@ -85,7 +85,7 @@ export default function LoginScreen() {
     >
       <View style={styles.container}>
         <View style={styles.form}>
-          <Text style={styles.title}>GenBGT</Text>
+          <Text style={styles.title}>SKDREC</Text>
 
           <TextInput
             style={styles.input}

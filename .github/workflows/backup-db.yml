@@ -2,15 +2,17 @@ name: Database Backup
 
 on:
   schedule:
-    # 毎日午前3時（UTC = 日本時間12時）に実行
+    # 毎日午前3時（UTC = 日本時間12時）
     - cron: '0 3 * * *'
-  workflow_dispatch: # 手動実行も可能
+  workflow_dispatch:  # 手動実行も可能
 
 jobs:
   backup:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # GitHub Releasesを作成するために必要
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install flyctl
@@ -18,38 +20,163 @@ jobs:
           curl -L https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> $GITHUB_PATH
 
-      - name: Backup database
+      - name: Setup flyctl authentication
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "Error: FLY_API_TOKEN is not set"
+            exit 1
+          fi
+          echo "✓ FLY_API_TOKEN is set (length: ${#FLY_API_TOKEN})"
+          # FLY_API_TOKEN環境変数が設定されていれば、flyctlは自動的にそれを使用します
+          flyctl auth whoami || {
+            echo "Error: Authentication failed"
+            exit 1
+          }
+          echo "✓ Authentication successful"
+
+      - name: Create backup directory
+        run: |
+          mkdir -p backend/data/backups
+
+      - name: Backup database from production
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           cd backend
-          mkdir -p data/backups
+          APP_NAME="live-schedule-api"
+          REMOTE_DB="/app/data/app.db"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           BACKUP_FILE="data/backups/app.db.backup.${TIMESTAMP}"
           
-          echo "Starting database backup..."
-          flyctl sftp shell --app live-schedule-api <<EOF
-          get /app/data/app.db $BACKUP_FILE
+          echo "[$(date +'%Y-%m-%d %H:%M:%S')] データベースのバックアップを開始..."
+          
+          flyctl sftp shell --app "$APP_NAME" <<EOF
+          get $REMOTE_DB $BACKUP_FILE
           EOF
           
-          if [ -f "$BACKUP_FILE" ]; then
-            echo "✓ Backup completed: $BACKUP_FILE"
-            ls -lh "$BACKUP_FILE"
+          if [ $? -eq 0 ]; then
+            echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✓ バックアップが完了しました: $BACKUP_FILE"
+            echo "バックアップサイズ: $(du -h "$BACKUP_FILE" | cut -f1)"
           else
-            echo "✗ Backup failed: file not found"
+            echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✗ バックアップに失敗しました"
             exit 1
           fi
 
-      - name: Upload backup as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: database-backup-${{ github.run_number }}
-          path: backend/data/backups/app.db.backup.*
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Cleanup old local backups
+      - name: Install SQLite
         run: |
-          cd backend/data/backups
-          # 30日以上前のバックアップを削除（ローカルのみ）
-          find . -name "app.db.backup.*" -mtime +30 -delete 2>/dev/null || true
+          sudo apt-get update
+          sudo apt-get install -y sqlite3
+
+      - name: Verify backup integrity
+        run: |
+          cd backend
+          BACKUP_FILE=$(ls -t data/backups/app.db.backup.* | head -1)
+          
+          if [ -z "$BACKUP_FILE" ]; then
+            echo "✗ バックアップファイルが見つかりません"
+            exit 1
+          fi
+          
+          echo "バックアップファイルの検証中: $BACKUP_FILE"
+          
+          # SQLiteの整合性チェック
+          sqlite3 "$BACKUP_FILE" "PRAGMA integrity_check;" > /tmp/integrity_check.txt
+          
+          if grep -q "ok" /tmp/integrity_check.txt; then
+            echo "✓ バックアップファイルは正常です"
+            
+            # テーブル数の確認
+            TABLE_COUNT=$(sqlite3 "$BACKUP_FILE" "SELECT COUNT(*) FROM sqlite_master WHERE type='table';")
+            echo "  テーブル数: $TABLE_COUNT"
+            
+            # スケジュール数の確認
+            SCHEDULE_COUNT=$(sqlite3 "$BACKUP_FILE" "SELECT COUNT(*) FROM schedules;" 2>/dev/null || echo "0")
+            echo "  スケジュール数: $SCHEDULE_COUNT"
+          else
+            echo "✗ バックアップファイルが破損しています"
+            cat /tmp/integrity_check.txt
+            exit 1
+          fi
+
+      - name: Upload backup to GitHub Releases
+        uses: softprops/action-gh-release@v1
+        if: success()
+        with:
+          files: backend/data/backups/app.db.backup.*
+          tag_name: backup-${{ github.run_number }}
+          name: Database Backup ${{ github.run_number }}
+          body: |
+            Automated database backup
+            
+            - Backup time: ${{ github.run_number }}
+            - Integrity: Verified
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install b2 CLI
+        if: success()
+        run: |
+          pip install b2
+
+      - name: Upload backup to Backblaze B2
+        if: success()
+        env:
+          B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+          B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+        run: |
+          # 環境変数のチェック
+          if [ -z "$B2_APPLICATION_KEY_ID" ] || [ -z "$B2_APPLICATION_KEY" ] || [ -z "$B2_BUCKET_NAME" ]; then
+            echo "⚠ Backblaze B2の認証情報が設定されていません。B2へのアップロードをスキップします。"
+            echo "設定方法: GitHub Settings → Secrets and variables → Actions"
+            exit 0
+          fi
+          
+          cd backend
+          BACKUP_FILE=$(ls -t data/backups/app.db.backup.* | head -1)
+          
+          if [ -z "$BACKUP_FILE" ]; then
+            echo "Error: Backup file not found"
+            exit 1
+          fi
+          
+          echo "[$(date +'%Y-%m-%d %H:%M:%S')] Backblaze B2へのアップロードを開始..."
+          
+          # B2認証
+          b2 authorize-account "$B2_APPLICATION_KEY_ID" "$B2_APPLICATION_KEY"
+          
+          if [ $? -eq 0 ]; then
+            # ファイル名を取得
+            FILENAME=$(basename "$BACKUP_FILE")
+            
+            # B2にアップロード
+            b2 upload-file --no-progress "$B2_BUCKET_NAME" "$BACKUP_FILE" "$FILENAME"
+            
+            if [ $? -eq 0 ]; then
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✓ Backblaze B2へのアップロードが完了しました: $FILENAME"
+            else
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✗ Backblaze B2へのアップロードに失敗しました"
+              exit 1
+            fi
+          else
+            echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✗ Backblaze B2認証に失敗しました"
+            exit 1
+          fi
+
+      - name: Cleanup old backups
+        run: |
+          cd backend
+          # ローカルの古いバックアップを削除（30日以上前）
+          find data/backups -name "app.db.backup.*" -mtime +30 -delete 2>/dev/null || true
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Database backup failed! Please check the logs."
+          # オプション: メール通知やSlack通知を追加可能
+          # 例: curl -X POST -H 'Content-type: application/json' \
+          #     --data '{"text":"Database backup failed!"}' \
+          #     ${{ secrets.SLACK_WEBHOOK_URL }}
+
