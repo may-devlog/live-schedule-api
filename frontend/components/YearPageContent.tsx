@@ -47,6 +47,8 @@ type YearPageContentProps = {
   initialYear?: string | null;
 };
 
+type MainSortMode = "default" | "date" | "kana";
+
 export function YearPageContent({
   isShared,
   shareId,
@@ -78,6 +80,7 @@ export function YearPageContent({
   const [subGroupingField, setSubGroupingField] = useState<SubGroupingField>("none");
   const [stayGroupingField, setStayGroupingField] = useState<"website" | "status" | "none">("none");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [mainSortMode, setMainSortMode] = useState<MainSortMode>("default");
   
   // 選択肢の並び順情報（グルーピングのソート用）
   const [selectOptionsMap, setSelectOptionsMap] = useState<Map<string, Map<string, number>>>(new Map());
@@ -266,6 +269,102 @@ export function YearPageContent({
     if (archiveType !== "イベント") return [];
     return groupSchedulesNested(schedules, mainGroupingField, subGroupingField, selectOptionsMap);
   }, [schedules, mainGroupingField, subGroupingField, selectOptionsMap, archiveType]);
+
+  const sortedNestedGroupedSchedules = useMemo(() => {
+    if (archiveType !== "イベント") return [];
+
+    const isMainSortable = mainGroupingField === "target" || mainGroupingField === "lineup";
+    if (!isMainSortable) {
+      return nestedGroupedSchedules;
+    }
+
+    if (nestedGroupedSchedules.length <= 1) {
+      return nestedGroupedSchedules;
+    }
+
+    const getMainGroupKeys = (schedule: Schedule): string[] => {
+      if (mainGroupingField === "target") {
+        return [schedule.target || "未設定"];
+      }
+      if (schedule.lineup) {
+        const lineupValues = schedule.lineup.split(",").map((value) => value.trim()).filter(Boolean);
+        return lineupValues.length > 0 ? lineupValues : ["未設定"];
+      }
+      return ["未設定"];
+    };
+
+    const orderMap = selectOptionsMap.get(mainGroupingField);
+    const getOrderFallback = (title: string) => {
+      if (!orderMap || orderMap.size === 0) {
+        return undefined;
+      }
+      return orderMap.get(title);
+    };
+
+    if (mainSortMode === "default") {
+      const firstIndexMap = new Map<string, number>();
+      schedules.forEach((schedule, index) => {
+        getMainGroupKeys(schedule).forEach((key) => {
+          if (!firstIndexMap.has(key)) {
+            firstIndexMap.set(key, index);
+          }
+        });
+      });
+
+      return [...nestedGroupedSchedules].sort((a, b) => {
+        const keyA = a.title || "未設定";
+        const keyB = b.title || "未設定";
+        const orderA = firstIndexMap.get(keyA) ?? Number.MAX_SAFE_INTEGER;
+        const orderB = firstIndexMap.get(keyB) ?? Number.MAX_SAFE_INTEGER;
+        return orderA - orderB;
+      });
+    }
+
+    const getEarliestDatetime = (group: NestedGroupedSchedule): number => {
+      let earliest = Infinity;
+      group.subGroups.forEach((subGroup) => {
+        subGroup.data.forEach((schedule) => {
+          const time = new Date(schedule.datetime).getTime();
+          if (!Number.isNaN(time)) {
+            earliest = Math.min(earliest, time);
+          }
+        });
+      });
+      return earliest;
+    };
+
+    return [...nestedGroupedSchedules].sort((a, b) => {
+      const titleA = a.title || "未設定";
+      const titleB = b.title || "未設定";
+
+      if (titleA === "未設定") return 1;
+      if (titleB === "未設定") return -1;
+
+      if (mainSortMode === "date") {
+        const timeA = getEarliestDatetime(a);
+        const timeB = getEarliestDatetime(b);
+        if (timeA !== timeB) {
+          return timeA - timeB;
+        }
+        const orderA = getOrderFallback(titleA);
+        const orderB = getOrderFallback(titleB);
+        if (orderA !== undefined && orderB !== undefined) {
+          return orderA - orderB;
+        }
+        if (orderA !== undefined) return -1;
+        if (orderB !== undefined) return 1;
+      }
+
+      return titleA.localeCompare(titleB, "ja");
+    });
+  }, [
+    archiveType,
+    mainGroupingField,
+    mainSortMode,
+    nestedGroupedSchedules,
+    schedules,
+    selectOptionsMap,
+  ]);
   
   // 宿泊情報のグルーピング
   const groupedStays = useMemo(() => {
@@ -561,30 +660,59 @@ export function YearPageContent({
         <>
           <View style={styles.groupingSelector}>
             <Text style={styles.groupingLabel}>メイン</Text>
-            <View style={styles.groupingButtons}>
-              {[
-                { value: "none" as MainGroupingField, label: "なし" },
-                { value: "target" as MainGroupingField, label: "お目当て" },
-                { value: "lineup" as MainGroupingField, label: "出演者" },
-              ].map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.groupingButton,
-                    mainGroupingField === option.value && styles.groupingButtonActive,
-                  ]}
-                  onPress={() => setMainGroupingField(option.value)}
-                >
-                  <Text
+            <View style={styles.groupingRow}>
+              <View style={styles.groupingButtons}>
+                {[
+                  { value: "none" as MainGroupingField, label: "なし" },
+                  { value: "target" as MainGroupingField, label: "お目当て" },
+                  { value: "lineup" as MainGroupingField, label: "出演者" },
+                ].map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
                     style={[
-                      styles.groupingButtonText,
-                      mainGroupingField === option.value && styles.groupingButtonTextActive,
+                      styles.groupingButton,
+                      mainGroupingField === option.value && styles.groupingButtonActive,
                     ]}
+                    onPress={() => setMainGroupingField(option.value)}
                   >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.groupingButtonText,
+                        mainGroupingField === option.value && styles.groupingButtonTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {(mainGroupingField === "target" || mainGroupingField === "lineup") && (
+                <View style={styles.mainSortButtons}>
+                  {[
+                    { value: "default" as MainSortMode, label: "デフォルト" },
+                    { value: "date" as MainSortMode, label: "開演日" },
+                    { value: "kana" as MainSortMode, label: "五十音" },
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.mainSortButton,
+                        mainSortMode === option.value && styles.mainSortButtonActive,
+                      ]}
+                      onPress={() => setMainSortMode(option.value)}
+                    >
+                      <Text
+                        style={[
+                          styles.mainSortButtonText,
+                          mainSortMode === option.value && styles.mainSortButtonTextActive,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
           <View style={styles.groupingSelector}>
@@ -719,7 +847,7 @@ export function YearPageContent({
           />
         ) : (
           <FlatList
-            data={nestedGroupedSchedules}
+            data={sortedNestedGroupedSchedules}
             keyExtractor={(item, index) => `main-${index}-${item.title}`}
             style={{ flex: 1 }}
             contentContainerStyle={{ flexGrow: 1 }}
@@ -1155,6 +1283,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  groupingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    flexWrap: "wrap",
+    gap: 8,
+  },
   groupingLabel: {
     fontSize: 14,
     fontWeight: "600",
@@ -1186,6 +1321,33 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   groupingButtonTextActive: {
+    color: "#ffffff",
+    fontWeight: "600",
+  },
+  mainSortButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  mainSortButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: "#e9e9e7",
+    backgroundColor: "#ffffff",
+  },
+  mainSortButtonActive: {
+    backgroundColor: "#37352f",
+    borderColor: "#37352f",
+  },
+  mainSortButtonText: {
+    color: "#37352f",
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  mainSortButtonTextActive: {
     color: "#ffffff",
     fontWeight: "600",
   },
