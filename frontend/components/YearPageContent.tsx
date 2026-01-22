@@ -172,26 +172,6 @@ export function YearPageContent({
     };
   }, [currentYear, fetchSchedules, fetchStays, showStayTab, isShared, shareId]);
 
-  // Areaの色情報を取得
-  useEffect(() => {
-    if (visibleSchedules.length === 0) return;
-    
-    let isMounted = true;
-    
-    const loadAreaColors = async () => {
-      const colorMap = await fetchAreaColors(visibleSchedules);
-      if (isMounted) {
-        setAreaColors(colorMap);
-      }
-    };
-    
-    loadAreaColors();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [visibleSchedules]);
-
   // 選択肢の並び順情報を取得（グルーピングのソート用）
   useEffect(() => {
     let isMounted = true;
@@ -239,6 +219,33 @@ export function YearPageContent({
     };
   }, [shareId]);
 
+  // グルーピングロジック（2段階グルーピング）
+  const visibleSchedules = useMemo(() => {
+    if (archiveType !== "イベント") return schedules;
+    if (subGroupingField === "status") return schedules;
+    return schedules.filter((schedule) => schedule.status !== "Canceled");
+  }, [schedules, subGroupingField, archiveType]);
+
+  // Areaの色情報を取得
+  useEffect(() => {
+    if (visibleSchedules.length === 0) return;
+    
+    let isMounted = true;
+    
+    const loadAreaColors = async () => {
+      const colorMap = await fetchAreaColors(visibleSchedules);
+      if (isMounted) {
+        setAreaColors(colorMap);
+      }
+    };
+    
+    loadAreaColors();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [visibleSchedules]);
+
   // 予約サイトの色情報を取得（staysが変更されたときに再取得）
   useEffect(() => {
     if (archiveType !== "宿泊" || stays.length === 0) return;
@@ -263,13 +270,6 @@ export function YearPageContent({
     const yStr = String(y);
     setCurrentYear(yStr);
   };
-
-  // グルーピングロジック（2段階グルーピング）
-  const visibleSchedules = useMemo(() => {
-    if (archiveType !== "イベント") return schedules;
-    if (subGroupingField === "status") return schedules;
-    return schedules.filter((schedule) => schedule.status !== "Canceled");
-  }, [schedules, subGroupingField, archiveType]);
 
   const nestedGroupedSchedules = useMemo(() => {
     if (archiveType !== "イベント") return [];
