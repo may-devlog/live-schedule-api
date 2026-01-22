@@ -291,8 +291,10 @@ export default function HomeScreen() {
       const data: Schedule[] = await res.json();
       console.log("Schedules received:", data.length, "items");
       
+      const visibleSchedules = data.filter((schedule) => schedule.status !== "Canceled");
+
       // 全スケジュールを保存（カレンダー用）
-      setAllSchedules(data);
+      setAllSchedules(visibleSchedules);
       
       // データから存在する年を抽出
       const years = new Set<number>();
@@ -332,7 +334,7 @@ export default function HomeScreen() {
       // バックエンドでは、dateとstartから"YYYY-MM-DDTHH:MM:00Z"形式で生成されている
       // これはUTC形式だが、実際にはJSTの日時を表している
       // したがって、UTC時刻として解釈し、9時間を加算してJST時刻として扱う
-      const futureSchedules = data.filter((schedule) => {
+      const futureSchedules = visibleSchedules.filter((schedule) => {
         if (!schedule.datetime) {
           return false; // datetimeがない場合は除外
         }

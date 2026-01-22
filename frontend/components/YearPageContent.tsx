@@ -174,12 +174,12 @@ export function YearPageContent({
 
   // Areaの色情報を取得
   useEffect(() => {
-    if (schedules.length === 0) return;
+    if (visibleSchedules.length === 0) return;
     
     let isMounted = true;
     
     const loadAreaColors = async () => {
-      const colorMap = await fetchAreaColors(schedules);
+      const colorMap = await fetchAreaColors(visibleSchedules);
       if (isMounted) {
         setAreaColors(colorMap);
       }
@@ -190,7 +190,7 @@ export function YearPageContent({
     return () => {
       isMounted = false;
     };
-  }, [schedules]);
+  }, [visibleSchedules]);
 
   // 選択肢の並び順情報を取得（グルーピングのソート用）
   useEffect(() => {
@@ -265,10 +265,16 @@ export function YearPageContent({
   };
 
   // グルーピングロジック（2段階グルーピング）
+  const visibleSchedules = useMemo(() => {
+    if (archiveType !== "イベント") return schedules;
+    if (subGroupingField === "status") return schedules;
+    return schedules.filter((schedule) => schedule.status !== "Canceled");
+  }, [schedules, subGroupingField, archiveType]);
+
   const nestedGroupedSchedules = useMemo(() => {
     if (archiveType !== "イベント") return [];
-    return groupSchedulesNested(schedules, mainGroupingField, subGroupingField, selectOptionsMap);
-  }, [schedules, mainGroupingField, subGroupingField, selectOptionsMap, archiveType]);
+    return groupSchedulesNested(visibleSchedules, mainGroupingField, subGroupingField, selectOptionsMap);
+  }, [visibleSchedules, mainGroupingField, subGroupingField, selectOptionsMap, archiveType]);
 
   const sortedNestedGroupedSchedules = useMemo(() => {
     if (archiveType !== "イベント") return [];
@@ -303,7 +309,7 @@ export function YearPageContent({
 
     if (mainSortMode === "default") {
       const firstIndexMap = new Map<string, number>();
-      schedules.forEach((schedule, index) => {
+      visibleSchedules.forEach((schedule, index) => {
         getMainGroupKeys(schedule).forEach((key) => {
           if (!firstIndexMap.has(key)) {
             firstIndexMap.set(key, index);
@@ -362,7 +368,7 @@ export function YearPageContent({
     mainGroupingField,
     mainSortMode,
     nestedGroupedSchedules,
-    schedules,
+    visibleSchedules,
     selectOptionsMap,
   ]);
   
@@ -379,7 +385,7 @@ export function YearPageContent({
       return;
     }
     
-    if (schedules.length === 0 || (mainGroupingField === "none" && subGroupingField === "none")) {
+    if (visibleSchedules.length === 0 || (mainGroupingField === "none" && subGroupingField === "none")) {
       setGroupTitleColors(new Map());
       return;
     }
@@ -387,7 +393,7 @@ export function YearPageContent({
     let isMounted = true;
     
     const loadGroupTitleColors = async () => {
-      const currentNestedGroupedSchedules = groupSchedulesNested(schedules, mainGroupingField, subGroupingField, selectOptionsMap);
+      const currentNestedGroupedSchedules = groupSchedulesNested(visibleSchedules, mainGroupingField, subGroupingField, selectOptionsMap);
       if (currentNestedGroupedSchedules.length === 0) {
         if (isMounted) {
           setGroupTitleColors(new Map());
@@ -494,7 +500,7 @@ export function YearPageContent({
     return () => {
       isMounted = false;
     };
-  }, [schedules, mainGroupingField, subGroupingField, selectOptionsMap, archiveType]);
+  }, [visibleSchedules, mainGroupingField, subGroupingField, selectOptionsMap, archiveType]);
   
   // 宿泊情報のグルーピングタイトルの色を非同期で取得
   useEffect(() => {
@@ -807,7 +813,7 @@ export function YearPageContent({
       {archiveType === "イベント" ? (
         mainGroupingField === "none" && subGroupingField === "none" ? (
           <FlatList
-            data={schedules}
+            data={visibleSchedules}
             keyExtractor={(item) => item.id.toString()}
             style={{ flex: 1 }}
             contentContainerStyle={{ flexGrow: 1 }}

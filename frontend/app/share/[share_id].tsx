@@ -76,7 +76,8 @@ export default function SharedScheduleScreen() {
       }
       const data: Schedule[] = await res.json();
       console.log('[SharedScheduleScreen] Received schedules:', data.length);
-      setSchedules(data);
+      const visibleSchedules = data.filter((schedule) => schedule.status !== "Canceled");
+      setSchedules(visibleSchedules);
       
       // 未来のスケジュールをフィルタリング（JSTで比較）
       const nowUTC = new Date();
@@ -84,7 +85,7 @@ export default function SharedScheduleScreen() {
       const utcTime = nowUTC.getTime();
       const jstNow = new Date(utcTime + jstOffset);
       
-      const futureSchedules = data.filter((schedule) => {
+      const futureSchedules = visibleSchedules.filter((schedule) => {
         if (!schedule.datetime) {
           return false;
         }
