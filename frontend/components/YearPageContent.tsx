@@ -687,31 +687,56 @@ export function YearPageContent({
                 ))}
               </View>
               {(mainGroupingField === "target" || mainGroupingField === "lineup") && (
-                <View style={styles.mainSortButtons}>
-                  {[
-                    { value: "default" as MainSortMode, label: "デフォルト" },
-                    { value: "date" as MainSortMode, label: "開演日" },
-                    { value: "kana" as MainSortMode, label: "五十音" },
-                  ].map((option) => (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[
-                        styles.mainSortButton,
-                        mainSortMode === option.value && styles.mainSortButtonActive,
-                      ]}
-                      onPress={() => setMainSortMode(option.value)}
+                Platform.OS === "web" ? (
+                  <View style={styles.mainSortSelectWrapper}>
+                    {/* @ts-ignore - Web環境でのみ使用されるHTML要素 */}
+                    <select
+                      value={mainSortMode}
+                      onChange={(e: any) => setMainSortMode(e.target.value as MainSortMode)}
+                      style={{
+                        padding: "6px 10px",
+                        fontSize: "12px",
+                        borderRadius: "3px",
+                        border: "1px solid #e9e9e7",
+                        backgroundColor: "#ffffff",
+                        color: "#37352f",
+                        fontWeight: "500",
+                        cursor: "pointer",
+                        minWidth: "90px",
+                      }}
                     >
-                      <Text
+                      <option value="default">デフォルト</option>
+                      <option value="date">開演日</option>
+                      <option value="kana">五十音</option>
+                    </select>
+                  </View>
+                ) : (
+                  <View style={styles.mainSortButtons}>
+                    {[
+                      { value: "default" as MainSortMode, label: "デフォルト" },
+                      { value: "date" as MainSortMode, label: "開演日" },
+                      { value: "kana" as MainSortMode, label: "五十音" },
+                    ].map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
                         style={[
-                          styles.mainSortButtonText,
-                          mainSortMode === option.value && styles.mainSortButtonTextActive,
+                          styles.mainSortButton,
+                          mainSortMode === option.value && styles.mainSortButtonActive,
                         ]}
+                        onPress={() => setMainSortMode(option.value)}
                       >
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                        <Text
+                          style={[
+                            styles.mainSortButtonText,
+                            mainSortMode === option.value && styles.mainSortButtonTextActive,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )
               )}
             </View>
           </View>
@@ -1329,6 +1354,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexWrap: "wrap",
     gap: 6,
+  },
+  mainSortSelectWrapper: {
+    justifyContent: "flex-end",
   },
   mainSortButton: {
     paddingHorizontal: 10,
