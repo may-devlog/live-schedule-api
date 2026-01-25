@@ -46,7 +46,7 @@
 | area | TEXT | NO | - | エリア | Select | |
 | venue | TEXT | NO | - | 会場 | Text | |
 | target | TEXT | YES | NULL | お目当て | Select | お目当てのアーティスト名 |
-| lineup | TEXT | YES | NULL | 出演者 | Text | |
+| lineup | TEXT | YES | NULL | 出演者 | Multi-select | |
 | seller | TEXT | YES | NULL | 販売元 | Select | チケットぴあ、イープラス 等 |
 | ticket_fee | INTEGER | YES | NULL | チケット代 | Number | 円単位 |
 | drink_fee | INTEGER | YES | NULL | ドリンク代 | Number | 円単位 |
