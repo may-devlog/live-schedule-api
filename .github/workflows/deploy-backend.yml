@@ -35,7 +35,7 @@ jobs:
             aws ssm send-command \
               --instance-ids "$EC2_INSTANCE_ID" \
               --document-name "AWS-RunShellScript" \
-              --parameters 'commands=["set -e","sudo git config --system --add safe.directory /opt/live-schedule-api","cd /opt/live-schedule-api","git fetch origin","git reset --hard origin/master","cd backend","cargo build --release","sudo systemctl restart live-schedule-api"]' \
+              --parameters 'commands=["set -e","sudo git config --system --add safe.directory /opt/live-schedule-api","sudo -u ec2-user bash -lc '\''cd /opt/live-schedule-api && git fetch origin && git reset --hard origin/master && cd backend && source /home/ec2-user/.cargo/env && cargo build --release'\''","sudo systemctl restart live-schedule-api"]' \
               --query "Command.CommandId" \
               --output text
           )
