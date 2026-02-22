@@ -516,7 +516,7 @@ export function YearPageContent({
       const colorPromises: Promise<void>[] = [];
       
       for (const stayGroup of groupedStays) {
-        if (stayGroup.title && stayGroupingField !== "none") {
+        if (stayGroup.title) {
           let optionType: "WEBSITE" | "STAY_STATUS" | undefined;
           switch (stayGroupingField) {
             case "website":
@@ -845,7 +845,7 @@ export function YearPageContent({
                   <Text style={styles.cardDate}>
                     {formatDateTimeUTC(item.datetime)}
                   </Text>
-                  {mainGroupingField !== "lineup" && (() => {
+                  {(() => {
                     const totalCost = calculateTotalCost(item);
                     return totalCost && totalCost > 0 ? (
                       <Text style={styles.cardPrice}>
@@ -864,7 +864,7 @@ export function YearPageContent({
                   {item.title}
                 </Text>
                 <View style={styles.cardSubContainer}>
-                  {item.area && subGroupingField !== "area" && (
+                  {item.area && (
                     <NotionTag
                       label={item.area}
                       color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}

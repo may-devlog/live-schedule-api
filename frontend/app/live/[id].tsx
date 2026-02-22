@@ -105,7 +105,7 @@ export default function DetailScreen() {
       setError(null);
 
       // 全 Schedule 取得
-      const res = await authenticatedFetch(getApiUrl("/schedules"));
+      const res = await authenticatedFetch(getApiUrl("/schedules?include_canceled=true"));
       if (!res.ok) throw new Error(`status: ${res.status}`);
       const data: Schedule[] = await res.json();
       setAllSchedules(data);

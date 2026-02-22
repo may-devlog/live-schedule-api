@@ -45,7 +45,7 @@ export default function YearScreen() {
 
   // スケジュールを取得する関数
   const fetchSchedules = async (year: string): Promise<Schedule[]> => {
-    const url = getApiUrl(`/schedules?year=${year}`);
+    const url = getApiUrl(`/schedules?year=${year}&include_canceled=true`);
     const res = await authenticatedFetch(url);
 
     if (!res.ok) {

@@ -9,7 +9,7 @@ const colorCache: Record<string, string> = {};
 // 選択肢の色情報をキャッシュに保存する関数（事前読み込み用）
 export function preloadOptionColors(
   options: SelectOption[],
-  optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS" | "WEBSITE" | "STAY_STATUS"
+  optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS" | "GROUPS" | "WEBSITE" | "STAY_STATUS"
 ): void {
   const isPrefecture = optionType === "AREAS";
   const isCategory = optionType === "CATEGORIES";
@@ -27,7 +27,7 @@ export function preloadOptionColors(
 // 選択肢の色を取得（非同期）
 export async function getOptionColor(
   label: string,
-  optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS" | "WEBSITE" | "STAY_STATUS"
+  optionType: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS" | "GROUPS" | "WEBSITE" | "STAY_STATUS"
 ): Promise<string> {
   const cacheKey = `${optionType}:${label}`;
   if (colorCache[cacheKey]) {
@@ -62,7 +62,7 @@ export async function getOptionColor(
 }
 
 // 同期版（キャッシュから取得、なければデフォルト色）
-export function getOptionColorSync(label: string, optionType?: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS" | "WEBSITE" | "STAY_STATUS"): string {
+export function getOptionColorSync(label: string, optionType?: "CATEGORIES" | "AREAS" | "TARGETS" | "SELLERS" | "STATUSES" | "TRANSPORTATIONS" | "GROUPS" | "WEBSITE" | "STAY_STATUS"): string {
   // キャッシュから探す
   if (optionType) {
     const cacheKey = `${optionType}:${label}`;

@@ -187,7 +187,7 @@ export default function EditScheduleScreen() {
     const fetchSchedule = async () => {
       try {
         setLoading(true);
-        const res = await authenticatedFetch(getApiUrl("/schedules"));
+        const res = await authenticatedFetch(getApiUrl("/schedules?include_canceled=true"));
         if (!res.ok) throw new Error(`status: ${res.status}`);
         const data: Schedule[] = await res.json();
         const found = data.find((s) => s.id.toString() === id);
