@@ -128,13 +128,11 @@ export default function LoginScreen() {
               onPress={() => setShowPassword(!showPassword)}
               disabled={loading}
             >
-              <View style={styles.passwordToggleIconWrap}>
-                {showPassword ? (
-                  <IconEye size={20} color="#37352f" />
-                ) : (
-                  <IconEyeOff size={20} color="#37352f" />
-                )}
-              </View>
+              {showPassword ? (
+                <IconEye size={18} color="#37352f" />
+              ) : (
+                <IconEyeOff size={18} color="#37352f" />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -246,16 +244,10 @@ const styles = StyleSheet.create({
   passwordToggle: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingRight: 10,
-    paddingLeft: 4,
+    paddingVertical: 12,
+    paddingLeft: 8,
+    paddingRight: 12,
     minWidth: 44,
-  },
-  passwordToggleIconWrap: {
-    width: 22,
-    height: 22,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   button: {
     backgroundColor: '#007AFF',
