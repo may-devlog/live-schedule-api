@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -113,11 +112,13 @@ export default function RegisterScreen() {
             onPress={() => setShowPassword(!showPassword)}
             disabled={loading}
           >
-            {showPassword ? (
-              <IconEye size={20} color="#37352f" />
-            ) : (
-              <IconEyeOff size={20} color="#37352f" />
-            )}
+            <View style={styles.passwordToggleIconWrap}>
+              {showPassword ? (
+                <IconEye size={20} color="#37352f" />
+              ) : (
+                <IconEyeOff size={20} color="#37352f" />
+              )}
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -188,12 +189,13 @@ const styles = StyleSheet.create({
   },
   passwordContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 4,
     marginBottom: 16,
     backgroundColor: '#fff',
+    overflow: 'hidden',
   },
   passwordInput: {
     flex: 1,
@@ -201,9 +203,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   passwordToggle: {
-    padding: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingRight: 10,
+    paddingLeft: 4,
+    minWidth: 44,
+  },
+  passwordToggleIconWrap: {
+    width: 22,
+    height: 22,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   button: {
     backgroundColor: '#007AFF',
