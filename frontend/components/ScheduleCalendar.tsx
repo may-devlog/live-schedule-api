@@ -10,7 +10,7 @@ import {
   FlatList,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { CloseIcon } from "@/components/CustomIcons";
+import { Feather } from "@expo/vector-icons";
 import type { Schedule } from "../app/HomeScreen";
 import { NotionTag } from "./notion-tag";
 import { getOptionColor } from "../utils/get-option-color";
@@ -344,7 +344,7 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
                 onPress={() => setShowScheduleModal(false)}
                 style={styles.modalCloseButton}
               >
-                <CloseIcon size={20} color="#37352f" />
+                <Feather name="x" size={20} color="#37352f" />
               </TouchableOpacity>
             </View>
 

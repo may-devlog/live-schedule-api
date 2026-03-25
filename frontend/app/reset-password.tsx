@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { API_BASE } from '../constants/api';
-import { EyeIcon, EyeOffIcon } from '@/components/CustomIcons';
+import { Feather } from '@expo/vector-icons';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -154,9 +154,9 @@ export default function ResetPasswordScreen() {
             disabled={loading}
           >
             {showPassword ? (
-              <EyeIcon size={20} color="#37352f" />
+              <Feather name="eye" size={20} color="#37352f" />
             ) : (
-              <EyeOffIcon size={20} color="#37352f" />
+              <Feather name="eye-off" size={20} color="#37352f" />
             )}
           </TouchableOpacity>
         </View>
@@ -181,9 +181,9 @@ export default function ResetPasswordScreen() {
             disabled={loading}
           >
             {showConfirmPassword ? (
-              <EyeIcon size={20} color="#37352f" />
+              <Feather name="eye" size={20} color="#37352f" />
             ) : (
-              <EyeOffIcon size={20} color="#37352f" />
+              <Feather name="eye-off" size={20} color="#37352f" />
             )}
           </TouchableOpacity>
         </View>

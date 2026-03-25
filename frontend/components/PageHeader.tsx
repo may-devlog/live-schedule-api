@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeftIcon, HomeOutlineIcon } from '@/components/CustomIcons';
+import { Feather } from '@expo/vector-icons';
 
 type PageHeaderProps = {
   scheduleTitle?: string | null;
@@ -21,7 +21,7 @@ export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: P
             onPress={() => router.back()}
           >
             <View style={styles.buttonContent}>
-              <ArrowLeftIcon size={16} color="#37352f" />
+              <Feather name="arrow-left" size={16} color="#37352f" />
               <Text style={styles.backButtonText}>戻る</Text>
             </View>
           </TouchableOpacity>
@@ -35,7 +35,7 @@ export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: P
           }}
         >
           <View style={styles.buttonContent}>
-            <HomeOutlineIcon size={16} color="#37352f" />
+            <Feather name="home" size={16} color="#37352f" />
             <Text style={styles.homeButtonText}>ホーム</Text>
           </View>
         </TouchableOpacity>

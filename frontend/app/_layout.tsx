@@ -1,12 +1,16 @@
+import { useEffect } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/contexts/AuthContext';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Tab navigation removed - using direct routing instead
 // export const unstable_settings = {
@@ -16,13 +20,19 @@ import { AuthProvider } from '@/contexts/AuthContext';
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   
-  // @expo/vector-iconsのフォントを明示的に読み込む（Web環境で必要）
+  // @expo/vector-icons のフォントを起動時に確実に読み込む（Web/ネイティブ両方）
   const [fontsLoaded] = useFonts({
+    ...Feather.font,
     ...Ionicons.font,
     ...MaterialIcons.font,
   });
 
-  // フォントが読み込まれるまで何も表示しない
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded]);
+
   if (!fontsLoaded) {
     return null;
   }

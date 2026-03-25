@@ -15,18 +15,9 @@ import {
   RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  CloseIcon,
-  CopyIcon,
-  HashIcon,
-  LinkIcon,
-  LockOutlineIcon,
-  LogoutIcon,
-  MailIcon,
-  PersonIcon,
-  NotificationIcon,
-} from "@/components/CustomIcons";
+import { PersonIcon, NotificationIcon } from "@/components/CustomIcons";
 
 export type Schedule = {
   id: number;
@@ -630,7 +621,7 @@ export default function HomeScreen() {
               {isAuthenticated ? (
                 <PersonIcon size={40} color="#37352f" />
               ) : (
-                <LockOutlineIcon size={40} color="#37352f" />
+                <Feather name="lock" size={34} color="#37352f" />
               )}
             </TouchableOpacity>
           </View>
@@ -760,7 +751,7 @@ export default function HomeScreen() {
               {isAuthenticated ? (
                 <PersonIcon size={40} color="#37352f" />
               ) : (
-                <LockOutlineIcon size={40} color="#37352f" />
+                <Feather name="lock" size={34} color="#37352f" />
               )}
             </TouchableOpacity>
           </View>
@@ -864,7 +855,7 @@ export default function HomeScreen() {
                 onPress={() => setShowLoginModal(false)}
                 style={styles.modalCloseButton}
               >
-                <CloseIcon size={22} color="#37352f" />
+                <Feather name="x" size={22} color="#37352f" />
               </TouchableOpacity>
             </View>
 
@@ -941,7 +932,7 @@ export default function HomeScreen() {
                 }}
                 style={styles.modalCloseButton}
               >
-                <CloseIcon size={22} color="#37352f" />
+                <Feather name="x" size={22} color="#37352f" />
               </TouchableOpacity>
             </View>
 
@@ -994,7 +985,7 @@ export default function HomeScreen() {
                 onPress={() => setShowUserMenuModal(false)}
                 style={styles.modalCloseButton}
               >
-                <CloseIcon size={22} color="#37352f" />
+                <Feather name="x" size={22} color="#37352f" />
               </TouchableOpacity>
             </View>
 
@@ -1010,7 +1001,7 @@ export default function HomeScreen() {
               }}
             >
               <View style={styles.menuButtonContent}>
-                <MailIcon size={18} color="#37352f" />
+                <Feather name="mail" size={18} color="#37352f" />
                 <Text style={styles.menuButtonText}>メールアドレス変更</Text>
               </View>
             </TouchableOpacity>
@@ -1023,7 +1014,7 @@ export default function HomeScreen() {
               }}
             >
               <View style={styles.menuButtonContent}>
-                <HashIcon size={18} color="#37352f" />
+                <Feather name="hash" size={18} color="#37352f" />
                 <Text style={styles.menuButtonText}>ユーザーID変更</Text>
               </View>
             </TouchableOpacity>
@@ -1036,14 +1027,14 @@ export default function HomeScreen() {
               }}
             >
               <View style={styles.menuButtonContent}>
-                <LockOutlineIcon size={18} color="#37352f" />
+                <Feather name="lock" size={18} color="#37352f" />
                 <Text style={styles.menuButtonText}>出発地・到着地マスク設定</Text>
               </View>
             </TouchableOpacity>
 
             <View style={[styles.menuButton, { marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 }]}>
               <View style={styles.menuButtonContent}>
-                <LinkIcon size={18} color="#37352f" />
+                <Feather name="link" size={18} color="#37352f" />
                 <Text style={styles.menuButtonText}>共有化</Text>
               </View>
               <TouchableOpacity
@@ -1084,7 +1075,7 @@ export default function HomeScreen() {
                     }}
                     style={styles.copyButton}
                   >
-                    <CopyIcon size={18} color="#37352f" />
+                    <Feather name="copy" size={18} color="#37352f" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1111,7 +1102,7 @@ export default function HomeScreen() {
               }}
             >
               <View style={styles.menuButtonContent}>
-                <LogoutIcon size={18} color="#d93025" />
+                <Feather name="log-out" size={18} color="#d93025" />
                 <Text style={[styles.menuButtonText, styles.menuButtonTextDanger]}>ログアウト</Text>
               </View>
             </TouchableOpacity>
@@ -1137,7 +1128,7 @@ export default function HomeScreen() {
                 }}
                 style={styles.modalCloseButton}
               >
-                <CloseIcon size={22} color="#37352f" />
+                <Feather name="x" size={22} color="#37352f" />
               </TouchableOpacity>
             </View>
 
@@ -1188,7 +1179,7 @@ export default function HomeScreen() {
                 onPress={() => setShowNotificationModal(false)}
                 style={styles.modalCloseButton}
               >
-                <CloseIcon size={22} color="#37352f" />
+                <Feather name="x" size={22} color="#37352f" />
               </TouchableOpacity>
             </View>
 
