@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -106,6 +107,7 @@ export default function RegisterScreen() {
             autoCapitalize="none"
             autoCorrect={false}
             editable={!loading}
+            underlineColorAndroid="transparent"
           />
           <TouchableOpacity
             style={styles.passwordToggle}
@@ -197,8 +199,16 @@ const styles = StyleSheet.create({
   },
   passwordInput: {
     flex: 1,
-    padding: 12,
+    minWidth: 0,
+    paddingVertical: 12,
+    paddingLeft: 12,
+    paddingRight: 8,
     fontSize: 16,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    ...(Platform.OS === 'web'
+      ? { outlineStyle: 'none' as const, outlineWidth: 0 }
+      : {}),
   },
   passwordToggle: {
     justifyContent: 'center',

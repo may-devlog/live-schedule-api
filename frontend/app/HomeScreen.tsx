@@ -19,6 +19,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PersonIcon, NotificationIcon } from "@/components/CustomIcons";
 import {
   IconCopy,
+  IconEye,
+  IconEyeOff,
   IconHash,
   IconLink,
   IconLock,
@@ -256,6 +258,7 @@ export default function HomeScreen() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showChangeEmailModal, setShowChangeEmailModal] = useState(false);
@@ -427,6 +430,7 @@ export default function HomeScreen() {
       setShowLoginModal(false);
       setLoginEmail("");
       setLoginPassword("");
+      setShowLoginPassword(false);
       setLoginError(null);
     } catch (error: any) {
       // セキュリティ上の理由から、どちらが間違っているかわからないメッセージに統一
@@ -853,14 +857,20 @@ export default function HomeScreen() {
         visible={showLoginModal}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setShowLoginModal(false)}
+        onRequestClose={() => {
+          setShowLoginModal(false);
+          setShowLoginPassword(false);
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>ログイン</Text>
               <TouchableOpacity
-                onPress={() => setShowLoginModal(false)}
+                onPress={() => {
+                  setShowLoginModal(false);
+                  setShowLoginPassword(false);
+                }}
                 style={styles.modalCloseButton}
               >
                 <IconX size={22} color="#37352f" />
@@ -880,17 +890,32 @@ export default function HomeScreen() {
               autoComplete="email"
             />
 
-            <TextInput
-              style={styles.input}
-              placeholder="パスワード"
-              value={loginPassword}
-              onChangeText={(text) => {
-                setLoginPassword(text);
-                setLoginError(null); // 入力時にエラーをクリア
-              }}
-              secureTextEntry
-              autoComplete="password"
-            />
+            <View style={styles.loginPasswordContainer}>
+              <TextInput
+                style={styles.loginPasswordInput}
+                placeholder="パスワード"
+                value={loginPassword}
+                onChangeText={(text) => {
+                  setLoginPassword(text);
+                  setLoginError(null);
+                }}
+                secureTextEntry={!showLoginPassword}
+                autoComplete="password"
+                underlineColorAndroid="transparent"
+                editable={!loginLoading}
+              />
+              <TouchableOpacity
+                style={styles.loginPasswordToggle}
+                onPress={() => setShowLoginPassword(!showLoginPassword)}
+                disabled={loginLoading}
+              >
+                {showLoginPassword ? (
+                  <IconEye size={18} color="#37352f" />
+                ) : (
+                  <IconEyeOff size={18} color="#37352f" />
+                )}
+              </TouchableOpacity>
+            </View>
 
             {loginError && (
               <Text style={styles.loginErrorText}>{loginError}</Text>
@@ -912,6 +937,7 @@ export default function HomeScreen() {
               style={styles.forgotPasswordLink}
               onPress={() => {
                 setShowLoginModal(false);
+                setShowLoginPassword(false);
                 router.push("/forgot-password");
               }}
               disabled={loginLoading}
@@ -1484,6 +1510,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
     backgroundColor: "#ffffff",
+  },
+  loginPasswordContainer: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    borderWidth: 1,
+    borderColor: "#e9e9e7",
+    borderRadius: 4,
+    marginBottom: 16,
+    backgroundColor: "#ffffff",
+    overflow: "hidden",
+  },
+  loginPasswordInput: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 12,
+    paddingLeft: 12,
+    paddingRight: 8,
+    fontSize: 16,
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    ...(Platform.OS === "web"
+      ? { outlineStyle: "none" as const, outlineWidth: 0 }
+      : {}),
+  },
+  loginPasswordToggle: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingLeft: 8,
+    paddingRight: 12,
+    minWidth: 44,
   },
   loginSubmitButton: {
     backgroundColor: "#37352f",
