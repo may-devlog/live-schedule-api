@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { Feather } from '@expo/vector-icons';
+import { IconEye, IconEyeOff } from '@/components/FeatherSvgIcons';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -114,9 +114,9 @@ export default function RegisterScreen() {
             disabled={loading}
           >
             {showPassword ? (
-              <Feather name="eye" size={20} color="#37352f" />
+              <IconEye size={20} color="#37352f" />
             ) : (
-              <Feather name="eye-off" size={20} color="#37352f" />
+              <IconEyeOff size={20} color="#37352f" />
             )}
           </TouchableOpacity>
         </View>

@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
-import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -22,7 +22,6 @@ export default function RootLayout() {
   
   // @expo/vector-icons のフォントを起動時に確実に読み込む（Web/ネイティブ両方）
   const [fontsLoaded] = useFonts({
-    ...Feather.font,
     ...Ionicons.font,
     ...MaterialIcons.font,
   });
