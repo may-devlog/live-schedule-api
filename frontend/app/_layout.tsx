@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import 'react-native-reanimated';
+import { View, StyleSheet } from 'react-native';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -16,6 +17,11 @@ import { AuthProvider } from '@/contexts/AuthContext';
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   
+  const brandLogoSource =
+    colorScheme === 'dark'
+      ? require('@/assets/images/genbgt-logo-white.png')
+      : require('@/assets/images/genbgt-logo-black.png');
+
   // @expo/vector-iconsのフォントを明示的に読み込む（Web環境で必要）
   const [fontsLoaded] = useFonts({
     ...Ionicons.font,
@@ -30,16 +36,24 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack
-          screenOptions={{
-            headerShown: false, // デフォルトでヘッダーを非表示
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
+        <View style={styles.root}>
+          <Stack
+            screenOptions={{
+              headerShown: false, // デフォルトでヘッダーを非表示
+            }}
+          >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </Stack>
+        </View>
         <StatusBar style="auto" />
       </ThemeProvider>
     </AuthProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});
