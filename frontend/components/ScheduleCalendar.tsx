@@ -298,6 +298,8 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
                 styles.dayCell,
                 isToday && styles.todayCell,
                 hasSchedule && styles.hasScheduleCell,
+                // 今日かつ予定ありの場合は「青ベース＋緑の縁取り」にする
+                isToday && hasSchedule && styles.todayWithScheduleCell,
               ]}
               onPress={() => handleDatePress(day)}
               activeOpacity={0.7}
@@ -467,6 +469,12 @@ const styles = StyleSheet.create({
   todayCell: {
     backgroundColor: "#e3f2fd",
     borderRadius: 25, // 円形にするための固定値
+  },
+  todayWithScheduleCell: {
+    backgroundColor: "#e3f2fd", // 今日の青ベース
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: "#2e7d32", // 予定の緑で縁取り
   },
   hasScheduleCell: {
     backgroundColor: "#e8f5e9", // 薄い緑色の背景
