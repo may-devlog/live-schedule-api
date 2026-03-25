@@ -17,7 +17,6 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { PersonIcon, LockIcon, NotificationIcon } from "@/components/CustomIcons";
-import { PageHeader } from "@/components/PageHeader";
 
 export type Schedule = {
   id: number;
@@ -585,65 +584,55 @@ export default function HomeScreen() {
           scrollEventThrottle={16}
         >
           <View style={styles.container}>
-            <PageHeader
-              showBackButton={false}
-              showHomeButton={false}
-              showDivider={false}
-              rightActions={
-                <View style={styles.headerRight}>
-                  {isAuthenticated && (
-                    <TouchableOpacity
-                      style={styles.notificationButton}
-                      onPress={() => {
-                        setShowNotificationModal(true);
-                        fetchNotifications();
-                      }}
-                    >
-                      <NotificationIcon size={40} color="#37352f" />
-                      {notifications.filter((n) => !n.is_read).length > 0 && (
-                        <View style={styles.notificationBadge}>
-                          <Text style={styles.notificationBadgeText}>
-                            {notifications.filter((n) => !n.is_read).length}
-                          </Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  )}
-
-                  <TouchableOpacity
-                    style={styles.loginButton}
-                    onPress={() => {
-                      console.log(
-                        "Icon clicked - isAuthenticated:",
-                        isAuthenticated,
-                        "email:",
-                        email
-                      );
-                      if (isAuthenticated) {
-                        setShowUserMenuModal(true);
-                      } else {
-                        setShowLoginModal(true);
-                      }
-                    }}
-                  >
-                    {isAuthenticated ? (
-                      <PersonIcon size={40} color="#37352f" />
-                    ) : (
-                      <LockIcon size={40} color="#37352f" />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              }
-            />
-
-            {/* 2行目：新規イベント（左寄せ） */}
+        <View style={styles.header}>
+      <Text style={styles.title}>SCHEDULE</Text>
+          <View style={styles.headerRight}>
             {isAuthenticated && (
-              <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
-                <Text style={styles.newButtonText}>+ 新規イベント</Text>
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={() => {
+                  setShowNotificationModal(true);
+                  fetchNotifications();
+                }}
+              >
+                <NotificationIcon size={40} color="#37352f" />
+                {notifications.filter(n => !n.is_read).length > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {notifications.filter(n => !n.is_read).length}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => {
+                console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
+                if (isAuthenticated) {
+                  // ログイン済みの場合、メニューモーダルを表示
+                  setShowUserMenuModal(true);
+                } else {
+                  setShowLoginModal(true);
+                }
+              }}
+            >
+              {isAuthenticated ? (
+                <PersonIcon size={40} color="#37352f" />
+              ) : (
+                <LockIcon size={40} color="#37352f" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
 
-            {/* カレンダー */}
+        {isAuthenticated && (
+      <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
+        <Text style={styles.newButtonText}>+ 新規イベント</Text>
+      </TouchableOpacity>
+        )}
+
+        {/* カレンダー */}
         <ScheduleCalendar schedules={allSchedules} />
 
       <View style={styles.sectionContainer}>
@@ -725,61 +714,53 @@ export default function HomeScreen() {
           nestedScrollEnabled={true}
         >
           <View style={styles.container}>
-            <PageHeader
-              showBackButton={false}
-              showHomeButton={false}
-              rightActions={
-                <View style={styles.headerRight}>
-                  {isAuthenticated && (
-                    <TouchableOpacity
-                      style={styles.notificationButton}
-                      onPress={() => {
-                        setShowNotificationModal(true);
-                        fetchNotifications();
-                      }}
-                    >
-                      <NotificationIcon size={40} color="#37352f" />
-                      {notifications.filter((n) => !n.is_read).length > 0 && (
-                        <View style={styles.notificationBadge}>
-                          <Text style={styles.notificationBadgeText}>
-                            {notifications.filter((n) => !n.is_read).length}
-                          </Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    style={styles.loginButton}
-                    onPress={() => {
-                      console.log(
-                        "Icon clicked - isAuthenticated:",
-                        isAuthenticated,
-                        "email:",
-                        email
-                      );
-                      if (isAuthenticated) {
-                        setShowUserMenuModal(true);
-                      } else {
-                        setShowLoginModal(true);
-                      }
-                    }}
-                  >
-                    {isAuthenticated ? (
-                      <PersonIcon size={40} color="#37352f" />
-                    ) : (
-                      <LockIcon size={40} color="#37352f" />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              }
-            />
-
-            {/* 2行目：新規イベント（左寄せ） */}
+            <View style={styles.header}>
+      <Text style={styles.title}>SCHEDULE</Text>
+          <View style={styles.headerRight}>
             {isAuthenticated && (
-              <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
-                <Text style={styles.newButtonText}>+ 新規イベント</Text>
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={() => {
+                  setShowNotificationModal(true);
+                  fetchNotifications();
+                }}
+              >
+                <NotificationIcon size={40} color="#37352f" />
+                {notifications.filter(n => !n.is_read).length > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {notifications.filter(n => !n.is_read).length}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => {
+                console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
+                if (isAuthenticated) {
+                  // ログイン済みの場合、メニューモーダルを表示
+                  setShowUserMenuModal(true);
+                } else {
+                  setShowLoginModal(true);
+                }
+              }}
+            >
+              {isAuthenticated ? (
+                <PersonIcon size={40} color="#37352f" />
+              ) : (
+                <LockIcon size={40} color="#37352f" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {isAuthenticated && (
+      <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
+        <Text style={styles.newButtonText}>+ 新規イベント</Text>
+      </TouchableOpacity>
+        )}
 
         {/* カレンダー */}
         <ScheduleCalendar schedules={allSchedules} />
@@ -1249,7 +1230,7 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {}),
   },
   container: {
-    paddingTop: 0,
+    paddingTop: 48,
     paddingHorizontal: 24,
     backgroundColor: "#ffffff",
     maxWidth: 900,
@@ -1266,37 +1247,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  brandLogoImage: {
-    width: "100%",
-    maxWidth: 320,
-    height: 72,
-  },
-  topHeader: {
-    marginBottom: 16,
-  },
-  topHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    // スマホでの崩れ防止（web での折返し対策）
-    flexWrap: "nowrap",
-  },
-  topHeaderLeft: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: "flex-start",
-    justifyContent: "center",
-  },
-  topHeaderRight: {
-    flexShrink: 0,
-    alignItems: "flex-end",
-    justifyContent: "center",
-  },
-  topHeaderBottom: {
-    marginTop: 8,
-    alignItems: "flex-start",
   },
   notificationButton: {
     padding: 8,
@@ -1362,11 +1312,11 @@ const styles = StyleSheet.create({
   },
   newButton: {
     alignSelf: "flex-start",
+    marginBottom: 24,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 3,
     backgroundColor: "#37352f",
-    maxWidth: 240,
   },
   newButtonText: {
     color: "#ffffff",
@@ -1607,5 +1557,62 @@ const styles = StyleSheet.create({
   },
   copyButtonText: {
     fontSize: 16,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  notificationButton: {
+    padding: 8,
+    position: "relative",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "#d93025",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  notificationBadgeText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  notificationList: {
+    maxHeight: 400,
+  },
+  notificationItem: {
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "#f7f6f3",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e9e9e7",
+  },
+  notificationItemUnread: {
+    backgroundColor: "#fff4e6",
+    borderColor: "#ffd89b",
+  },
+  notificationTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#37352f",
+    marginBottom: 8,
+  },
+  notificationMessage: {
+    fontSize: 14,
+    color: "#787774",
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  notificationDate: {
+    fontSize: 12,
+    color: "#9b9a97",
   },
 });
