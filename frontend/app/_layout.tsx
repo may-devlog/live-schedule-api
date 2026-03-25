@@ -2,7 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -18,7 +18,6 @@ export default function RootLayout() {
   
   // @expo/vector-iconsのフォントを明示的に読み込む（Web環境で必要）
   const [fontsLoaded] = useFonts({
-    ...Feather.font,
     ...Ionicons.font,
     ...MaterialIcons.font,
   });

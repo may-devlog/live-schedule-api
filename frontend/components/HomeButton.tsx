@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { HomeOutlineIcon } from '@/components/CustomIcons';
 
 export function HomeButton() {
   const router = useRouter();
@@ -12,7 +12,7 @@ export function HomeButton() {
       onPress={() => router.push('/')}
     >
       <View style={styles.buttonContent}>
-        <Feather name="home" size={16} color="#37352f" />
+        <HomeOutlineIcon size={16} color="#37352f" />
         <Text style={styles.buttonText}>ホーム</Text>
       </View>
     </TouchableOpacity>
