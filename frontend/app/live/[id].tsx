@@ -1274,9 +1274,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#9b9a97",
   },
-  relationContainer: {
-    gap: 8,
-  },
   sectionHeader: {
     flexDirection: "column",
     alignItems: "stretch",

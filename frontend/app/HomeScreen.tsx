@@ -17,6 +17,7 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { PersonIcon, LockIcon, NotificationIcon } from "@/components/CustomIcons";
+import { Feather } from "@expo/vector-icons";
 
 export type Schedule = {
   id: number;
@@ -854,7 +855,7 @@ export default function HomeScreen() {
                 onPress={() => setShowLoginModal(false)}
                 style={styles.modalCloseButton}
               >
-                <Text style={{ fontSize: 24 }}>✕</Text>
+                <Feather name="x" size={22} color="#37352f" />
               </TouchableOpacity>
             </View>
 
@@ -931,7 +932,7 @@ export default function HomeScreen() {
                 }}
                 style={styles.modalCloseButton}
               >
-                <Text style={{ fontSize: 24 }}>✕</Text>
+                <Feather name="x" size={22} color="#37352f" />
               </TouchableOpacity>
             </View>
 
@@ -984,7 +985,7 @@ export default function HomeScreen() {
                 onPress={() => setShowUserMenuModal(false)}
                 style={styles.modalCloseButton}
               >
-                <Text style={{ fontSize: 24 }}>✕</Text>
+                <Feather name="x" size={22} color="#37352f" />
               </TouchableOpacity>
             </View>
 
@@ -999,7 +1000,10 @@ export default function HomeScreen() {
                 setShowChangeEmailModal(true);
               }}
             >
-              <Text style={styles.menuButtonText}>📧 メールアドレス変更</Text>
+              <View style={styles.menuButtonContent}>
+                <Feather name="mail" size={18} color="#37352f" />
+                <Text style={styles.menuButtonText}>メールアドレス変更</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1009,7 +1013,10 @@ export default function HomeScreen() {
                 setShowChangeShareIdModal(true);
               }}
             >
-              <Text style={styles.menuButtonText}>🆔 ユーザーID変更</Text>
+              <View style={styles.menuButtonContent}>
+                <Feather name="hash" size={18} color="#37352f" />
+                <Text style={styles.menuButtonText}>ユーザーID変更</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1019,11 +1026,17 @@ export default function HomeScreen() {
                 router.push("/settings/masked-locations");
               }}
             >
-              <Text style={styles.menuButtonText}>🔒 出発地・到着地マスク設定</Text>
+              <View style={styles.menuButtonContent}>
+                <Feather name="lock" size={18} color="#37352f" />
+                <Text style={styles.menuButtonText}>出発地・到着地マスク設定</Text>
+              </View>
             </TouchableOpacity>
 
             <View style={[styles.menuButton, { marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 }]}>
-              <Text style={styles.menuButtonText}>🔗 共有化</Text>
+              <View style={styles.menuButtonContent}>
+                <Feather name="link" size={18} color="#37352f" />
+                <Text style={styles.menuButtonText}>共有化</Text>
+              </View>
               <TouchableOpacity
                 onPress={handleToggleSharing}
                 style={[styles.toggleButton, sharingEnabled && styles.toggleButtonActive]}
@@ -1062,7 +1075,7 @@ export default function HomeScreen() {
                     }}
                     style={styles.copyButton}
                   >
-                    <Text style={styles.copyButtonText}>📋</Text>
+                    <Feather name="copy" size={18} color="#37352f" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1088,7 +1101,10 @@ export default function HomeScreen() {
                 }
               }}
             >
-              <Text style={[styles.menuButtonText, styles.menuButtonTextDanger]}>🚪 ログアウト</Text>
+              <View style={styles.menuButtonContent}>
+                <Feather name="log-out" size={18} color="#d93025" />
+                <Text style={[styles.menuButtonText, styles.menuButtonTextDanger]}>ログアウト</Text>
+              </View>
             </TouchableOpacity>
       </View>
     </View>
@@ -1112,7 +1128,7 @@ export default function HomeScreen() {
                 }}
                 style={styles.modalCloseButton}
               >
-                <Text style={{ fontSize: 24 }}>✕</Text>
+                <Feather name="x" size={22} color="#37352f" />
               </TouchableOpacity>
             </View>
 
@@ -1163,7 +1179,7 @@ export default function HomeScreen() {
                 onPress={() => setShowNotificationModal(false)}
                 style={styles.modalCloseButton}
               >
-                <Text style={{ fontSize: 24 }}>✕</Text>
+                <Feather name="x" size={22} color="#37352f" />
               </TouchableOpacity>
             </View>
 
@@ -1489,7 +1505,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
     padding: 16,
     borderRadius: 4,
+    alignItems: "flex-start",
+  },
+  menuButtonContent: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 10,
   },
   menuButtonDanger: {
     backgroundColor: "#fff5f5",
@@ -1557,62 +1578,5 @@ const styles = StyleSheet.create({
   },
   copyButtonText: {
     fontSize: 16,
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  notificationButton: {
-    padding: 8,
-    position: "relative",
-  },
-  notificationBadge: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    backgroundColor: "#d93025",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 6,
-  },
-  notificationBadgeText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  notificationList: {
-    maxHeight: 400,
-  },
-  notificationItem: {
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#f7f6f3",
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#e9e9e7",
-  },
-  notificationItemUnread: {
-    backgroundColor: "#fff4e6",
-    borderColor: "#ffd89b",
-  },
-  notificationTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#37352f",
-    marginBottom: 8,
-  },
-  notificationMessage: {
-    fontSize: 14,
-    color: "#787774",
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  notificationDate: {
-    fontSize: 12,
-    color: "#9b9a97",
   },
 });

@@ -488,11 +488,6 @@ const styles = StyleSheet.create({
   separator: {
     height: 0,
   },
-  errorText: {
-    color: '#d93025',
-    marginVertical: 8,
-    fontSize: 14,
-  },
   emptyText: {
     color: '#787774',
     fontSize: 14,

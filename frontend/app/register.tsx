@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-// アイコンは絵文字を使用（フォントに依存しない）
+import { Feather } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -113,9 +113,7 @@ export default function RegisterScreen() {
             onPress={() => setShowPassword(!showPassword)}
             disabled={loading}
           >
-            <Text style={{ fontSize: 20 }}>
-              {showPassword ? '🙈' : '👁️'}
-            </Text>
+            <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#37352f" />
           </TouchableOpacity>
         </View>
 

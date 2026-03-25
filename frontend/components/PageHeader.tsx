@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 
 type PageHeaderProps = {
   scheduleTitle?: string | null;
@@ -19,7 +20,10 @@ export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: P
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.backButtonText}>← 戻る</Text>
+            <View style={styles.buttonContent}>
+              <Feather name="arrow-left" size={16} color="#37352f" />
+              <Text style={styles.backButtonText}>戻る</Text>
+            </View>
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -30,7 +34,10 @@ export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: P
             router.push(path);
           }}
         >
-          <Text style={styles.homeButtonText}>🏠 ホーム</Text>
+          <View style={styles.buttonContent}>
+            <Feather name="home" size={16} color="#37352f" />
+            <Text style={styles.homeButtonText}>ホーム</Text>
+          </View>
         </TouchableOpacity>
       </View>
       {scheduleTitle && (
@@ -61,6 +68,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   backButton: {
     backgroundColor: '#f7f6f3',
