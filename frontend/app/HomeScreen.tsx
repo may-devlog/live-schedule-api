@@ -17,7 +17,6 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { PersonIcon, LockIcon, NotificationIcon } from "@/components/CustomIcons";
-import { PageHeader } from "@/components/PageHeader";
 
 export type Schedule = {
   id: number;
@@ -584,54 +583,48 @@ export default function HomeScreen() {
           }}
           scrollEventThrottle={16}
         >
-          <View style={styles.pageHeaderFullWidth}>
-            <PageHeader
-              showBackButton={false}
-              showHomeButton={false}
-              rightActions={
-                <View style={styles.headerRight}>
-                  {isAuthenticated && (
-                    <TouchableOpacity
-                      style={styles.notificationButton}
-                      onPress={() => {
-                        setShowNotificationModal(true);
-                        fetchNotifications();
-                      }}
-                    >
-                      <NotificationIcon size={40} color="#37352f" />
-                      {notifications.filter(n => !n.is_read).length > 0 && (
-                        <View style={styles.notificationBadge}>
-                          <Text style={styles.notificationBadgeText}>
-                            {notifications.filter(n => !n.is_read).length}
-                          </Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    style={styles.loginButton}
-                    onPress={() => {
-                      console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
-                      if (isAuthenticated) {
-                        setShowUserMenuModal(true);
-                      } else {
-                        setShowLoginModal(true);
-                      }
-                    }}
-                  >
-                    {isAuthenticated ? (
-                      <PersonIcon size={40} color="#37352f" />
-                    ) : (
-                      <LockIcon size={40} color="#37352f" />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              }
-              showDivider={true}
-            />
-          </View>
-
           <View style={styles.container}>
+        <View style={styles.header}>
+      <Text style={styles.title}>SCHEDULE</Text>
+          <View style={styles.headerRight}>
+            {isAuthenticated && (
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={() => {
+                  setShowNotificationModal(true);
+                  fetchNotifications();
+                }}
+              >
+                <NotificationIcon size={40} color="#37352f" />
+                {notifications.filter(n => !n.is_read).length > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {notifications.filter(n => !n.is_read).length}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => {
+                console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
+                if (isAuthenticated) {
+                  // ログイン済みの場合、メニューモーダルを表示
+                  setShowUserMenuModal(true);
+                } else {
+                  setShowLoginModal(true);
+                }
+              }}
+            >
+              {isAuthenticated ? (
+                <PersonIcon size={40} color="#37352f" />
+              ) : (
+                <LockIcon size={40} color="#37352f" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {isAuthenticated && (
       <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
@@ -720,62 +713,57 @@ export default function HomeScreen() {
           scrollEnabled={true}
           nestedScrollEnabled={true}
         >
-          <View style={styles.pageHeaderFullWidth}>
-            <PageHeader
-              showBackButton={false}
-              showHomeButton={false}
-              rightActions={
-                <View style={styles.headerRight}>
-                  {isAuthenticated && (
-                    <TouchableOpacity
-                      style={styles.notificationButton}
-                      onPress={() => {
-                        setShowNotificationModal(true);
-                        fetchNotifications();
-                      }}
-                    >
-                      <NotificationIcon size={40} color="#37352f" />
-                      {notifications.filter(n => !n.is_read).length > 0 && (
-                        <View style={styles.notificationBadge}>
-                          <Text style={styles.notificationBadgeText}>
-                            {notifications.filter(n => !n.is_read).length}
-                          </Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    style={styles.loginButton}
-                    onPress={() => {
-                      console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
-                      if (isAuthenticated) {
-                        setShowUserMenuModal(true);
-                      } else {
-                        setShowLoginModal(true);
-                      }
-                    }}
-                  >
-                    {isAuthenticated ? (
-                      <PersonIcon size={40} color="#37352f" />
-                    ) : (
-                      <LockIcon size={40} color="#37352f" />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              }
-              showDivider={true}
-            />
-          </View>
-
           <View style={styles.container}>
+            <View style={styles.header}>
+      <Text style={styles.title}>SCHEDULE</Text>
+          <View style={styles.headerRight}>
             {isAuthenticated && (
-              <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
-                <Text style={styles.newButtonText}>+ 新規イベント</Text>
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={() => {
+                  setShowNotificationModal(true);
+                  fetchNotifications();
+                }}
+              >
+                <NotificationIcon size={40} color="#37352f" />
+                {notifications.filter(n => !n.is_read).length > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {notifications.filter(n => !n.is_read).length}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => {
+                console.log("Icon clicked - isAuthenticated:", isAuthenticated, "email:", email);
+                if (isAuthenticated) {
+                  // ログイン済みの場合、メニューモーダルを表示
+                  setShowUserMenuModal(true);
+                } else {
+                  setShowLoginModal(true);
+                }
+              }}
+            >
+              {isAuthenticated ? (
+                <PersonIcon size={40} color="#37352f" />
+              ) : (
+                <LockIcon size={40} color="#37352f" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
 
-            {/* カレンダー */}
-            <ScheduleCalendar schedules={allSchedules} />
+        {isAuthenticated && (
+      <TouchableOpacity style={styles.newButton} onPress={handleOpenNew}>
+        <Text style={styles.newButtonText}>+ 新規イベント</Text>
+      </TouchableOpacity>
+        )}
+
+        {/* カレンダー */}
+        <ScheduleCalendar schedules={allSchedules} />
 
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>NEXT</Text>
@@ -1242,16 +1230,18 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {}),
   },
   container: {
-    paddingTop: 16,
+    paddingTop: 48,
     paddingHorizontal: 24,
     backgroundColor: "#ffffff",
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
   },
-  pageHeaderFullWidth: {
-    width: "100%",
-    backgroundColor: "#ffffff",
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
   },
   headerRight: {
     flexDirection: "row",
