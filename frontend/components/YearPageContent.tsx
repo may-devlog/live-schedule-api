@@ -1183,7 +1183,7 @@ export function YearPageContent({
                     <Text style={styles.cardTitle} numberOfLines={2}>
                       {item.hotel_name}
                     </Text>
-                    {item.website && (
+                    {item.website && stayGroupingField !== "website" && (
                       <View style={styles.cardSubContainer}>
                         <NotionTag
                           label={item.website}
