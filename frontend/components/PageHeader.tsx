@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
-import { NotificationIcon, PersonIcon } from '@/components/CustomIcons';
+import { LockIcon, NotificationIcon, PersonIcon } from '@/components/CustomIcons';
 
 type PageHeaderProps = {
   scheduleTitle?: string | null;
@@ -59,15 +59,19 @@ export function PageHeader({
             console.log('[PageHeader] Person icon pressed, isAuthenticated:', isAuthenticated);
           }}
         >
-          <PersonIcon size={40} color="#37352f" />
+          {isAuthenticated ? (
+            <PersonIcon size={40} color="#37352f" />
+          ) : (
+            <LockIcon size={40} color="#37352f" />
+          )}
         </TouchableOpacity>
       </View>
     ) : null);
 
-  const headerNode = (
+  const headerBar = (
     <View
       style={[
-        styles.header,
+        styles.headerBar,
         fixedOnWeb && Platform.OS === 'web' && styles.headerFixedOnWeb,
         {
           borderBottomWidth: showDivider ? 1 : 0,
@@ -75,58 +79,57 @@ export function PageHeader({
         },
       ]}
     >
-      {/* 1行目：左ロゴ / 右アクション（通知・人物など） */}
       <View style={styles.topRow}>
         <Image source={brandLogoSource} style={styles.logo} contentFit="contain" />
         <View style={styles.rightActionsContainer}>{effectiveRightActions}</View>
       </View>
-
-      {/* 2行目：戻る・ホーム（新規イベントボタンと同じ左位置） */}
-      {hasLeftButtons && (
-        <View style={styles.bottomRow}>
-          {showBackButton && (
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-              <Text style={styles.backButtonText}>← 戻る</Text>
-            </TouchableOpacity>
-          )}
-          {showHomeButton && (
-            <TouchableOpacity
-              style={styles.homeButton}
-              onPress={() => {
-                const path = homePath || '/';
-                console.log('[PageHeader] Home button pressed, navigating to:', path);
-                router.push(path);
-              }}
-            >
-              <Text style={styles.homeButtonText}>🏠 ホーム</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-
-      {scheduleTitle && (
-        <Text style={styles.scheduleTitle}>
-          {scheduleTitle}
-        </Text>
-      )}
+      {scheduleTitle && <Text style={styles.scheduleTitle}>{scheduleTitle}</Text>}
     </View>
   );
+
+  const navRow = hasLeftButtons ? (
+    <View style={styles.navRow}>
+      {showBackButton && (
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>← 戻る</Text>
+        </TouchableOpacity>
+      )}
+      {showHomeButton && (
+        <TouchableOpacity
+          style={styles.homeButton}
+          onPress={() => {
+            const path = homePath || '/';
+            console.log('[PageHeader] Home button pressed, navigating to:', path);
+            router.push(path);
+          }}
+        >
+          <Text style={styles.homeButtonText}>🏠 ホーム</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  ) : null;
 
   // fixed の場合、コンテンツが下に潜らないようスペーサーを入れる
   if (fixedOnWeb && Platform.OS === 'web') {
     return (
       <>
-        {headerNode}
-        <View style={styles.fixedSpacer} />
+        {headerBar}
+        {navRow}
+        <View style={[styles.fixedSpacer, hasLeftButtons && styles.fixedSpacerWithNav]} />
       </>
     );
   }
 
-  return headerNode;
+  return (
+    <>
+      {headerBar}
+      {navRow}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
-  header: {
+  headerBar: {
     paddingTop: 2,
     paddingBottom: 2,
     backgroundColor: "#ffffff",
@@ -144,7 +147,10 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   fixedSpacer: {
-    height: 112, // ヘッダー分の余白（ロゴ行＋ボタン行想定）
+    height: 56, // ヘッダーバー分の余白
+  },
+  fixedSpacerWithNav: {
+    height: 56 + 44, // ヘッダーバー + ナビ行
   },
   topRow: {
     flexDirection: 'row',
@@ -157,12 +163,14 @@ const styles = StyleSheet.create({
     width: 150,
     height: 40,
   },
-  bottomRow: {
+  navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 24, // HomeScreen の newButton と同じ左位置
-    marginTop: 2,
+    paddingTop: 8,
+    paddingBottom: 8,
+    backgroundColor: "#ffffff",
   },
   rightActionsContainer: {
     flexDirection: 'row',
