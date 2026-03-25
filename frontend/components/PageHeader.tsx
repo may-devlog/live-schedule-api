@@ -34,7 +34,11 @@ export function PageHeader({
     <View
       style={[
         styles.header,
-        !showDivider && { borderBottomWidth: 0, borderBottomColor: 'transparent' },
+        // showDivider に応じて常に明示的に上書きする（スタイルマージの差で残るのを防ぐ）
+        {
+          borderBottomWidth: showDivider ? 1 : 0,
+          borderBottomColor: showDivider ? "#e9e9e7" : "transparent",
+        },
       ]}
     >
       {/* ロゴは左上に固定配置。戻る/ホームボタン側は padding で干渉回避。 */}
