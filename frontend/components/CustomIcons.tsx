@@ -204,7 +204,15 @@ export function EyeIcon({ size = 20, color = '#37352f', strokeWidth = 2 }: Strok
   const h = 11 * scale;
   const pupil = 3.5 * scale;
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View
+      style={{
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}
+    >
       <View
         style={{
           width: w,
@@ -233,12 +241,20 @@ export function EyeIcon({ size = 20, color = '#37352f', strokeWidth = 2 }: Strok
 export function EyeOffIcon({ size = 20, color = '#37352f', strokeWidth = 2 }: StrokeProps) {
   const scale = size / 20;
   const t = strokeWidth * scale;
-  const slashLen = size * 0.95;
+  const slashLen = size * 0.82;
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View
+      style={{
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}
+    >
       <EyeIcon size={size} color={color} strokeWidth={strokeWidth} />
       <View style={{ position: 'absolute' }}>
-        <Line length={slashLen} color={color} thickness={t} rotateDeg={-35} />
+        <Line length={slashLen} color={color} thickness={t} rotateDeg={-30} />
       </View>
     </View>
   );
@@ -247,12 +263,18 @@ export function EyeOffIcon({ size = 20, color = '#37352f', strokeWidth = 2 }: St
 export function MailIcon({ size = 18, color = '#37352f', strokeWidth = 2 }: StrokeProps) {
   const scale = size / 18;
   const t = strokeWidth * scale;
-  const w = 18 * scale;
-  const h = 12 * scale;
+  const w = 16 * scale;
+  const h = 11 * scale;
+  const top = (size - h) / 2;
+  const left = (size - w) / 2;
+  const flapLen = w * 0.9;
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <View
         style={{
+          position: 'absolute',
+          top,
+          left,
           width: w,
           height: h,
           borderWidth: t,
@@ -262,11 +284,12 @@ export function MailIcon({ size = 18, color = '#37352f', strokeWidth = 2 }: Stro
           overflow: 'hidden',
         }}
       />
-      <View style={{ position: 'absolute', top: (size - h) / 2 + 1 * scale }}>
-        <Line length={w * 0.62} color={color} thickness={t} rotateDeg={25} />
+      {/* flap lines (kept inside by shorter length + centered) */}
+      <View style={{ position: 'absolute', top: top + 3.2 * scale }}>
+        <Line length={flapLen * 0.5} color={color} thickness={t} rotateDeg={28} />
       </View>
-      <View style={{ position: 'absolute', top: (size - h) / 2 + 1 * scale }}>
-        <Line length={w * 0.62} color={color} thickness={t} rotateDeg={-25} />
+      <View style={{ position: 'absolute', top: top + 3.2 * scale }}>
+        <Line length={flapLen * 0.5} color={color} thickness={t} rotateDeg={-28} />
       </View>
     </View>
   );
@@ -275,15 +298,32 @@ export function MailIcon({ size = 18, color = '#37352f', strokeWidth = 2 }: Stro
 export function HashIcon({ size = 18, color = '#37352f', strokeWidth = 2 }: StrokeProps) {
   const scale = size / 18;
   const t = strokeWidth * scale;
-  const len = 14 * scale;
+  const len = 12.5 * scale;
+  const vHeight = 15 * scale;
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ position: 'absolute', left: 6 * scale }}>
-        <Line length={len} color={color} thickness={t} rotateDeg={90} />
-      </View>
-      <View style={{ position: 'absolute', left: 11 * scale }}>
-        <Line length={len} color={color} thickness={t} rotateDeg={90} />
-      </View>
+      {/* vertical strokes */}
+      <View
+        style={{
+          position: 'absolute',
+          left: 5.5 * scale,
+          width: t,
+          height: vHeight,
+          backgroundColor: color,
+          borderRadius: t / 2,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          left: 11.5 * scale,
+          width: t,
+          height: vHeight,
+          backgroundColor: color,
+          borderRadius: t / 2,
+        }}
+      />
+      {/* horizontal strokes */}
       <View style={{ position: 'absolute', top: 7 * scale }}>
         <Line length={len} color={color} thickness={t} rotateDeg={0} />
       </View>
@@ -336,8 +376,9 @@ export function LockOutlineIcon({ size = 18, color = '#37352f', strokeWidth = 2 
 export function LinkIcon({ size = 18, color = '#37352f', strokeWidth = 2 }: StrokeProps) {
   const scale = size / 18;
   const t = strokeWidth * scale;
-  const w = 11 * scale;
-  const h = 6 * scale;
+  const w = 10.5 * scale;
+  const h = 6.5 * scale;
+  const r = h / 2;
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <View
@@ -347,9 +388,10 @@ export function LinkIcon({ size = 18, color = '#37352f', strokeWidth = 2 }: Stro
           height: h,
           borderWidth: t,
           borderColor: color,
-          borderRadius: h / 2,
-          transform: [{ rotate: '25deg' }],
+          borderRadius: r,
+          transform: [{ rotate: '20deg' }],
           backgroundColor: 'transparent',
+          left: 1.0 * scale,
         }}
       />
       <View
@@ -359,9 +401,10 @@ export function LinkIcon({ size = 18, color = '#37352f', strokeWidth = 2 }: Stro
           height: h,
           borderWidth: t,
           borderColor: color,
-          borderRadius: h / 2,
-          transform: [{ rotate: '-25deg' }],
+          borderRadius: r,
+          transform: [{ rotate: '-20deg' }],
           backgroundColor: 'transparent',
+          right: 1.0 * scale,
         }}
       />
     </View>
