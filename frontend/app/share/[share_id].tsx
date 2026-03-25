@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: '700',
     color: '#37352f',
   },
