@@ -1301,7 +1301,7 @@ const styles = StyleSheet.create({
     color: "#9b9a97",
   },
   title: {
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: "700",
     color: "#37352f",
   },
