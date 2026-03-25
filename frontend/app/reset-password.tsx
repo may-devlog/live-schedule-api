@@ -153,7 +153,7 @@ export default function ResetPasswordScreen() {
             onPress={() => setShowPassword(!showPassword)}
             disabled={loading}
           >
-            <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#37352f" />
+            <Feather name={showPassword ? 'eye' : 'eye-off'} size={20} color="#37352f" />
           </TouchableOpacity>
         </View>
 
@@ -176,7 +176,7 @@ export default function ResetPasswordScreen() {
             onPress={() => setShowConfirmPassword(!showConfirmPassword)}
             disabled={loading}
           >
-            <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#37352f" />
+            <Feather name={showConfirmPassword ? 'eye' : 'eye-off'} size={20} color="#37352f" />
           </TouchableOpacity>
         </View>
 

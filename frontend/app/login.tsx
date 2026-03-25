@@ -128,7 +128,7 @@ export default function LoginScreen() {
               onPress={() => setShowPassword(!showPassword)}
               disabled={loading}
             >
-              <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#37352f" />
+              <Feather name={showPassword ? 'eye' : 'eye-off'} size={20} color="#37352f" />
             </TouchableOpacity>
           </View>
 
