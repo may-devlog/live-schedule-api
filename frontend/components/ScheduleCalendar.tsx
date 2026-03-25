@@ -23,8 +23,8 @@ interface ScheduleCalendarProps {
   onSchedulePress?: (scheduleId: number) => void; // スケジュールクリック時のカスタムハンドラ
 }
 
-// 祝日を判定する関数
-function isHoliday(year: number, month: number, day: number): boolean {
+// 法定祝日のみ（振替休日は含めない）
+function isStatutoryHoliday(year: number, month: number, day: number): boolean {
   // 固定祝日
   // 元日
   if (month === 0 && day === 1) return true;
@@ -87,6 +87,87 @@ function isHoliday(year: number, month: number, day: number): boolean {
   return false;
 }
 
+/** 日曜に当たった法定祝日の振替休日（その翌日以降で最初の「祝日でない日」）かどうか */
+function isSubstituteHoliday(year: number, month: number, day: number): boolean {
+  if (isStatutoryHoliday(year, month, day)) return false;
+
+  const target = new Date(year, month, day);
+  target.setHours(0, 0, 0, 0);
+
+  for (const yy of [year - 1, year, year + 1]) {
+    for (let mm = 0; mm < 12; mm++) {
+      const daysInM = new Date(yy, mm + 1, 0).getDate();
+      for (let dd = 1; dd <= daysInM; dd++) {
+        const sun = new Date(yy, mm, dd);
+        if (sun.getDay() !== 0) continue;
+        if (!isStatutoryHoliday(yy, mm, dd)) continue;
+
+        let next = new Date(yy, mm, dd);
+        next.setDate(next.getDate() + 1);
+        while (isStatutoryHoliday(next.getFullYear(), next.getMonth(), next.getDate())) {
+          next.setDate(next.getDate() + 1);
+        }
+        next.setHours(0, 0, 0, 0);
+        if (next.getTime() === target.getTime()) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function dateKey(y: number, m: number, d: number): string {
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * 表示年を中心に前後年も含め、法定祝日・振替休日・国民の休日（祝日に挟まれた日）の集合を構築する。
+ * 国民の休日は前日・翌日がいずれも集合に入った日を固定点で追加入力する（連鎖対応）。
+ */
+function buildNationalHolidaySet(centerYear: number): Set<string> {
+  const set = new Set<string>();
+
+  const addCoreHolidaysForYear = (yy: number) => {
+    for (let mm = 0; mm < 12; mm++) {
+      const dim = new Date(yy, mm + 1, 0).getDate();
+      for (let dd = 1; dd <= dim; dd++) {
+        if (isStatutoryHoliday(yy, mm, dd) || isSubstituteHoliday(yy, mm, dd)) {
+          set.add(dateKey(yy, mm, dd));
+        }
+      }
+    }
+  };
+
+  for (const yy of [centerYear - 1, centerYear, centerYear + 1]) {
+    addCoreHolidaysForYear(yy);
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const yy of [centerYear - 1, centerYear, centerYear + 1]) {
+      for (let mm = 0; mm < 12; mm++) {
+        const dim = new Date(yy, mm + 1, 0).getDate();
+        for (let dd = 1; dd <= dim; dd++) {
+          const k = dateKey(yy, mm, dd);
+          if (set.has(k)) continue;
+          const prev = new Date(yy, mm, dd);
+          prev.setDate(prev.getDate() - 1);
+          const next = new Date(yy, mm, dd);
+          next.setDate(next.getDate() + 1);
+          const pk = dateKey(prev.getFullYear(), prev.getMonth(), prev.getDate());
+          const nk = dateKey(next.getFullYear(), next.getMonth(), next.getDate());
+          if (set.has(pk) && set.has(nk)) {
+            set.add(k);
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+
+  return set;
+}
+
 export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress }: ScheduleCalendarProps) {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -98,6 +179,8 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
   // 現在の月の最初の日と最後の日を取得
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+
+  const nationalHolidaySet = useMemo(() => buildNationalHolidaySet(year), [year]);
 
   // 月の最初の日（1日）
   const firstDay = new Date(year, month, 1);
@@ -290,7 +373,7 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
           const daySchedules = schedulesByDate[dateString] || [];
           const isToday = todayDay === day;
           const hasSchedule = daySchedules.length > 0;
-          const isHolidayDay = isHoliday(year, month, day);
+          const isHolidayDay = nationalHolidaySet.has(dateKey(year, month, day));
 
           return (
             <TouchableOpacity
