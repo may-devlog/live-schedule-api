@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getApiUrl } from "../../../../utils/api";
+import { authenticatedFetch, getApiUrl } from "../../../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../../../components/notion-property";
 import { NotionTag } from "../../../../components/notion-tag";
 import { getOptionColor } from "../../../../utils/get-option-color";
@@ -21,7 +21,7 @@ import { loadSelectOptions } from "../../../../utils/select-options-storage";
 import type { Schedule } from "../../../HomeScreen";
 import { maskHotelName } from "../../../../utils/mask-hotel-name";
 import { CollapsibleDetailSection } from "../../../../components/CollapsibleDetailSection";
-import { PublicFooter, PublicHeader, brand } from "../../../../components/GenBGTBrand";
+import { AppHeader, PublicFooter, PublicHeader, brand } from "../../../../components/GenBGTBrand";
 import { isJapaneseHolidayDate } from "../../../../components/ScheduleCalendar";
 
 type TrafficSummary = {
@@ -53,11 +53,15 @@ type StaySummary = {
   status: string;
 };
 
-export default function SharedScheduleDetailScreen() {
+type DetailScreenProps = { authenticated?: boolean; scheduleId?: string };
+
+export default function SharedScheduleDetailScreen({ authenticated = false, scheduleId }: DetailScreenProps = {}) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
   const isMobile = width < 600;
-  const { share_id, id } = useLocalSearchParams<{ share_id: string; id: string }>();
+  const params = useLocalSearchParams<{ share_id?: string; id?: string }>();
+  const share_id = params.share_id;
+  const id = scheduleId ?? params.id;
   const router = useRouter();
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
@@ -90,14 +94,15 @@ export default function SharedScheduleDetailScreen() {
   const [transportationColors, setTransportationColors] = useState<Map<number, string>>(new Map());
 
   const fetchDetail = async () => {
-    if (!share_id || !id) return;
+    if ((!authenticated && !share_id) || !id) return;
     
     try {
       setLoading(true);
       setError(null);
 
-      // 共有スケジュールを取得
-      const res = await fetch(getApiUrl(`/share/${share_id}/schedules/${id}`));
+      const res = authenticated
+        ? await authenticatedFetch(getApiUrl(`/schedules/${id}`))
+        : await fetch(getApiUrl(`/share/${share_id}/schedules/${id}`));
       if (!res.ok) {
         if (res.status === 404) {
           throw new Error("スケジュールが見つかりません");
@@ -108,7 +113,9 @@ export default function SharedScheduleDetailScreen() {
       setSchedule(found);
 
       // 全スケジュールを取得（関連スケジュール表示用）
-      const allRes = await fetch(getApiUrl(`/share/${share_id}`));
+      const allRes = authenticated
+        ? await authenticatedFetch(getApiUrl('/schedules?include_canceled=true'))
+        : await fetch(getApiUrl(`/share/${share_id}`));
       if (allRes.ok) {
         const allData: Schedule[] = await allRes.json();
         setAllSchedules(allData);
@@ -117,7 +124,7 @@ export default function SharedScheduleDetailScreen() {
       await fetchTrafficAndStay(found.id);
       
       // TargetとLineupの選択肢を読み込んでフィルタリング
-      const targets = await loadSelectOptions("TARGETS", share_id);
+      const targets = await loadSelectOptions("TARGETS", authenticated ? undefined : share_id);
       const targetOptionLabels = targets.map(opt => opt.label);
       
       // Target: 選択肢に存在する場合のみ表示
@@ -180,7 +187,7 @@ export default function SharedScheduleDetailScreen() {
 
   useEffect(() => {
     fetchDetail();
-  }, [share_id, id]);
+  }, [share_id, id, authenticated]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -238,9 +245,10 @@ export default function SharedScheduleDetailScreen() {
   }, [trafficSummaries]);
 
   const fetchTrafficAndStay = async (scheduleId: number) => {
-    // Traffic 一覧（公開APIを使用）
     try {
-      const res = await fetch(getApiUrl(`/public/traffic?schedule_id=${scheduleId}`));
+      const res = authenticated
+        ? await authenticatedFetch(getApiUrl(`/traffic?schedule_id=${scheduleId}`))
+        : await fetch(getApiUrl(`/public/traffic?schedule_id=${scheduleId}`));
       if (res.ok) {
         const list: TrafficSummary[] = await res.json();
         list.sort((a, b) => {
@@ -255,9 +263,10 @@ export default function SharedScheduleDetailScreen() {
       // とりあえず無視
     }
 
-    // Stay 一覧（公開APIを使用）
     try {
-      const res = await fetch(getApiUrl(`/public/stay?schedule_id=${scheduleId}`));
+      const res = authenticated
+        ? await authenticatedFetch(getApiUrl(`/stay?schedule_id=${scheduleId}`))
+        : await fetch(getApiUrl(`/public/stay?schedule_id=${scheduleId}`));
       if (res.ok) {
         const list: StaySummary[] = await res.json();
         setStaySummaries(list);
@@ -265,6 +274,13 @@ export default function SharedScheduleDetailScreen() {
     } catch {
       // 無視
     }
+  };
+
+  const handleDelete = async () => {
+    if (!authenticated || !id) return;
+    if (Platform.OS === "web" && typeof window !== "undefined" && !window.confirm("このイベントを削除しますか？")) return;
+    const response = await authenticatedFetch(getApiUrl(`/schedules/${id}`), { method: "DELETE" });
+    if (response.ok) router.replace("/");
   };
 
   if (loading) {
@@ -325,7 +341,7 @@ export default function SharedScheduleDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <PublicHeader active="none" />
+      {authenticated ? <AppHeader active="schedule" /> : <PublicHeader active="none" />}
       <ScrollView 
         contentContainerStyle={styles.scrollPage}
         refreshControl={
@@ -373,13 +389,13 @@ export default function SharedScheduleDetailScreen() {
         scrollEventThrottle={16}
       >
         <View style={styles.scrollContent}>
-        <TouchableOpacity style={styles.backLink} onPress={() => router.push(`/share/${share_id}`)}>
+        <TouchableOpacity style={styles.backLink} onPress={() => router.push(authenticated ? "/" : `/share/${share_id}`)}>
           <Ionicons name="arrow-back" size={18} color={brand.violet} />
           <Text style={styles.backLinkText}>スケジュールに戻る</Text>
         </TouchableOpacity>
 
         {/* イベント概要 */}
-        <View style={styles.heroCard}>
+        <View style={[styles.heroCard, isMobile && styles.heroCardMobile]}>
           <View style={styles.heroCopy}>
             <Text style={styles.mainTitle}>{schedule.title}</Text>
             <View style={styles.heroBadges}>
@@ -412,6 +428,10 @@ export default function SharedScheduleDetailScreen() {
               )}
             </View>
           </View>
+          {authenticated && <View style={[styles.heroActions, isMobile && styles.heroActionsMobile]}>
+            <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={brand.violet} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
+          </View>}
         </View>
 
         <View style={[styles.primaryGrid, isDesktop && styles.primaryGridDesktop]}>
@@ -556,7 +576,7 @@ export default function SharedScheduleDetailScreen() {
                   return (
                     <TouchableOpacity
                       key={rid}
-                      onPress={() => router.push(`/share/${share_id}/schedules/${rid}`)}
+                      onPress={() => router.push(authenticated ? `/live/${rid}` : `/share/${share_id}/schedules/${rid}`)}
                     >
                       <Text style={styles.relationLink}>Live #${rid}</Text>
                     </TouchableOpacity>
@@ -566,7 +586,7 @@ export default function SharedScheduleDetailScreen() {
                 return (
                   <TouchableOpacity
                     key={rid}
-                    onPress={() => router.push(`/share/${share_id}/schedules/${rid}`)}
+                    onPress={() => router.push(authenticated ? `/live/${rid}` : `/share/${share_id}/schedules/${rid}`)}
                     style={styles.relationCard}
                   >
                     <View style={styles.relationCardContent}>
@@ -617,7 +637,7 @@ export default function SharedScheduleDetailScreen() {
                 <TouchableOpacity
                   key={traffic.id}
                   style={[styles.trafficCard, isMobile && styles.transportCardMobile]}
-                  onPress={() => router.push(`/share/${share_id}/traffic/${traffic.id}`)}
+                  onPress={() => router.push(authenticated ? `/traffic/${traffic.id}` : `/share/${share_id}/traffic/${traffic.id}`)}
                 >
                   {traffic.transportation && (
                     <View style={[styles.trafficTag, isMobile && styles.trafficTagMobile]}>
@@ -643,6 +663,7 @@ export default function SharedScheduleDetailScreen() {
               );
             })
           )}
+          {authenticated && <TouchableOpacity style={styles.addAction} onPress={() => router.push(`/traffic/new?scheduleId=${schedule.id}`)}><Text style={styles.addActionText}>＋ 交通を追加</Text></TouchableOpacity>}
         </CollapsibleDetailSection>
         </View>
 
@@ -664,7 +685,7 @@ export default function SharedScheduleDetailScreen() {
                 <TouchableOpacity
                   key={stay.id}
                   style={[styles.stayCard, isMobile && styles.stayCardMobile]}
-                  onPress={() => router.push(`/share/${share_id}/stay/${stay.id}`)}
+                  onPress={() => router.push(authenticated ? `/stay/${stay.id}` : `/share/${share_id}/stay/${stay.id}`)}
                 >
                   <View style={[styles.stayIcon, isMobile && styles.stayIconMobile]}>
                     <Ionicons name="bed" size={28} color="#FFFFFF" />
@@ -699,6 +720,7 @@ export default function SharedScheduleDetailScreen() {
               );
             })
           )}
+          {authenticated && <TouchableOpacity style={styles.addAction} onPress={() => router.push(`/stay/new?scheduleId=${schedule.id}`)}><Text style={styles.addActionText}>＋ 宿泊を追加</Text></TouchableOpacity>}
         </CollapsibleDetailSection>
         </View>
         </View>
@@ -744,7 +766,14 @@ const styles = StyleSheet.create({
     backgroundColor: brand.white,
     ...(Platform.OS === "web" ? ({ boxShadow: "0 14px 40px rgba(46,16,101,0.08)" } as any) : {}),
   },
+  heroCardMobile: { flexDirection: "column", padding: 18 },
   heroCopy: { flex: 1, minWidth: 0 },
+  heroActions: { flexDirection: "row", alignItems: "center", gap: 16 },
+  heroActionsMobile: { width: "100%", justifyContent: "flex-end" },
+  editAction: { minHeight: 42, paddingHorizontal: 20, borderWidth: 1, borderColor: brand.violet, borderRadius: 7, flexDirection: "row", alignItems: "center", gap: 8 },
+  editActionText: { color: brand.violet, fontSize: 14, fontWeight: "700" },
+  deleteAction: { minHeight: 42, paddingHorizontal: 12, justifyContent: "center" },
+  deleteActionText: { color: "#DC2626", fontSize: 14, fontWeight: "600" },
   heroBadges: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 },
   mainTitle: {
     fontSize: 30,
@@ -918,4 +947,6 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   breakfastTagOff: { color: "#77717F", backgroundColor: "#F0EEF2" },
+  addAction: { alignSelf: "center", paddingHorizontal: 18, paddingVertical: 8 },
+  addActionText: { color: brand.violet, fontSize: 14, fontWeight: "600", textAlign: "center" },
 });
