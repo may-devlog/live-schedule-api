@@ -8,7 +8,6 @@ import { NotionTag } from "../../../../components/notion-tag";
 import { PageHeader } from "../../../../components/PageHeader";
 import { PublicFooter, PublicHeader } from "../../../../components/GenBGTBrand";
 import type { Schedule } from "../../../HomeScreen";
-import { maskHotelName } from "../../../../utils/mask-hotel-name";
 import type { SelectOption } from "../../../../types/select-option";
 import { loadStaySelectOptions } from "../../../../utils/select-options-storage";
 import { BooleanSelectDisplay } from "../../../../components/boolean-select-display";
@@ -166,13 +165,6 @@ export default function SharedStayDetailScreen() {
         scrollEventThrottle={16}
       >
         <View style={styles.detailContent}>
-        {/* タイトル */}
-        <View style={styles.titleHeader}>
-          <Text style={styles.mainTitle}>
-            {maskHotelName(stay.hotel_name, false)}
-          </Text>
-        </View>
-
         {/* [Stay Info] */}
         <NotionPropertyBlock title="宿泊情報" collapsibleOnMobile={false}>
           <NotionProperty
@@ -270,20 +262,6 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
-  },
-  titleHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 24,
-    gap: 16,
-  },
-  mainTitle: {
-    fontSize: 40,
-    fontWeight: "700",
-    color: "#37352f",
-    lineHeight: 48,
-    flex: 1,
   },
   errorText: {
     color: "#d93025",

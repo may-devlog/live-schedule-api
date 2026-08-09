@@ -20,7 +20,6 @@ import { NotionTag } from "../../../../components/notion-tag";
 import { getOptionColor } from "../../../../utils/get-option-color";
 import { loadSelectOptions } from "../../../../utils/select-options-storage";
 import type { Schedule } from "../../../HomeScreen";
-import { maskHotelName } from "../../../../utils/mask-hotel-name";
 import { CollapsibleDetailSection } from "../../../../components/CollapsibleDetailSection";
 import { AppHeader, PublicFooter, PublicHeader, brand } from "../../../../components/GenBGTBrand";
 import { isJapaneseHolidayDate } from "../../../../components/ScheduleCalendar";
@@ -715,7 +714,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                     <Ionicons name="bed" size={28} color="#FFFFFF" />
                   </View>
                   <View style={[styles.cardMain, isMobile && styles.stayMainMobile]}>
-                    <Text style={styles.cardRouteBold}>{maskHotelName(stay.hotel_name, authenticated)}</Text>
+                    {authenticated && <Text style={styles.cardRouteBold}>{stay.hotel_name}</Text>}
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
                       <Text style={styles.stayDateLabel}>チェックイン</Text>
