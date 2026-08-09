@@ -23,7 +23,7 @@ import {
   saveSelectOptions,
 } from "../utils/select-options-storage";
 import { useAuth } from "@/contexts/AuthContext";
-import { HomeButton } from "../components/HomeButton";
+import { AppHeader, PublicFooter, brand } from "../components/GenBGTBrand";
 
 export default function NewScheduleScreen() {
   const router = useRouter();
@@ -354,20 +354,17 @@ export default function NewScheduleScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backButtonText}>← 戻る</Text>
-        </TouchableOpacity>
-        <HomeButton />
-      </View>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>
-          {copyFrom ? "イベントを複製" : "新規イベント"}
-        </Text>
+    <View style={styles.page}>
+      <AppHeader active="schedule" />
+      <ScrollView contentContainerStyle={styles.pageContent}>
+        <View style={styles.container}>
+          <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>
+            <Text style={styles.backLinkText}>← スケジュールに戻る</Text>
+          </TouchableOpacity>
+          <Text style={styles.eyebrow}>EVENT</Text>
+          <Text style={styles.title}>{copyFrom ? "イベントを複製" : "新規イベント"}</Text>
+          <Text style={styles.lead}>ライブの基本情報や費用を登録します。</Text>
+          <View style={styles.formCard}>
 
       {/* Text型 */}
       <Text style={styles.label}>
@@ -537,56 +534,41 @@ export default function NewScheduleScreen() {
           {submitting ? "保存中..." : "保存"}
         </Text>
       </TouchableOpacity>
+          </View>
+        </View>
+        <PublicFooter />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 24,
-    paddingTop: 48,
-    paddingBottom: 16,
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e9e9e7",
-  },
-  backButton: {
-    backgroundColor: "#f7f6f3",
-    borderWidth: 1,
-    borderColor: "#e9e9e7",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 3,
-  },
-  backButtonText: {
-    color: "#37352f",
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  page: { flex: 1, backgroundColor: brand.lavender },
+  pageContent: { flexGrow: 1 },
   container: {
-    paddingTop: 24,
+    paddingTop: 32,
     paddingHorizontal: 24,
-    paddingBottom: 32,
-    backgroundColor: "#ffffff",
-    maxWidth: 900,
+    paddingBottom: 56,
+    maxWidth: 960,
     alignSelf: "center",
     width: "100%",
   },
+  backLink: { alignSelf: "flex-start", paddingVertical: 8, marginBottom: 16 },
+  backLinkText: { color: brand.violetDark, fontSize: 14, fontWeight: "700" },
+  eyebrow: { color: brand.violet, fontSize: 11, fontWeight: "800", letterSpacing: 1.8, marginBottom: 7 },
   title: {
-    fontSize: 40,
-    fontWeight: "700",
-    color: "#37352f",
-    marginBottom: 32,
+    fontSize: 36,
+    fontWeight: "800",
+    color: brand.ink,
+    marginBottom: 8,
   },
+  lead: { color: brand.muted, fontSize: 14, marginBottom: 24 },
+  formCard: { backgroundColor: brand.white, borderWidth: 1, borderColor: brand.border, borderRadius: 16, padding: 28, shadowColor: '#2E1065', shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
   label: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#37352f",
-    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: "700",
+    color: brand.ink,
+    marginBottom: 7,
   },
   required: {
     color: "#d93025",
@@ -594,14 +576,14 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#e9e9e7",
-    borderRadius: 3,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: brand.border,
+    borderRadius: 9,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     fontSize: 14,
-    color: "#37352f",
-    minHeight: 40,
-    marginBottom: 16,
+    color: brand.ink,
+    minHeight: 46,
+    marginBottom: 18,
   },
   multiline: {
     height: 100,
@@ -609,9 +591,10 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 32,
-    backgroundColor: "#37352f",
-    paddingVertical: 12,
-    borderRadius: 3,
+    backgroundColor: brand.violet,
+    minHeight: 50,
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: "center",
   },
   buttonDisabled: {
