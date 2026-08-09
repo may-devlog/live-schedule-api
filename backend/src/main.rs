@@ -875,6 +875,30 @@ fn is_valid_email(email: &str) -> bool {
     email.contains('@') && email.contains('.') && email.len() > 5
 }
 
+fn is_valid_password(password: &str) -> bool {
+    password.chars().count() >= 8
+        && password.chars().any(|c| c.is_ascii_alphabetic())
+        && password.chars().any(|c| c.is_ascii_digit())
+}
+
+#[cfg(test)]
+mod password_policy_tests {
+    use super::is_valid_password;
+
+    #[test]
+    fn accepts_eight_or_more_characters_with_letters_and_numbers() {
+        assert!(is_valid_password("GenBGT12"));
+        assert!(is_valid_password("Password2026!"));
+    }
+
+    #[test]
+    fn rejects_short_or_single_character_class_passwords() {
+        assert!(!is_valid_password("Gen12"));
+        assert!(!is_valid_password("abcdefgh"));
+        assert!(!is_valid_password("12345678"));
+    }
+}
+
 // POST /auth/register
 async fn register(
     Extension(pool): Extension<Pool<Sqlite>>,
@@ -918,12 +942,12 @@ async fn register(
         ));
     }
 
-    if payload.password.len() < 6 {
-        println!("[REGISTER] Validation failed: password too short");
+    if !is_valid_password(&payload.password) {
+        println!("[REGISTER] Validation failed: password does not meet policy");
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse {
-                error: "パスワードは6文字以上で入力してください".to_string(),
+                error: "パスワードは8文字以上で、英字と数字をそれぞれ1文字以上含めてください".to_string(),
             }),
         ));
     }
@@ -1366,11 +1390,11 @@ async fn reset_password(
     }
 
     // パスワードのバリデーション
-    if payload.new_password.len() < 6 {
+    if !is_valid_password(&payload.new_password) {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse {
-                error: "パスワードは6文字以上で入力してください".to_string(),
+                error: "パスワードは8文字以上で、英字と数字をそれぞれ1文字以上含めてください".to_string(),
             }),
         ));
     }

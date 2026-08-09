@@ -40,6 +40,11 @@ export default function RegisterScreen() {
       return;
     }
 
+    if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('パスワードは8文字以上で、英字と数字をそれぞれ1文字以上含めてください');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -97,7 +102,7 @@ export default function RegisterScreen() {
         <View style={styles.passwordContainer}>
           <TextInput
             style={styles.passwordInput}
-            placeholder="パスワード"
+            placeholder="パスワード（8文字以上・英字と数字を含む）"
             value={password}
             onChangeText={(text) => {
               setPassword(text);
@@ -249,4 +254,3 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 });
-

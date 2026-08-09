@@ -15,7 +15,7 @@ use crate::auth::{
 use crate::utils::{
     email::{send_verification_email, send_password_reset_email, send_email_change_verification_email},
     helpers::generate_token,
-    validation::is_valid_email,
+    validation::{is_valid_email, is_valid_password},
 };
 use crate::lib::ErrorResponse;
 
@@ -62,12 +62,12 @@ pub async fn register(
         ));
     }
 
-    if payload.password.len() < 6 {
-        println!("[REGISTER] Validation failed: password too short");
+    if !is_valid_password(&payload.password) {
+        println!("[REGISTER] Validation failed: password does not meet policy");
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse {
-                error: "パスワードは6文字以上で入力してください".to_string(),
+                error: "パスワードは8文字以上で、英字と数字をそれぞれ1文字以上含めてください".to_string(),
             }),
         ));
     }
@@ -510,11 +510,11 @@ pub async fn reset_password(
     }
 
     // パスワードのバリデーション
-    if payload.new_password.len() < 6 {
+    if !is_valid_password(&payload.new_password) {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse {
-                error: "パスワードは6文字以上で入力してください".to_string(),
+                error: "パスワードは8文字以上で、英字と数字をそれぞれ1文字以上含めてください".to_string(),
             }),
         ));
     }
@@ -977,5 +977,4 @@ pub async fn get_sharing_status(
         ))
     }
 }
-
 

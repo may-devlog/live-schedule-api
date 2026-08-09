@@ -146,8 +146,8 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    if (!newPassword.trim() || newPassword.length < 6) {
-      Alert.alert('エラー', 'パスワードは6文字以上で入力してください');
+    if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      Alert.alert('エラー', 'パスワードは8文字以上で、英字と数字をそれぞれ1文字以上含めてください');
       return;
     }
 
@@ -387,4 +387,3 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 });
-
