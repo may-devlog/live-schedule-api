@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   blockTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
     color: "#201B2C",
     width: "100%",
@@ -136,9 +136,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   label: {
-    fontSize: 12,
-    color: "#7A7484",
-    fontWeight: "700",
+    fontSize: 13,
+    color: "#3F3948",
+    fontWeight: "600",
     letterSpacing: 0.2,
   },
   valueContainer: {
@@ -152,6 +152,7 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 14,
     color: "#201B2C",
-    lineHeight: 20,
+    lineHeight: 21,
+    fontWeight: "500",
   },
 });
