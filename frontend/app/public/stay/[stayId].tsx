@@ -114,6 +114,7 @@ export default function PublicStayDetailScreen() {
       <PublicHeader active="schedule" />
       <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.detailContent}>
         {/* タイトル */}
         <View style={styles.titleHeader}>
           <Text style={styles.mainTitle}>
@@ -170,8 +171,9 @@ export default function PublicStayDetailScreen() {
             value={stay.status}
           />
         </NotionPropertyBlock>
+        </View>
+        <PublicFooter />
       </ScrollView>
-      <PublicFooter />
     </View>
   );
 }
@@ -190,6 +192,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   scrollContent: {
+    flexGrow: 1,
+  },
+  detailContent: {
     padding: 24,
     paddingBottom: 32,
     maxWidth: 900,

@@ -165,6 +165,7 @@ export default function SharedStayDetailScreen() {
         }}
         scrollEventThrottle={16}
       >
+        <View style={styles.detailContent}>
         {/* タイトル */}
         <View style={styles.titleHeader}>
           <Text style={styles.mainTitle}>
@@ -240,8 +241,9 @@ export default function SharedStayDetailScreen() {
             })() : undefined}
           </NotionProperty>
         </NotionPropertyBlock>
+        </View>
+        <PublicFooter />
       </ScrollView>
-      <PublicFooter />
     </View>
   );
 }
@@ -260,13 +262,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   scrollContent: {
+    flexGrow: 1,
+  },
+  detailContent: {
     padding: 24,
     paddingBottom: 32,
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
-    flexGrow: 1,
-    minHeight: '100%',
   },
   titleHeader: {
     flexDirection: "row",
