@@ -4,11 +4,17 @@ import { Ionicons } from "@expo/vector-icons";
 import type { Schedule } from "../app/HomeScreen";
 import { PublicFooter, PublicHeader, brand } from "./GenBGTBrand";
 import { NotionTag } from "./notion-tag";
-import { getOptionColorSync } from "../utils/get-option-color";
+import { getOptionColorSync, preloadOptionColors } from "../utils/get-option-color";
 import { fetchAreaColors } from "../utils/fetch-area-colors";
 import { isJapaneseHolidayDate } from "./ScheduleCalendar";
+import { groupSchedulesNested, type MainGroupingField, type SubGroupingField } from "../utils/group-schedules";
+import { loadSelectOptionsMap } from "../utils/load-select-options-map";
+import { loadSelectOptions } from "../utils/select-options-storage";
+import { fetchTrafficBySchedule } from "../utils/fetch-traffic-by-schedule";
+import { calculateTotalCostWithReturnFlag, type TrafficBySchedule } from "../utils/calculate-total-cost";
 
 type Props = {
+  shareId: string;
   initialYear: string;
   fetchSchedules: (year: string) => Promise<Schedule[]>;
   fetchAvailableYears: () => Promise<number[]>;
@@ -27,48 +33,127 @@ function dateParts(raw: string) {
   return { month, day: String(day).padStart(2, "0"), weekday, tone };
 }
 
-export function SharedArchivePage({ initialYear, fetchSchedules, fetchAvailableYears, onBack, onSelectYear, onSchedulePress }: Props) {
+export function SharedArchivePage({ shareId, initialYear, fetchSchedules, fetchAvailableYears, onBack, onSelectYear, onSchedulePress }: Props) {
   const { width } = useWindowDimensions();
   const mobile = width < 720;
   const [year, setYear] = useState(initialYear);
   const [years, setYears] = useState<number[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
+  const [trafficBySchedule, setTrafficBySchedule] = useState<TrafficBySchedule>(new Map());
+  const [selectOptionsMap, setSelectOptionsMap] = useState<Map<string, Map<string, number>>>(new Map());
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
-  const [mainGrouping, setMainGrouping] = useState<"none" | "target" | "lineup">("none");
-  const [subGrouping, setSubGrouping] = useState<"none" | "group" | "category" | "area" | "seller" | "status">("none");
+  const [mainGrouping, setMainGrouping] = useState<MainGroupingField>("none");
+  const [subGrouping, setSubGrouping] = useState<SubGroupingField>("none");
 
   useEffect(() => { setYear(initialYear); }, [initialYear]);
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchAvailableYears(), fetchSchedules(year)])
-      .then(async ([available, data]) => {
+    Promise.all([fetchAvailableYears(), fetchSchedules(year), loadSelectOptionsMap(shareId)])
+      .then(async ([available, data, optionMaps]) => {
         if (!active) return;
-        const visible = data.filter((item) => item.status !== "Canceled").sort((a, b) => (b.date ?? b.datetime).localeCompare(a.date ?? a.datetime));
+        const sorted = [...data].sort((a, b) => (b.date ?? b.datetime).localeCompare(a.date ?? a.datetime));
+        const [colors, trafficMap] = await Promise.all([
+          Promise.all([
+            loadSelectOptions("TARGETS", shareId).then((options) => preloadOptionColors(options, "TARGETS")),
+            loadSelectOptions("GROUPS", shareId).then((options) => preloadOptionColors(options, "GROUPS")),
+            loadSelectOptions("CATEGORIES", shareId).then((options) => preloadOptionColors(options, "CATEGORIES")),
+            loadSelectOptions("AREAS", shareId).then((options) => preloadOptionColors(options, "AREAS")),
+            loadSelectOptions("SELLERS", shareId).then((options) => preloadOptionColors(options, "SELLERS")),
+            loadSelectOptions("STATUSES", shareId).then((options) => preloadOptionColors(options, "STATUSES")),
+          ]),
+          fetchTrafficBySchedule(sorted, false, shareId),
+        ]);
+        void colors;
+        if (!active) return;
         setYears(available);
-        setSchedules(visible);
-        setAreaColors(await fetchAreaColors(visible));
+        setSchedules(sorted);
+        setSelectOptionsMap(optionMaps.orderMap);
+        setTrafficBySchedule(trafficMap);
+        setAreaColors(await fetchAreaColors(sorted));
         setError(null);
       })
       .catch((e) => active && setError(e.message ?? "アーカイブを取得できませんでした"))
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [year, fetchAvailableYears, fetchSchedules]);
+  }, [year, shareId, fetchAvailableYears, fetchSchedules]);
 
-  const groups = useMemo(() => {
-    const map = new Map<string, Schedule[]>();
-    schedules.forEach((item) => {
+  const visibleSchedules = useMemo(
+    () => subGrouping === "status" ? schedules : schedules.filter((item) => item.status !== "Canceled"),
+    [schedules, subGrouping]
+  );
+
+  const monthGroups = useMemo(() => {
+    const map = new Map<number, Schedule[]>();
+    visibleSchedules.forEach((item) => {
       const month = Number((item.date ?? item.datetime).slice(5, 7));
-      const mainValue = mainGrouping === "target" ? (item.target || "未設定") : mainGrouping === "lineup" ? (item.lineup || "未設定") : "";
-      const subValue = subGrouping === "none" ? "" : String(item[subGrouping] || "未設定");
-      const key = mainValue || subValue ? [mainValue, subValue].filter(Boolean).join(" / ") : `${month}月`;
-      map.set(key, [...(map.get(key) ?? []), item]);
+      map.set(month, [...(map.get(month) ?? []), item]);
     });
-    return Array.from(map.entries());
-  }, [schedules, mainGrouping, subGrouping]);
+    return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
+  }, [visibleSchedules]);
+
+  const groupedSchedules = useMemo(
+    () => groupSchedulesNested(visibleSchedules, mainGrouping, subGrouping, selectOptionsMap),
+    [visibleSchedules, mainGrouping, subGrouping, selectOptionsMap]
+  );
+
+  const toggleSection = (key: string) => {
+    setCollapsedSections((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const totalCost = (schedule: Schedule) => calculateTotalCostWithReturnFlag(schedule, trafficBySchedule) ?? 0;
+
+  const groupColor = (field: MainGroupingField | SubGroupingField, title: string) => {
+    const optionTypes = {
+      target: "TARGETS",
+      lineup: "TARGETS",
+      group: "GROUPS",
+      category: "CATEGORIES",
+      area: "AREAS",
+      seller: "SELLERS",
+      status: "STATUSES",
+    } as const;
+    if (field === "none" || title === "未設定") return null;
+    if (field === "group" && !selectOptionsMap.get("group")?.has(title)) return null;
+    return getOptionColorSync(title, optionTypes[field]);
+  };
+
+  const renderCard = (item: Schedule) => {
+    const parts = dateParts(item.date ?? item.datetime);
+    const cost = totalCost(item);
+    return (
+      <TouchableOpacity key={item.id} style={[styles.card, mobile && styles.cardMobile]} onPress={() => onSchedulePress(item.id)}>
+        <View style={[styles.dateBlock, mobile && styles.dateBlockMobile]}>
+          <Text style={[styles.dateText, mobile && styles.dateTextMobile]}>{String(parts.month).padStart(2, "0")}.{parts.day}</Text>
+          <Text style={[styles.weekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text>
+        </View>
+        {!mobile && <View style={styles.dateDivider} />}
+        <View style={styles.cardBody}>
+          {mobile && <View style={styles.mobileDateRow}><Text style={styles.mobileDate}>{String(parts.month).padStart(2, "0")}.{parts.day}</Text><Text style={[styles.mobileWeekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text></View>}
+          <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+          <View style={styles.archiveTags}>
+            {!!item.area && subGrouping !== "area" && <NotionTag label={item.area} color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")} />}
+            {!!item.status && subGrouping !== "status" && <NotionTag label={item.status} color={getOptionColorSync(item.status, "STATUSES")} />}
+          </View>
+          {!!item.venue && <Text style={styles.venue} numberOfLines={1}>{item.venue}</Text>}
+        </View>
+        {cost > 0 && mainGrouping !== "lineup" && <Text style={styles.cardCost}>¥{cost.toLocaleString()}</Text>}
+        <Ionicons name="chevron-forward" size={24} color={brand.violet} />
+      </TouchableOpacity>
+    );
+  };
 
   const selectYear = (next: number) => {
     setLoading(true);
@@ -101,38 +186,51 @@ export function SharedArchivePage({ initialYear, fetchSchedules, fetchAvailableY
             <View style={styles.groupingRow}><Text style={styles.groupingLabel}>サブ</Text><View style={styles.groupingButtons}>{([['none','なし'],['group','グループ'],['category','カテゴリ'],['area','エリア'],['seller','販売元'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, subGrouping === value && styles.groupingButtonActive]} onPress={() => setSubGrouping(value)}><Text style={[styles.groupingButtonText, subGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
           </View>
 
-          {loading ? <ActivityIndicator color={brand.violet} style={styles.loader} /> : error ? <Text style={styles.error}>{error}</Text> : groups.map(([groupTitle, items]) => (
-            <View key={groupTitle} style={styles.monthSection}>
-              <Text style={styles.monthTitle}>{groupTitle}</Text>
-              <View style={styles.cardList}>
-                {items.map((item) => {
-                  const parts = dateParts(item.date ?? item.datetime);
-                  return (
-                    <TouchableOpacity key={item.id} style={[styles.card, mobile && styles.cardMobile]} onPress={() => onSchedulePress(item.id)}>
-                      <View style={[styles.dateBlock, mobile && styles.dateBlockMobile]}>
-                        <Text style={[styles.dateText, mobile && styles.dateTextMobile]}>{mobile ? `${String(parts.month).padStart(2, "0")}.${parts.day}` : `${String(parts.month).padStart(2, "0")}.${parts.day}`}</Text>
-                        <Text style={[styles.weekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text>
-                      </View>
-                      {!mobile && <View style={styles.dateDivider} />}
-                      <View style={styles.cardBody}>
-                        {mobile && <View style={styles.mobileDateRow}>
-                          <Text style={styles.mobileDate}>{String(parts.month).padStart(2, "0")}.{parts.day}</Text>
-                          <Text style={[styles.mobileWeekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text>
-                        </View>}
-                        <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-                        <View style={styles.archiveTags}>
-                          {!!item.area && subGrouping !== "area" && <NotionTag label={item.area} color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")} />}
-                          {!!item.status && subGrouping !== "status" && <NotionTag label={item.status} color={getOptionColorSync(item.status, "STATUSES")} />}
-                        </View>
-                        {!!item.venue && <Text style={styles.venue} numberOfLines={1}>{item.venue}</Text>}
-                      </View>
-                      <Ionicons name="chevron-forward" size={24} color={brand.violet} />
-                    </TouchableOpacity>
-                  );
-                })}
+          {loading ? <ActivityIndicator color={brand.violet} style={styles.loader} /> : error ? <Text style={styles.error}>{error}</Text> : (
+            mainGrouping === "none" && subGrouping === "none" ? monthGroups.map(([month, items]) => (
+              <View key={month} style={styles.monthSection}>
+                <Text style={styles.monthTitle}>{month}月</Text>
+                <View style={styles.cardList}>{items.map(renderCard)}</View>
               </View>
-            </View>
-          ))}
+            )) : groupedSchedules.map((mainGroup) => {
+              const mainKey = `main-${mainGroup.title}`;
+              const mainCollapsed = collapsedSections.has(mainKey);
+              const mainCount = mainGroup.subGroups.reduce((sum, group) => sum + group.data.length, 0);
+              const mainTotal = mainGroup.subGroups.reduce((sum, group) => sum + group.data.reduce((subSum, item) => subSum + totalCost(item), 0), 0);
+              const mainColor = groupColor(mainGrouping, mainGroup.title);
+              return (
+                <View key={mainKey} style={styles.groupSection}>
+                  {!!mainGroup.title && <>
+                    <TouchableOpacity style={styles.groupHeader} onPress={() => toggleSection(mainKey)}>
+                      <Ionicons name={mainCollapsed ? "chevron-forward" : "chevron-down"} size={18} color={brand.muted} style={styles.groupChevron} />
+                      {mainColor ? <NotionTag label={mainGroup.title} color={mainColor} /> : <Text style={styles.groupTitle}>{mainGroup.title}</Text>}
+                      <Text style={styles.groupCount}>({mainCount})</Text>
+                    </TouchableOpacity>
+                    {!mainCollapsed && mainTotal > 0 && mainGrouping !== "lineup" && <View style={styles.groupTotal}><Text style={styles.groupTotalText}>¥{mainTotal.toLocaleString()}</Text></View>}
+                  </>}
+                  {(!mainGroup.title || !mainCollapsed) && mainGroup.subGroups.map((subGroup) => {
+                    const subKey = `sub-${mainGroup.title}-${subGroup.title}`;
+                    const subCollapsed = collapsedSections.has(subKey);
+                    const subTotal = subGroup.data.reduce((sum, item) => sum + totalCost(item), 0);
+                    const subColor = groupColor(subGrouping, subGroup.title);
+                    return (
+                      <View key={subKey}>
+                        {!!subGroup.title && <>
+                          <TouchableOpacity style={[styles.groupHeader, !!mainGroup.title && styles.subGroupHeader]} onPress={() => toggleSection(subKey)}>
+                            <Ionicons name={subCollapsed ? "chevron-forward" : "chevron-down"} size={16} color={brand.muted} style={styles.groupChevron} />
+                            {subColor ? <NotionTag label={subGroup.title} color={subColor} /> : <Text style={styles.subGroupTitle}>{subGroup.title}</Text>}
+                            <Text style={styles.groupCount}>({subGroup.data.length})</Text>
+                          </TouchableOpacity>
+                          {!subCollapsed && subTotal > 0 && mainGrouping !== "lineup" && <View style={[styles.groupTotal, !!mainGroup.title && styles.subGroupTotal]}><Text style={styles.groupTotalText}>¥{subTotal.toLocaleString()}</Text></View>}
+                        </>}
+                        {(!subGroup.title || !subCollapsed) && <View style={[styles.cardList, styles.groupCardList]}>{subGroup.data.map(renderCard)}</View>}
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })
+          )}
         </View>
         <PublicFooter />
       </ScrollView>
@@ -168,7 +266,18 @@ const styles = StyleSheet.create({
   error: { color: "#C2414B", marginVertical: 30 },
   monthSection: { marginBottom: 28 },
   monthTitle: { color: brand.plum, fontSize: 25, lineHeight: 32, fontWeight: "800", marginBottom: 10 },
+  groupSection: { marginBottom: 18, overflow: "hidden", borderRadius: 10, borderWidth: 1, borderColor: brand.border, backgroundColor: "#F9F7FC" },
+  groupHeader: { minHeight: 54, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: brand.border, backgroundColor: "#F9F7FC" },
+  subGroupHeader: { paddingLeft: 32, minHeight: 48, backgroundColor: "#FCFBFD" },
+  groupChevron: { width: 26 },
+  groupTitle: { color: brand.ink, fontSize: 16, fontWeight: "700" },
+  subGroupTitle: { color: brand.ink, fontSize: 14, fontWeight: "600" },
+  groupCount: { marginLeft: 8, color: brand.muted, fontSize: 12 },
+  groupTotal: { paddingLeft: 42, paddingRight: 16, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: brand.border, backgroundColor: "#F9F7FC" },
+  subGroupTotal: { paddingLeft: 58, backgroundColor: "#FCFBFD" },
+  groupTotalText: { color: brand.ink, fontSize: 14, fontWeight: "700", fontVariant: ["tabular-nums"] },
   cardList: { gap: 12 },
+  groupCardList: { padding: 12, backgroundColor: brand.lavender },
   card: { minHeight: 108, paddingHorizontal: 24, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 22, ...shadow },
   cardMobile: { minHeight: 0, paddingHorizontal: 14, paddingVertical: 14, gap: 10, alignItems: "flex-start" },
   dateBlock: { width: 104, alignItems: "center" },
@@ -180,6 +289,7 @@ const styles = StyleSheet.create({
   holiday: { color: "#DC2626" },
   dateDivider: { width: 1, height: 66, backgroundColor: brand.border },
   cardBody: { flex: 1, minWidth: 0 },
+  cardCost: { color: brand.ink, fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"], textAlign: "right" },
   mobileDateRow: { flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 7 },
   mobileDate: { color: brand.ink, fontSize: 17, lineHeight: 22, fontWeight: "800", fontVariant: ["tabular-nums"] },
   mobileWeekday: { color: brand.ink, fontSize: 15, lineHeight: 20, fontWeight: "800", minWidth: 32, fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
