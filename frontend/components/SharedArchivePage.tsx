@@ -311,7 +311,12 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const selectYear = (next: string) => {
     setLoading(true);
     setYear(next);
-    onSelectYear(next);
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const nextPath = authenticated ? `/year/${next}` : `/share/${shareId}/year/${next}`;
+      window.history.replaceState(window.history.state, "", nextPath);
+    } else {
+      onSelectYear(next);
+    }
   };
 
   return (
