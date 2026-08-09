@@ -5,6 +5,7 @@ import { View, Text, StyleSheet } from "react-native";
 type TagProps = {
   label: string;
   color?: string;
+  align?: "start" | "end";
 };
 
 // カラーコードからRGB値を取得
@@ -48,11 +49,11 @@ const getTextColor = (backgroundColor: string): string => {
   return luminance > 0.5 ? "#37352f" : "#ffffff";
 };
 
-export function NotionTag({ label, color = "#e9e9e7" }: TagProps) {
+export function NotionTag({ label, color = "#e9e9e7", align = "start" }: TagProps) {
   const textColor = getTextColor(color);
   
   return (
-    <View style={[styles.tag, { backgroundColor: color }]}>
+    <View style={[styles.tag, align === "end" && styles.tagEnd, { backgroundColor: color }]}>
       <Text style={[styles.tagText, { color: textColor }]}>{label}</Text>
     </View>
   );
@@ -60,9 +61,9 @@ export function NotionTag({ label, color = "#e9e9e7" }: TagProps) {
 
 const styles = StyleSheet.create({
   tag: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: 5,
     alignSelf: "flex-start",
     maxWidth: "100%",
     borderWidth: 0,
@@ -70,8 +71,9 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 12,
     color: "#37352f",
-    fontWeight: "600",
+    fontWeight: "400",
     flexShrink: 1,
     flexWrap: "wrap",
   },
+  tagEnd: { alignSelf: "flex-end" },
 });

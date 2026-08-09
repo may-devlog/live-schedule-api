@@ -56,6 +56,7 @@ type StaySummary = {
 export default function SharedScheduleDetailScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
+  const isMobile = width < 600;
   const { share_id, id } = useLocalSearchParams<{ share_id: string; id: string }>();
   const router = useRouter();
   const [schedule, setSchedule] = useState<Schedule | null>(null);
@@ -461,7 +462,7 @@ export default function SharedScheduleDetailScreen() {
           <NotionPropertyBlock title="費用" iconName="wallet">
           <NotionProperty label="販売元" alignValue="right">
             {schedule.seller ? (
-              <NotionTag label={schedule.seller} color={sellerColor || undefined} />
+              <NotionTag label={schedule.seller} color={sellerColor || undefined} align="end" />
             ) : (
               <Text style={styles.emptyValue}>-</Text>
             )}
@@ -603,26 +604,26 @@ export default function SharedScheduleDetailScreen() {
               return (
                 <TouchableOpacity
                   key={traffic.id}
-                  style={styles.trafficCard}
+                  style={[styles.trafficCard, isMobile && styles.transportCardMobile]}
                   onPress={() => router.push(`/share/${share_id}/traffic/${traffic.id}`)}
                 >
                   {traffic.transportation && (
-                    <View style={styles.trafficTag}>
+                    <View style={[styles.trafficTag, isMobile && styles.trafficTagMobile]}>
                       <NotionTag label={traffic.transportation} color={transportationColors.get(traffic.id) || undefined} />
                     </View>
                   )}
-                  <View style={styles.cardMain}>
-                    <Text style={styles.cardRoute}>{detailWithNotes}</Text>
+                  <View style={[styles.cardMain, isMobile && styles.cardMainMobile]}>
+                    <Text style={styles.cardRouteBold}>{detailWithNotes}</Text>
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
                       <Text style={styles.cardDate}>{dateDisplay(traffic.date).date} <Text style={[styles.weekdayText, dateDisplay(traffic.date).tone === "saturday" && styles.saturdayText, dateDisplay(traffic.date).tone === "holiday" && styles.holidayText]}>{dateDisplay(traffic.date).weekday}</Text></Text>
                     </View>
                   </View>
-                  <View style={styles.cardPriceContainer}>
+                  <View style={[styles.cardPriceContainer, isMobile && styles.cardPriceMobile]}>
                     <Text style={styles.cardPrice}>{formatCurrency(displayFare)}</Text>
                     {displayMiles !== null && displayMiles !== undefined && <Text style={styles.cardMiles}>{displayMiles}マイル</Text>}
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color={brand.muted} />
+                  <Ionicons name="chevron-forward" size={20} color={brand.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
                 </TouchableOpacity>
               );
             })
@@ -647,13 +648,13 @@ export default function SharedScheduleDetailScreen() {
               return (
                 <TouchableOpacity
                   key={stay.id}
-                  style={styles.stayCard}
+                  style={[styles.stayCard, isMobile && styles.stayCardMobile]}
                   onPress={() => router.push(`/share/${share_id}/stay/${stay.id}`)}
                 >
-                  <View style={styles.stayIcon}>
+                  <View style={[styles.stayIcon, isMobile && styles.stayIconMobile]}>
                     <Ionicons name="bed" size={28} color="#FFFFFF" />
                   </View>
-                  <View style={styles.cardMain}>
+                  <View style={[styles.cardMain, isMobile && styles.stayMainMobile]}>
                     <Text style={styles.cardRoute}>{maskHotelName(stay.hotel_name, false)}</Text>
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
@@ -670,7 +671,7 @@ export default function SharedScheduleDetailScreen() {
                     {stay.breakfast_flag ? "朝食あり" : "朝食なし"}
                   </Text>
                   <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
-                  <Ionicons name="chevron-forward" size={20} color={brand.muted} />
+                  <Ionicons name="chevron-forward" size={20} color={brand.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
                 </TouchableOpacity>
               );
             })
@@ -708,7 +709,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginBottom: 18,
   },
-  backLinkText: { color: brand.violet, fontSize: 14, fontWeight: "700" },
+  backLinkText: { color: brand.violet, fontSize: 14, fontWeight: "400" },
   heroCard: {
     flexDirection: "row",
     gap: 18,
@@ -732,8 +733,8 @@ const styles = StyleSheet.create({
   heroMeta: { gap: 10, marginTop: 16 },
   timeMetaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
-  metaText: { color: brand.ink, fontSize: 14, lineHeight: 21, fontWeight: "500", flexShrink: 1 },
-  weekdayText: { color: brand.violet, fontWeight: "800" },
+  metaText: { color: brand.ink, fontSize: 14, lineHeight: 21, fontWeight: "400", flexShrink: 1 },
+  weekdayText: { color: brand.violet, fontWeight: "400" },
   saturdayText: { color: "#2563EB" },
   holidayText: { color: "#DC2626" },
   primaryGrid: { gap: 20 },
@@ -777,7 +778,7 @@ const styles = StyleSheet.create({
   relationDate: {
     fontSize: 13,
     color: brand.ink,
-    fontWeight: "600",
+    fontWeight: "400",
     marginBottom: 6,
   },
   relationScheduleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
@@ -786,7 +787,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 20,
-    fontWeight: "600",
+    fontWeight: "400",
     color: brand.ink,
   },
   relationArea: { alignSelf: "flex-start", marginLeft: 48, marginTop: 4 },
@@ -838,11 +839,20 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   trafficTag: { minWidth: 82, alignItems: "center" },
+  trafficTagMobile: { minWidth: 0, alignItems: "flex-start" },
   stayIcon: { width: 54, height: 54, borderRadius: 8, backgroundColor: brand.violet, alignItems: "center", justifyContent: "center" },
   cardMain: { flex: 1, minWidth: 0, gap: 7 },
-  cardRoute: { color: brand.ink, fontSize: 14, lineHeight: 20, fontWeight: "700" },
+  cardRoute: { color: brand.ink, fontSize: 14, lineHeight: 20, fontWeight: "400" },
+  cardRouteBold: { color: brand.ink, fontSize: 14, lineHeight: 20, fontWeight: "700" },
+  transportCardMobile: { flexWrap: "wrap", paddingRight: 38 },
+  cardMainMobile: { flexBasis: "65%", flexGrow: 1 },
+  cardPriceMobile: { marginLeft: "auto" },
+  stayCardMobile: { flexWrap: "wrap", paddingRight: 38 },
+  stayIconMobile: { width: 44, height: 44 },
+  stayMainMobile: { flexBasis: "72%", flexGrow: 1 },
   cardSubRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  stayDateLabel: { width: 88, color: brand.muted, fontSize: 11, fontWeight: "600" },
+  stayDateLabel: { width: 100, color: brand.muted, fontSize: 11, fontWeight: "400" },
+  cardChevronMobile: { position: "absolute", right: 12, top: "50%" },
   cardRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -864,7 +874,7 @@ const styles = StyleSheet.create({
   cardPrice: {
     fontSize: 14,
     color: "#37352f",
-    fontWeight: "500",
+    fontWeight: "400",
     textAlign: "right",
   },
   cardMiles: {
@@ -881,11 +891,11 @@ const styles = StyleSheet.create({
   breakfastTag: {
     color: "#6D28D9",
     backgroundColor: "#F5F3FF",
-    borderRadius: 999,
-    paddingHorizontal: 10,
+    borderRadius: 5,
+    paddingHorizontal: 12,
     paddingVertical: 4,
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "400",
   },
   breakfastTagOff: { color: "#77717F", backgroundColor: "#F0EEF2" },
 });

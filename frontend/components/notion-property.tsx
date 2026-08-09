@@ -28,7 +28,9 @@ export function NotionProperty({ label, value, children, onPress, isLast, alignV
       <View style={styles.labelContainer}>
         <Text style={styles.label}>{label}</Text>
       </View>
-      <View style={[styles.valueContainer, alignValue === "right" && styles.valueContainerRight]}>{content}</View>
+      <View style={[styles.valueContainer, alignValue === "right" && styles.valueContainerRight]}>
+        <View style={[styles.valueContent, alignValue === "right" && styles.valueContentRight]}>{content}</View>
+      </View>
     </Wrapper>
   );
 }
@@ -115,7 +117,7 @@ const styles = StyleSheet.create({
   },
   blockTitle: {
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "400",
     color: "#201B2C",
     width: "100%",
     flex: 1,
@@ -144,7 +146,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     color: "#3F3948",
-    fontWeight: "600",
+    fontWeight: "400",
     letterSpacing: 0.2,
   },
   valueContainer: {
@@ -159,8 +161,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#201B2C",
     lineHeight: 21,
-    fontWeight: "500",
+    fontWeight: "400",
   },
   valueContainerRight: { alignItems: "flex-end" },
+  valueContent: { width: "100%" },
+  valueContentRight: { alignItems: "flex-end" },
   valueRight: { textAlign: "right", fontVariant: ["tabular-nums"] },
 });
