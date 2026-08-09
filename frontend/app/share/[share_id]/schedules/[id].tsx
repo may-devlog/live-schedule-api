@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
   holidayText: { color: "#DC2626" },
   primaryGrid: { gap: 20 },
   primaryGridDesktop: { flexDirection: "row", alignItems: "flex-start" },
-  primaryColumn: { flex: 1, minWidth: 0 },
+  primaryColumn: { minWidth: 0 },
   eventColumnDesktop: { flex: 2 },
   costColumnDesktop: { flex: 1 },
   secondaryGrid: { gap: 20 },
