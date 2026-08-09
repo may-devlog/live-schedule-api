@@ -7,6 +7,7 @@ import { NotionTag } from "../../../../components/notion-tag";
 import { NotionProperty, NotionPropertyBlock } from "../../../../components/notion-property";
 import { getOptionColor } from "../../../../utils/get-option-color";
 import { PageHeader } from "../../../../components/PageHeader";
+import { PublicFooter, PublicHeader } from "../../../../components/GenBGTBrand";
 import type { Schedule } from "../../../HomeScreen";
 import { BooleanSelectDisplay } from "../../../../components/boolean-select-display";
 
@@ -121,6 +122,7 @@ export default function SharedTrafficDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <PublicHeader active="schedule" />
       <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} homePath={`/share/${share_id}`} />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
@@ -219,6 +221,7 @@ export default function SharedTrafficDetailScreen() {
           </NotionProperty>
         </NotionPropertyBlock>
       </ScrollView>
+      <PublicFooter />
     </View>
   );
 }

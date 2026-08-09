@@ -23,6 +23,7 @@ import { NotionProperty, NotionPropertyBlock } from "../../components/notion-pro
 import { NotionTag } from "../../components/notion-tag";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "../../components/PageHeader";
+import { AppHeader, PublicFooter } from "../../components/GenBGTBrand";
 import type { Schedule } from "../HomeScreen";
 import { BooleanSelectDisplay } from "../../components/boolean-select-display";
 import { maskHotelName } from "../../utils/mask-hotel-name";
@@ -272,6 +273,7 @@ export default function StayDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <AppHeader active="schedule" />
       <PageHeader scheduleTitle={schedule?.title || null} homePath="/" />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
@@ -469,6 +471,7 @@ export default function StayDetailScreen() {
           </View>
         )}
       </ScrollView>
+      <PublicFooter />
     </View>
   );
 }

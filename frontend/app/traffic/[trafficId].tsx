@@ -26,6 +26,7 @@ import { NotionProperty, NotionPropertyBlock } from "../../components/notion-pro
 import { getOptionColor } from "../../utils/get-option-color";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "../../components/PageHeader";
+import { AppHeader, PublicFooter } from "../../components/GenBGTBrand";
 import type { Schedule } from "../HomeScreen";
 import { NotionRelation } from "../../components/notion-relation";
 import { BooleanSelectDisplay } from "../../components/boolean-select-display";
@@ -244,6 +245,7 @@ export default function TrafficDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <AppHeader active="schedule" />
       <PageHeader scheduleTitle={schedule?.title || null} homePath="/" />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
@@ -428,6 +430,7 @@ export default function TrafficDetailScreen() {
           </View>
         )}
       </ScrollView>
+      <PublicFooter />
     </View>
   );
 }

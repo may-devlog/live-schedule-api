@@ -6,6 +6,7 @@ import { getApiUrl } from "../../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../../components/notion-property";
 import { NotionTag } from "../../../components/notion-tag";
 import { PageHeader } from "../../../components/PageHeader";
+import { PublicFooter, PublicHeader } from "../../../components/GenBGTBrand";
 import type { Schedule } from "../../HomeScreen";
 import { maskHotelName } from "../../../utils/mask-hotel-name";
 import type { SelectOption } from "../../../types/select-option";
@@ -110,6 +111,7 @@ export default function PublicStayDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <PublicHeader active="schedule" />
       <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* タイトル */}
@@ -169,6 +171,7 @@ export default function PublicStayDetailScreen() {
           />
         </NotionPropertyBlock>
       </ScrollView>
+      <PublicFooter />
     </View>
   );
 }

@@ -7,6 +7,7 @@ import { NotionTag } from "../../../components/notion-tag";
 import { NotionProperty, NotionPropertyBlock } from "../../../components/notion-property";
 import { getOptionColor } from "../../../utils/get-option-color";
 import { PageHeader } from "../../../components/PageHeader";
+import { PublicFooter, PublicHeader } from "../../../components/GenBGTBrand";
 import type { Schedule } from "../../HomeScreen";
 import { BooleanSelectDisplay } from "../../../components/boolean-select-display";
 
@@ -110,6 +111,7 @@ export default function PublicTrafficDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <PublicHeader active="schedule" />
       <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* タイトル */}
@@ -169,6 +171,7 @@ export default function PublicTrafficDetailScreen() {
           </NotionProperty>
         </NotionPropertyBlock>
       </ScrollView>
+      <PublicFooter />
     </View>
   );
 }
