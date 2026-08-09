@@ -25,6 +25,20 @@ type Notification = {
   created_at: string;
 };
 
+function formatDeadlineMessage(message: string): string {
+  return message
+    .split('\n')
+    .map((line) => {
+      if (!line.startsWith('期限日時:')) return line;
+      const rawDeadline = line.slice('期限日時:'.length).trim();
+      const deadline = new Date(rawDeadline);
+      if (Number.isNaN(deadline.getTime())) return line;
+      const pad = (value: number) => String(value).padStart(2, '0');
+      return `期限日時: ${deadline.getFullYear()}.${pad(deadline.getMonth() + 1)}.${pad(deadline.getDate())} ${pad(deadline.getHours())}:${pad(deadline.getMinutes())}`;
+    })
+    .join('\n');
+}
+
 export function NotificationMenu() {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
@@ -123,7 +137,7 @@ export function NotificationMenu() {
                         <Text style={styles.itemTitle}>{notification.title}</Text>
                         {!notification.is_read && <View style={styles.unreadDot} />}
                       </View>
-                      <Text style={styles.itemMessage}>{notification.message}</Text>
+                      <Text style={styles.itemMessage}>{formatDeadlineMessage(notification.message)}</Text>
                       <Text style={styles.itemDate}>{new Date(notification.created_at).toLocaleString('ja-JP')}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color="#AAA3B5" />
