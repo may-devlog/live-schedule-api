@@ -16,7 +16,7 @@ import {
   Image,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { PersonIcon, NotificationIcon } from "@/components/CustomIcons";
 import {
@@ -81,6 +81,7 @@ import { calculateTotalCostWithReturnFlag, type TrafficBySchedule } from "../uti
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { openProfile } = useLocalSearchParams<{ openProfile?: string }>();
   const { isAuthenticated, login, logout, email, changeEmail } = useAuth();
   
   // ログイン必須化は index.tsx で処理するため、ここでは削除
@@ -276,6 +277,12 @@ export default function HomeScreen() {
   const [changeShareIdLoading, setChangeShareIdLoading] = useState(false);
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
+
+  useEffect(() => {
+    if (openProfile === "1") {
+      setShowUserMenuModal(true);
+    }
+  }, [openProfile]);
 
   const fetchProfile = async () => {
     try {

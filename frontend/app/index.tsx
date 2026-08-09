@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import HomeScreen from './HomeScreen';
+import ScheduleScreen from './share/[share_id]';
 
 export default function Index() {
   const router = useRouter();
@@ -32,5 +32,5 @@ export default function Index() {
     return null;
   }
   
-  return <HomeScreen />;
+  return <ScheduleScreen authenticated />;
 }

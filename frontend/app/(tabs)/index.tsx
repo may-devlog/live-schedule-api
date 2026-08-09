@@ -1,5 +1,5 @@
-import HomeScreen from "../HomeScreen";
+import ScheduleScreen from "../share/[share_id]";
 
 export default function TabsIndex() {
-  return <HomeScreen />;
+  return <ScheduleScreen authenticated />;
 }

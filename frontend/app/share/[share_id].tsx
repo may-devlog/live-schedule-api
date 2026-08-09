@@ -16,8 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { isJapaneseHolidayDate, ScheduleCalendar } from '../../components/ScheduleCalendar';
 import { NotionTag } from '../../components/notion-tag';
-import { PublicFooter, PublicHeader, brand } from '../../components/GenBGTBrand';
-import { getApiUrl } from '../../utils/api';
+import { AppHeader, PublicFooter, PublicHeader, brand } from '../../components/GenBGTBrand';
+import { authenticatedFetch, getApiUrl } from '../../utils/api';
 import { fetchAreaColors } from '../../utils/fetch-area-colors';
 import { getOptionColorSync } from '../../utils/get-option-color';
 import type { Schedule } from '../HomeScreen';
@@ -31,9 +31,11 @@ function nextDateDisplay(raw: string) {
   return { label: datePart.replace(/-/g, '.'), weekday, tone };
 }
 
-export default function SharedScheduleScreen() {
+type ScheduleScreenProps = { authenticated?: boolean };
+
+export default function SharedScheduleScreen({ authenticated = false }: ScheduleScreenProps = {}) {
   const router = useRouter();
-  const { share_id } = useLocalSearchParams<{ share_id: string }>();
+  const { share_id } = useLocalSearchParams<{ share_id?: string }>();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [nextSchedules, setNextSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,9 @@ export default function SharedScheduleScreen() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(getApiUrl(`/share/${share_id}`));
+      const res = authenticated
+        ? await authenticatedFetch(getApiUrl('/schedules?include_canceled=true'))
+        : await fetch(getApiUrl(`/share/${share_id}`));
       if (!res.ok) {
         const body = await res.text();
         let message = `サーバーエラー (${res.status})`;
@@ -76,23 +80,26 @@ export default function SharedScheduleScreen() {
     } finally {
       setLoading(false);
     }
-  }, [share_id]);
+  }, [share_id, authenticated]);
 
   useEffect(() => {
-    if (share_id) fetchSchedules();
+    if (authenticated || share_id) fetchSchedules();
     else {
       setError('共有IDが指定されていません');
       setLoading(false);
     }
-  }, [share_id, fetchSchedules]);
+  }, [share_id, authenticated, fetchSchedules]);
 
   useEffect(() => {
-    if (!share_id) return;
-    fetch(getApiUrl(`/share/${share_id}/profile`))
+    if (!authenticated && !share_id) return;
+    const request = authenticated
+      ? authenticatedFetch(getApiUrl('/auth/profile'))
+      : fetch(getApiUrl(`/share/${share_id}/profile`));
+    request
       .then((res) => res.ok ? res.json() : null)
       .then((data) => setAvatarDataUrl(data?.avatar_data_url ?? null))
       .catch(() => setAvatarDataUrl(null));
-  }, [share_id]);
+  }, [share_id, authenticated]);
 
   useEffect(() => {
     if (!nextSchedules.length) return;
@@ -127,7 +134,7 @@ export default function SharedScheduleScreen() {
 
   return (
     <View style={styles.page}>
-      <PublicHeader />
+      {authenticated ? <AppHeader active="schedule" /> : <PublicHeader />}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -139,18 +146,18 @@ export default function SharedScheduleScreen() {
               {avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.avatarImage} /> : <Ionicons name="person" size={26} color="#A6A0AE" />}
             </View>
             <View style={styles.profileCopy}>
-              <Text style={styles.profileName}>{share_id}</Text>
+              <Text style={styles.profileName}>{authenticated ? 'MY SCHEDULE' : share_id}</Text>
               <Text style={styles.profileLabel}>ライブスケジュール</Text>
             </View>
-            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-              <Ionicons name="share-outline" size={18} color={brand.violet} />
-              <Text style={styles.shareText}>シェア</Text>
+            <TouchableOpacity style={styles.shareButton} onPress={authenticated ? () => router.push('/new') : handleShare}>
+              <Ionicons name={authenticated ? "add" : "share-outline"} size={18} color={brand.violet} />
+              <Text style={styles.shareText}>{authenticated ? '新規イベント' : 'シェア'}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.calendarSection}>
             <Text style={styles.pageTitle}>SCHEDULE</Text>
-            <ScheduleCalendar schedules={schedules} isPublic onSchedulePress={(id) => router.push(`/share/${share_id}/schedules/${id}`)} />
+            <ScheduleCalendar schedules={schedules} isPublic={!authenticated} onSchedulePress={(id) => router.push(authenticated ? `/live/${id}` : `/share/${share_id}/schedules/${id}`)} />
           </View>
 
           <View style={styles.sectionCard}>
@@ -166,7 +173,7 @@ export default function SharedScheduleScreen() {
                 renderItem={({ item }) => {
                   const dateDisplay = nextDateDisplay(item.date ?? item.datetime);
                   return (
-                    <TouchableOpacity style={styles.eventRow} onPress={() => router.push(`/share/${share_id}/schedules/${item.id}`)}>
+                    <TouchableOpacity style={styles.eventRow} onPress={() => router.push(authenticated ? `/live/${item.id}` : `/share/${share_id}/schedules/${item.id}`)}>
                       <View style={styles.eventContent}>
                         <View style={styles.nextDateRow}>
                           <Text style={styles.nextDate}>{dateDisplay.label}</Text>
@@ -191,7 +198,7 @@ export default function SharedScheduleScreen() {
             <Text style={styles.eyebrow}>ARCHIVE</Text>
             <View style={styles.yearList}>
               {availableYears.map((year, index) => (
-                <TouchableOpacity key={year} style={[styles.yearPill, index === 0 && styles.yearPillActive]} onPress={() => router.push(`/share/${share_id}/year/${year}`)}>
+                <TouchableOpacity key={year} style={[styles.yearPill, index === 0 && styles.yearPillActive]} onPress={() => router.push(authenticated ? `/year/${year}` : `/share/${share_id}/year/${year}`)}>
                   <Text style={[styles.yearText, index === 0 && styles.yearTextActive]}>{year}</Text>
                 </TouchableOpacity>
               ))}
