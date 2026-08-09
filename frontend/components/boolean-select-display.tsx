@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -10,10 +9,14 @@ export function BooleanSelectDisplay({ value }: BooleanSelectDisplayProps) {
   return (
     <View
       style={styles.container}
-      accessibilityLabel={`${value ? "あり" : "なし"}（選択値）`}
+      accessibilityLabel={`${value ? "オン" : "オフ"}（${value ? "あり" : "なし"}）`}
     >
-      <Text style={styles.text}>{value ? "あり" : "なし"}</Text>
-      <Ionicons name="chevron-down" size={15} color="#6D28D9" />
+      <View style={[styles.track, value ? styles.trackOn : styles.trackOff]}>
+        <View style={[styles.thumb, value ? styles.thumbOn : styles.thumbOff]} />
+      </View>
+      <Text style={[styles.text, value ? styles.textOn : styles.textOff]}>
+        {value ? "あり" : "なし"}
+      </Text>
     </View>
   );
 }
@@ -21,21 +24,43 @@ export function BooleanSelectDisplay({ value }: BooleanSelectDisplayProps) {
 const styles = StyleSheet.create({
   container: {
     alignSelf: "flex-start",
-    minWidth: 88,
-    minHeight: 34,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "#8B5CF6",
-    borderRadius: 7,
-    backgroundColor: "#F5F0FF",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
+    gap: 9,
+  },
+  track: {
+    width: 42,
+    height: 24,
+    padding: 3,
+    borderRadius: 12,
+    justifyContent: "center",
+  },
+  trackOn: {
+    backgroundColor: "#7C3AED",
+  },
+  trackOff: {
+    backgroundColor: "#D6D0DE",
+  },
+  thumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#FFFFFF",
+  },
+  thumbOn: {
+    alignSelf: "flex-end",
+  },
+  thumbOff: {
+    alignSelf: "flex-start",
   },
   text: {
-    color: "#5B21B6",
     fontSize: 14,
     fontWeight: "600",
+  },
+  textOn: {
+    color: "#5B21B6",
+  },
+  textOff: {
+    color: "#706878",
   },
 });
