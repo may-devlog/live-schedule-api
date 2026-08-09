@@ -1,182 +1,169 @@
-name: Database Backup
+name: Database Backup (AWS)
 
 on:
   schedule:
-    # 毎日午前3時（UTC = 日本時間12時）
-    - cron: '0 3 * * *'
-  workflow_dispatch:  # 手動実行も可能
+    # Every day at 03:00 UTC (12:00 JST)
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: database-backup
+  cancel-in-progress: false
 
 jobs:
   backup:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
-      contents: write  # GitHub Releasesを作成するために必要
+      id-token: write
+      contents: read
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install flyctl
-        run: |
-          curl -L https://fly.io/install.sh | sh
-          echo "$HOME/.fly/bin" >> $GITHUB_PATH
-
-      - name: Setup flyctl authentication
+      - name: Validate configuration
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+          S3_BUCKET: ${{ vars.AWS_BACKUP_BUCKET }}
         run: |
-          if [ -z "$FLY_API_TOKEN" ]; then
-            echo "Error: FLY_API_TOKEN is not set"
-            exit 1
-          fi
-          echo "✓ FLY_API_TOKEN is set (length: ${#FLY_API_TOKEN})"
-          # FLY_API_TOKEN環境変数が設定されていれば、flyctlは自動的にそれを使用します
-          flyctl auth whoami || {
-            echo "Error: Authentication failed"
-            exit 1
-          }
-          echo "✓ Authentication successful"
+          set -euo pipefail
+          [[ -n "$EC2_INSTANCE_ID" ]] || { echo "EC2_INSTANCE_ID secret is not set" >&2; exit 1; }
+          [[ -n "$S3_BUCKET" ]] || { echo "AWS_BACKUP_BUCKET repository variable is not set" >&2; exit 1; }
+          [[ "$EC2_INSTANCE_ID" =~ ^i-[0-9a-f]+$ ]] || { echo "EC2_INSTANCE_ID has an invalid format" >&2; exit 1; }
+          [[ "$S3_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]] || { echo "AWS_BACKUP_BUCKET has an invalid format" >&2; exit 1; }
 
-      - name: Create backup directory
-        run: |
-          mkdir -p backend/data/backups
-
-      - name: Backup database from production
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          cd backend
-          APP_NAME="live-schedule-api"
-          REMOTE_DB="/app/data/app.db"
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          BACKUP_FILE="data/backups/app.db.backup.${TIMESTAMP}"
-          
-          echo "[$(date +'%Y-%m-%d %H:%M:%S')] データベースのバックアップを開始..."
-          
-          flyctl sftp shell --app "$APP_NAME" <<EOF
-          get $REMOTE_DB $BACKUP_FILE
-          EOF
-          
-          if [ $? -eq 0 ]; then
-            echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✓ バックアップが完了しました: $BACKUP_FILE"
-            echo "バックアップサイズ: $(du -h "$BACKUP_FILE" | cut -f1)"
-          else
-            echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✗ バックアップに失敗しました"
-            exit 1
-          fi
-
-      - name: Install SQLite
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y sqlite3
-
-      - name: Verify backup integrity
-        run: |
-          cd backend
-          BACKUP_FILE=$(ls -t data/backups/app.db.backup.* | head -1)
-          
-          if [ -z "$BACKUP_FILE" ]; then
-            echo "✗ バックアップファイルが見つかりません"
-            exit 1
-          fi
-          
-          echo "バックアップファイルの検証中: $BACKUP_FILE"
-          
-          # SQLiteの整合性チェック
-          sqlite3 "$BACKUP_FILE" "PRAGMA integrity_check;" > /tmp/integrity_check.txt
-          
-          if grep -q "ok" /tmp/integrity_check.txt; then
-            echo "✓ バックアップファイルは正常です"
-            
-            # テーブル数の確認
-            TABLE_COUNT=$(sqlite3 "$BACKUP_FILE" "SELECT COUNT(*) FROM sqlite_master WHERE type='table';")
-            echo "  テーブル数: $TABLE_COUNT"
-            
-            # スケジュール数の確認
-            SCHEDULE_COUNT=$(sqlite3 "$BACKUP_FILE" "SELECT COUNT(*) FROM schedules;" 2>/dev/null || echo "0")
-            echo "  スケジュール数: $SCHEDULE_COUNT"
-          else
-            echo "✗ バックアップファイルが破損しています"
-            cat /tmp/integrity_check.txt
-            exit 1
-          fi
-
-      - name: Upload backup to GitHub Releases
-        uses: softprops/action-gh-release@v1
-        if: success()
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          files: backend/data/backups/app.db.backup.*
-          tag_name: backup-${{ github.run_number }}
-          name: Database Backup ${{ github.run_number }}
-          body: |
-            Automated database backup
-            
-            - Backup time: ${{ github.run_number }}
-            - Integrity: Verified
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'ap-northeast-1' }}
 
-      - name: Install b2 CLI
-        if: success()
-        run: |
-          pip install b2
-
-      - name: Upload backup to Backblaze B2
-        if: success()
+      - name: Back up SQLite from EC2 to S3 via SSM
         env:
-          B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
-          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
-          B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+          EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+          S3_BUCKET: ${{ vars.AWS_BACKUP_BUCKET }}
         run: |
-          # 環境変数のチェック
-          if [ -z "$B2_APPLICATION_KEY_ID" ] || [ -z "$B2_APPLICATION_KEY" ] || [ -z "$B2_BUCKET_NAME" ]; then
-            echo "⚠ Backblaze B2の認証情報が設定されていません。B2へのアップロードをスキップします。"
-            echo "設定方法: GitHub Settings → Secrets and variables → Actions"
-            exit 0
-          fi
-          
-          cd backend
-          BACKUP_FILE=$(ls -t data/backups/app.db.backup.* | head -1)
-          
-          if [ -z "$BACKUP_FILE" ]; then
-            echo "Error: Backup file not found"
-            exit 1
-          fi
-          
-          echo "[$(date +'%Y-%m-%d %H:%M:%S')] Backblaze B2へのアップロードを開始..."
-          
-          # B2認証
-          b2 authorize-account "$B2_APPLICATION_KEY_ID" "$B2_APPLICATION_KEY"
-          
-          if [ $? -eq 0 ]; then
-            # ファイル名を取得
-            FILENAME=$(basename "$BACKUP_FILE")
-            
-            # B2にアップロード
-            b2 upload-file --no-progress "$B2_BUCKET_NAME" "$BACKUP_FILE" "$FILENAME"
-            
-            if [ $? -eq 0 ]; then
-              echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✓ Backblaze B2へのアップロードが完了しました: $FILENAME"
-            else
-              echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✗ Backblaze B2へのアップロードに失敗しました"
-              exit 1
-            fi
-          else
-            echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✗ Backblaze B2認証に失敗しました"
+          set -euo pipefail
+
+          cat > /tmp/backup-db.sh <<'REMOTE_SCRIPT'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          S3_BUCKET="${1:?S3 bucket is required}"
+          GITHUB_RUN_ID="${2:?GitHub run ID is required}"
+          SERVICE="live-schedule-api"
+          MAIN_PID="$(systemctl show "$SERVICE" --property=MainPID --value)"
+          WORKING_DIR="$(systemctl show "$SERVICE" --property=WorkingDirectory --value)"
+
+          if [[ -z "$MAIN_PID" || "$MAIN_PID" == "0" ]]; then
+            echo "The $SERVICE service is not running." >&2
             exit 1
           fi
 
-      - name: Cleanup old backups
-        run: |
-          cd backend
-          # ローカルの古いバックアップを削除（30日以上前）
-          find data/backups -name "app.db.backup.*" -mtime +30 -delete 2>/dev/null || true
+          DATABASE_URL="$(tr '\0' '\n' < "/proc/$MAIN_PID/environ" | sed -n 's/^DATABASE_URL=//p' | head -n 1)"
+          [[ -n "$DATABASE_URL" ]] || DATABASE_URL="sqlite://data/app.db"
 
-      - name: Notify on failure
+          export BACKUP_DATABASE_URL="$DATABASE_URL"
+          export BACKUP_WORKING_DIR="$WORKING_DIR"
+          BACKUP_DIR="$(mktemp -d /tmp/live-schedule-backup.XXXXXX)"
+          trap 'rm -rf "$BACKUP_DIR"' EXIT
+          export BACKUP_DIR
+
+          python3 <<'PYTHON'
+          import os
+          import pathlib
+          import sqlite3
+
+          database_url = os.environ["BACKUP_DATABASE_URL"].split("?", 1)[0]
+          working_dir = pathlib.Path(os.environ["BACKUP_WORKING_DIR"] or ".")
+          if database_url.startswith("sqlite://"):
+              database_path = database_url[len("sqlite://"):]
+          elif database_url.startswith("sqlite:"):
+              database_path = database_url[len("sqlite:"):]
+          else:
+              raise SystemExit("DATABASE_URL is not SQLite; refusing to continue.")
+
+          source = pathlib.Path(database_path)
+          if not source.is_absolute():
+              source = working_dir / source
+          source = source.resolve()
+          destination = pathlib.Path(os.environ["BACKUP_DIR"]) / "app.db"
+          if not source.is_file():
+              raise SystemExit(f"Database does not exist: {source}")
+
+          source_connection = sqlite3.connect(f"file:{source}?mode=ro", uri=True, timeout=30)
+          backup_connection = sqlite3.connect(destination)
+          try:
+              source_connection.backup(backup_connection)
+          finally:
+              backup_connection.close()
+              source_connection.close()
+
+          check_connection = sqlite3.connect(f"file:{destination}?mode=ro", uri=True)
+          try:
+              integrity = check_connection.execute("PRAGMA integrity_check").fetchone()[0]
+              table_count = check_connection.execute(
+                  "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+              ).fetchone()[0]
+              try:
+                  schedule_count = check_connection.execute("SELECT COUNT(*) FROM schedules").fetchone()[0]
+              except sqlite3.Error:
+                  schedule_count = "not available"
+          finally:
+              check_connection.close()
+
+          if integrity != "ok":
+              raise SystemExit(f"Backup integrity check failed: {integrity}")
+          print(f"SQLite backup verified: tables={table_count}, schedules={schedule_count}")
+          PYTHON
+
+          TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          YEAR="${TIMESTAMP:0:4}"
+          MONTH="${TIMESTAMP:4:2}"
+          ARCHIVE="app.db.${TIMESTAMP}.gz"
+          gzip -9c "$BACKUP_DIR/app.db" > "$BACKUP_DIR/$ARCHIVE"
+          (cd "$BACKUP_DIR" && sha256sum "$ARCHIVE" > "$ARCHIVE.sha256")
+          S3_PREFIX="s3://${S3_BUCKET}/database/${YEAR}/${MONTH}"
+
+          aws s3 cp "$BACKUP_DIR/$ARCHIVE" "${S3_PREFIX}/${ARCHIVE}" \
+            --only-show-errors \
+            --server-side-encryption AES256 \
+            --metadata "github-run-id=${GITHUB_RUN_ID:-unknown},integrity=ok"
+          aws s3 cp "$BACKUP_DIR/$ARCHIVE.sha256" "${S3_PREFIX}/${ARCHIVE}.sha256" \
+            --only-show-errors \
+            --server-side-encryption AES256
+          aws s3api head-object \
+            --bucket "$S3_BUCKET" \
+            --key "database/${YEAR}/${MONTH}/${ARCHIVE}" \
+            --query '{Size:ContentLength,Encryption:ServerSideEncryption,Metadata:Metadata}'
+          echo "Backup completed: ${S3_PREFIX}/${ARCHIVE}"
+          REMOTE_SCRIPT
+
+          SCRIPT_BASE64="$(base64 -w 0 /tmp/backup-db.sh)"
+          REMOTE_COMMAND="echo '$SCRIPT_BASE64' | base64 -d > /tmp/backup-db.sh && chmod 700 /tmp/backup-db.sh && sudo /tmp/backup-db.sh '$S3_BUCKET' '$GITHUB_RUN_ID'"
+          PARAMETERS="$(jq -n --arg command "$REMOTE_COMMAND" '{commands: [$command]}')"
+          COMMAND_ID="$(
+            aws ssm send-command \
+              --instance-ids "$EC2_INSTANCE_ID" \
+              --document-name "AWS-RunShellScript" \
+              --comment "Back up live-schedule-api SQLite to S3" \
+              --parameters "$PARAMETERS" \
+              --query "Command.CommandId" \
+              --output text
+          )"
+          echo "SSM command ID: $COMMAND_ID"
+
+          set +e
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$EC2_INSTANCE_ID"
+          WAIT_STATUS=$?
+          set -e
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$EC2_INSTANCE_ID" \
+            --query '{Status:Status,StandardOutput:StandardOutputContent,StandardError:StandardErrorContent}'
+          exit "$WAIT_STATUS"
+
+      - name: Report failure
         if: failure()
-        run: |
-          echo "::error::Database backup failed! Please check the logs."
-          # オプション: メール通知やSlack通知を追加可能
-          # 例: curl -X POST -H 'Content-type: application/json' \
-          #     --data '{"text":"Database backup failed!"}' \
-          #     ${{ secrets.SLACK_WEBHOOK_URL }}
-
+        run: echo "::error::Database backup failed. Check the SSM command output above."

@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: S3 backup storage and least-privilege EC2 access for live-schedule-api
+
+Parameters:
+  Ec2InstanceRoleName:
+    Type: String
+    Description: Name of the IAM role attached to the backend EC2 instance
+  RetentionDays:
+    Type: Number
+    Default: 30
+    MinValue: 1
+    Description: Number of days to retain database backups
+
+Resources:
+  BackupBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireDatabaseBackups
+            Status: Enabled
+            Prefix: database/
+            ExpirationInDays: !Ref RetentionDays
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+
+  BackupBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BackupBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !GetAtt BackupBucket.Arn
+              - !Sub "${BackupBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+  Ec2BackupPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: live-schedule-api-s3-backup
+      Roles:
+        - !Ref Ec2InstanceRoleName
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: WriteAndVerifyBackups
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+            Resource: !Sub "${BackupBucket.Arn}/database/*"
+
+Outputs:
+  BackupBucketName:
+    Description: Set this value as the GitHub repository variable AWS_BACKUP_BUCKET
+    Value: !Ref BackupBucket
