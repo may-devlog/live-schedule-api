@@ -4062,6 +4062,50 @@ async fn get_public_stay(
 }
 
 // GET /share/:share_id/traffic/:id - 共有ページ用の交通情報（個別）
+async fn list_shared_traffics(
+    Path(share_id): Path<String>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<Vec<Traffic>>, (StatusCode, Json<ErrorResponse>)> {
+    let user_row: Option<(i64, i32)> = sqlx::query_as(
+        "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
+    )
+    .bind(&share_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "Database error".to_string() })))?;
+
+    let (user_id, sharing_enabled) = user_row.ok_or((
+        StatusCode::NOT_FOUND,
+        Json(ErrorResponse { error: "User not found".to_string() }),
+    ))?;
+    if sharing_enabled == 0 {
+        return Err((StatusCode::FORBIDDEN, Json(ErrorResponse { error: "このユーザーのスケジュールは共有されていません".to_string() })));
+    }
+
+    let rows: Vec<TrafficRow> = sqlx::query_as::<_, TrafficRow>(
+        r#"
+        SELECT t.id, t.schedule_id, t.date, t."order", t.transportation,
+               t.from_place, t.to_place, t.notes, t.fare, t.miles,
+               t.return_flag, t.total_fare, t.total_miles
+        FROM traffics t
+        INNER JOIN schedules s ON s.id = t.schedule_id
+        WHERE s.user_id = ? AND CAST(s.is_public AS INTEGER) = 1
+        ORDER BY t.date ASC, t."order" ASC
+        "#,
+    )
+    .bind(user_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "Database error".to_string() })))?;
+
+    let masked_locations = get_masked_locations_for_user(&pool, user_id).await.unwrap_or_default();
+    let traffics = rows.into_iter()
+        .map(row_to_traffic)
+        .map(|traffic| apply_mask_to_traffic(traffic, &masked_locations))
+        .collect();
+    Ok(Json(traffics))
+}
+
 async fn get_shared_traffic(
     Path((share_id, id)): Path<(String, i32)>,
     Extension(pool): Extension<Pool<Sqlite>>,
@@ -6012,6 +6056,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/share/search-user", get(search_shared_user))
         .route("/share/:share_id/profile", get(get_shared_profile))
         .route("/share/:share_id/schedules/:id", get(get_shared_schedule))
+        .route("/share/:share_id/traffic", get(list_shared_traffics))
         .route("/share/:share_id/traffic/:id", get(get_shared_traffic))
         .route("/share/:share_id/select-options/:type", get(get_shared_select_options))
         .route("/share/:share_id/stay-select-options/:type", get(get_shared_stay_select_options))

@@ -19,36 +19,25 @@ export async function fetchTrafficBySchedule(
   isAuthenticated: boolean = true,
   shareId?: string
 ): Promise<Map<number, TrafficInfo[]>> {
-  // 各スケジュールの交通情報を並列で取得
-  const trafficPromises = schedules.map(async (schedule) => {
-    try {
-      let trafficRes: Response;
-      if (isAuthenticated) {
-        trafficRes = await authenticatedFetch(getApiUrl(`/traffic?schedule_id=${schedule.id}`));
-      } else {
-        // 共有ページ用
-        trafficRes = await fetch(getApiUrl(`/public/traffic?schedule_id=${schedule.id}`));
-      }
-      
-      if (trafficRes.ok) {
-        const trafficList: TrafficInfo[] = await trafficRes.json();
-        return { scheduleId: schedule.id, trafficList };
-      }
-      return { scheduleId: schedule.id, trafficList: [] };
-    } catch (e) {
-      console.error(`Error fetching traffic for schedule ${schedule.id}:`, e);
-      return { scheduleId: schedule.id, trafficList: [] };
-    }
-  });
-  
-  const trafficResults = await Promise.all(trafficPromises);
   const trafficMap = new Map<number, TrafficInfo[]>();
-  trafficResults.forEach(({ scheduleId, trafficList }) => {
-    if (trafficList.length > 0) {
-      trafficMap.set(scheduleId, trafficList);
-    }
-  });
-  
+  if (schedules.length === 0) return trafficMap;
+
+  try {
+    const response = isAuthenticated
+      ? await authenticatedFetch(getApiUrl('/traffic/all'))
+      : await fetch(getApiUrl(`/share/${shareId}/traffic`));
+    if (!response.ok) return trafficMap;
+
+    const scheduleIds = new Set(schedules.map((schedule) => schedule.id));
+    const traffics: (TrafficInfo & { schedule_id: number })[] = await response.json();
+    traffics.forEach((traffic) => {
+      if (!scheduleIds.has(traffic.schedule_id)) return;
+      const current = trafficMap.get(traffic.schedule_id) ?? [];
+      current.push(traffic);
+      trafficMap.set(traffic.schedule_id, current);
+    });
+  } catch (error) {
+    console.error('Error fetching archive traffic:', error);
+  }
   return trafficMap;
 }
-
