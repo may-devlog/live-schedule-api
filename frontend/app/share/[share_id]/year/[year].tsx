@@ -5,7 +5,7 @@ import React from "react";
 import { View, StyleSheet, Text } from "react-native";
 import type { Schedule } from "../../../HomeScreen";
 import { getApiUrl } from "../../../../utils/api";
-import { YearPageContent } from "../../../../components/YearPageContent";
+import { SharedArchivePage } from "../../../../components/SharedArchivePage";
 
 export default function SharedYearScreen() {
   const { share_id, year } = useLocalSearchParams<{ share_id: string; year: string }>();
@@ -82,15 +82,14 @@ export default function SharedYearScreen() {
   };
 
   return (
-    <YearPageContent
-      isShared={true}
+    <SharedArchivePage
       shareId={share_id}
       fetchSchedules={fetchSchedules}
       fetchAvailableYears={fetchAvailableYears}
-      showStayTab={false}
-      homePath={`/share/${share_id}`}
       onSchedulePress={handleOpenDetail}
-      initialYear={year ?? null}
+      initialYear={year ?? String(new Date().getFullYear())}
+      onBack={() => router.push(`/share/${share_id}`)}
+      onSelectYear={(selectedYear) => router.replace(`/share/${share_id}/year/${selectedYear}`)}
     />
   );
 }
