@@ -39,6 +39,7 @@ type StaySummary = {
 
 const shadow = Platform.OS === "web" ? ({ boxShadow: "0 8px 24px rgba(46,16,101,0.08)" } as any) : {};
 type SortOrder = "asc" | "desc";
+type MainSortMode = "default" | "kana";
 
 function scheduleDate(schedule: Schedule) {
   return schedule.datetime || schedule.date || "";
@@ -76,11 +77,14 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const [mainSortMenuOpen, setMainSortMenuOpen] = useState(false);
   const [mainGrouping, setMainGrouping] = useState<MainGroupingField>("none");
   const [subGrouping, setSubGrouping] = useState<SubGroupingField>("none");
   const [archiveType, setArchiveType] = useState<"event" | "stay">("event");
   const [stayGrouping, setStayGrouping] = useState<"none" | "website" | "status">("none");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [mainSortMode, setMainSortMode] = useState<MainSortMode>("default");
 
   useEffect(() => { setYear(initialYear); }, [initialYear]);
 
@@ -146,7 +150,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
       const comparison = groupBoundary(a, sortOrder).localeCompare(groupBoundary(b, sortOrder));
       return sortOrder === "asc" ? comparison : -comparison;
     };
-    return grouped
+    const sorted = grouped
       .map((mainGroup) => ({
         ...mainGroup,
         subGroups: [...mainGroup.subGroups]
@@ -154,7 +158,16 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           .sort((a, b) => compareGroups(a.data, b.data)),
       }))
       .sort((a, b) => compareGroups(a.subGroups.flatMap((group) => group.data), b.subGroups.flatMap((group) => group.data)));
-  }, [visibleSchedules, mainGrouping, subGrouping, selectOptionsMap, sortOrder]);
+
+    if (mainSortMode === "kana" && (mainGrouping === "target" || mainGrouping === "lineup")) {
+      return sorted.sort((a, b) => {
+        if (a.title === "未設定") return 1;
+        if (b.title === "未設定") return -1;
+        return a.title.localeCompare(b.title, "ja");
+      });
+    }
+    return sorted;
+  }, [visibleSchedules, mainGrouping, subGrouping, selectOptionsMap, sortOrder, mainSortMode]);
 
   const sortedStays = useMemo(
     () => [...stays].sort((a, b) => sortOrder === "asc" ? a.check_in.localeCompare(b.check_in) : b.check_in.localeCompare(a.check_in)),
@@ -286,19 +299,36 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             </View>}
           </View>
 
-          <View style={styles.sortRow}>
-            <Text style={styles.groupingLabel}>並び順</Text>
-            <View style={styles.sortButtons}>
-              {([['asc', '昇順'], ['desc', '降順']] as const).map(([value, label]) => <TouchableOpacity key={value} style={[styles.groupingButton, sortOrder === value && styles.groupingButtonActive]} onPress={() => setSortOrder(value)}><Text style={[styles.groupingButtonText, sortOrder === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}
+          <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
+            {archiveType === "event" ? <View style={styles.groupingPanel}>
+              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>メイン</Text><View style={styles.groupingButtons}>{([['none','なし'],['target','お目当て'],['lineup','出演者']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, mainGrouping === value && styles.groupingButtonActive]} onPress={() => setMainGrouping(value)}><Text style={[styles.groupingButtonText, mainGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
+              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>サブ</Text><View style={styles.groupingButtons}>{([['none','なし'],['group','グループ'],['category','カテゴリ'],['area','エリア'],['seller','販売元'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, subGrouping === value && styles.groupingButtonActive]} onPress={() => setSubGrouping(value)}><Text style={[styles.groupingButtonText, subGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
+            </View> : <View style={styles.groupingPanel}>
+              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>分類</Text><View style={styles.groupingButtons}>{([['none','なし'],['website','予約サイト'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, stayGrouping === value && styles.groupingButtonActive]} onPress={() => setStayGrouping(value)}><Text style={[styles.groupingButtonText, stayGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
+            </View>}
+            <View style={[styles.sortControls, mobile && styles.sortControlsMobile]}>
+              {(mainGrouping === "target" || mainGrouping === "lineup") && archiveType === "event" && <View style={styles.compactSelectWrap}>
+                <Text style={styles.compactSelectLabel}>グループ順</Text>
+                <TouchableOpacity style={styles.compactSelect} onPress={() => { setMainSortMenuOpen((open) => !open); setSortMenuOpen(false); }}>
+                  <Text style={styles.compactSelectText}>{mainSortMode === "default" ? "デフォルト" : "五十音順"}</Text>
+                  <Ionicons name={mainSortMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
+                </TouchableOpacity>
+                {mainSortMenuOpen && <View style={styles.compactSelectMenu}>
+                  {([['default', 'デフォルト'], ['kana', '五十音順']] as const).map(([value, label]) => <TouchableOpacity key={value} style={styles.compactSelectOption} onPress={() => { setMainSortMode(value); setMainSortMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, mainSortMode === value && styles.compactSelectOptionActive]}>{label}</Text></TouchableOpacity>)}
+                </View>}
+              </View>}
+              <View style={styles.compactSelectWrap}>
+                <Text style={styles.compactSelectLabel}>並び順</Text>
+                <TouchableOpacity style={styles.compactSelect} onPress={() => { setSortMenuOpen((open) => !open); setMainSortMenuOpen(false); }}>
+                  <Text style={styles.compactSelectText}>{sortOrder === "asc" ? "昇順" : "降順"}</Text>
+                  <Ionicons name={sortMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
+                </TouchableOpacity>
+                {sortMenuOpen && <View style={styles.compactSelectMenu}>
+                  {([['asc', '昇順'], ['desc', '降順']] as const).map(([value, label]) => <TouchableOpacity key={value} style={styles.compactSelectOption} onPress={() => { setSortOrder(value); setSortMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, sortOrder === value && styles.compactSelectOptionActive]}>{label}</Text></TouchableOpacity>)}
+                </View>}
+              </View>
             </View>
           </View>
-
-          {archiveType === "event" ? <View style={styles.groupingPanel}>
-            <View style={styles.groupingRow}><Text style={styles.groupingLabel}>メイン</Text><View style={styles.groupingButtons}>{([['none','なし'],['target','お目当て'],['lineup','出演者']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, mainGrouping === value && styles.groupingButtonActive]} onPress={() => setMainGrouping(value)}><Text style={[styles.groupingButtonText, mainGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
-            <View style={styles.groupingRow}><Text style={styles.groupingLabel}>サブ</Text><View style={styles.groupingButtons}>{([['none','なし'],['group','グループ'],['category','カテゴリ'],['area','エリア'],['seller','販売元'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, subGrouping === value && styles.groupingButtonActive]} onPress={() => setSubGrouping(value)}><Text style={[styles.groupingButtonText, subGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
-          </View> : <View style={styles.groupingPanel}>
-            <View style={styles.groupingRow}><Text style={styles.groupingLabel}>分類</Text><View style={styles.groupingButtons}>{([['none','なし'],['website','予約サイト'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, stayGrouping === value && styles.groupingButtonActive]} onPress={() => setStayGrouping(value)}><Text style={[styles.groupingButtonText, stayGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
-          </View>}
 
           {loading ? <ActivityIndicator color={brand.violet} style={styles.loader} /> : error ? <Text style={styles.error}>{error}</Text> : archiveType === "stay" ? (
             stayGroups.map(([title, items]) => {
@@ -383,9 +413,19 @@ const styles = StyleSheet.create({
   yearOption: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 5 },
   yearOptionText: { color: brand.ink, fontSize: 14 },
   yearOptionTextActive: { color: brand.violet, fontWeight: "700" },
-  groupingPanel: { gap: 10, marginBottom: 28 },
-  sortRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 12 },
-  sortButtons: { flexDirection: "row", gap: 8 },
+  archiveControls: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 20, marginBottom: 28, zIndex: 4 },
+  archiveControlsMobile: { flexDirection: "column", gap: 12 },
+  groupingPanel: { flex: 1, gap: 10 },
+  sortControls: { flexDirection: "row", alignItems: "flex-start", justifyContent: "flex-end", gap: 10 },
+  sortControlsMobile: { alignSelf: "flex-end" },
+  compactSelectWrap: { position: "relative", width: 126, zIndex: 5 },
+  compactSelectLabel: { color: brand.ink, fontSize: 12, fontWeight: "700", marginBottom: 5, textAlign: "right" },
+  compactSelect: { minHeight: 36, paddingHorizontal: 11, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  compactSelectText: { color: brand.ink, fontSize: 13, fontWeight: "500" },
+  compactSelectMenu: { position: "absolute", top: 59, left: 0, right: 0, padding: 4, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", ...shadow },
+  compactSelectOption: { paddingHorizontal: 10, paddingVertical: 9, borderRadius: 4 },
+  compactSelectOptionText: { color: brand.ink, fontSize: 13 },
+  compactSelectOptionActive: { color: brand.violet, fontWeight: "700" },
   groupingRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   groupingLabel: { width: 48, color: brand.ink, fontSize: 13, lineHeight: 36, fontWeight: "700" },
   groupingButtons: { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 8 },
