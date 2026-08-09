@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
   timeMetaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
   metaText: { color: brand.ink, fontSize: 14, lineHeight: 21, fontWeight: "400", flexShrink: 1 },
-  weekdayText: { color: brand.violet, fontWeight: "700", minWidth: 30, textAlign: "center", fontVariant: ["tabular-nums"] },
+  weekdayText: { color: brand.violet, fontWeight: "700", minWidth: 30, textAlign: "center", fontVariant: ["tabular-nums"], fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
   saturdayText: { color: "#2563EB" },
   holidayText: { color: "#DC2626" },
   primaryGrid: { gap: 20 },

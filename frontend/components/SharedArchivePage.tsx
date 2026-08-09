@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   dateBlockMobile: { width: 0, display: "none" },
   dateText: { color: brand.plum, fontSize: 29, lineHeight: 35, fontWeight: "800", fontVariant: ["tabular-nums"] },
   dateTextMobile: { fontSize: 17, lineHeight: 22 },
-  weekday: { color: brand.violet, fontSize: 15, fontWeight: "800", minWidth: 32, textAlign: "center", marginTop: 2, fontVariant: ["tabular-nums"] },
+  weekday: { color: brand.violet, fontSize: 15, fontWeight: "800", minWidth: 32, textAlign: "center", marginTop: 2, fontVariant: ["tabular-nums"], fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
   saturday: { color: "#2563EB" },
   holiday: { color: "#DC2626" },
   dateDivider: { width: 1, height: 66, backgroundColor: brand.border },

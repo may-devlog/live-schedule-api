@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Modal,
   FlatList,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { IconX } from "@/components/FeatherSvgIcons";
@@ -531,6 +532,7 @@ const styles = StyleSheet.create({
     minWidth: 30,
     textAlign: "center",
     fontVariant: ["tabular-nums"],
+    fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace",
   },
   sundayText: {
     color: "#F06B72",
