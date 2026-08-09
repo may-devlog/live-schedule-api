@@ -166,6 +166,12 @@ function buildNationalHolidaySet(centerYear: number): Set<string> {
   return set;
 }
 
+export function isJapaneseHolidayDate(dateString: string): boolean {
+  const [year, month, day] = dateString.slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return false;
+  return buildNationalHolidaySet(year).has(dateKey(year, month - 1, day));
+}
+
 export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress }: ScheduleCalendarProps) {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -345,7 +351,7 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
 
       {/* 曜日ヘッダー */}
       <View style={styles.weekdayHeader}>
-        {["月", "火", "水", "木", "金", "土", "日"].map((day, index) => (
+        {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day, index) => (
           <View key={index} style={styles.weekday}>
             <Text
               style={[

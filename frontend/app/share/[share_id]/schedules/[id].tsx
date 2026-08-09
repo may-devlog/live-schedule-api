@@ -22,6 +22,7 @@ import type { Schedule } from "../../../HomeScreen";
 import { maskHotelName } from "../../../../utils/mask-hotel-name";
 import { CollapsibleDetailSection } from "../../../../components/CollapsibleDetailSection";
 import { PublicFooter, PublicHeader, brand } from "../../../../components/GenBGTBrand";
+import { isJapaneseHolidayDate } from "../../../../components/ScheduleCalendar";
 
 type TrafficSummary = {
   id: number;
@@ -302,6 +303,18 @@ export default function SharedScheduleDetailScreen() {
     return `¥${value.toLocaleString("ja-JP")}`;
   }
 
+  function dateDisplay(raw?: string | null) {
+    if (!raw) return { date: "-", weekday: "", tone: "normal" as const };
+    const datePart = raw.slice(0, 10);
+    const [year, month, day] = datePart.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    const weekday = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][date.getDay()] ?? "";
+    const tone = date.getDay() === 6 ? "saturday" as const : (date.getDay() === 0 || isJapaneseHolidayDate(datePart)) ? "holiday" as const : "normal" as const;
+    return { date: datePart, weekday, tone };
+  }
+
+  const scheduleDateDisplay = dateDisplay(schedule.date ?? schedule.datetime);
+
   return (
     <View style={styles.container}>
       <PublicHeader active="none" />
@@ -368,7 +381,7 @@ export default function SharedScheduleDetailScreen() {
             <View style={styles.heroMeta}>
               <View style={styles.metaItem}>
                 <Ionicons name="calendar-outline" size={16} color={brand.violet} />
-                <Text style={styles.metaText}>{schedule.date ?? formatDateTimeUTC(schedule.datetime)}</Text>
+                <Text style={styles.metaText}>{scheduleDateDisplay.date} <Text style={[styles.weekdayText, scheduleDateDisplay.tone === "saturday" && styles.saturdayText, scheduleDateDisplay.tone === "holiday" && styles.holidayText]}>{scheduleDateDisplay.weekday}</Text></Text>
               </View>
               <View style={styles.timeMetaRow}>
                 <Ionicons name="time-outline" size={16} color={brand.violet} />
@@ -546,7 +559,7 @@ export default function SharedScheduleDetailScreen() {
                   >
                     <View style={styles.relationCardContent}>
                       {related.date && (
-                        <Text style={styles.relationDate}>{related.date}</Text>
+                        <Text style={styles.relationDate}>{dateDisplay(related.date).date} <Text style={[styles.weekdayText, dateDisplay(related.date).tone === "saturday" && styles.saturdayText, dateDisplay(related.date).tone === "holiday" && styles.holidayText]}>{dateDisplay(related.date).weekday}</Text></Text>
                       )}
                       <View style={styles.relationScheduleRow}>
                         {!!related.start && <Text style={styles.relationTime}>{related.start}</Text>}
@@ -602,7 +615,7 @@ export default function SharedScheduleDetailScreen() {
                     <Text style={styles.cardRoute}>{detailWithNotes}</Text>
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
-                      <Text style={styles.cardDate}>{traffic.date}</Text>
+                      <Text style={styles.cardDate}>{dateDisplay(traffic.date).date} <Text style={[styles.weekdayText, dateDisplay(traffic.date).tone === "saturday" && styles.saturdayText, dateDisplay(traffic.date).tone === "holiday" && styles.holidayText]}>{dateDisplay(traffic.date).weekday}</Text></Text>
                     </View>
                   </View>
                   <View style={styles.cardPriceContainer}>
@@ -625,7 +638,9 @@ export default function SharedScheduleDetailScreen() {
             staySummaries.map((stay) => {
               // チェックイン/チェックアウトの日時をフォーマット
               const formatDateTime = (dateTimeStr: string) => {
-                return dateTimeStr.replace(/-/g, "/");
+                const display = dateDisplay(dateTimeStr);
+                const time = dateTimeStr.includes(" ") ? dateTimeStr.split(" ")[1] : "";
+                return { ...display, date: display.date.replace(/-/g, "."), time };
               };
               const checkInFormatted = formatDateTime(stay.check_in);
               const checkOutFormatted = formatDateTime(stay.check_out);
@@ -643,12 +658,12 @@ export default function SharedScheduleDetailScreen() {
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
                       <Text style={styles.stayDateLabel}>チェックイン</Text>
-                      <Text style={styles.cardDateTime}>{checkInFormatted}</Text>
+                      <Text style={styles.cardDateTime}>{checkInFormatted.date} <Text style={[styles.weekdayText, checkInFormatted.tone === "saturday" && styles.saturdayText, checkInFormatted.tone === "holiday" && styles.holidayText]}>{checkInFormatted.weekday}</Text>{checkInFormatted.time ? ` ${checkInFormatted.time}` : ""}</Text>
                     </View>
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
                       <Text style={styles.stayDateLabel}>チェックアウト</Text>
-                      <Text style={styles.cardDateTime}>{checkOutFormatted}</Text>
+                      <Text style={styles.cardDateTime}>{checkOutFormatted.date} <Text style={[styles.weekdayText, checkOutFormatted.tone === "saturday" && styles.saturdayText, checkOutFormatted.tone === "holiday" && styles.holidayText]}>{checkOutFormatted.weekday}</Text>{checkOutFormatted.time ? ` ${checkOutFormatted.time}` : ""}</Text>
                     </View>
                   </View>
                   <Text style={[styles.breakfastTag, !stay.breakfast_flag && styles.breakfastTagOff]}>
@@ -718,6 +733,9 @@ const styles = StyleSheet.create({
   timeMetaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
   metaText: { color: brand.ink, fontSize: 14, lineHeight: 21, fontWeight: "500", flexShrink: 1 },
+  weekdayText: { color: brand.violet, fontWeight: "800" },
+  saturdayText: { color: "#2563EB" },
+  holidayText: { color: "#DC2626" },
   primaryGrid: { gap: 20 },
   primaryGridDesktop: { flexDirection: "row", alignItems: "flex-start" },
   primaryColumn: { flex: 1, minWidth: 0 },
