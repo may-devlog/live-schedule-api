@@ -905,15 +905,17 @@ export default function DetailScreen() {
           />
           <NotionProperty
             label="総費用"
-            value={formatCurrency(
+            alignValue="right"
+          >
+            <Text style={styles.totalCostText}>{formatCurrency(
               // チケット代 + ドリンク代 + 遠征費合計（往復フラグ考慮済み）
               (schedule.ticket_fee || 0) + 
               (schedule.drink_fee || 0) + 
               trafficSummaries.reduce((sum, traffic) => {
                 return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
               }, 0) + (schedule.stay_fee || 0)
-            )}
-          />
+            )}</Text>
+          </NotionProperty>
           <NotionProperty label="ステータス">
           {schedule.status ? (
               <NotionTag label={schedule.status} color={statusColor || undefined} />
@@ -1351,6 +1353,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  totalCostText: { color: "#7C3AED", fontSize: 20, lineHeight: 26, fontWeight: "800", fontVariant: ["tabular-nums"], textAlign: "right" },
   addLinksContainer: {
     marginTop: 8,
     gap: 4,

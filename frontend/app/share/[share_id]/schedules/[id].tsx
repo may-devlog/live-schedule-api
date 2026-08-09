@@ -525,16 +525,17 @@ export default function SharedScheduleDetailScreen() {
           <NotionProperty
             label="総費用"
             alignValue="right"
-            value={formatCurrency(
+            isLast={false}
+          >
+            <Text style={styles.totalCostText}>{formatCurrency(
               // チケット代 + ドリンク代 + 遠征費合計（往復フラグ考慮済み）
               (schedule.ticket_fee || 0) + 
               (schedule.drink_fee || 0) + 
               trafficSummaries.reduce((sum, traffic) => {
                 return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
               }, 0) + (schedule.stay_fee || 0)
-            )}
-            isLast={false}
-          />
+            )}</Text>
+          </NotionProperty>
           </NotionPropertyBlock>
         </View>
         </View>
@@ -889,6 +890,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontVariant: ["tabular-nums"],
   },
+  totalCostText: { color: brand.violet, fontSize: 20, lineHeight: 26, fontWeight: "800", fontVariant: ["tabular-nums"], textAlign: "right" },
   cardMiles: {
     fontSize: 12,
     color: "#787774",
