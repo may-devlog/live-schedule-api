@@ -171,7 +171,7 @@ export default function SharedScheduleScreen() {
                         <Text style={styles.eventTitle} numberOfLines={2}>{item.title}</Text>
                         <View style={styles.metaRow}>
                           {item.area && <NotionTag label={item.area} color={areaColors.get(item.id) || getOptionColorSync(item.area, 'AREAS')} />}
-                          {!!item.venue && <View style={styles.venuePill}><Ionicons name="business-outline" size={13} color={brand.muted} /><Text style={styles.venueText}>{item.venue}</Text></View>}
+                          {!!item.venue && <View style={styles.venuePill}><Ionicons name="location-outline" size={14} color={brand.violet} /><Text style={styles.venueText}>{item.venue}</Text></View>}
                         </View>
                       </View>
                       <View style={styles.arrowButton}><Ionicons name="arrow-forward" size={20} color="#FFFFFF" /></View>
