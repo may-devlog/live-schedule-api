@@ -400,24 +400,9 @@ export default function SharedScheduleDetailScreen() {
               <Text style={styles.emptyValue}>-</Text>
             )}
           </NotionProperty>
-          <NotionProperty
-            label="備考"
-            value={
-              schedule.notes && schedule.notes.trim().length > 0
-                ? schedule.notes
-                : undefined
-            }
-          />
           <NotionProperty label="カテゴリ">
             {schedule.category ? (
               <NotionTag label={schedule.category} color={categoryColor || undefined} />
-            ) : (
-              <Text style={styles.emptyValue}>-</Text>
-            )}
-          </NotionProperty>
-          <NotionProperty label="エリア">
-            {schedule.area ? (
-              <NotionTag label={schedule.area} color={areaColor || undefined} />
             ) : (
               <Text style={styles.emptyValue}>-</Text>
             )}
@@ -448,6 +433,14 @@ export default function SharedScheduleDetailScreen() {
               <Text style={styles.emptyValue}>-</Text>
             )}
           </NotionProperty>
+          <NotionProperty
+            label="備考"
+            value={
+              schedule.notes && schedule.notes.trim().length > 0
+                ? schedule.notes
+                : undefined
+            }
+          />
           </NotionPropertyBlock>
         </View>
 
