@@ -12,7 +12,7 @@ export function HomeButton() {
       onPress={() => router.push('/')}
     >
       <View style={styles.buttonContent}>
-        <IconHome size={16} color="#37352f" />
+        <IconHome size={16} color="#FFFFFF" />
         <Text style={styles.buttonText}>ホーム</Text>
       </View>
     </TouchableOpacity>
@@ -21,12 +21,13 @@ export function HomeButton() {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#f7f6f3',
+    backgroundColor: '#7C3AED',
     borderWidth: 1,
-    borderColor: '#e9e9e7',
+    borderColor: '#7C3AED',
+    minHeight: 42,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 3,
+    justifyContent: 'center',
+    borderRadius: 9,
     alignSelf: 'flex-start',
   },
   buttonContent: {
@@ -35,12 +36,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   buttonText: {
-    color: '#37352f',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
 });
-
 
 
 

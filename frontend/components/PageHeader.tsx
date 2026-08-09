@@ -21,7 +21,7 @@ export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: P
             onPress={() => router.back()}
           >
             <View style={styles.buttonContent}>
-              <IconArrowLeft size={16} color="#37352f" />
+              <IconArrowLeft size={16} color="#5B21B6" />
               <Text style={styles.backButtonText}>戻る</Text>
             </View>
           </TouchableOpacity>
@@ -35,7 +35,7 @@ export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: P
           }}
         >
           <View style={styles.buttonContent}>
-            <IconHome size={16} color="#37352f" />
+            <IconHome size={16} color="#FFFFFF" />
             <Text style={styles.homeButtonText}>ホーム</Text>
           </View>
         </TouchableOpacity>
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: "#e9e9e7",
+    borderBottomColor: "#E8E3F1",
     // Web環境では固定ヘッダーを避けて、アドレスバーの非表示を促進
     ...(Platform.OS === 'web' && {
       position: 'relative' as const,
@@ -75,28 +75,30 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   backButton: {
-    backgroundColor: '#f7f6f3',
+    backgroundColor: '#F5F3FF',
     borderWidth: 1,
-    borderColor: '#e9e9e7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 3,
+    borderColor: '#C4B5FD',
+    minHeight: 40,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    borderRadius: 9,
   },
   backButtonText: {
-    color: '#37352f',
+    color: '#5B21B6',
     fontSize: 14,
     fontWeight: '600',
   },
   homeButton: {
-    backgroundColor: '#f7f6f3',
+    backgroundColor: '#7C3AED',
     borderWidth: 1,
-    borderColor: '#e9e9e7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 3,
+    borderColor: '#7C3AED',
+    minHeight: 40,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    borderRadius: 9,
   },
   homeButtonText: {
-    color: '#37352f',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -107,4 +109,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-
