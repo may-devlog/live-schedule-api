@@ -376,6 +376,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#37352f",
     minHeight: 46,
+    marginBottom: 16,
   },
   multiline: {
     height: 100,
