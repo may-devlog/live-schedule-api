@@ -213,30 +213,33 @@ export default function TrafficDetailScreen() {
     }
   };
 
+  const renderStatePage = (content: React.ReactNode) => (
+    <View style={styles.container}>
+      <AppHeader active="schedule" />
+      <PageHeader homePath="/" />
+      <ScrollView contentContainerStyle={styles.stateScroll}>
+        <View style={styles.stateContent}>{content}</View>
+        <PublicFooter />
+      </ScrollView>
+    </View>
+  );
+
   if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator color="#333333" />
-      </View>
-    );
+    return renderStatePage(<ActivityIndicator color="#7C3AED" size="large" />);
   }
 
   if (error) {
-    return (
-      <View style={styles.container}>
+    return renderStatePage(<>
         <Text style={styles.title}>Traffic Detail</Text>
         <Text style={styles.errorText}>エラー: {error}</Text>
-      </View>
-    );
+      </>);
   }
 
   if (!traffic) {
-    return (
-      <View style={styles.container}>
+    return renderStatePage(<>
         <Text style={styles.title}>Traffic Detail</Text>
         <Text style={styles.errorText}>Traffic not found</Text>
-      </View>
-    );
+      </>);
   }
 
   const title = traffic.return_flag
@@ -450,6 +453,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
+  stateScroll: { flexGrow: 1 },
+  stateContent: { minHeight: 420, padding: 24, alignItems: "center", justifyContent: "center" },
   scrollContent: {
     flexGrow: 1,
   },
