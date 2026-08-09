@@ -38,6 +38,7 @@ type StaySummary = {
 };
 
 const shadow = Platform.OS === "web" ? ({ boxShadow: "0 8px 24px rgba(46,16,101,0.08)" } as any) : {};
+const deferredCardRendering = Platform.OS === "web" ? ({ contentVisibility: "auto", containIntrinsicSize: "108px" } as any) : {};
 type SortOrder = "asc" | "desc";
 type MainSortMode = "default" | "kana";
 
@@ -51,17 +52,29 @@ function compareSchedules(a: Schedule, b: Schedule, order: SortOrder) {
 }
 
 function groupBoundary(schedules: Schedule[], order: SortOrder) {
-  const timestamps = schedules.map(scheduleDate).sort();
-  return order === "asc" ? timestamps[0] ?? "" : timestamps[timestamps.length - 1] ?? "";
+  let boundary = "";
+  schedules.forEach((schedule) => {
+    const value = scheduleDate(schedule);
+    if (!boundary || (order === "asc" ? value < boundary : value > boundary)) boundary = value;
+  });
+  return boundary;
 }
 
-function dateParts(raw: string) {
+type ArchiveDateParts = { month: number; day: string; weekday: string; tone: "sat" | "holiday" | "normal" };
+const datePartsCache = new Map<string, ArchiveDateParts>();
+
+function dateParts(raw: string): ArchiveDateParts {
+  const key = raw.slice(0, 10);
+  const cached = datePartsCache.get(key);
+  if (cached) return cached;
   const [year, month, day] = raw.slice(0, 10).split("-").map(Number);
   const date = new Date(year, month - 1, day);
   const holiday = isJapaneseHolidayDate(raw);
   const weekday = `${["日", "月", "火", "水", "木", "金", "土"][date.getDay()]}${holiday ? "・祝" : ""}`;
   const tone = date.getDay() === 6 ? "sat" : (date.getDay() === 0 || holiday) ? "holiday" : "normal";
-  return { month, day: String(day).padStart(2, "0"), weekday, tone };
+  const result: ArchiveDateParts = { month, day: String(day).padStart(2, "0"), weekday, tone };
+  datePartsCache.set(key, result);
+  return result;
 }
 
 export function SharedArchivePage({ shareId, authenticated = false, initialYear, fetchSchedules, fetchStays, fetchAvailableYears, onBack, onSelectYear, onSchedulePress, onStayPress }: Props) {
@@ -92,11 +105,24 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   useEffect(() => {
     let active = true;
     const optionOwner = authenticated ? undefined : shareId;
-    Promise.all([fetchAvailableYears(), fetchSchedules(year), fetchStays ? fetchStays(year) : Promise.resolve([]), loadSelectOptionsMap(optionOwner)])
-      .then(async ([available, data, stayData, optionMaps]) => {
+    Promise.all([fetchAvailableYears(), fetchSchedules(year), fetchStays ? fetchStays(year) : Promise.resolve([])])
+      .then(([available, data, stayData]) => {
         if (!active) return;
         const sorted = [...data].sort((a, b) => compareSchedules(a, b, "asc"));
-        const [colors, trafficMap] = await Promise.all([
+        setYears(available);
+        setSchedules(sorted);
+        setStays(stayData);
+        setTrafficBySchedule(new Map());
+        setAreaColors(new Map());
+        setError(null);
+        setLoading(false);
+
+        // Totals, option ordering and colors enrich the cards but are not
+        // required to show the archive. Load them without blocking year changes.
+        loadSelectOptionsMap(optionOwner).then((optionMaps) => {
+          if (active) setSelectOptionsMap(optionMaps.orderMap);
+        }).catch(() => undefined);
+        Promise.all([
           Promise.all([
             loadSelectOptions("TARGETS", optionOwner).then((options) => preloadOptionColors(options, "TARGETS")),
             loadSelectOptions("GROUPS", optionOwner).then((options) => preloadOptionColors(options, "GROUPS")),
@@ -108,19 +134,18 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             loadStaySelectOptions("STATUS", optionOwner).then((options) => preloadOptionColors(options, "STAY_STATUS")),
           ]),
           fetchTrafficBySchedule(sorted, authenticated, shareId),
-        ]);
-        void colors;
-        if (!active) return;
-        setYears(available);
-        setSchedules(sorted);
-        setStays(stayData);
-        setSelectOptionsMap(optionMaps.orderMap);
-        setTrafficBySchedule(trafficMap);
-        setAreaColors(await fetchAreaColors(sorted));
-        setError(null);
+          fetchAreaColors(sorted),
+        ]).then(([, trafficMap, colors]) => {
+          if (!active) return;
+          setTrafficBySchedule(trafficMap);
+          setAreaColors(colors);
+        }).catch(() => undefined);
       })
-      .catch((e) => active && setError(e.message ?? "アーカイブを取得できませんでした"))
-      .finally(() => active && setLoading(false));
+      .catch((e) => {
+        if (!active) return;
+        setError(e.message ?? "アーカイブを取得できませんでした");
+        setLoading(false);
+      });
     return () => { active = false; };
   }, [year, shareId, authenticated, fetchAvailableYears, fetchSchedules, fetchStays]);
 
@@ -208,7 +233,15 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
     });
   };
 
-  const totalCost = (schedule: Schedule) => calculateTotalCostWithReturnFlag(schedule, trafficBySchedule) ?? 0;
+  const totalCostBySchedule = useMemo(() => {
+    const totals = new Map<number, number>();
+    schedules.forEach((schedule) => {
+      totals.set(schedule.id, calculateTotalCostWithReturnFlag(schedule, trafficBySchedule) ?? 0);
+    });
+    return totals;
+  }, [schedules, trafficBySchedule]);
+
+  const totalCost = (schedule: Schedule) => totalCostBySchedule.get(schedule.id) ?? 0;
 
   const groupColor = (field: MainGroupingField | SubGroupingField, title: string) => {
     const optionTypes = {
@@ -456,8 +489,8 @@ const styles = StyleSheet.create({
   groupTotalText: { color: brand.ink, fontSize: 14, fontWeight: "700", fontVariant: ["tabular-nums"] },
   cardList: { gap: 12 },
   groupCardList: { padding: 12, backgroundColor: brand.lavender },
-  card: { minHeight: 108, paddingHorizontal: 24, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 22, ...shadow },
-  cardMobile: { minHeight: 0, paddingHorizontal: 14, paddingVertical: 14, gap: 10, alignItems: "flex-start" },
+  card: { minHeight: 108, paddingHorizontal: 24, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 22, ...shadow, ...deferredCardRendering },
+  cardMobile: { minHeight: 0, paddingHorizontal: 14, paddingVertical: 14, gap: 10, alignItems: "flex-start", ...(Platform.OS === "web" ? ({ boxShadow: "none" } as any) : {}) },
   dateBlock: { width: 104, alignItems: "center" },
   dateBlockMobile: { width: 0, display: "none" },
   dateText: { color: brand.plum, fontSize: 29, lineHeight: 35, fontWeight: "800", fontVariant: ["tabular-nums"] },

@@ -3,7 +3,6 @@ import { Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } 
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
-import { authenticatedFetch, getApiUrl } from '../utils/api';
 import { AccountMenu } from './AccountMenu';
 import { NotificationMenu } from './NotificationMenu';
 import { fetchProfile } from '../utils/profile-request';

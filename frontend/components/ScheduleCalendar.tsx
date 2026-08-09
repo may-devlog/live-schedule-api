@@ -122,7 +122,12 @@ function dateKey(y: number, m: number, d: number): string {
  * 表示年を中心に前後年も含め、法定祝日・振替休日・国民の休日（祝日に挟まれた日）の集合を構築する。
  * 国民の休日は前日・翌日がいずれも集合に入った日を固定点で追加入力する（連鎖対応）。
  */
+const nationalHolidayCache = new Map<number, Set<string>>();
+
 function buildNationalHolidaySet(centerYear: number): Set<string> {
+  const cached = nationalHolidayCache.get(centerYear);
+  if (cached) return cached;
+
   const set = new Set<string>();
 
   const addCoreHolidaysForYear = (yy: number) => {
@@ -164,6 +169,7 @@ function buildNationalHolidaySet(centerYear: number): Set<string> {
     }
   }
 
+  nationalHolidayCache.set(centerYear, set);
   return set;
 }
 
