@@ -21,7 +21,7 @@ import {
   loadStaySelectOptions,
   saveStaySelectOptions,
 } from "../../../utils/select-options-storage";
-import { PageHeader } from "../../../components/PageHeader";
+import { AppHeader, PublicFooter, brand } from "../../../components/GenBGTBrand";
 
 type Stay = {
   id: number;
@@ -380,7 +380,7 @@ export default function EditStayScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-        <PageHeader showBackButton={true} homePath="/" />
+        <AppHeader active="schedule" />
         <View style={styles.container}>
           <ActivityIndicator color="#37352f" size="large" />
         </View>
@@ -391,7 +391,7 @@ export default function EditStayScreen() {
   if (error) {
     return (
       <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-        <PageHeader showBackButton={true} homePath="/" />
+        <AppHeader active="schedule" />
         <View style={styles.container}>
           <Text style={styles.title}>宿泊を編集</Text>
           <Text style={styles.errorText}>エラー: {error}</Text>
@@ -407,10 +407,15 @@ export default function EditStayScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <PageHeader showBackButton={true} homePath="/" />
-      <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.page}>
+      <AppHeader active="schedule" />
+      <ScrollView contentContainerStyle={styles.pageContent}>
+        <View style={styles.container}>
+        <TouchableOpacity style={styles.backLink} onPress={() => router.back()}><Text style={styles.backLinkText}>← 宿泊詳細に戻る</Text></TouchableOpacity>
+        <Text style={styles.eyebrow}>EDIT STAY</Text>
         <Text style={styles.title}>宿泊を編集</Text>
+        <Text style={styles.lead}>登録済みの宿泊情報を更新します。</Text>
+        <View style={styles.formCard}>
 
       <NotionDatePicker
         label="チェックイン"
@@ -517,12 +522,17 @@ export default function EditStayScreen() {
           {submitting ? "更新中..." : "更新"}
         </Text>
       </TouchableOpacity>
+        </View>
+        </View>
+        <PublicFooter />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: brand.lavender },
+  pageContent: { flexGrow: 1 },
   header: {
     paddingHorizontal: 24,
     paddingTop: 48,
@@ -532,20 +542,24 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e9e9e7",
   },
   container: {
-    paddingTop: 24,
+    paddingTop: 32,
     paddingHorizontal: 24,
-    paddingBottom: 32,
-    backgroundColor: "#ffffff",
-    maxWidth: 900,
+    paddingBottom: 56,
+    maxWidth: 960,
     alignSelf: "center",
     width: "100%",
   },
+  backLink: { alignSelf: "flex-start", paddingVertical: 8, marginBottom: 16 },
+  backLinkText: { color: brand.violetDark, fontSize: 14, fontWeight: "700" },
+  eyebrow: { color: brand.violet, fontSize: 11, fontWeight: "800", letterSpacing: 1.8, marginBottom: 7 },
   title: {
-    fontSize: 40,
-    fontWeight: "700",
-    color: "#37352f",
-    marginBottom: 32,
+    fontSize: 36,
+    fontWeight: "800",
+    color: brand.ink,
+    marginBottom: 8,
   },
+  lead: { color: brand.muted, fontSize: 14, marginBottom: 24 },
+  formCard: { backgroundColor: brand.white, borderWidth: 1, borderColor: brand.border, borderRadius: 16, padding: 28, shadowColor: '#2E1065', shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
   label: {
     fontSize: 12,
     fontWeight: "600",
@@ -559,13 +573,13 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#e9e9e7",
-    borderRadius: 3,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: brand.border,
+    borderRadius: 9,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     fontSize: 14,
     color: "#37352f",
-    minHeight: 40,
+    minHeight: 46,
   },
   flagRow: {
     flexDirection: "row",
@@ -576,9 +590,10 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 32,
-    backgroundColor: "#37352f",
-    paddingVertical: 12,
-    borderRadius: 3,
+    backgroundColor: brand.violet,
+    minHeight: 50,
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: "center",
   },
   buttonDisabled: {
@@ -602,4 +617,3 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 });
-
