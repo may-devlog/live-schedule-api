@@ -94,19 +94,25 @@ export function AuthHeader() {
   );
 }
 
-export function AppHeader({ active = 'schedule' }: { active?: 'schedule' | 'archive' }) {
+export function AppHeader({ active = 'schedule', onDisplayNameChange }: { active?: 'schedule' | 'archive'; onDisplayNameChange?: (value: string | null) => void }) {
   const router = useRouter();
   const { email } = useAuth();
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [profileShareId, setProfileShareId] = useState<string | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const { width } = useWindowDimensions();
   const narrow = width < 720;
-  const accountLabel = email?.split('@')[0] || 'ユーザー';
+  const accountLabel = displayName || profileShareId || email?.split('@')[0] || 'ユーザー';
   useEffect(() => {
     authenticatedFetch(getApiUrl('/auth/profile'))
       .then((response) => response.ok ? response.json() : null)
-      .then((profile) => setAvatarDataUrl(profile?.avatar_data_url ?? null))
-      .catch(() => setAvatarDataUrl(null));
+      .then((profile) => {
+        setAvatarDataUrl(profile?.avatar_data_url ?? null);
+        setDisplayName(profile?.display_name ?? null);
+        setProfileShareId(profile?.share_id ?? null);
+      })
+      .catch(() => { setAvatarDataUrl(null); setDisplayName(null); setProfileShareId(null); });
   }, []);
   return (
     <View style={styles.header}>
@@ -125,7 +131,7 @@ export function AppHeader({ active = 'schedule' }: { active?: 'schedule' | 'arch
           </TouchableOpacity>
         </View>
       </View>
-      <AccountMenu visible={menuVisible} onClose={() => setMenuVisible(false)} avatarDataUrl={avatarDataUrl} onAvatarChange={setAvatarDataUrl} />
+      <AccountMenu visible={menuVisible} onClose={() => setMenuVisible(false)} avatarDataUrl={avatarDataUrl} onAvatarChange={setAvatarDataUrl} displayName={displayName} onDisplayNameChange={(value) => { setDisplayName(value); onDisplayNameChange?.(value); }} />
     </View>
   );
 }

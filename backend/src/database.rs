@@ -19,6 +19,7 @@ pub async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       share_id TEXT UNIQUE,
       sharing_enabled INTEGER NOT NULL DEFAULT 0,
       avatar_data_url TEXT,
+      display_name TEXT,
       created_at   TEXT,
       updated_at   TEXT
     );
@@ -30,6 +31,9 @@ pub async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     }
 
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN avatar_data_url TEXT")
+        .execute(pool)
+        .await;
+    let _ = sqlx::query("ALTER TABLE users ADD COLUMN display_name TEXT")
         .execute(pool)
         .await;
 
@@ -189,4 +193,3 @@ pub async fn create_pool() -> Result<Pool<Sqlite>, sqlx::Error> {
     
     Ok(pool)
 }
-

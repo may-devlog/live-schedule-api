@@ -44,6 +44,8 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [profileShareId, setProfileShareId] = useState<string | null>(null);
 
   const fetchSchedules = useCallback(async () => {
     try {
@@ -97,8 +99,12 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
       : fetch(getApiUrl(`/share/${share_id}/profile`));
     request
       .then((res) => res.ok ? res.json() : null)
-      .then((data) => setAvatarDataUrl(data?.avatar_data_url ?? null))
-      .catch(() => setAvatarDataUrl(null));
+      .then((data) => {
+        setAvatarDataUrl(data?.avatar_data_url ?? null);
+        setDisplayName(data?.display_name ?? null);
+        setProfileShareId(data?.share_id ?? share_id ?? null);
+      })
+      .catch(() => { setAvatarDataUrl(null); setDisplayName(null); setProfileShareId(share_id ?? null); });
   }, [share_id, authenticated]);
 
   useEffect(() => {
@@ -134,7 +140,7 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
 
   return (
     <View style={styles.page}>
-      {authenticated ? <AppHeader active="schedule" /> : <PublicHeader />}
+      {authenticated ? <AppHeader active="schedule" onDisplayNameChange={setDisplayName} /> : <PublicHeader />}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -146,8 +152,8 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
               {avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.avatarImage} /> : <Ionicons name="person" size={26} color="#A6A0AE" />}
             </View>
             <View style={styles.profileCopy}>
-              <Text style={styles.profileName}>{authenticated ? 'MY SCHEDULE' : share_id}</Text>
-              <Text style={styles.profileLabel}>ライブスケジュール</Text>
+              <Text style={styles.profileName}>{displayName || profileShareId || 'MY SCHEDULE'}</Text>
+              {!!displayName && !!profileShareId && <Text style={styles.profileLabel}>@{profileShareId}</Text>}
             </View>
             <TouchableOpacity style={styles.shareButton} onPress={authenticated ? () => router.push('/new') : handleShare}>
               <Ionicons name={authenticated ? "add" : "share-outline"} size={18} color={brand.violet} />

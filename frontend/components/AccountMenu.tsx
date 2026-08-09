@@ -13,16 +13,19 @@ type AccountMenuProps = {
   onClose: () => void;
   avatarDataUrl: string | null;
   onAvatarChange: (value: string | null) => void;
+  displayName: string | null;
+  onDisplayNameChange: (value: string | null) => void;
 };
 
-export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange }: AccountMenuProps) {
+export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, displayName, onDisplayNameChange }: AccountMenuProps) {
   const router = useRouter();
   const { email, logout, changeEmail } = useAuth();
   const [sharingEnabled, setSharingEnabled] = useState(false);
   const [shareId, setShareId] = useState<string | null>(null);
   const [sharingUrl, setSharingUrl] = useState<string | null>(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
-  const [dialog, setDialog] = useState<'email' | 'shareId' | null>(null);
+  const [dialog, setDialog] = useState<'name' | 'email' | 'shareId' | null>(null);
+  const [newDisplayName, setNewDisplayName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newShareId, setNewShareId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -96,6 +99,24 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange }:
     } finally { setSaving(false); }
   };
 
+  const submitDisplayName = async () => {
+    const value = newDisplayName.trim();
+    if ([...value].length > 50) return Alert.alert('エラー', '名前は50文字以内で入力してください');
+    try {
+      setSaving(true);
+      const response = await authenticatedFetch(getApiUrl('/auth/profile'), {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ display_name: value || null }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || '名前の更新に失敗しました');
+      onDisplayNameChange(data.display_name ?? null);
+      setDialog(null);
+      setNewDisplayName('');
+    } catch (error: any) {
+      Alert.alert('エラー', error.message);
+    } finally { setSaving(false); }
+  };
+
   const submitShareId = async () => {
     const value = newShareId.trim();
     if (!/^[a-zA-Z0-9_-]{3,20}$/.test(value)) return Alert.alert('エラー', '3〜20文字の英数字・ハイフン・アンダースコアで入力してください');
@@ -142,11 +163,12 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange }:
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.profileCard}>
               <View style={styles.avatar}>{avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.avatarImage} /> : <Ionicons name="person-outline" size={31} color={brand.violet} />}</View>
-              <View style={styles.profileCopy}><Text style={styles.profileName}>{email?.split('@')[0] || 'ユーザー'}</Text><Text style={styles.email}>{email}</Text></View>
+              <View style={styles.profileCopy}><Text style={styles.profileName}>{displayName || shareId || email?.split('@')[0] || 'ユーザー'}</Text><Text style={styles.email}>{email}</Text></View>
               <TouchableOpacity style={styles.avatarButton} onPress={pickAvatar} disabled={avatarLoading}>{avatarLoading ? <ActivityIndicator color={brand.violet} /> : <Text style={styles.avatarButtonText}>画像を変更</Text>}</TouchableOpacity>
             </View>
             {avatarDataUrl && <TouchableOpacity onPress={() => saveAvatar(null)}><Text style={styles.removeAvatar}>プロフィール画像を削除</Text></TouchableOpacity>}
             <View style={styles.menuGroup}>
+              {menuItem('person-outline', '名前変更', () => { setNewDisplayName(displayName || ''); setDialog('name'); })}
               {menuItem('mail-outline', 'メールアドレス変更', () => setDialog('email'))}
               {menuItem('at-outline', 'ユーザーID変更', () => setDialog('shareId'))}
               {menuItem('shield-checkmark-outline', '出発地・到着地マスク設定', () => { onClose(); router.push('/settings/masked-locations'); })}
@@ -162,10 +184,10 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange }:
       </View>
       <Modal visible={dialog !== null} transparent animationType="fade" onRequestClose={() => setDialog(null)}>
         <View style={styles.dialogOverlay}><View style={styles.dialog}>
-          <View style={styles.dialogHeader}><Text style={styles.dialogTitle}>{dialog === 'email' ? 'メールアドレス変更' : 'ユーザーID変更'}</Text><TouchableOpacity onPress={() => setDialog(null)}><Ionicons name="close" size={22} color={brand.ink} /></TouchableOpacity></View>
-          <Text style={styles.dialogHelp}>{dialog === 'email' ? `現在: ${email}` : `現在: ${shareId || '未設定'}`}</Text>
-          <TextInput style={styles.input} value={dialog === 'email' ? newEmail : newShareId} onChangeText={dialog === 'email' ? setNewEmail : setNewShareId} placeholder={dialog === 'email' ? '新しいメールアドレス' : '新しいユーザーID'} autoCapitalize="none" />
-          <TouchableOpacity style={styles.saveButton} onPress={dialog === 'email' ? submitEmail : submitShareId} disabled={saving}>{saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveText}>変更する</Text>}</TouchableOpacity>
+          <View style={styles.dialogHeader}><Text style={styles.dialogTitle}>{dialog === 'name' ? '名前変更' : dialog === 'email' ? 'メールアドレス変更' : 'ユーザーID変更'}</Text><TouchableOpacity onPress={() => setDialog(null)}><Ionicons name="close" size={22} color={brand.ink} /></TouchableOpacity></View>
+          <Text style={styles.dialogHelp}>{dialog === 'name' ? `現在: ${displayName || '未設定'}` : dialog === 'email' ? `現在: ${email}` : `現在: ${shareId || '未設定'}`}</Text>
+          <TextInput style={styles.input} value={dialog === 'name' ? newDisplayName : dialog === 'email' ? newEmail : newShareId} onChangeText={dialog === 'name' ? setNewDisplayName : dialog === 'email' ? setNewEmail : setNewShareId} placeholder={dialog === 'name' ? '名前（50文字以内）' : dialog === 'email' ? '新しいメールアドレス' : '新しいユーザーID'} autoCapitalize={dialog === 'name' ? 'sentences' : 'none'} maxLength={dialog === 'name' ? 50 : undefined} />
+          <TouchableOpacity style={styles.saveButton} onPress={dialog === 'name' ? submitDisplayName : dialog === 'email' ? submitEmail : submitShareId} disabled={saving}>{saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveText}>変更する</Text>}</TouchableOpacity>
         </View></View>
       </Modal>
     </Modal>

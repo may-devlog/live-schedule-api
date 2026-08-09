@@ -138,6 +138,34 @@
 
 ---
 
+### 4. users（ユーザー・プロフィール）
+
+認証情報、共有用ユーザーID、公開プロフィールを管理するテーブルです。
+
+| カラム名 | データ型 | NULL許可 | デフォルト値 | 説明 | 公開範囲 |
+|---------|---------|---------|------------|------|---------|
+| id | INTEGER | NO | AUTO_INCREMENT | 内部ユーザーID | 非公開 |
+| email | TEXT | NO | - | ログイン用メールアドレス | 非公開 |
+| password_hash | TEXT | NO | - | パスワードハッシュ | 非公開 |
+| email_verified | INTEGER | NO | 0 | メール確認済みフラグ | 非公開 |
+| share_id | TEXT | YES | NULL | 共有URL・ユーザー検索に使う一意のユーザーID | 公開 |
+| display_name | TEXT | YES | NULL | プロフィールに表示する名前（最大50文字） | 公開 |
+| sharing_enabled | INTEGER | NO | 0 | 共有ページ公開フラグ | 非公開 |
+| avatar_data_url | TEXT | YES | NULL | プロフィール画像 | 公開 |
+| created_at | TEXT | YES | NULL | 作成日時 | 非公開 |
+| updated_at | TEXT | YES | NULL | 更新日時 | 非公開 |
+
+`display_name`と`share_id`は別項目です。名前は重複可能で、空の場合は画面上で`share_id`を代替表示します。共有ページが無効なユーザーの名前・画像は公開APIから取得できません。
+
+**プロフィールAPI:**
+
+- `GET /auth/profile`: ログイン中ユーザーのメールアドレス、ユーザーID、名前、画像を取得
+- `PUT /auth/profile`: 名前を更新。`{ "display_name": "名前" }`、`null`または空文字で未設定に戻す
+- `PUT /auth/profile-avatar`: プロフィール画像を更新
+- `GET /share/:share_id/profile`: 公開中ユーザーのユーザーID、名前、画像を取得
+
+---
+
 ## リレーション
 
 ```
@@ -209,4 +237,3 @@ schedules (1) ──< (N) stays
 | 日付 | バージョン | 変更内容 | 変更者 |
 |------|-----------|---------|--------|
 | 2025-01-XX | 1.0.0 | 初版作成 | - |
-

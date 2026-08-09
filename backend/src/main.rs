@@ -81,6 +81,11 @@ struct ProfileAvatarRequest {
 }
 
 #[derive(Debug, Deserialize)]
+struct UpdateProfileRequest {
+    display_name: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
 struct SearchSharedUserQuery {
     user_id: String,
 }
@@ -1868,8 +1873,8 @@ async fn get_profile(
     user: AuthenticatedUser,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
-    let row: Option<(String, Option<String>, Option<String>)> = sqlx::query_as(
-        "SELECT email, share_id, avatar_data_url FROM users WHERE id = ?"
+    let row: Option<(String, Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT email, share_id, avatar_data_url, display_name FROM users WHERE id = ?"
     )
     .bind(user.user_id as i64)
     .fetch_optional(&pool)
@@ -1877,13 +1882,45 @@ async fn get_profile(
     .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "プロフィールの取得に失敗しました".to_string() })))?;
 
     match row {
-        Some((email, share_id, avatar_data_url)) => Ok(Json(serde_json::json!({
+        Some((email, share_id, avatar_data_url, display_name)) => Ok(Json(serde_json::json!({
             "email": email,
             "share_id": share_id,
             "avatar_data_url": avatar_data_url,
+            "display_name": display_name,
         }))),
         None => Err((StatusCode::NOT_FOUND, Json(ErrorResponse { error: "ユーザーが見つかりません".to_string() }))),
     }
+}
+
+// PUT /auth/profile - プロフィール名更新（空文字で未設定に戻す）
+async fn update_profile(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<UpdateProfileRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let display_name = payload
+        .display_name
+        .map(|name| name.trim().to_string())
+        .filter(|name| !name.is_empty());
+
+    if display_name.as_ref().map(|name| name.chars().count()).unwrap_or(0) > 50 {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse {
+            error: "名前は50文字以内で入力してください".to_string(),
+        })));
+    }
+
+    let now = Utc::now().to_rfc3339();
+    sqlx::query("UPDATE users SET display_name = ?, updated_at = ? WHERE id = ?")
+        .bind(&display_name)
+        .bind(&now)
+        .bind(user.user_id as i64)
+        .execute(&pool)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
+            error: "名前の更新に失敗しました".to_string(),
+        })))?;
+
+    Ok(Json(serde_json::json!({ "success": true, "display_name": display_name })))
 }
 
 // PUT /auth/profile-avatar - プロフィール画像更新（nullで削除）
@@ -1921,8 +1958,8 @@ async fn get_shared_profile(
     Path(share_id): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
-    let row: Option<(Option<String>, i32)> = sqlx::query_as(
-        "SELECT avatar_data_url, sharing_enabled FROM users WHERE share_id = ?"
+    let row: Option<(Option<String>, Option<String>, i32)> = sqlx::query_as(
+        "SELECT avatar_data_url, display_name, sharing_enabled FROM users WHERE share_id = ?"
     )
     .bind(&share_id)
     .fetch_optional(&pool)
@@ -1930,9 +1967,10 @@ async fn get_shared_profile(
     .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "プロフィールの取得に失敗しました".to_string() })))?;
 
     match row {
-        Some((avatar_data_url, sharing_enabled)) if sharing_enabled != 0 => Ok(Json(serde_json::json!({
+        Some((avatar_data_url, display_name, sharing_enabled)) if sharing_enabled != 0 => Ok(Json(serde_json::json!({
             "share_id": share_id,
             "avatar_data_url": avatar_data_url,
+            "display_name": display_name,
         }))),
         _ => Err((StatusCode::NOT_FOUND, Json(ErrorResponse { error: "共有プロフィールが見つかりません".to_string() }))),
     }
@@ -1954,8 +1992,8 @@ async fn search_shared_user(
         ));
     }
 
-    let row: Option<(String, Option<String>)> = sqlx::query_as(
-        "SELECT share_id, avatar_data_url FROM users WHERE share_id = ? AND sharing_enabled = 1"
+    let row: Option<(String, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT share_id, avatar_data_url, display_name FROM users WHERE share_id = ? AND sharing_enabled = 1"
     )
     .bind(user_id)
     .fetch_optional(&pool)
@@ -1965,11 +2003,12 @@ async fn search_shared_user(
         Json(ErrorResponse { error: "ユーザー検索に失敗しました".to_string() }),
     ))?;
 
-    if let Some((share_id, avatar_data_url)) = row {
+    if let Some((share_id, avatar_data_url, display_name)) = row {
         Ok(Json(serde_json::json!({
             "found": true,
             "share_id": share_id,
             "avatar_data_url": avatar_data_url,
+            "display_name": display_name,
         })))
     } else {
         // 未登録と非公開を区別せず、非公開ユーザーの存在を開示しない
@@ -5965,7 +6004,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/auth/change-share-id", post(change_share_id))
         .route("/auth/toggle-sharing", post(toggle_sharing))
         .route("/auth/sharing-status", get(get_sharing_status))
-        .route("/auth/profile", get(get_profile))
+        .route("/auth/profile", get(get_profile).put(update_profile))
         .route("/auth/profile-avatar", put(update_profile_avatar))
         .route("/masked-locations", get(list_masked_locations).post(create_masked_location))
         .route("/masked-locations/:id", put(update_masked_location).delete(delete_masked_location))
@@ -6060,6 +6099,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       share_id              TEXT UNIQUE,
       sharing_enabled       INTEGER NOT NULL DEFAULT 0,
       avatar_data_url       TEXT,
+      display_name          TEXT,
       created_at            TEXT,
       updated_at            TEXT
     );
@@ -6300,6 +6340,9 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await;
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN avatar_data_url TEXT")
+        .execute(pool)
+        .await;
+    let _ = sqlx::query("ALTER TABLE users ADD COLUMN display_name TEXT")
         .execute(pool)
         .await;
     
