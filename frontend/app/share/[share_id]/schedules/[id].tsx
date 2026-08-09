@@ -584,26 +584,23 @@ export default function SharedScheduleDetailScreen() {
                   style={styles.trafficCard}
                   onPress={() => router.push(`/share/${share_id}/traffic/${traffic.id}`)}
                 >
-                  <View style={styles.cardRow}>
-                    <Text style={styles.cardDate}>{traffic.date}</Text>
-                    <View style={styles.cardPriceContainer}>
-                      <Text style={styles.cardPrice}>{formatCurrency(displayFare)}</Text>
-                      {displayMiles !== null && displayMiles !== undefined && (
-                        <Text style={styles.cardMiles}>{displayMiles}マイル</Text>
-                      )}
+                  {traffic.transportation && (
+                    <View style={styles.trafficTag}>
+                      <NotionTag label={traffic.transportation} color={transportationColors.get(traffic.id) || undefined} />
+                    </View>
+                  )}
+                  <View style={styles.cardMain}>
+                    <Text style={styles.cardRoute}>{detailWithNotes}</Text>
+                    <View style={styles.cardSubRow}>
+                      <Ionicons name="calendar-outline" size={15} color={brand.violet} />
+                      <Text style={styles.cardDate}>{traffic.date}</Text>
                     </View>
                   </View>
-                  <View style={styles.cardRow}>
-                    {traffic.transportation && (
-                      <NotionTag
-                        label={traffic.transportation}
-                        color={transportationColors.get(traffic.id) || undefined}
-                      />
-                    )}
+                  <View style={styles.cardPriceContainer}>
+                    <Text style={styles.cardPrice}>{formatCurrency(displayFare)}</Text>
+                    {displayMiles !== null && displayMiles !== undefined && <Text style={styles.cardMiles}>{displayMiles}マイル</Text>}
                   </View>
-                  <View style={styles.cardRow}>
-                    <Text style={styles.cardDetail}>{detailWithNotes}</Text>
-                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={brand.muted} />
                 </TouchableOpacity>
               );
             })
@@ -631,14 +628,19 @@ export default function SharedScheduleDetailScreen() {
                   style={styles.stayCard}
                   onPress={() => router.push(`/share/${share_id}/stay/${stay.id}`)}
                 >
-                  <View style={styles.cardRow}>
-                    <Text style={styles.cardDateTime}>{dateTimeText}</Text>
-                    <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
+                  <View style={styles.stayIcon}>
+                    <Ionicons name="bed" size={28} color="#FFFFFF" />
                   </View>
-                  <View style={styles.cardRow}>
-                    <Text style={styles.cardDetail}>{maskHotelName(stay.hotel_name, false)}</Text>
-                    {stay.breakfast_flag && <Text style={styles.breakfastTag}>朝食あり</Text>}
+                  <View style={styles.cardMain}>
+                    <Text style={styles.cardRoute}>{maskHotelName(stay.hotel_name, false)}</Text>
+                    <View style={styles.cardSubRow}>
+                      <Ionicons name="calendar-outline" size={15} color={brand.violet} />
+                      <Text style={styles.cardDateTime}>{dateTimeText}</Text>
+                    </View>
                   </View>
+                  {stay.breakfast_flag && <Text style={styles.breakfastTag}>朝食あり</Text>}
+                  <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
+                  <Ionicons name="chevron-forward" size={20} color={brand.muted} />
                 </TouchableOpacity>
               );
             })
@@ -776,20 +778,31 @@ const styles = StyleSheet.create({
   },
   trafficCard: {
     marginBottom: 12,
-    padding: 12,
+    padding: 16,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: "#e9e9e7",
     borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
   },
   stayCard: {
     marginBottom: 12,
-    padding: 12,
+    padding: 16,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: "#e9e9e7",
     borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
   },
+  trafficTag: { minWidth: 82, alignItems: "center" },
+  stayIcon: { width: 54, height: 54, borderRadius: 8, backgroundColor: brand.violet, alignItems: "center", justifyContent: "center" },
+  cardMain: { flex: 1, minWidth: 0, gap: 7 },
+  cardRoute: { color: brand.ink, fontSize: 14, lineHeight: 20, fontWeight: "700" },
+  cardSubRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   cardRow: {
     flexDirection: "row",
     alignItems: "center",
