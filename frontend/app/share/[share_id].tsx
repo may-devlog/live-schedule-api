@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   shareButton: { minHeight: 42, borderWidth: 1, borderColor: brand.violet, borderRadius: 10, paddingHorizontal: 16, flexDirection: 'row', gap: 7, alignItems: 'center' },
   shareText: { color: brand.violet, fontSize: 14, fontWeight: '700' },
   calendarSection: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: brand.border, borderRadius: 18, padding: 22, ...cardShadow },
-  pageTitle: { color: brand.violet, fontSize: 12, fontWeight: '800', letterSpacing: 0.6, marginBottom: 12 },
+  pageTitle: { color: brand.violet, fontSize: 14, fontWeight: '800', letterSpacing: 0.6, marginBottom: 12 },
   sectionCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: brand.border, borderRadius: 16, padding: 20, ...cardShadow },
   eyebrow: { color: brand.violet, fontSize: 12, fontWeight: '800', letterSpacing: 0.6, marginBottom: 12 },
   eventRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 4 },
