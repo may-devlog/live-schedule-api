@@ -438,6 +438,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
             </View>
           </View>
           {authenticated && <View style={[styles.heroActions, isMobile && styles.heroActionsMobile]}>
+            <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={brand.violetDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
             <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={brand.white} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
             <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Ionicons name="trash-outline" size={17} color="#DC2626" /><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
           </View>}
@@ -779,6 +780,8 @@ const styles = StyleSheet.create({
   heroCopy: { flex: 1, minWidth: 0 },
   heroActions: { flexDirection: "row", alignItems: "center", gap: 16 },
   heroActionsMobile: { width: "100%", justifyContent: "flex-end" },
+  duplicateAction: { minHeight: 42, paddingHorizontal: 18, backgroundColor: brand.lavender, borderWidth: 1, borderColor: "#C4B5FD", borderRadius: 9, flexDirection: "row", alignItems: "center", gap: 8 },
+  duplicateActionText: { color: brand.violetDark, fontSize: 14, fontWeight: "700" },
   editAction: { minHeight: 42, paddingHorizontal: 20, backgroundColor: brand.violet, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, flexDirection: "row", alignItems: "center", gap: 8 },
   editActionText: { color: brand.white, fontSize: 14, fontWeight: "700" },
   deleteAction: { minHeight: 42, paddingHorizontal: 14, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: 7, borderWidth: 1, borderColor: "#FECACA", backgroundColor: "#FEF2F2", borderRadius: 9 },
@@ -805,11 +808,11 @@ const styles = StyleSheet.create({
   eventColumnDesktop: { flex: 2 },
   costColumnDesktop: { flex: 1 },
   secondaryGrid: { gap: 20 },
-  secondaryGridDesktop: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
+  secondaryGridDesktop: { position: "relative", alignItems: "flex-start" },
   secondaryColumn: { minWidth: 0 },
-  trafficColumnDesktop: { order: 1, flexGrow: 0, flexBasis: "66%", marginTop: -92 },
-  relatedColumnDesktop: { order: 2, flexGrow: 1, flexBasis: "30%" },
-  stayColumnDesktop: { order: 3, flexGrow: 0, flexBasis: "66%" },
+  trafficColumnDesktop: { width: "66%", marginTop: -92 },
+  relatedColumnDesktop: { position: "absolute", right: 0, top: 0, width: "31%" },
+  stayColumnDesktop: { width: "66%" },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
