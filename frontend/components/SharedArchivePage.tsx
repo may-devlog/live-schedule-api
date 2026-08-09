@@ -203,7 +203,7 @@ export function SharedArchivePage({ shareId, initialYear, fetchSchedules, fetchA
                   {!!mainGroup.title && <>
                     <TouchableOpacity style={styles.groupHeader} onPress={() => toggleSection(mainKey)}>
                       <Ionicons name={mainCollapsed ? "chevron-forward" : "chevron-down"} size={18} color={brand.muted} style={styles.groupChevron} />
-                      {mainColor ? <NotionTag label={mainGroup.title} color={mainColor} /> : <Text style={styles.groupTitle}>{mainGroup.title}</Text>}
+                      {mainColor ? <View style={styles.groupTagWrap}><NotionTag label={mainGroup.title} color={mainColor} /></View> : <Text style={styles.groupTitle}>{mainGroup.title}</Text>}
                       <Text style={styles.groupCount}>({mainCount})</Text>
                     </TouchableOpacity>
                     {!mainCollapsed && mainTotal > 0 && mainGrouping !== "lineup" && <View style={styles.groupTotal}><Text style={styles.groupTotalText}>¥{mainTotal.toLocaleString()}</Text></View>}
@@ -218,7 +218,7 @@ export function SharedArchivePage({ shareId, initialYear, fetchSchedules, fetchA
                         {!!subGroup.title && <>
                           <TouchableOpacity style={[styles.groupHeader, !!mainGroup.title && styles.subGroupHeader]} onPress={() => toggleSection(subKey)}>
                             <Ionicons name={subCollapsed ? "chevron-forward" : "chevron-down"} size={16} color={brand.muted} style={styles.groupChevron} />
-                            {subColor ? <NotionTag label={subGroup.title} color={subColor} /> : <Text style={styles.subGroupTitle}>{subGroup.title}</Text>}
+                            {subColor ? <View style={styles.groupTagWrap}><NotionTag label={subGroup.title} color={subColor} /></View> : <Text style={styles.subGroupTitle}>{subGroup.title}</Text>}
                             <Text style={styles.groupCount}>({subGroup.data.length})</Text>
                           </TouchableOpacity>
                           {!subCollapsed && subTotal > 0 && mainGrouping !== "lineup" && <View style={[styles.groupTotal, !!mainGroup.title && styles.subGroupTotal]}><Text style={styles.groupTotalText}>¥{subTotal.toLocaleString()}</Text></View>}
@@ -270,6 +270,7 @@ const styles = StyleSheet.create({
   groupHeader: { minHeight: 54, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: brand.border, backgroundColor: "#F9F7FC" },
   subGroupHeader: { paddingLeft: 32, minHeight: 48, backgroundColor: "#FCFBFD" },
   groupChevron: { width: 26 },
+  groupTagWrap: { alignSelf: "center", justifyContent: "center" },
   groupTitle: { color: brand.ink, fontSize: 16, fontWeight: "700" },
   subGroupTitle: { color: brand.ink, fontSize: 14, fontWeight: "600" },
   groupCount: { marginLeft: 8, color: brand.muted, fontSize: 12 },
