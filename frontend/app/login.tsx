@@ -59,8 +59,8 @@ export default function LoginScreen() {
         <View style={styles.main}>
           <View style={styles.form}>
             <View style={styles.logoWrap}><BrandMark size={58} /></View>
-            <Text style={styles.title}>おかえりなさい</Text>
-            <Text style={styles.subtitle}>GenBGTにログインして、ライブの予定を管理しましょう。</Text>
+            <Text style={styles.title}>GenBGTにログイン</Text>
+            <Text style={styles.subtitle}>ログインして、ライブの予定や思い出を管理しましょう。</Text>
 
             <Text style={styles.label}>メールアドレス</Text>
             <TextInput
