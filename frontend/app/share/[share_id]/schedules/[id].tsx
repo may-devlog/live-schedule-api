@@ -360,6 +360,9 @@ export default function SharedScheduleDetailScreen() {
         {/* イベント概要 */}
         <View style={styles.heroCard}>
           <View style={styles.heroCopy}>
+            <View style={styles.heroBadges}>
+              {!!schedule.area && <NotionTag label={schedule.area} color={areaColor || undefined} />}
+            </View>
             <Text style={styles.mainTitle}>{schedule.title}</Text>
             <View style={styles.heroMeta}>
               <View style={styles.metaItem}>
@@ -695,6 +698,7 @@ const styles = StyleSheet.create({
     ...(Platform.OS === "web" ? ({ boxShadow: "0 14px 40px rgba(46,16,101,0.08)" } as any) : {}),
   },
   heroCopy: { flex: 1, minWidth: 0 },
+  heroBadges: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
   mainTitle: {
     fontSize: 27,
     fontWeight: "800",
