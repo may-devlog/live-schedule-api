@@ -711,7 +711,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                   style={[styles.stayCard, isMobile && styles.stayCardMobile]}
                   onPress={() => router.push(authenticated ? `/stay/${stay.id}` : `/share/${share_id}/stay/${stay.id}`)}
                 >
-                  {!isMobile && <View style={styles.stayIcon}>
+                  {authenticated && !isMobile && <View style={styles.stayIcon}>
                     <Ionicons name="bed" size={28} color="#FFFFFF" />
                   </View>}
                   <View style={[styles.cardMain, isMobile && styles.stayMainMobile]}>
@@ -813,9 +813,9 @@ const styles = StyleSheet.create({
   heroMeta: { gap: 10, marginTop: 16 },
   timeMetaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
-  heroDateRow: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+  heroDateRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
   metaText: { color: brand.ink, fontSize: 14, lineHeight: 21, fontWeight: "400", flexShrink: 1 },
-  weekdayText: { color: brand.ink, fontWeight: "700", minWidth: 30, textAlign: "center", fontVariant: ["tabular-nums"], fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
+  weekdayText: { color: brand.ink, fontWeight: "700", minWidth: 0, textAlign: "left", fontVariant: ["tabular-nums"], fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
   stayWeekdayText: { width: 52, minWidth: 52, textAlign: "left" },
   stayWeekdayTextMobile: { width: 42, minWidth: 42 },
   stayWeekdayTextNarrow: { width: 36, minWidth: 36, fontSize: 12 },
@@ -948,7 +948,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  datePartsRow: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 8, rowGap: 2 },
+  datePartsRow: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 6, rowGap: 2 },
   dateValue: { fontSize: 14, color: "#37352f", fontVariant: ["tabular-nums"] },
   timeValue: { fontSize: 14, color: "#37352f", fontVariant: ["tabular-nums"] },
   cardPriceContainer: {
