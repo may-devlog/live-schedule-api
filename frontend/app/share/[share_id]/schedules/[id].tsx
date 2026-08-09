@@ -389,7 +389,10 @@ export default function SharedScheduleDetailScreen() {
             <View style={styles.heroMeta}>
               <View style={styles.metaItem}>
                 <Ionicons name="calendar-outline" size={16} color={brand.violet} />
-                <Text style={styles.metaText}>{scheduleDateDisplay.date} <Text style={[styles.weekdayText, scheduleDateDisplay.tone === "saturday" && styles.saturdayText, scheduleDateDisplay.tone === "holiday" && styles.holidayText]}>{scheduleDateDisplay.weekday}</Text></Text>
+                <View style={styles.heroDateRow}>
+                  <Text style={styles.metaText}>{scheduleDateDisplay.date}</Text>
+                  <Text style={[styles.weekdayText, scheduleDateDisplay.tone === "saturday" && styles.saturdayText, scheduleDateDisplay.tone === "holiday" && styles.holidayText]}>{scheduleDateDisplay.weekday}</Text>
+                </View>
               </View>
               <View style={styles.timeMetaRow}>
                 <Ionicons name="time-outline" size={16} color={brand.violet} />
@@ -625,7 +628,10 @@ export default function SharedScheduleDetailScreen() {
                     <Text style={styles.cardRouteBold}>{detailWithNotes}</Text>
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
-                      <Text style={styles.cardDate}>{dateDisplay(traffic.date).date} <Text style={[styles.weekdayText, dateDisplay(traffic.date).tone === "saturday" && styles.saturdayText, dateDisplay(traffic.date).tone === "holiday" && styles.holidayText]}>{dateDisplay(traffic.date).weekday}</Text></Text>
+                      <View style={styles.datePartsRow}>
+                        <Text style={styles.dateValue}>{dateDisplay(traffic.date).date}</Text>
+                        <Text style={[styles.weekdayText, dateDisplay(traffic.date).tone === "saturday" && styles.saturdayText, dateDisplay(traffic.date).tone === "holiday" && styles.holidayText]}>{dateDisplay(traffic.date).weekday}</Text>
+                      </View>
                     </View>
                   </View>
                   <View style={[styles.cardPriceContainer, isMobile && styles.cardPriceMobile]}>
@@ -668,12 +674,20 @@ export default function SharedScheduleDetailScreen() {
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
                       <Text style={styles.stayDateLabel}>チェックイン</Text>
-                      <Text style={styles.cardDateTime}>{checkInFormatted.date} <Text style={[styles.weekdayText, checkInFormatted.tone === "saturday" && styles.saturdayText, checkInFormatted.tone === "holiday" && styles.holidayText]}>{checkInFormatted.weekday}</Text>{checkInFormatted.time ? ` ${checkInFormatted.time}` : ""}</Text>
+                      <View style={styles.datePartsRow}>
+                        <Text style={styles.dateValue}>{checkInFormatted.date}</Text>
+                        <Text style={[styles.weekdayText, checkInFormatted.tone === "saturday" && styles.saturdayText, checkInFormatted.tone === "holiday" && styles.holidayText]}>{checkInFormatted.weekday}</Text>
+                        {!!checkInFormatted.time && <Text style={styles.timeValue}>{checkInFormatted.time}</Text>}
+                      </View>
                     </View>
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
                       <Text style={styles.stayDateLabel}>チェックアウト</Text>
-                      <Text style={styles.cardDateTime}>{checkOutFormatted.date} <Text style={[styles.weekdayText, checkOutFormatted.tone === "saturday" && styles.saturdayText, checkOutFormatted.tone === "holiday" && styles.holidayText]}>{checkOutFormatted.weekday}</Text>{checkOutFormatted.time ? ` ${checkOutFormatted.time}` : ""}</Text>
+                      <View style={styles.datePartsRow}>
+                        <Text style={styles.dateValue}>{checkOutFormatted.date}</Text>
+                        <Text style={[styles.weekdayText, checkOutFormatted.tone === "saturday" && styles.saturdayText, checkOutFormatted.tone === "holiday" && styles.holidayText]}>{checkOutFormatted.weekday}</Text>
+                        {!!checkOutFormatted.time && <Text style={styles.timeValue}>{checkOutFormatted.time}</Text>}
+                      </View>
                     </View>
                   </View>
                   <Text style={[styles.breakfastTag, !stay.breakfast_flag && styles.breakfastTagOff]}>
@@ -742,6 +756,7 @@ const styles = StyleSheet.create({
   heroMeta: { gap: 10, marginTop: 16 },
   timeMetaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
+  heroDateRow: { flexDirection: "row", alignItems: "baseline", gap: 8 },
   metaText: { color: brand.ink, fontSize: 14, lineHeight: 21, fontWeight: "400", flexShrink: 1 },
   weekdayText: { color: brand.ink, fontWeight: "700", minWidth: 30, textAlign: "center", fontVariant: ["tabular-nums"], fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
   saturdayText: { color: "#2563EB" },
@@ -868,18 +883,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  cardDate: {
-    fontSize: 14,
-    color: "#37352f",
-    flex: 1,
-    fontVariant: ["tabular-nums"],
-  },
-  cardDateTime: {
-    fontSize: 14,
-    color: "#37352f",
-    flex: 1,
-    fontVariant: ["tabular-nums"],
-  },
+  datePartsRow: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 8, rowGap: 2 },
+  dateValue: { fontSize: 14, color: "#37352f", fontVariant: ["tabular-nums"] },
+  timeValue: { fontSize: 14, color: "#37352f", fontVariant: ["tabular-nums"] },
   cardPriceContainer: {
     alignItems: "flex-end",
   },
