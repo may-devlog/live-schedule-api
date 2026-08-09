@@ -193,7 +193,7 @@ export default function StayDetailScreen() {
       
       // Website選択肢を取得
       try {
-        const websiteRes = await authenticatedFetch(getApiUrl("/stay-select-options/website"));
+        const websiteRes = await authenticatedFetch(getApiUrl("/stay-select-options/WEBSITE"));
         if (websiteRes.ok) {
           const websiteData: SelectOption[] = await websiteRes.json();
           setWebsiteOptions(websiteData);

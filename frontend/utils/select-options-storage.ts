@@ -490,10 +490,10 @@ export async function loadStaySelectOptions(
       let res: Response;
       if (shareId) {
         // 共有ページの場合は共有用エンドポイントを使用
-        res = await fetch(getApiUrl(`/share/${shareId}/stay-select-options/${key.toLowerCase()}`));
+        res = await fetch(getApiUrl(`/share/${shareId}/stay-select-options/${key}`));
       } else {
         // 通常の場合は認証付きエンドポイントを使用
-        res = await authenticatedFetch(getApiUrl(`/stay-select-options/${key.toLowerCase()}`));
+        res = await authenticatedFetch(getApiUrl(`/stay-select-options/${key}`));
       }
       if (res.ok) {
         const options: SelectOption[] = await res.json();
@@ -682,7 +682,7 @@ export async function saveStaySelectOptions(
   const { authenticatedFetch, getApiUrl } = await import("./api");
   const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
   // まずデータベースに保存
-  const url = getApiUrl(`/stay-select-options/${key.toLowerCase()}`);
+  const url = getApiUrl(`/stay-select-options/${key}`);
   const payload = { options };
   console.log(`[StaySelectOptions] Saving ${key} to database:`, url);
   console.log(`[StaySelectOptions] Payload:`, JSON.stringify(payload, null, 2));
@@ -710,4 +710,3 @@ export async function saveStaySelectOptions(
   await AsyncStorage.setItem(STAY_STORAGE_KEYS[key], JSON.stringify(options));
   console.log(`[StaySelectOptions] Saved ${key} to local storage`);
 }
-

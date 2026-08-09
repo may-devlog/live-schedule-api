@@ -66,7 +66,7 @@ export default function PublicStayDetailScreen() {
         
         // Website選択肢を取得（認証不要のエンドポイントを使用）
         try {
-          const websiteRes = await fetch(getApiUrl("/stay-select-options/website"));
+          const websiteRes = await fetch(getApiUrl("/stay-select-options/WEBSITE"));
           if (websiteRes.ok) {
             const websiteData: SelectOption[] = await websiteRes.json();
             setWebsiteOptions(websiteData);

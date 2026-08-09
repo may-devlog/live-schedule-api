@@ -5043,11 +5043,48 @@ async fn get_shared_select_options(
     }
 }
 
+fn normalize_stay_option_type(option_type: &str) -> Option<&'static str> {
+    match option_type.trim().to_ascii_uppercase().as_str() {
+        "WEBSITE" => Some("WEBSITE"),
+        "STATUS" => Some("STATUS"),
+        _ => None,
+    }
+}
+
+fn invalid_stay_option_type() -> (StatusCode, Json<ErrorResponse>) {
+    (
+        StatusCode::BAD_REQUEST,
+        Json(ErrorResponse {
+            error: "Invalid stay option type. Expected WEBSITE or STATUS".to_string(),
+        }),
+    )
+}
+
+#[cfg(test)]
+mod stay_option_type_tests {
+    use super::normalize_stay_option_type;
+
+    #[test]
+    fn normalizes_supported_types_case_insensitively() {
+        assert_eq!(normalize_stay_option_type("website"), Some("WEBSITE"));
+        assert_eq!(normalize_stay_option_type("STATUS"), Some("STATUS"));
+        assert_eq!(normalize_stay_option_type(" Status "), Some("STATUS"));
+    }
+
+    #[test]
+    fn rejects_unknown_types() {
+        assert_eq!(normalize_stay_option_type("category"), None);
+        assert_eq!(normalize_stay_option_type(""), None);
+    }
+}
+
 // GET /share/:share_id/stay-select-options/:type - 共有ページ用のホテル選択肢を取得（認証不要）
 async fn get_shared_stay_select_options(
     Path((share_id, option_type)): Path<(String, String)>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<ErrorResponse>)> {
+    let option_type = normalize_stay_option_type(&option_type)
+        .ok_or_else(invalid_stay_option_type)?;
     eprintln!("[GetSharedStaySelectOptions] Called with share_id: {}, option_type: {}", share_id, option_type);
     
     // share_idからユーザーIDを取得
@@ -5119,6 +5156,8 @@ async fn get_stay_select_options(
     Path(option_type): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<ErrorResponse>)> {
+    let option_type = normalize_stay_option_type(&option_type)
+        .ok_or_else(invalid_stay_option_type)?;
     // DISABLE_AUTHが有効な場合、データベースから実際のユーザーIDを取得
     let actual_user_id = if std::env::var("DISABLE_AUTH").is_ok() {
         if let Ok(user_id_str) = std::env::var("DEFAULT_USER_ID") {
@@ -5176,6 +5215,8 @@ async fn save_stay_select_options(
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<SelectOptionsRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let option_type = normalize_stay_option_type(&option_type)
+        .ok_or_else(invalid_stay_option_type)?;
     // DISABLE_AUTHが有効な場合、データベースから実際のユーザーIDを取得
     let actual_user_id = if std::env::var("DISABLE_AUTH").is_ok() {
         if let Ok(user_id_str) = std::env::var("DEFAULT_USER_ID") {
