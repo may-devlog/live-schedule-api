@@ -352,7 +352,7 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
 
       {/* 曜日ヘッダー */}
       <View style={styles.weekdayHeader}>
-        {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day, index) => (
+        {["月", "火", "水", "木", "金", "土", "日"].map((day, index) => (
           <View key={index} style={styles.weekday}>
             <Text
               style={[

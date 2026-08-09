@@ -26,7 +26,7 @@ function nextDateDisplay(raw: string) {
   const datePart = raw.slice(0, 10);
   const [year, month, day] = datePart.split('-').map(Number);
   const date = new Date(year, month - 1, day);
-  const weekday = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][date.getDay()];
+  const weekday = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
   const tone = date.getDay() === 6 ? 'saturday' : (date.getDay() === 0 || isJapaneseHolidayDate(datePart)) ? 'holiday' : 'weekday';
   return { label: datePart.replace(/-/g, '.'), weekday, tone };
 }

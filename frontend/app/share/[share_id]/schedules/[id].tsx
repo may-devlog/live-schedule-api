@@ -354,7 +354,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
     const datePart = raw.slice(0, 10);
     const [year, month, day] = datePart.split("-").map(Number);
     const date = new Date(year, month - 1, day);
-    const weekday = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][date.getDay()] ?? "";
+    const weekday = ["日", "月", "火", "水", "木", "金", "土"][date.getDay()] ?? "";
     const tone = date.getDay() === 6 ? "saturday" as const : (date.getDay() === 0 || isJapaneseHolidayDate(datePart)) ? "holiday" as const : "normal" as const;
     return { date: datePart.replace(/-/g, "."), weekday, tone };
   }
