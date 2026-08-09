@@ -372,9 +372,13 @@ export default function SharedScheduleDetailScreen() {
               </View>
               <View style={styles.timeMetaRow}>
                 <Ionicons name="time-outline" size={16} color={brand.violet} />
-                {!!schedule.open && <Text style={styles.metaText}>開場 {schedule.open}</Text>}
-                {!!schedule.start && <Text style={styles.metaText}>開演 {schedule.start}</Text>}
-                {!!schedule.end && schedule.end !== "-" && <Text style={styles.metaText}>終演 {schedule.end}</Text>}
+                <Text style={styles.metaText}>
+                  {[
+                    schedule.open ? `開場 ${schedule.open}` : null,
+                    schedule.start ? `開演 ${schedule.start}` : null,
+                    schedule.end && schedule.end !== "-" ? `終演 ${schedule.end}` : null,
+                  ].filter(Boolean).join("　")}
+                </Text>
               </View>
               {!!schedule.venue && (
                 <View style={styles.metaItem}>
@@ -700,7 +704,7 @@ const styles = StyleSheet.create({
     lineHeight: 36,
   },
   heroMeta: { gap: 10, marginTop: 16 },
-  timeMetaRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 14 },
+  timeMetaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
   metaText: { color: brand.muted, fontSize: 13, flexShrink: 1 },
   primaryGrid: { gap: 20 },
