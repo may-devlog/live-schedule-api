@@ -120,7 +120,7 @@ export default function PublicStayDetailScreen() {
         </View>
 
         {/* [Stay Info] */}
-        <NotionPropertyBlock title="宿泊情報">
+        <NotionPropertyBlock title="宿泊情報" collapsibleOnMobile={false}>
           <NotionProperty
             label="チェックイン"
             value={formatDateValue(stay.check_in)}

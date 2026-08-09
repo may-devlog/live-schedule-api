@@ -39,16 +39,18 @@ type PropertyBlockProps = {
   children: React.ReactNode;
   title?: string;
   iconName?: keyof typeof Ionicons.glyphMap;
+  collapsibleOnMobile?: boolean;
 };
 
-export function NotionPropertyBlock({ children, title, iconName }: PropertyBlockProps) {
+export function NotionPropertyBlock({ children, title, iconName, collapsibleOnMobile = true }: PropertyBlockProps) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
-  const [expanded, setExpanded] = useState(!isMobile);
+  const isCollapsible = isMobile && collapsibleOnMobile;
+  const [expanded, setExpanded] = useState(!isCollapsible);
 
   useEffect(() => {
-    setExpanded(!isMobile);
-  }, [isMobile]);
+    setExpanded(!isCollapsible);
+  }, [isCollapsible]);
 
   // 有効な子要素のみをフィルタリングして配列に変換
   const validChildren = React.Children.toArray(children).filter(
@@ -63,14 +65,14 @@ export function NotionPropertyBlock({ children, title, iconName }: PropertyBlock
       {title && (
         <TouchableOpacity
           style={[styles.blockTitleContainer, isMobile && styles.blockTitleContainerMobile]}
-          onPress={() => isMobile && setExpanded((value) => !value)}
-          disabled={!isMobile}
-          accessibilityRole={isMobile ? "button" : undefined}
-          accessibilityState={isMobile ? { expanded } : undefined}
+          onPress={() => isCollapsible && setExpanded((value) => !value)}
+          disabled={!isCollapsible}
+          accessibilityRole={isCollapsible ? "button" : undefined}
+          accessibilityState={isCollapsible ? { expanded } : undefined}
         >
           {!!iconName && <Ionicons name={iconName} size={22} color="#5B21B6" style={styles.blockIcon} />}
           <Text style={styles.blockTitle}>{title}</Text>
-          {isMobile && <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color="#7C3AED" />}
+          {isCollapsible && <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color="#7C3AED" />}
         </TouchableOpacity>
       )}
       {expanded && <View style={styles.properties}>
