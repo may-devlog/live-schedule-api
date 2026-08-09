@@ -17,6 +17,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="theme-color" content="#5B21B6" />
         <link rel="dns-prefetch" href="https://api.genbgt.com" />
         <link rel="preconnect" href="https://api.genbgt.com" crossOrigin="anonymous" />
+        <script dangerouslySetInnerHTML={{ __html: 'window.__genbgtReplaceState = window.history.replaceState.bind(window.history);' }} />
         <ScrollViewStyleReset />
       </head>
       <body>{children}</body>
