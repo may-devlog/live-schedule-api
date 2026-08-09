@@ -5843,8 +5843,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| "3000".to_string())
         .parse::<u16>()
         .unwrap_or(3000);
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    println!("Server running at http://0.0.0.0:{}", port);
+    let bind_host = std::env::var("BIND_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let addr: SocketAddr = format!("{}:{}", bind_host, port)
+        .parse()
+        .unwrap_or_else(|_| SocketAddr::from(([0, 0, 0, 0], port)));
+    println!("Server running at http://{}:{}", bind_host, port);
 
     // バックグラウンドでキャンセル期限通知を定期的にチェック
     let pool_clone = pool.clone();
