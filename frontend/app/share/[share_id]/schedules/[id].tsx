@@ -720,7 +720,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                       <Text style={[styles.stayDateLabel, isMobile && styles.stayDateLabelMobile]}>チェックイン</Text>
                       <View style={[styles.datePartsRow, isMobile && styles.stayDatePartsMobile]}>
                         <Text style={styles.dateValue}>{checkInFormatted.date}</Text>
-                        <Text style={[styles.weekdayText, styles.stayWeekdayText, checkInFormatted.tone === "saturday" && styles.saturdayText, checkInFormatted.tone === "holiday" && styles.holidayText]}>{checkInFormatted.weekday}</Text>
+                        <Text style={[styles.weekdayText, styles.stayWeekdayText, isMobile && styles.stayWeekdayTextMobile, checkInFormatted.tone === "saturday" && styles.saturdayText, checkInFormatted.tone === "holiday" && styles.holidayText]}>{checkInFormatted.weekday}</Text>
                         {!!checkInFormatted.time && <Text style={styles.timeValue}>{checkInFormatted.time}</Text>}
                       </View>
                     </View>
@@ -729,7 +729,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                       <Text style={[styles.stayDateLabel, isMobile && styles.stayDateLabelMobile]}>チェックアウト</Text>
                       <View style={[styles.datePartsRow, isMobile && styles.stayDatePartsMobile]}>
                         <Text style={styles.dateValue}>{checkOutFormatted.date}</Text>
-                        <Text style={[styles.weekdayText, styles.stayWeekdayText, checkOutFormatted.tone === "saturday" && styles.saturdayText, checkOutFormatted.tone === "holiday" && styles.holidayText]}>{checkOutFormatted.weekday}</Text>
+                        <Text style={[styles.weekdayText, styles.stayWeekdayText, isMobile && styles.stayWeekdayTextMobile, checkOutFormatted.tone === "saturday" && styles.saturdayText, checkOutFormatted.tone === "holiday" && styles.holidayText]}>{checkOutFormatted.weekday}</Text>
                         {!!checkOutFormatted.time && <Text style={styles.timeValue}>{checkOutFormatted.time}</Text>}
                       </View>
                     </View>
@@ -816,6 +816,7 @@ const styles = StyleSheet.create({
   metaText: { color: brand.ink, fontSize: 14, lineHeight: 21, fontWeight: "400", flexShrink: 1 },
   weekdayText: { color: brand.ink, fontWeight: "700", minWidth: 30, textAlign: "center", fontVariant: ["tabular-nums"], fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
   stayWeekdayText: { width: 52, minWidth: 52, textAlign: "left" },
+  stayWeekdayTextMobile: { width: 42, minWidth: 42 },
   saturdayText: { color: "#2563EB" },
   holidayText: { color: "#DC2626" },
   primaryGrid: { gap: 0 },
