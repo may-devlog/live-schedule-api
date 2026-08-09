@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Platform,
   RefreshControl,
   ScrollView,
@@ -39,6 +40,7 @@ export default function SharedScheduleScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
+  const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
 
   const fetchSchedules = useCallback(async () => {
     try {
@@ -84,6 +86,14 @@ export default function SharedScheduleScreen() {
   }, [share_id, fetchSchedules]);
 
   useEffect(() => {
+    if (!share_id) return;
+    fetch(getApiUrl(`/share/${share_id}/profile`))
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => setAvatarDataUrl(data?.avatar_data_url ?? null))
+      .catch(() => setAvatarDataUrl(null));
+  }, [share_id]);
+
+  useEffect(() => {
     if (!nextSchedules.length) return;
     let mounted = true;
     fetchAreaColors(nextSchedules).then((colors) => mounted && setAreaColors(colors));
@@ -124,7 +134,9 @@ export default function SharedScheduleScreen() {
       >
         <View style={styles.main}>
           <View style={styles.profileCard}>
-            <View style={styles.avatar}><Ionicons name="person" size={26} color="#A6A0AE" /></View>
+            <View style={styles.avatar}>
+              {avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.avatarImage} /> : <Ionicons name="person" size={26} color="#A6A0AE" />}
+            </View>
             <View style={styles.profileCopy}>
               <Text style={styles.profileName}>{share_id}</Text>
               <Text style={styles.profileLabel}>ライブスケジュール</Text>
@@ -196,6 +208,7 @@ const styles = StyleSheet.create({
   main: { width: '100%', maxWidth: 1080, alignSelf: 'center', paddingHorizontal: 24, paddingTop: 28, paddingBottom: 48, gap: 16 },
   profileCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: brand.border, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', ...cardShadow },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#F0EEF3', alignItems: 'center', justifyContent: 'center' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 24 },
   profileCopy: { marginLeft: 14, flex: 1 },
   profileName: { color: brand.ink, fontSize: 17, fontWeight: '700' },
   profileLabel: { color: brand.muted, fontSize: 13, marginTop: 3 },

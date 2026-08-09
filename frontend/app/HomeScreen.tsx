@@ -13,7 +13,9 @@ import {
   Platform,
   ScrollView,
   RefreshControl,
+  Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { PersonIcon, NotificationIcon } from "@/components/CustomIcons";
@@ -87,6 +89,7 @@ export default function HomeScreen() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchSharingStatus();
+      fetchProfile();
       fetchNotifications();
     }
   }, [isAuthenticated]);
@@ -271,6 +274,55 @@ export default function HomeScreen() {
   const [showChangeShareIdModal, setShowChangeShareIdModal] = useState(false);
   const [newShareId, setNewShareId] = useState("");
   const [changeShareIdLoading, setChangeShareIdLoading] = useState(false);
+  const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await authenticatedFetch(getApiUrl("/auth/profile"));
+      if (res.ok) {
+        const data = await res.json();
+        setAvatarDataUrl(data.avatar_data_url ?? null);
+      }
+    } catch (error) {
+      console.error("[HomeScreen] Failed to fetch profile:", error);
+    }
+  };
+
+  const saveAvatar = async (dataUrl: string | null) => {
+    const res = await authenticatedFetch(getApiUrl("/auth/profile-avatar"), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatar_data_url: dataUrl }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "プロフィール画像の更新に失敗しました");
+    setAvatarDataUrl(data.avatar_data_url ?? null);
+  };
+
+  const handlePickAvatar = async () => {
+    try {
+      setAvatarLoading(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.55,
+        base64: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset.base64) throw new Error("画像を読み込めませんでした");
+      const mimeType = asset.mimeType === "image/png" || asset.mimeType === "image/webp" ? asset.mimeType : "image/jpeg";
+      const dataUrl = `data:${mimeType};base64,${asset.base64}`;
+      if (dataUrl.length > 2_100_000) throw new Error("画像サイズは1.5MB以下にしてください");
+      await saveAvatar(dataUrl);
+    } catch (error: any) {
+      Alert.alert("エラー", error.message || "プロフィール画像の更新に失敗しました");
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
 
   // 通知関連のstate
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -631,7 +683,7 @@ export default function HomeScreen() {
               }}
             >
               {isAuthenticated ? (
-                <PersonIcon size={40} color="#37352f" />
+                avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.headerAvatar} /> : <PersonIcon size={40} color="#37352f" />
               ) : (
                 <IconLock size={34} color="#37352f" />
               )}
@@ -761,7 +813,7 @@ export default function HomeScreen() {
               }}
             >
               {isAuthenticated ? (
-                <PersonIcon size={40} color="#37352f" />
+                avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.headerAvatar} /> : <PersonIcon size={40} color="#37352f" />
               ) : (
                 <IconLock size={34} color="#37352f" />
               )}
@@ -1026,6 +1078,26 @@ export default function HomeScreen() {
             <Text style={{ marginBottom: 16, color: "#666" }}>
               {email || 'ログイン中'} でログイン中です
             </Text>
+
+            <View style={styles.avatarSettings}>
+              <View style={styles.avatarPreview}>
+                {avatarDataUrl ? (
+                  <Image source={{ uri: avatarDataUrl }} style={styles.avatarImage} />
+                ) : (
+                  <PersonIcon size={32} color="#7C3AED" />
+                )}
+              </View>
+              <View style={styles.avatarActions}>
+                <TouchableOpacity style={styles.avatarButton} onPress={handlePickAvatar} disabled={avatarLoading}>
+                  {avatarLoading ? <ActivityIndicator color="#7C3AED" /> : <Text style={styles.avatarButtonText}>画像を変更</Text>}
+                </TouchableOpacity>
+                {avatarDataUrl && (
+                  <TouchableOpacity onPress={() => saveAvatar(null).catch((error) => Alert.alert("エラー", error.message))} disabled={avatarLoading}>
+                    <Text style={styles.avatarRemoveText}>画像を削除</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
 
             <TouchableOpacity
               style={[styles.menuButton, { marginBottom: 12 }]}
@@ -1322,6 +1394,54 @@ const styles = StyleSheet.create({
   notificationList: {
     maxHeight: 400,
   },
+  avatarSettings: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    backgroundColor: "#F5F3FF",
+  },
+  avatarPreview: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: "#DDD6FE",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  avatarActions: {
+    flex: 1,
+    alignItems: "flex-start",
+    gap: 9,
+  },
+  avatarButton: {
+    minHeight: 38,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#7C3AED",
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarButtonText: {
+    color: "#7C3AED",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  avatarRemoveText: {
+    color: "#C2414B",
+    fontSize: 12,
+    fontWeight: "600",
+  },
   notificationItem: {
     padding: 16,
     borderRadius: 8,
@@ -1359,6 +1479,13 @@ const styles = StyleSheet.create({
     padding: 8,
     justifyContent: "center",
     alignItems: "center",
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "#DDD6FE",
   },
   newButton: {
     alignSelf: "flex-start",

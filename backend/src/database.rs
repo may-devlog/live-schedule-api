@@ -18,6 +18,7 @@ pub async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       new_email TEXT,
       share_id TEXT UNIQUE,
       sharing_enabled INTEGER NOT NULL DEFAULT 0,
+      avatar_data_url TEXT,
       created_at   TEXT,
       updated_at   TEXT
     );
@@ -27,6 +28,10 @@ pub async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         eprintln!("[INIT_DB] Error creating users table: {}", e);
         return Err(e);
     }
+
+    let _ = sqlx::query("ALTER TABLE users ADD COLUMN avatar_data_url TEXT")
+        .execute(pool)
+        .await;
 
     let create_schedules = r#"
     CREATE TABLE IF NOT EXISTS schedules (
@@ -184,5 +189,4 @@ pub async fn create_pool() -> Result<Pool<Sqlite>, sqlx::Error> {
     
     Ok(pool)
 }
-
 

@@ -75,6 +75,11 @@ struct ToggleSharingRequest {
     enabled: bool,
 }
 
+#[derive(Debug, Deserialize)]
+struct ProfileAvatarRequest {
+    avatar_data_url: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 struct AuthResponse {
     token: Option<String>, // メール未確認の場合はNone
@@ -1821,6 +1826,81 @@ async fn get_sharing_status(
                 error: "ユーザーが見つかりません".to_string(),
             }),
         ))
+    }
+}
+
+// GET /auth/profile - ログイン中ユーザーのプロフィール取得
+async fn get_profile(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let row: Option<(String, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT email, share_id, avatar_data_url FROM users WHERE id = ?"
+    )
+    .bind(user.user_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "プロフィールの取得に失敗しました".to_string() })))?;
+
+    match row {
+        Some((email, share_id, avatar_data_url)) => Ok(Json(serde_json::json!({
+            "email": email,
+            "share_id": share_id,
+            "avatar_data_url": avatar_data_url,
+        }))),
+        None => Err((StatusCode::NOT_FOUND, Json(ErrorResponse { error: "ユーザーが見つかりません".to_string() }))),
+    }
+}
+
+// PUT /auth/profile-avatar - プロフィール画像更新（nullで削除）
+async fn update_profile_avatar(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<ProfileAvatarRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    if let Some(ref data_url) = payload.avatar_data_url {
+        let supported = data_url.starts_with("data:image/jpeg;base64,")
+            || data_url.starts_with("data:image/png;base64,")
+            || data_url.starts_with("data:image/webp;base64,");
+        if !supported {
+            return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "JPEG、PNG、WebP画像のみ使用できます".to_string() })));
+        }
+        if data_url.len() > 2_100_000 {
+            return Err((StatusCode::PAYLOAD_TOO_LARGE, Json(ErrorResponse { error: "画像サイズは1.5MB以下にしてください".to_string() })));
+        }
+    }
+
+    let now = Utc::now().to_rfc3339();
+    sqlx::query("UPDATE users SET avatar_data_url = ?, updated_at = ? WHERE id = ?")
+        .bind(&payload.avatar_data_url)
+        .bind(&now)
+        .bind(user.user_id as i64)
+        .execute(&pool)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "プロフィール画像の更新に失敗しました".to_string() })))?;
+
+    Ok(Json(serde_json::json!({ "success": true, "avatar_data_url": payload.avatar_data_url })))
+}
+
+// GET /share/:share_id/profile - 共有ページ用公開プロフィール
+async fn get_shared_profile(
+    Path(share_id): Path<String>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let row: Option<(Option<String>, i32)> = sqlx::query_as(
+        "SELECT avatar_data_url, sharing_enabled FROM users WHERE share_id = ?"
+    )
+    .bind(&share_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "プロフィールの取得に失敗しました".to_string() })))?;
+
+    match row {
+        Some((avatar_data_url, sharing_enabled)) if sharing_enabled != 0 => Ok(Json(serde_json::json!({
+            "share_id": share_id,
+            "avatar_data_url": avatar_data_url,
+        }))),
+        _ => Err((StatusCode::NOT_FOUND, Json(ErrorResponse { error: "共有プロフィールが見つかりません".to_string() }))),
     }
 }
 
@@ -5723,9 +5803,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/auth/change-share-id", post(change_share_id))
         .route("/auth/toggle-sharing", post(toggle_sharing))
         .route("/auth/sharing-status", get(get_sharing_status))
+        .route("/auth/profile", get(get_profile))
+        .route("/auth/profile-avatar", put(update_profile_avatar))
         .route("/masked-locations", get(list_masked_locations).post(create_masked_location))
         .route("/masked-locations/:id", put(update_masked_location).delete(delete_masked_location))
         .route("/share/:share_id", get(get_shared_schedules))
+        .route("/share/:share_id/profile", get(get_shared_profile))
         .route("/share/:share_id/schedules/:id", get(get_shared_schedule))
         .route("/share/:share_id/traffic/:id", get(get_shared_traffic))
         .route("/share/:share_id/select-options/:type", get(get_shared_select_options))
@@ -5810,6 +5893,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       new_email             TEXT,
       share_id              TEXT UNIQUE,
       sharing_enabled       INTEGER NOT NULL DEFAULT 0,
+      avatar_data_url       TEXT,
       created_at            TEXT,
       updated_at            TEXT
     );
@@ -6046,6 +6130,9 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await;
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN sharing_enabled INTEGER NOT NULL DEFAULT 0")
+        .execute(pool)
+        .await;
+    let _ = sqlx::query("ALTER TABLE users ADD COLUMN avatar_data_url TEXT")
         .execute(pool)
         .await;
     
