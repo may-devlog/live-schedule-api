@@ -9,7 +9,6 @@ import { getOptionColorSync } from "../utils/get-option-color";
 import { isJapaneseHolidayDate } from "./ScheduleCalendar";
 
 type Props = {
-  shareId: string;
   initialYear: string;
   fetchSchedules: (year: string) => Promise<Schedule[]>;
   fetchAvailableYears: () => Promise<number[]>;
@@ -28,7 +27,7 @@ function dateParts(raw: string) {
   return { month, day: String(day).padStart(2, "0"), weekday, tone };
 }
 
-export function SharedArchivePage({ shareId, initialYear, fetchSchedules, fetchAvailableYears, onBack, onSelectYear, onSchedulePress }: Props) {
+export function SharedArchivePage({ initialYear, fetchSchedules, fetchAvailableYears, onBack, onSelectYear, onSchedulePress }: Props) {
   const { width } = useWindowDimensions();
   const mobile = width < 720;
   const [year, setYear] = useState(initialYear);
@@ -81,7 +80,6 @@ export function SharedArchivePage({ shareId, initialYear, fetchSchedules, fetchA
             <Text style={styles.backText}>スケジュールに戻る</Text>
           </TouchableOpacity>
           <Text style={[styles.title, mobile && styles.titleMobile]}>{year} ARCHIVE</Text>
-          <Text style={styles.subtitle}>{shareId}のライブ記録</Text>
           <View style={styles.yearTabs}>
             {years.map((item) => (
               <TouchableOpacity key={item} style={[styles.yearTab, String(item) === year && styles.yearTabActive]} onPress={() => selectYear(item)}>
@@ -142,7 +140,6 @@ const styles = StyleSheet.create({
   backText: { color: brand.violet, fontSize: 14, fontWeight: "700" },
   title: { color: brand.plum, fontSize: 48, lineHeight: 56, fontWeight: "800", letterSpacing: -1.2 },
   titleMobile: { fontSize: 32, lineHeight: 40, letterSpacing: -0.6 },
-  subtitle: { color: brand.muted, fontSize: 15, marginTop: 4 },
   yearTabs: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 22, marginBottom: 28 },
   yearTab: { minWidth: 82, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 9, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", alignItems: "center" },
   yearTabActive: { backgroundColor: brand.violet, borderColor: brand.violet },

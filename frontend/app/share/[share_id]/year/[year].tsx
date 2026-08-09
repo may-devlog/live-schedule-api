@@ -83,7 +83,6 @@ export default function SharedYearScreen() {
 
   return (
     <SharedArchivePage
-      shareId={share_id}
       fetchSchedules={fetchSchedules}
       fetchAvailableYears={fetchAvailableYears}
       onSchedulePress={handleOpenDetail}
