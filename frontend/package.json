@@ -8,7 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build": "expo export --platform web",
+    "build": "expo export --platform web && node ./scripts/normalize-icon-font-assets.mjs",
     "lint": "expo lint",
     "proxy:public": "node ./scripts/public-api-proxy.mjs"
   },
