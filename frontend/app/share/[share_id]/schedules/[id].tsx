@@ -734,10 +734,12 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                       </View>
                     </View>
                   </View>
-                  <Text style={[styles.breakfastTag, !stay.breakfast_flag && styles.breakfastTagOff]}>
-                    {stay.breakfast_flag ? "朝食あり" : "朝食なし"}
-                  </Text>
-                  <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
+                  <View style={[styles.stayCardActions, isMobile && styles.stayCardActionsMobile]}>
+                    <Text style={[styles.breakfastTag, !stay.breakfast_flag && styles.breakfastTagOff]}>
+                      {stay.breakfast_flag ? "朝食あり" : "朝食なし"}
+                    </Text>
+                    <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
+                  </View>
                   <Ionicons name="chevron-forward" size={20} color={brand.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
                 </TouchableOpacity>
               );
@@ -929,6 +931,8 @@ const styles = StyleSheet.create({
   cardPriceMobile: { marginLeft: "auto" },
   stayCardMobile: { flexWrap: "wrap", paddingRight: 38 },
   stayMainMobile: { flexBasis: "72%", flexGrow: 1 },
+  stayCardActions: { flexDirection: "row", alignItems: "center", gap: 14 },
+  stayCardActionsMobile: { flexBasis: "100%", justifyContent: "flex-end", paddingRight: 2 },
   cardSubRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   stayDateLabel: { width: 100, color: brand.muted, fontSize: 11, fontWeight: "400" },
   stayDateLabelMobile: { width: 82, flexShrink: 0 },
