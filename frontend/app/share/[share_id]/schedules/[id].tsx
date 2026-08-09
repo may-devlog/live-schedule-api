@@ -10,7 +10,9 @@ import {
   ScrollView,
   RefreshControl,
   Platform,
+  useWindowDimensions,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { getApiUrl } from "../../../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../../../components/notion-property";
 import { NotionTag } from "../../../../components/notion-tag";
@@ -18,8 +20,8 @@ import { getOptionColor } from "../../../../utils/get-option-color";
 import { loadSelectOptions } from "../../../../utils/select-options-storage";
 import type { Schedule } from "../../../HomeScreen";
 import { maskHotelName } from "../../../../utils/mask-hotel-name";
-import { PageHeader } from "../../../../components/PageHeader";
 import { CollapsibleDetailSection } from "../../../../components/CollapsibleDetailSection";
+import { PublicFooter, PublicHeader, brand } from "../../../../components/GenBGTBrand";
 
 type TrafficSummary = {
   id: number;
@@ -51,6 +53,8 @@ type StaySummary = {
 };
 
 export default function SharedScheduleDetailScreen() {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 900;
   const { share_id, id } = useLocalSearchParams<{ share_id: string; id: string }>();
   const router = useRouter();
   const [schedule, setSchedule] = useState<Schedule | null>(null);
@@ -300,9 +304,9 @@ export default function SharedScheduleDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader showBackButton={true} homePath={`/share/${share_id}`} />
+      <PublicHeader active="none" />
       <ScrollView 
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.scrollPage}
         refreshControl={
           Platform.OS !== 'web' ? (
             <RefreshControl 
@@ -347,15 +351,44 @@ export default function SharedScheduleDetailScreen() {
         }}
         scrollEventThrottle={16}
       >
-        {/* タイトル */}
-        <View style={styles.titleHeader}>
-          <Text style={styles.mainTitle}>
-            {schedule.title}
-          </Text>
+        <View style={styles.scrollContent}>
+        <TouchableOpacity style={styles.backLink} onPress={() => router.push(`/share/${share_id}`)}>
+          <Ionicons name="arrow-back" size={18} color={brand.violet} />
+          <Text style={styles.backLinkText}>スケジュールに戻る</Text>
+        </TouchableOpacity>
+
+        {/* イベント概要 */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroIcon}>
+            <Ionicons name="musical-notes" size={25} color={brand.violet} />
+          </View>
+          <View style={styles.heroCopy}>
+            <Text style={styles.heroEyebrow}>LIVE SCHEDULE</Text>
+            <Text style={styles.mainTitle}>{schedule.title}</Text>
+            <View style={styles.heroMeta}>
+              <View style={styles.metaItem}>
+                <Ionicons name="calendar-outline" size={16} color={brand.violet} />
+                <Text style={styles.metaText}>{schedule.date ?? formatDateTimeUTC(schedule.datetime)}</Text>
+              </View>
+              {!!schedule.start && (
+                <View style={styles.metaItem}>
+                  <Ionicons name="time-outline" size={16} color={brand.violet} />
+                  <Text style={styles.metaText}>{schedule.start} 開演</Text>
+                </View>
+              )}
+              {!!schedule.venue && (
+                <View style={styles.metaItem}>
+                  <Ionicons name="location-outline" size={16} color={brand.violet} />
+                  <Text style={styles.metaText}>{schedule.venue}</Text>
+                </View>
+              )}
+            </View>
+          </View>
         </View>
 
-        {/* [Event Info] */}
-        <NotionPropertyBlock title="イベント情報">
+        <View style={[styles.primaryGrid, isDesktop && styles.primaryGridDesktop]}>
+        <View style={styles.primaryColumn}>
+          <NotionPropertyBlock title="イベント情報">
           <NotionProperty label="グループ">
             {schedule.group ? (
               <NotionTag label={schedule.group} color={groupColor || undefined} />
@@ -419,10 +452,11 @@ export default function SharedScheduleDetailScreen() {
               <Text style={styles.emptyValue}>-</Text>
             )}
           </NotionProperty>
-        </NotionPropertyBlock>
+          </NotionPropertyBlock>
+        </View>
 
-        {/* [Cost] */}
-        <NotionPropertyBlock title="費用">
+        <View style={styles.primaryColumn}>
+          <NotionPropertyBlock title="費用">
           <NotionProperty label="販売元">
             {schedule.seller ? (
               <NotionTag label={schedule.seller} color={sellerColor || undefined} />
@@ -491,9 +525,12 @@ export default function SharedScheduleDetailScreen() {
               <Text style={styles.emptyValue}>-</Text>
             )}
           </NotionProperty>
-        </NotionPropertyBlock>
+          </NotionPropertyBlock>
+        </View>
+        </View>
 
-        {/* [Relation] Live */}
+        <View style={[styles.secondaryGrid, isDesktop && styles.secondaryGridDesktop]}>
+        <View style={styles.secondaryColumn}>
         <CollapsibleDetailSection title="関連スケジュール">
           {relatedIds.length === 0 ? (
             <Text style={styles.emptyValue}>関連スケジュールはありません</Text>
@@ -538,8 +575,9 @@ export default function SharedScheduleDetailScreen() {
             </View>
           )}
         </CollapsibleDetailSection>
+        </View>
 
-        {/* [Traffic] */}
+        <View style={styles.secondaryColumn}>
         <CollapsibleDetailSection title="交通">
           {trafficSummaries.length === 0 ? (
             <Text style={styles.emptyValue}>交通情報はありません</Text>
@@ -589,8 +627,9 @@ export default function SharedScheduleDetailScreen() {
             })
           )}
         </CollapsibleDetailSection>
+        </View>
 
-        {/* [Stay] */}
+        <View style={styles.secondaryColumn}>
         <CollapsibleDetailSection title="宿泊">
           {staySummaries.length === 0 ? (
             <Text style={styles.emptyValue}>宿泊情報はありません</Text>
@@ -623,6 +662,10 @@ export default function SharedScheduleDetailScreen() {
             })
           )}
         </CollapsibleDetailSection>
+        </View>
+        </View>
+        </View>
+        <PublicFooter />
       </ScrollView>
     </View>
   );
@@ -631,31 +674,56 @@ export default function SharedScheduleDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: brand.lavender,
   },
+  scrollPage: { flexGrow: 1 },
   scrollContent: {
-    padding: 24,
-    paddingBottom: 32,
-    maxWidth: 900,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 48,
+    maxWidth: 1180,
     flexGrow: 1,
     minHeight: '100%',
     alignSelf: "center",
     width: "100%",
   },
-  titleHeader: {
+  backLink: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+    marginBottom: 18,
+  },
+  backLinkText: { color: brand.violet, fontSize: 14, fontWeight: "700" },
+  heroCard: {
+    flexDirection: "row",
+    gap: 18,
+    padding: 26,
     marginBottom: 24,
-    gap: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: brand.border,
+    backgroundColor: brand.white,
+    ...(Platform.OS === "web" ? ({ boxShadow: "0 14px 40px rgba(46,16,101,0.08)" } as any) : {}),
   },
+  heroIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: "#EDE9FE", alignItems: "center", justifyContent: "center" },
+  heroCopy: { flex: 1, minWidth: 0 },
+  heroEyebrow: { color: brand.violet, fontSize: 11, fontWeight: "800", letterSpacing: 1.4, marginBottom: 7 },
   mainTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#37352f",
+    fontSize: 27,
+    fontWeight: "800",
+    color: brand.ink,
     lineHeight: 36,
-    flex: 1,
   },
+  heroMeta: { flexDirection: "row", flexWrap: "wrap", gap: 16, marginTop: 16 },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
+  metaText: { color: brand.muted, fontSize: 13, flexShrink: 1 },
+  primaryGrid: { gap: 20 },
+  primaryGridDesktop: { flexDirection: "row", alignItems: "flex-start" },
+  primaryColumn: { flex: 1, minWidth: 0 },
+  secondaryGrid: { gap: 20 },
+  secondaryGridDesktop: { flexDirection: "row", alignItems: "flex-start" },
+  secondaryColumn: { flex: 1, minWidth: 0 },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
@@ -673,10 +741,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   relationCard: {
-    backgroundColor: "#f7f6f3",
+    backgroundColor: "#FAF9FF",
     borderWidth: 1,
     borderColor: "#e9e9e7",
-    borderRadius: 3,
+    borderRadius: 12,
     padding: 12,
     marginBottom: 8,
   },
@@ -724,7 +792,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: "#e9e9e7",
-    borderRadius: 3,
+    borderRadius: 12,
   },
   stayCard: {
     marginBottom: 12,
@@ -732,7 +800,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: "#e9e9e7",
-    borderRadius: 3,
+    borderRadius: 12,
   },
   cardRow: {
     flexDirection: "row",
