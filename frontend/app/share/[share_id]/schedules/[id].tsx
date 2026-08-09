@@ -714,7 +714,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                     <Ionicons name="bed" size={28} color="#FFFFFF" />
                   </View>
                   <View style={[styles.cardMain, isMobile && styles.stayMainMobile]}>
-                    <Text style={styles.cardRoute}>{maskHotelName(stay.hotel_name, false)}</Text>
+                    <Text style={styles.cardRoute}>{maskHotelName(stay.hotel_name, authenticated)}</Text>
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
                       <Text style={styles.stayDateLabel}>チェックイン</Text>
