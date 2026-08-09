@@ -100,25 +100,34 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
       setLoading(true);
       setError(null);
 
-      const res = authenticated
-        ? await authenticatedFetch(getApiUrl(`/schedules/${id}`))
-        : await fetch(getApiUrl(`/share/${share_id}/schedules/${id}`));
-      if (!res.ok) {
-        if (res.status === 404) {
+      let found: Schedule;
+      if (authenticated) {
+        const res = await authenticatedFetch(getApiUrl('/schedules?include_canceled=true'));
+        if (!res.ok) throw new Error(`status: ${res.status}`);
+        const allData: Schedule[] = await res.json();
+        const matched = allData.find((item) => item.id === Number(id));
+        if (!matched) {
           throw new Error("スケジュールが見つかりません");
         }
-        throw new Error(`status: ${res.status}`);
+        found = matched;
+        setAllSchedules(allData);
+      } else {
+        const res = await fetch(getApiUrl(`/share/${share_id}/schedules/${id}`));
+        if (!res.ok) {
+          if (res.status === 404) throw new Error("スケジュールが見つかりません");
+          throw new Error(`status: ${res.status}`);
+        }
+        found = await res.json();
       }
-      const found: Schedule = await res.json();
       setSchedule(found);
 
       // 全スケジュールを取得（関連スケジュール表示用）
-      const allRes = authenticated
-        ? await authenticatedFetch(getApiUrl('/schedules?include_canceled=true'))
-        : await fetch(getApiUrl(`/share/${share_id}`));
-      if (allRes.ok) {
+      if (!authenticated) {
+        const allRes = await fetch(getApiUrl(`/share/${share_id}`));
+        if (allRes.ok) {
         const allData: Schedule[] = await allRes.json();
         setAllSchedules(allData);
+        }
       }
 
       await fetchTrafficAndStay(found.id);
