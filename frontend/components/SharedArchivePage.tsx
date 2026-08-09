@@ -115,7 +115,10 @@ export function SharedArchivePage({ initialYear, fetchSchedules, fetchAvailableY
                       </View>
                       {!mobile && <View style={styles.dateDivider} />}
                       <View style={styles.cardBody}>
-                        {mobile && <Text style={styles.mobileDate}>{String(parts.month).padStart(2, "0")}.{parts.day} <Text style={[styles.weekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text></Text>}
+                        {mobile && <View style={styles.mobileDateRow}>
+                          <Text style={styles.mobileDate}>{String(parts.month).padStart(2, "0")}.{parts.day}</Text>
+                          <Text style={[styles.mobileWeekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text>
+                        </View>}
                         <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
                         <View style={styles.archiveTags}>
                           {!!item.area && subGrouping !== "area" && <NotionTag label={item.area} color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")} />}
@@ -177,7 +180,9 @@ const styles = StyleSheet.create({
   holiday: { color: "#DC2626" },
   dateDivider: { width: 1, height: 66, backgroundColor: brand.border },
   cardBody: { flex: 1, minWidth: 0 },
-  mobileDate: { color: brand.violet, fontSize: 17, lineHeight: 22, fontWeight: "800", marginBottom: 7, fontVariant: ["tabular-nums"] },
+  mobileDateRow: { flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 7 },
+  mobileDate: { color: brand.violet, fontSize: 17, lineHeight: 22, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  mobileWeekday: { color: brand.violet, fontSize: 15, lineHeight: 20, fontWeight: "800", minWidth: 32, fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
   cardTitle: { color: brand.ink, fontSize: 16, lineHeight: 22, fontWeight: "800" },
   archiveTags: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 9 },
   venue: { color: brand.muted, fontSize: 13, marginTop: 8 },

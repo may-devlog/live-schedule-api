@@ -84,6 +84,7 @@ export default function SharedScheduleDetailScreen() {
   
   // Related SchedulesのArea色情報
   const [relatedAreaColors, setRelatedAreaColors] = useState<Map<number, string>>(new Map());
+  const [relatedStatusColors, setRelatedStatusColors] = useState<Map<number, string>>(new Map());
   
   // TrafficのTransportation色情報
   const [transportationColors, setTransportationColors] = useState<Map<number, string>>(new Map());
@@ -199,14 +200,20 @@ export default function SharedScheduleDetailScreen() {
     
     const fetchRelatedAreaColors = async () => {
       const colorMap = new Map<number, string>();
+      const statusColorMap = new Map<number, string>();
       for (const rid of relatedIds) {
         const related = allSchedules.find((s) => s.id === rid);
         if (related && related.area) {
           const color = await getOptionColor(related.area, "AREAS");
           colorMap.set(rid, color);
         }
+        if (related?.status) {
+          const color = await getOptionColor(related.status, "STATUSES");
+          statusColorMap.set(rid, color);
+        }
       }
       setRelatedAreaColors(colorMap);
+      setRelatedStatusColors(statusColorMap);
     };
     
     fetchRelatedAreaColors();
@@ -567,9 +574,10 @@ export default function SharedScheduleDetailScreen() {
                         <Text style={styles.relationTitle} numberOfLines={2}>{related.title}</Text>
                         <Ionicons name="chevron-forward" size={18} color={brand.muted} />
                       </View>
-                      {related.area && (
+                      {(related.area || related.status) && (
                         <View style={styles.relationArea}>
-                          <NotionTag label={related.area} color={relatedAreaColors.get(rid) || undefined} />
+                          {!!related.area && <NotionTag label={related.area} color={relatedAreaColors.get(rid) || undefined} />}
+                          {!!related.status && <NotionTag label={related.status} color={relatedStatusColors.get(rid) || undefined} />}
                         </View>
                       )}
                       {!!related.venue && <Text style={styles.relationVenue}>{related.venue}</Text>}
@@ -791,7 +799,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: brand.ink,
   },
-  relationArea: { alignSelf: "flex-start", marginLeft: 48, marginTop: 4 },
+  relationArea: { alignSelf: "flex-start", marginLeft: 48, marginTop: 4, flexDirection: "row", gap: 7 },
   relationVenue: { marginLeft: 48, marginTop: 4, color: brand.muted, fontSize: 12, lineHeight: 18 },
   relationLink: {
     fontSize: 14,
