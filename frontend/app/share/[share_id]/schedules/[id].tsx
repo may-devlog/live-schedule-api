@@ -710,15 +710,15 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                   style={[styles.stayCard, isMobile && styles.stayCardMobile]}
                   onPress={() => router.push(authenticated ? `/stay/${stay.id}` : `/share/${share_id}/stay/${stay.id}`)}
                 >
-                  <View style={[styles.stayIcon, isMobile && styles.stayIconMobile]}>
+                  {!isMobile && <View style={styles.stayIcon}>
                     <Ionicons name="bed" size={28} color="#FFFFFF" />
-                  </View>
+                  </View>}
                   <View style={[styles.cardMain, isMobile && styles.stayMainMobile]}>
                     {authenticated && <Text style={styles.cardRouteBold}>{stay.hotel_name}</Text>}
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
-                      <Text style={styles.stayDateLabel}>チェックイン</Text>
-                      <View style={styles.datePartsRow}>
+                      <Text style={[styles.stayDateLabel, isMobile && styles.stayDateLabelMobile]}>チェックイン</Text>
+                      <View style={[styles.datePartsRow, isMobile && styles.stayDatePartsMobile]}>
                         <Text style={styles.dateValue}>{checkInFormatted.date}</Text>
                         <Text style={[styles.weekdayText, styles.stayWeekdayText, checkInFormatted.tone === "saturday" && styles.saturdayText, checkInFormatted.tone === "holiday" && styles.holidayText]}>{checkInFormatted.weekday}</Text>
                         {!!checkInFormatted.time && <Text style={styles.timeValue}>{checkInFormatted.time}</Text>}
@@ -726,8 +726,8 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                     </View>
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
-                      <Text style={styles.stayDateLabel}>チェックアウト</Text>
-                      <View style={styles.datePartsRow}>
+                      <Text style={[styles.stayDateLabel, isMobile && styles.stayDateLabelMobile]}>チェックアウト</Text>
+                      <View style={[styles.datePartsRow, isMobile && styles.stayDatePartsMobile]}>
                         <Text style={styles.dateValue}>{checkOutFormatted.date}</Text>
                         <Text style={[styles.weekdayText, styles.stayWeekdayText, checkOutFormatted.tone === "saturday" && styles.saturdayText, checkOutFormatted.tone === "holiday" && styles.holidayText]}>{checkOutFormatted.weekday}</Text>
                         {!!checkOutFormatted.time && <Text style={styles.timeValue}>{checkOutFormatted.time}</Text>}
@@ -928,10 +928,11 @@ const styles = StyleSheet.create({
   cardMainMobile: { flexBasis: "65%", flexGrow: 1 },
   cardPriceMobile: { marginLeft: "auto" },
   stayCardMobile: { flexWrap: "wrap", paddingRight: 38 },
-  stayIconMobile: { width: 44, height: 44 },
   stayMainMobile: { flexBasis: "72%", flexGrow: 1 },
   cardSubRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   stayDateLabel: { width: 100, color: brand.muted, fontSize: 11, fontWeight: "400" },
+  stayDateLabelMobile: { width: 82, flexShrink: 0 },
+  stayDatePartsMobile: { flexWrap: "nowrap", columnGap: 6 },
   cardChevronMobile: { position: "absolute", right: 12, top: "50%" },
   cardRow: {
     flexDirection: "row",
