@@ -1043,10 +1043,10 @@ export default function DetailScreen() {
           {isAuthenticated && (
             <View style={styles.addLinksContainer}>
               <TouchableOpacity
-                style={styles.addLink}
+                style={[styles.addLink, styles.centeredAddLink]}
                 onPress={handleAddTraffic}
               >
-                <Text style={styles.addLinkText}>+ 新規ページを追加</Text>
+                <Text style={[styles.addLinkText, styles.centeredAddLinkText]}>＋ 交通を追加</Text>
               </TouchableOpacity>
               <View style={styles.relationLinkButton}>
                 <NotionTrafficRelation
@@ -1098,10 +1098,10 @@ export default function DetailScreen() {
           {isAuthenticated && (
             <View style={styles.addLinksContainer}>
           <TouchableOpacity
-                style={styles.addLink}
+                style={[styles.addLink, styles.centeredAddLink]}
                 onPress={handleAddStay}
           >
-                <Text style={styles.addLinkText}>+ 新規ページを追加</Text>
+                <Text style={[styles.addLinkText, styles.centeredAddLinkText]}>＋ 宿泊を追加</Text>
           </TouchableOpacity>
               <View style={styles.relationLinkButton}>
                 <NotionStayRelation
@@ -1362,6 +1362,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 4,
   },
+  centeredAddLink: { alignSelf: "center", paddingHorizontal: 18 },
+  centeredAddLinkText: { color: "#6D28D9", fontWeight: "600", textAlign: "center" },
   addLinkText: {
     fontSize: 14,
     color: "#787774",
