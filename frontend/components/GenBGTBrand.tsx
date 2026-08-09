@@ -88,22 +88,23 @@ export function AuthHeader() {
 }
 
 export function PublicFooter({ compact = false }: { compact?: boolean }) {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const narrow = width < 720;
   return (
     <View style={[styles.footer, compact && styles.footerCompact]}>
       <View style={[styles.footerInner, narrow && styles.footerInnerNarrow]}>
         <View>
-          <BrandWordmark light compact />
+          <BrandWordmark light={!compact} compact />
           {!compact && <Text style={styles.footerTagline}>ライブの予定と思い出を、ひとつの場所に。</Text>}
         </View>
         <View style={[styles.footerLinks, narrow && styles.footerLinksNarrow]}>
-          {!compact && <Text style={styles.footerLink}>使い方</Text>}
-          {!compact && <Text style={styles.footerLink}>お問い合わせ</Text>}
-          <Text style={styles.footerLink}>プライバシー</Text>
-          <Text style={styles.footerLink}>利用規約</Text>
+          {!compact && <TouchableOpacity onPress={() => router.push('/guide')}><Text style={styles.footerLink}>使い方</Text></TouchableOpacity>}
+          {!compact && <TouchableOpacity onPress={() => router.push('/contact')}><Text style={styles.footerLink}>お問い合わせ</Text></TouchableOpacity>}
+          <TouchableOpacity onPress={() => router.push('/privacy')}><Text style={[styles.footerLink, compact && styles.footerLinkCompact]}>プライバシー</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/terms')}><Text style={[styles.footerLink, compact && styles.footerLinkCompact]}>利用規約</Text></TouchableOpacity>
         </View>
-        <Text style={styles.copyright}>© 2026 GenBGT</Text>
+        <Text style={[styles.copyright, compact && styles.copyrightCompact]}>© 2026 GenBGT</Text>
       </View>
     </View>
   );
@@ -138,5 +139,7 @@ const styles = StyleSheet.create({
   footerLinks: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 28 },
   footerLinksNarrow: { gap: 18 },
   footerLink: { color: brand.white, fontSize: 13 },
+  footerLinkCompact: { color: brand.muted },
   copyright: { color: '#C4B5FD', fontSize: 12 },
+  copyrightCompact: { color: brand.muted },
 });
