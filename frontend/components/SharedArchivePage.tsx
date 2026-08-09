@@ -199,8 +199,8 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           <Text style={styles.cardTitle} numberOfLines={2}>{stay.hotel_name}</Text>
           <View style={styles.archiveTags}>
             {!!stay.website && stayGrouping !== "website" && <NotionTag label={stay.website} color={getOptionColorSync(stay.website, "WEBSITE")} />}
-            {!!stay.status && stayGrouping !== "status" && <NotionTag label={stay.status} color={getOptionColorSync(stay.status, "STAY_STATUS")} />}
             <Text style={[styles.breakfastLabel, !stay.breakfast_flag && styles.breakfastLabelOff]}>{stay.breakfast_flag ? "朝食あり" : "朝食なし"}</Text>
+            {!!stay.status && stayGrouping !== "status" && <NotionTag label={stay.status} color={getOptionColorSync(stay.status, "STAY_STATUS")} />}
           </View>
           <Text style={styles.venue}>{stay.check_in.replace(/-/g, ".")} → {stay.check_out.replace(/-/g, ".")}</Text>
         </View>
