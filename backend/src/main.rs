@@ -80,6 +80,11 @@ struct ProfileAvatarRequest {
     avatar_data_url: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+struct SearchSharedUserQuery {
+    user_id: String,
+}
+
 #[derive(Debug, Serialize)]
 struct AuthResponse {
     token: Option<String>, // メール未確認の場合はNone
@@ -1901,6 +1906,45 @@ async fn get_shared_profile(
             "avatar_data_url": avatar_data_url,
         }))),
         _ => Err((StatusCode::NOT_FOUND, Json(ErrorResponse { error: "共有プロフィールが見つかりません".to_string() }))),
+    }
+}
+
+// GET /share/search-user?user_id=... - 公開中の共有ユーザーを完全一致で検索
+async fn search_shared_user(
+    Query(query): Query<SearchSharedUserQuery>,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let user_id = query.user_id.trim();
+    if user_id.len() < 3
+        || user_id.len() > 20
+        || !user_id.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse { error: "ユーザーIDは3〜20文字の英数字・ハイフン・アンダースコアで入力してください".to_string() }),
+        ));
+    }
+
+    let row: Option<(String, Option<String>)> = sqlx::query_as(
+        "SELECT share_id, avatar_data_url FROM users WHERE share_id = ? AND sharing_enabled = 1"
+    )
+    .bind(user_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(ErrorResponse { error: "ユーザー検索に失敗しました".to_string() }),
+    ))?;
+
+    if let Some((share_id, avatar_data_url)) = row {
+        Ok(Json(serde_json::json!({
+            "found": true,
+            "share_id": share_id,
+            "avatar_data_url": avatar_data_url,
+        })))
+    } else {
+        // 未登録と非公開を区別せず、非公開ユーザーの存在を開示しない
+        Ok(Json(serde_json::json!({ "found": false })))
     }
 }
 
@@ -5808,6 +5852,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/masked-locations", get(list_masked_locations).post(create_masked_location))
         .route("/masked-locations/:id", put(update_masked_location).delete(delete_masked_location))
         .route("/share/:share_id", get(get_shared_schedules))
+        .route("/share/search-user", get(search_shared_user))
         .route("/share/:share_id/profile", get(get_shared_profile))
         .route("/share/:share_id/schedules/:id", get(get_shared_schedule))
         .route("/share/:share_id/traffic/:id", get(get_shared_traffic))

@@ -74,7 +74,7 @@ export function AuthHeader() {
         <BrandWordmark compact={narrow} />
         <View style={styles.headerActions}>
           {!narrow && (
-            <TouchableOpacity style={styles.textButton} onPress={() => router.push('/public')}>
+            <TouchableOpacity style={styles.textButton} onPress={() => router.push('/find-user')}>
               <Text style={styles.textButtonText}>共有ページを見る</Text>
             </TouchableOpacity>
           )}
