@@ -64,12 +64,14 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 3,
     alignSelf: "flex-start",
+    maxWidth: "100%",
     borderWidth: 0,
   },
   tagText: {
     fontSize: 12,
     color: "#37352f",
     fontWeight: "500",
+    flexShrink: 1,
+    flexWrap: "wrap",
   },
 });
-

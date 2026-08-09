@@ -240,7 +240,15 @@ export default function PublicDetailScreen() {
           <NotionProperty label="会場" value={schedule.venue} />
           <NotionProperty label="出演者">
             {lineupOptions.length > 0 ? (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              <View
+                style={{
+                  width: "100%",
+                  minWidth: 0,
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: 6,
+                }}
+              >
                 {lineupOptions.map((opt) => (
                   <NotionTag key={opt.label} label={opt.label} color={opt.color} />
                 ))}
@@ -475,4 +483,3 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e9e9e7",
   },
 });
-

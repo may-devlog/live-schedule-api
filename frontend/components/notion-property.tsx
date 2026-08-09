@@ -135,6 +135,7 @@ const styles = StyleSheet.create({
   },
   valueContainer: {
     flex: 1,
+    minWidth: 0,
     justifyContent: "center",
     paddingLeft: 14,
     paddingRight: 14,
@@ -146,4 +147,3 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
-

@@ -394,7 +394,15 @@ export default function SharedScheduleDetailScreen() {
           <NotionProperty label="会場" value={schedule.venue} />
           <NotionProperty label="出演者">
             {filteredLineupOptions.length > 0 ? (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              <View
+                style={{
+                  width: "100%",
+                  minWidth: 0,
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: 6,
+                }}
+              >
                 {filteredLineupOptions.map((opt) => (
                   <NotionTag key={opt.label} label={opt.label} color={opt.color} />
                 ))}
