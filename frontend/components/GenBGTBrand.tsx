@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
+import { AccountMenu } from './AccountMenu';
 
 export const brand = {
   violet: '#7C3AED',
@@ -96,6 +97,7 @@ export function AppHeader({ active = 'schedule' }: { active?: 'schedule' | 'arch
   const router = useRouter();
   const { email } = useAuth();
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
   const { width } = useWindowDimensions();
   const narrow = width < 720;
   const accountLabel = email?.split('@')[0] || 'ユーザー';
@@ -113,12 +115,13 @@ export function AppHeader({ active = 'schedule' }: { active?: 'schedule' | 'arch
           <TouchableOpacity onPress={() => router.push('/')}><Text style={[styles.navText, active === 'schedule' && styles.navActive]}>スケジュール</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => router.push(`/year/${new Date().getFullYear()}`)}><Text style={[styles.navText, active === 'archive' && styles.navActive]}>アーカイブ</Text></TouchableOpacity>
         </View>}
-        <TouchableOpacity style={styles.accountButton} onPress={() => router.push('/HomeScreen?openProfile=1')}>
+        <TouchableOpacity style={styles.accountButton} onPress={() => setMenuVisible(true)}>
           <View style={styles.accountAvatar}>{avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.accountAvatarImage} /> : <Text style={styles.accountAvatarText}>{accountLabel.slice(0, 1).toUpperCase()}</Text>}</View>
           {!narrow && <Text style={styles.accountLabel}>{accountLabel}</Text>}
           <Ionicons name="chevron-down" size={16} color={brand.muted} />
         </TouchableOpacity>
       </View>
+      <AccountMenu visible={menuVisible} onClose={() => setMenuVisible(false)} avatarDataUrl={avatarDataUrl} onAvatarChange={setAvatarDataUrl} />
     </View>
   );
 }
