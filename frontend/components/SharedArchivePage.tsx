@@ -5,6 +5,7 @@ import type { Schedule } from "../app/HomeScreen";
 import { PublicFooter, PublicHeader, brand } from "./GenBGTBrand";
 import { NotionTag } from "./notion-tag";
 import { getOptionColorSync } from "../utils/get-option-color";
+import { fetchAreaColors } from "../utils/fetch-area-colors";
 import { isJapaneseHolidayDate } from "./ScheduleCalendar";
 
 type Props = {
@@ -32,6 +33,7 @@ export function SharedArchivePage({ initialYear, fetchSchedules, fetchAvailableY
   const [year, setYear] = useState(initialYear);
   const [years, setYears] = useState<number[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
@@ -43,11 +45,12 @@ export function SharedArchivePage({ initialYear, fetchSchedules, fetchAvailableY
   useEffect(() => {
     let active = true;
     Promise.all([fetchAvailableYears(), fetchSchedules(year)])
-      .then(([available, data]) => {
+      .then(async ([available, data]) => {
         if (!active) return;
         const visible = data.filter((item) => item.status !== "Canceled").sort((a, b) => (b.date ?? b.datetime).localeCompare(a.date ?? a.datetime));
         setYears(available);
         setSchedules(visible);
+        setAreaColors(await fetchAreaColors(visible));
         setError(null);
       })
       .catch((e) => active && setError(e.message ?? "アーカイブを取得できませんでした"))
@@ -115,8 +118,8 @@ export function SharedArchivePage({ initialYear, fetchSchedules, fetchAvailableY
                         {mobile && <Text style={styles.mobileDate}>{String(parts.month).padStart(2, "0")}.{parts.day} <Text style={[styles.weekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text></Text>}
                         <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
                         <View style={styles.archiveTags}>
-                          {!!item.category && <NotionTag label={item.category} color={getOptionColorSync(item.category, "CATEGORIES")} />}
-                          {!!item.status && <NotionTag label={item.status} color={getOptionColorSync(item.status, "STATUSES")} />}
+                          {!!item.area && subGrouping !== "area" && <NotionTag label={item.area} color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")} />}
+                          {!!item.status && subGrouping !== "status" && <NotionTag label={item.status} color={getOptionColorSync(item.status, "STATUSES")} />}
                         </View>
                         {!!item.venue && <Text style={styles.venue} numberOfLines={1}>{item.venue}</Text>}
                       </View>
@@ -155,7 +158,7 @@ const styles = StyleSheet.create({
   groupingLabel: { width: 48, color: brand.ink, fontSize: 13, lineHeight: 36, fontWeight: "700" },
   groupingButtons: { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 8 },
   groupingButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  groupingButtonActive: { backgroundColor: brand.ink, borderColor: brand.ink },
+  groupingButtonActive: { backgroundColor: brand.violet, borderColor: brand.violet },
   groupingButtonText: { color: brand.ink, fontSize: 13, fontWeight: "400" },
   groupingButtonTextActive: { color: "#FFFFFF", fontWeight: "600" },
   loader: { marginVertical: 60 },

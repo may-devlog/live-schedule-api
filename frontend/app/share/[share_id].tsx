@@ -22,14 +22,6 @@ import { fetchAreaColors } from '../../utils/fetch-area-colors';
 import { getOptionColorSync } from '../../utils/get-option-color';
 import type { Schedule } from '../HomeScreen';
 
-function formatDateTimeUTC(iso: string): { date: string; time: string } {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return { date: iso, time: '' };
-  const date = [d.getUTCFullYear(), String(d.getUTCMonth() + 1).padStart(2, '0'), String(d.getUTCDate()).padStart(2, '0')].join('.');
-  const time = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
-  return { date, time };
-}
-
 export default function SharedScheduleScreen() {
   const router = useRouter();
   const { share_id } = useLocalSearchParams<{ share_id: string }>();
@@ -163,16 +155,15 @@ export default function SharedScheduleScreen() {
                 scrollEnabled={false}
                 ItemSeparatorComponent={() => <View style={styles.divider} />}
                 renderItem={({ item }) => {
-                  const formatted = formatDateTimeUTC(item.datetime);
                   return (
                     <TouchableOpacity style={styles.eventRow} onPress={() => router.push(`/share/${share_id}/schedules/${item.id}`)}>
                       <View style={styles.eventContent}>
-                        <Text style={styles.eventDate}>{formatted.date} <Text style={styles.eventTime}>{formatted.time}</Text></Text>
                         <Text style={styles.eventTitle} numberOfLines={2}>{item.title}</Text>
                         <View style={styles.metaRow}>
                           {item.area && <NotionTag label={item.area} color={areaColors.get(item.id) || getOptionColorSync(item.area, 'AREAS')} />}
-                          {!!item.venue && <View style={styles.venuePill}><Ionicons name="location-outline" size={14} color={brand.violet} /><Text style={styles.venueText}>{item.venue}</Text></View>}
+                          {!!item.status && <NotionTag label={item.status} color={getOptionColorSync(item.status, 'STATUSES')} />}
                         </View>
+                        {!!item.venue && <View style={styles.venuePill}><Ionicons name="location-outline" size={14} color={brand.violet} /><Text style={styles.venueText}>{item.venue}</Text></View>}
                       </View>
                       <View style={styles.arrowButton}><Ionicons name="arrow-forward" size={20} color="#FFFFFF" /></View>
                     </TouchableOpacity>
@@ -224,7 +215,7 @@ const styles = StyleSheet.create({
   eventTime: { color: brand.muted, fontWeight: '600' },
   eventTitle: { color: brand.ink, fontSize: 18, fontWeight: '700', lineHeight: 25, marginTop: 5 },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 10 },
-  venuePill: { backgroundColor: '#F5F3F7', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  venuePill: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
   venueText: { color: brand.muted, fontSize: 12 },
   arrowButton: { width: 46, height: 46, borderRadius: 23, backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center' },
   divider: { height: 1, backgroundColor: brand.border, marginVertical: 16 },
