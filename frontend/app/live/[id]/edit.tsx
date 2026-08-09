@@ -209,18 +209,13 @@ export default function EditScheduleScreen() {
         setNotes(found.notes || "");
         setCategory(found.category || null);
         
-        // Target: 既存の選択肢に存在する場合はそのまま使用、存在しない場合でもスケジュールの値を表示
-        const targetOptionLabels = targets.map(opt => opt.label);
-        console.log("Edit - Target options:", targetOptionLabels);
+        // 選択肢に存在しない場合でもスケジュールの値を表示
         console.log("Edit - Found target:", found.target);
-        // 選択肢に存在する場合はそのまま使用、存在しない場合でもスケジュールの値を表示
         const validTarget = found.target || null;
         console.log("Edit - Valid target:", validTarget);
         setTarget(validTarget);
         
         // Lineup: カンマ区切りの値をそのまま表示（選択肢に存在しない場合でも表示）
-        const lineupOptionLabels = lineupOptions.map(opt => opt.label);
-        console.log("Edit - Lineup options:", lineupOptionLabels);
         if (found.lineup) {
           // 選択肢に存在しない場合でも、スケジュールの値をそのまま表示
           setLineup(found.lineup);
@@ -244,7 +239,7 @@ export default function EditScheduleScreen() {
     };
 
     fetchSchedule();
-  }, [id, router, optionsLoaded, targets, lineupOptions]);
+  }, [id, router, optionsLoaded]);
 
   const handleSubmit = async () => {
     if (!id) return;
@@ -663,4 +658,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
