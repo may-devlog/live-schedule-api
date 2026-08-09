@@ -173,6 +173,11 @@ fn generate_token() -> String {
     hex::encode(bytes)
 }
 
+fn get_email_from() -> String {
+    std::env::var("EMAIL_FROM")
+        .unwrap_or_else(|_| "GenBGT <onboarding@resend.dev>".to_string())
+}
+
 // メール送信（開発環境ではコンソールに出力、本番環境ではResendを使用）
 async fn send_verification_email(email: &str, token: &str) {
     let base_url = get_base_url();
@@ -187,11 +192,11 @@ async fn send_verification_email(email: &str, token: &str) {
         );
         
         let resend = Resend::new(&api_key);
-        let from = "onboarding@resend.dev";
+        let from = get_email_from();
         let to = [email];
         let subject = "メールアドレスの確認";
         
-        let email_options = CreateEmailBaseOptions::new(from, to, subject)
+        let email_options = CreateEmailBaseOptions::new(&from, to, subject)
             .with_html(&email_body);
         
         match resend.emails.send(email_options).await {
@@ -249,12 +254,12 @@ async fn send_password_reset_email(email: &str, token: &str, api_key: &str) -> R
     
     eprintln!("[EMAIL] Creating Resend client with API key length: {}", api_key.len());
     let resend = Resend::new(api_key);
-    let from = "onboarding@resend.dev";
+    let from = get_email_from();
     let to = [email];
     let subject = "パスワードリセット";
     
     eprintln!("[EMAIL] Preparing email: from={}, to={:?}, subject={}", from, to, subject);
-    let email = CreateEmailBaseOptions::new(from, to, subject)
+    let email = CreateEmailBaseOptions::new(&from, to, subject)
         .with_html(&email_body);
     
     eprintln!("[EMAIL] Sending email via Resend API...");
@@ -277,7 +282,7 @@ async fn send_deadline_notification_email(
     hotel_name: &str,
     deadline: &str,
     schedule_title: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // 環境変数からResend APIキーを取得
     let api_key = match std::env::var("RESEND_API_KEY") {
         Ok(key) => key,
@@ -304,11 +309,11 @@ async fn send_deadline_notification_email(
     );
     
     let resend = Resend::new(&api_key);
-    let from = "onboarding@resend.dev";
+    let from = get_email_from();
     let to = [email];
     let subject = "キャンセル期限が近づいています";
     
-    let email_options = CreateEmailBaseOptions::new(from, to, subject)
+    let email_options = CreateEmailBaseOptions::new(&from, to, subject)
         .with_html(&email_body);
     
     match resend.emails.send(email_options).await {
@@ -346,11 +351,11 @@ async fn send_email_change_verification_email(new_email: &str, token: &str) {
         );
         
         let resend = Resend::new(&api_key);
-        let from = "onboarding@resend.dev";
+        let from = get_email_from();
         let to = [new_email];
         let subject = "メールアドレス変更の確認";
         
-        let email_options = CreateEmailBaseOptions::new(from, to, subject)
+        let email_options = CreateEmailBaseOptions::new(&from, to, subject)
             .with_html(&email_body);
         
         match resend.emails.send(email_options).await {
@@ -5499,64 +5504,77 @@ async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn
         
         // 期限が24時間以内かチェック
         if deadline > now && deadline <= one_day_later {
-            // 既に通知が作成されているかチェック（重複防止）
-            let existing_notification: Option<(i64,)> = sqlx::query_as(
-                "SELECT id FROM notifications WHERE stay_id = ? AND user_id = ? AND created_at > datetime('now', '-1 day')"
+            // 通知とメール送信状態を取得（通知の重複とメールの重複を防止）
+            let existing_notification: Option<(i64, Option<String>)> = sqlx::query_as(
+                "SELECT id, email_sent_at FROM notifications WHERE stay_id = ? AND user_id = ? AND created_at > datetime('now', '-1 day') ORDER BY id DESC LIMIT 1"
             )
             .bind(stay_id)
             .bind(user_id)
             .fetch_optional(pool)
             .await?;
             
-            if existing_notification.is_some() {
-                // 既に通知が作成されている場合はスキップ
+            if matches!(existing_notification.as_ref(), Some((_, Some(_)))) {
+                // アプリ内通知とメール送信が完了している場合はスキップ
                 continue;
             }
             
             // ユーザーのメールアドレスを取得
             let user_email: Option<(String,)> = sqlx::query_as(
-                "SELECT email FROM users WHERE id = ?"
+                "SELECT email FROM users WHERE id = ? AND email_verified = 1"
             )
             .bind(user_id)
             .fetch_optional(pool)
             .await?;
             
             if let Some((email,)) = user_email {
-                // 通知を作成
+                let formatted_deadline = deadline
+                    .with_timezone(&chrono::FixedOffset::east_opt(9 * 60 * 60).expect("valid JST offset"))
+                    .format("%Y.%m.%d %H:%M")
+                    .to_string();
+
+                // 未作成の場合のみアプリ内通知を作成する
                 let notification_title = format!("キャンセル期限が近づいています: {}", hotel_name);
-                let notification_message = format!("期限日時: {}\n関連イベント: {}", deadline_str, schedule_title);
+                let notification_message = format!("期限日時: {}\n関連イベント: {}", formatted_deadline, schedule_title);
                 let created_at = Utc::now().to_rfc3339();
-                
-                sqlx::query(
-                    r#"
-                    INSERT INTO notifications (user_id, stay_id, schedule_id, title, message, is_read, created_at)
-                    VALUES (?, ?, ?, ?, ?, 0, ?)
-                    "#
-                )
-                .bind(user_id)
-                .bind(stay_id)
-                .bind(schedule_id)
-                .bind(&notification_title)
-                .bind(&notification_message)
-                .bind(&created_at)
-                .execute(pool)
-                .await?;
-                
-                // メール送信（バックグラウンドで実行）
-                let email_clone = email.clone();
-                let hotel_name_clone = hotel_name.clone();
-                let deadline_str_clone = deadline_str.clone();
-                let schedule_title_clone = schedule_title.clone();
-                tokio::spawn(async move {
-                    if let Err(e) = send_deadline_notification_email(
-                        &email_clone,
-                        &hotel_name_clone,
-                        &deadline_str_clone,
-                        &schedule_title_clone,
-                    ).await {
-                        eprintln!("[DEADLINE_CHECK] Failed to send notification email: {:?}", e);
+
+                let notification_id = if let Some((notification_id, None)) = existing_notification {
+                    notification_id
+                } else {
+                    sqlx::query_scalar::<_, i64>(
+                        r#"
+                        INSERT INTO notifications (user_id, stay_id, schedule_id, title, message, is_read, created_at, email_sent_at)
+                        VALUES (?, ?, ?, ?, ?, 0, ?, NULL)
+                        RETURNING id
+                        "#
+                    )
+                    .bind(user_id)
+                    .bind(stay_id)
+                    .bind(schedule_id)
+                    .bind(&notification_title)
+                    .bind(&notification_message)
+                    .bind(&created_at)
+                    .fetch_one(pool)
+                    .await?
+                };
+
+                // メール送信に失敗した場合はemail_sent_atを残さず、次回チェックで再試行する
+                match send_deadline_notification_email(
+                    &email,
+                    &hotel_name,
+                    &formatted_deadline,
+                    &schedule_title,
+                ).await {
+                    Ok(()) => {
+                        sqlx::query("UPDATE notifications SET email_sent_at = ? WHERE id = ?")
+                            .bind(Utc::now().to_rfc3339())
+                            .bind(notification_id)
+                            .execute(pool)
+                            .await?;
                     }
-                });
+                    Err(e) => {
+                        eprintln!("[DEADLINE_CHECK] Failed to send notification email; it will be retried: {:?}", e);
+                    }
+                }
             }
         }
     }
@@ -6220,6 +6238,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       message       TEXT NOT NULL,
       is_read       INTEGER NOT NULL DEFAULT 0,
       created_at    TEXT,
+      email_sent_at TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (stay_id) REFERENCES stays(id),
       FOREIGN KEY (schedule_id) REFERENCES schedules(id)
@@ -6306,6 +6325,23 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     if notifications_table_exists.is_none() {
         sqlx::query(create_notifications).execute(pool).await?;
         eprintln!("[Migration] Created notifications table");
+    }
+
+    let notification_email_column_exists: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM pragma_table_info('notifications') WHERE name = 'email_sent_at'"
+    )
+    .fetch_one(pool)
+    .await?;
+
+    if notification_email_column_exists == 0 {
+        sqlx::query("ALTER TABLE notifications ADD COLUMN email_sent_at TEXT")
+            .execute(pool)
+            .await?;
+        // 旧実装で作成済みの通知はメール送信済みの可能性があるため再送しない
+        sqlx::query("UPDATE notifications SET email_sent_at = created_at WHERE email_sent_at IS NULL")
+            .execute(pool)
+            .await?;
+        eprintln!("[Migration] Added notifications.email_sent_at column");
     }
 
     // targetカラムがNULL許可であることを確認（既存のデータベース用マイグレーション）

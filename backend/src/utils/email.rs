@@ -4,6 +4,11 @@ use resend_rs::types::CreateEmailBaseOptions;
 use resend_rs::{Resend, Result};
 use crate::config::{get_base_url, get_frontend_url};
 
+fn get_email_from() -> String {
+    std::env::var("EMAIL_FROM")
+        .unwrap_or_else(|_| "GenBGT <onboarding@resend.dev>".to_string())
+}
+
 // メール送信（開発環境ではコンソールに出力、本番環境ではResendを使用）
 pub async fn send_verification_email(email: &str, token: &str) {
     let base_url = get_base_url();
@@ -18,11 +23,11 @@ pub async fn send_verification_email(email: &str, token: &str) {
         );
         
         let resend = Resend::new(&api_key);
-        let from = "onboarding@resend.dev";
+        let from = get_email_from();
         let to = [email];
         let subject = "メールアドレスの確認";
         
-        let email_options = CreateEmailBaseOptions::new(from, to, subject)
+        let email_options = CreateEmailBaseOptions::new(&from, to, subject)
             .with_html(&email_body);
         
         match resend.emails.send(email_options).await {
@@ -80,12 +85,12 @@ pub async fn send_password_reset_email(email: &str, token: &str, api_key: &str) 
     
     eprintln!("[EMAIL] Creating Resend client with API key length: {}", api_key.len());
     let resend = Resend::new(api_key);
-    let from = "onboarding@resend.dev";
+    let from = get_email_from();
     let to = [email];
     let subject = "パスワードリセット";
     
     eprintln!("[EMAIL] Preparing email: from={}, to={:?}, subject={}", from, to, subject);
-    let email = CreateEmailBaseOptions::new(from, to, subject)
+    let email = CreateEmailBaseOptions::new(&from, to, subject)
         .with_html(&email_body);
     
     eprintln!("[EMAIL] Sending email via Resend API...");
@@ -108,7 +113,7 @@ pub async fn send_deadline_notification_email(
     hotel_name: &str,
     deadline: &str,
     schedule_title: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // 環境変数からResend APIキーを取得
     let api_key = match std::env::var("RESEND_API_KEY") {
         Ok(key) => key,
@@ -135,11 +140,11 @@ pub async fn send_deadline_notification_email(
     );
     
     let resend = Resend::new(&api_key);
-    let from = "onboarding@resend.dev";
+    let from = get_email_from();
     let to = [email];
     let subject = "キャンセル期限が近づいています";
     
-    let email_options = CreateEmailBaseOptions::new(from, to, subject)
+    let email_options = CreateEmailBaseOptions::new(&from, to, subject)
         .with_html(&email_body);
     
     match resend.emails.send(email_options).await {
@@ -177,11 +182,11 @@ pub async fn send_email_change_verification_email(new_email: &str, token: &str) 
         );
         
         let resend = Resend::new(&api_key);
-        let from = "onboarding@resend.dev";
+        let from = get_email_from();
         let to = [new_email];
         let subject = "メールアドレス変更の確認";
         
-        let email_options = CreateEmailBaseOptions::new(from, to, subject)
+        let email_options = CreateEmailBaseOptions::new(&from, to, subject)
             .with_html(&email_body);
         
         match resend.emails.send(email_options).await {
@@ -216,5 +221,3 @@ pub async fn send_email_change_verification_email(new_email: &str, token: &str) 
         println!("===========================");
     }
 }
-
-

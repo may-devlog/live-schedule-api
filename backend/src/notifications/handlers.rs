@@ -120,7 +120,7 @@ pub async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box
             
             // ユーザーのメールアドレスを取得
             let user_email: Option<(String,)> = sqlx::query_as(
-                "SELECT email FROM users WHERE id = ?"
+                "SELECT email FROM users WHERE id = ? AND email_verified = 1"
             )
             .bind(user_id)
             .fetch_optional(pool)
@@ -168,5 +168,4 @@ pub async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box
     
     Ok(())
 }
-
 

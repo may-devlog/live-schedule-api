@@ -90,7 +90,12 @@ DATABASE_URL=sqlite:///var/www/live-schedule-api/data/app.db
 JWT_SECRET=ランダムな長い文字列（32文字以上推奨）
 BASE_URL=https://schedule.null-relife.com
 ALLOWED_ORIGIN=https://schedule.null-relife.com
+RESEND_API_KEY=Resendで発行したAPIキー
+EMAIL_FROM=GenBGT <noreply@genbgt.com>
 ```
+
+`EMAIL_FROM`に使用するドメインは、事前にResendで所有確認を完了してください。
+未確認ドメインやResendのテスト用送信元では、任意のユーザー宛てに送信できません。
 
 JWT_SECRETの生成：
 ```bash
@@ -186,6 +191,5 @@ cargo build --release
 sudo cp target/release/live-schedule-api /var/www/live-schedule-api/
 sudo systemctl restart live-schedule-api
 ```
-
 
 
