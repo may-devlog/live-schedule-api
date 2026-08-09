@@ -711,7 +711,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                   style={[styles.stayCard, isMobile && styles.stayCardMobile]}
                   onPress={() => router.push(authenticated ? `/stay/${stay.id}` : `/share/${share_id}/stay/${stay.id}`)}
                 >
-                  {authenticated && !isMobile && <View style={styles.stayIcon}>
+                  {authenticated && isDesktop && <View style={styles.stayIcon}>
                     <Ionicons name="bed" size={28} color="#FFFFFF" />
                   </View>}
                   <View style={[styles.cardMain, isMobile && styles.stayMainMobile]}>
