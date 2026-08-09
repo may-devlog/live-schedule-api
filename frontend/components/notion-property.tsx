@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   },
   blockTitle: {
     fontSize: 18,
-    fontWeight: "400",
+    fontWeight: "800",
     color: "#201B2C",
     width: "100%",
     flex: 1,

@@ -41,6 +41,6 @@ const styles = StyleSheet.create({
   header: { marginBottom: 4, flexDirection: 'row', alignItems: 'center' },
   mobileHeader: { minHeight: 42, paddingHorizontal: 0, marginBottom: 0, flexDirection: 'row', alignItems: 'center' },
   icon: { marginRight: 10 },
-  title: { flex: 1, color: brand.ink, fontSize: 18, lineHeight: 24, fontWeight: '400', flexShrink: 0 },
+  title: { flex: 1, color: brand.ink, fontSize: 18, lineHeight: 24, fontWeight: '800', flexShrink: 0 },
   content: { marginTop: 12 },
 });

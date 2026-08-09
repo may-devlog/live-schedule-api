@@ -18,6 +18,7 @@ type Props = {
 };
 
 const shadow = Platform.OS === "web" ? ({ boxShadow: "0 8px 24px rgba(46,16,101,0.08)" } as any) : {};
+const monoFont = Platform.OS === "web" ? "SFMono-Regular, Menlo, Consolas, monospace" : "monospace";
 
 function dateParts(raw: string) {
   const [year, month, day] = raw.slice(0, 10).split("-").map(Number);
@@ -154,14 +155,14 @@ const styles = StyleSheet.create({
   cardMobile: { minHeight: 0, paddingHorizontal: 14, paddingVertical: 14, gap: 10, alignItems: "flex-start" },
   dateBlock: { width: 104, alignItems: "center" },
   dateBlockMobile: { width: 0, display: "none" },
-  dateText: { color: brand.plum, fontSize: 29, lineHeight: 35, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  dateText: { color: brand.plum, fontSize: 29, lineHeight: 35, fontWeight: "800", fontVariant: ["tabular-nums"], fontFamily: monoFont },
   dateTextMobile: { fontSize: 17, lineHeight: 22 },
-  weekday: { color: brand.violet, fontSize: 15, fontWeight: "800", marginTop: 2 },
+  weekday: { color: brand.violet, fontSize: 15, fontWeight: "800", marginTop: 2, fontFamily: monoFont },
   saturday: { color: "#2563EB" },
   holiday: { color: "#DC2626" },
   dateDivider: { width: 1, height: 66, backgroundColor: brand.border },
   cardBody: { flex: 1, minWidth: 0 },
-  mobileDate: { color: brand.violet, fontSize: 17, lineHeight: 22, fontWeight: "800", marginBottom: 7, fontVariant: ["tabular-nums"] },
+  mobileDate: { color: brand.violet, fontSize: 17, lineHeight: 22, fontWeight: "800", marginBottom: 7, fontVariant: ["tabular-nums"], fontFamily: monoFont },
   cardTitle: { color: brand.ink, fontSize: 16, lineHeight: 22, fontWeight: "800" },
   venueRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 },
   venue: { flex: 1, color: brand.muted, fontSize: 13 },
