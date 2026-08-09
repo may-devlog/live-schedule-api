@@ -1,34 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
-  RefreshControl,
+  FlatList,
   Platform,
+  RefreshControl,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { getApiUrl } from '../../utils/api';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScheduleCalendar } from '../../components/ScheduleCalendar';
 import { NotionTag } from '../../components/notion-tag';
-import { getOptionColorSync } from '../../utils/get-option-color';
+import { PublicFooter, PublicHeader, brand } from '../../components/GenBGTBrand';
+import { getApiUrl } from '../../utils/api';
 import { fetchAreaColors } from '../../utils/fetch-area-colors';
+import { getOptionColorSync } from '../../utils/get-option-color';
 import type { Schedule } from '../HomeScreen';
 
-function formatDateTimeUTC(iso: string): string {
+function formatDateTimeUTC(iso: string): { date: string; time: string } {
   const d = new Date(iso);
-  if (isNaN(d.getTime())) {
-    return iso;
-  }
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  const hours = String(d.getUTCHours() + 0).padStart(2, "0");
-  const minutes = String(d.getUTCMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
+  if (isNaN(d.getTime())) return { date: iso, time: '' };
+  const date = [d.getUTCFullYear(), String(d.getUTCMonth() + 1).padStart(2, '0'), String(d.getUTCDate()).padStart(2, '0')].join('.');
+  const time = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+  return { date, time };
 }
 
 export default function SharedScheduleScreen() {
@@ -39,494 +37,193 @@ export default function SharedScheduleScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
-  const [pullDistance, setPullDistance] = useState(0);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
 
-  useEffect(() => {
-    console.log('[SharedScheduleScreen] share_id:', share_id);
-    if (share_id) {
-      fetchSchedules();
-    } else {
-      console.error('[SharedScheduleScreen] share_id is missing');
-      setError('共有IDが指定されていません');
-      setLoading(false);
-    }
-  }, [share_id]);
-
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const url = getApiUrl(`/share/${share_id}`);
-      console.log('[SharedScheduleScreen] Fetching from:', url);
-      const res = await fetch(url);
-      console.log('[SharedScheduleScreen] Response status:', res.status);
+      const res = await fetch(getApiUrl(`/share/${share_id}`));
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error('[SharedScheduleScreen] Error response:', errorText);
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch (e) {
-          errorData = { error: `サーバーエラー (${res.status})` };
-        }
-        throw new Error(errorData.error || '共有ページの取得に失敗しました');
+        const body = await res.text();
+        let message = `サーバーエラー (${res.status})`;
+        try { message = JSON.parse(body).error || message; } catch {}
+        throw new Error(message);
       }
       const data: Schedule[] = await res.json();
-      console.log('[SharedScheduleScreen] Received schedules:', data.length);
-      const visibleSchedules = data.filter((schedule) => schedule.status !== "Canceled");
-      setSchedules(visibleSchedules);
-      
-      // 未来のスケジュールをフィルタリング（JSTで比較）
-      const nowUTC = new Date();
-      const jstOffset = 9 * 60 * 60 * 1000; // JSTはUTC+9
-      const utcTime = nowUTC.getTime();
-      const jstNow = new Date(utcTime + jstOffset);
-      
-      const futureSchedules = visibleSchedules.filter((schedule) => {
-        if (!schedule.datetime) {
-          return false;
-        }
-        const scheduleDateUTC = new Date(schedule.datetime);
-        const scheduleUtcTime = scheduleDateUTC.getTime();
-        const scheduleDateJST = new Date(scheduleUtcTime + jstOffset);
-        return scheduleDateJST.getTime() > jstNow.getTime();
-      });
-      
-      // 未来のスケジュールを日時順にソートして、最初の3件を取得
-      futureSchedules.sort((a, b) => {
-        const dateA = a.datetime ? new Date(a.datetime).getTime() : 0;
-        const dateB = b.datetime ? new Date(b.datetime).getTime() : 0;
-        return dateA - dateB;
-      });
-      setNextSchedules(futureSchedules.slice(0, 3));
-      
-      // 年を抽出してソート
+      const visible = data.filter((schedule) => schedule.status !== 'Canceled');
+      setSchedules(visible);
+
+      const now = Date.now();
+      const future = visible
+        .filter((schedule) => schedule.datetime && new Date(schedule.datetime).getTime() > now)
+        .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
+      setNextSchedules(future.slice(0, 3));
+
       const years = new Set<number>();
       data.forEach((schedule) => {
-        if (schedule.date) {
-          const year = parseInt(schedule.date.split('-')[0]);
-          if (!isNaN(year)) {
-            years.add(year);
-          }
-        } else if (schedule.datetime) {
-          const date = new Date(schedule.datetime);
-          const year = date.getUTCFullYear();
-          if (!isNaN(year)) {
-            years.add(year);
-          }
-        }
+        const rawYear = schedule.date?.split('-')[0] ?? (schedule.datetime ? String(new Date(schedule.datetime).getUTCFullYear()) : '');
+        const year = Number(rawYear);
+        if (year) years.add(year);
       });
       setAvailableYears(Array.from(years).sort((a, b) => b - a));
     } catch (err: any) {
-      console.error('[SharedScheduleScreen] Error:', err);
       setError(err.message || 'スケジュールの取得に失敗しました');
     } finally {
       setLoading(false);
     }
-  };
+  }, [share_id]);
 
-  const handleSchedulePress = (scheduleId: number) => {
-    router.push(`/share/${share_id}/schedules/${scheduleId}`);
-  };
-
-  // Areaの色情報を取得
   useEffect(() => {
-    if (nextSchedules.length === 0) return;
-    
-    let isMounted = true;
-    
-    const loadAreaColors = async () => {
-      const colorMap = await fetchAreaColors(nextSchedules);
-      if (isMounted) {
-        setAreaColors(colorMap);
-      }
-    };
-    
-    loadAreaColors();
-    
-    return () => {
-      isMounted = false;
-    };
+    if (share_id) fetchSchedules();
+    else {
+      setError('共有IDが指定されていません');
+      setLoading(false);
+    }
+  }, [share_id, fetchSchedules]);
+
+  useEffect(() => {
+    if (!nextSchedules.length) return;
+    let mounted = true;
+    fetchAreaColors(nextSchedules).then((colors) => mounted && setAreaColors(colors));
+    return () => { mounted = false; };
   }, [nextSchedules]);
 
   const onRefresh = async () => {
-    console.log('[SharedScheduleScreen] onRefresh called');
     setRefreshing(true);
-    try {
-      console.log('[SharedScheduleScreen] Starting refresh...');
-      await fetchSchedules();
-      console.log('[SharedScheduleScreen] Refresh completed');
-    } catch (error) {
-      console.error('[SharedScheduleScreen] Refresh error:', error);
-    } finally {
-      console.log('[SharedScheduleScreen] Setting refreshing to false');
-      setRefreshing(false);
-    }
+    await fetchSchedules();
+    setRefreshing(false);
+  };
+
+  const handleShare = async () => {
+    const url = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.href : `https://www.genbgt.com/share/${share_id}`;
+    await Share.share({ title: `${share_id}のライブスケジュール`, message: url, url });
   };
 
   if (loading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#37352f" />
-          <Text style={styles.loadingText}>読み込み中...</Text>
-        </View>
-      </View>
-    );
+    return <View style={styles.statePage}><ActivityIndicator size="large" color={brand.violet} /><Text style={styles.stateText}>読み込み中...</Text></View>;
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={fetchSchedules}
-          >
-            <Text style={styles.retryButtonText}>再試行</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.statePage}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchSchedules}><Text style={styles.retryText}>再試行</Text></TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.scrollContainer}>
-      {Platform.OS !== 'web' ? (
-        <ScrollView 
-          style={styles.scrollContainer} 
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={onRefresh}
-              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
-            />
-          }
-          scrollEnabled={true}
-          nestedScrollEnabled={true}
-          onTouchStart={(e) => {
-            const touch = e.nativeEvent.touches[0];
-            if (touch) {
-              setTouchStartY(touch.pageY);
-            }
-          }}
-          onTouchMove={(e) => {
-            if (touchStartY !== null) {
-              const touch = e.nativeEvent.touches[0];
-              if (touch) {
-                const distance = touch.pageY - touchStartY;
-                if (distance > 0) {
-                  setPullDistance(distance);
-                }
-              }
-            }
-          }}
-          onTouchEnd={() => {
-            if (pullDistance > 100 && !refreshing) {
-              onRefresh();
-            }
-            setTouchStartY(null);
-            setPullDistance(0);
-          }}
-          onScroll={(e) => {
-            const { contentOffset } = e.nativeEvent;
-            if (contentOffset.y === 0 && pullDistance > 100 && !refreshing) {
-              onRefresh();
-            }
-          }}
-          scrollEventThrottle={16}
-        >
-          <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>SCHEDULE</Text>
-        </View>
+    <View style={styles.page}>
+      <PublicHeader />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand.violet} /> : undefined}
+      >
+        <View style={styles.main}>
+          <View style={styles.profileCard}>
+            <View style={styles.avatar}><Ionicons name="person" size={26} color="#A6A0AE" /></View>
+            <View style={styles.profileCopy}>
+              <Text style={styles.profileName}>{share_id}</Text>
+              <Text style={styles.profileLabel}>ライブスケジュール</Text>
+            </View>
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+              <Ionicons name="share-outline" size={18} color={brand.violet} />
+              <Text style={styles.shareText}>シェア</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* カレンダー */}
-        <ScheduleCalendar 
-          schedules={schedules} 
-          isPublic={true}
-          onSchedulePress={handleSchedulePress}
-        />
+          <View style={styles.calendarSection}>
+            <Text style={styles.pageTitle}>SCHEDULE</Text>
+            <ScheduleCalendar schedules={schedules} isPublic onSchedulePress={(id) => router.push(`/share/${share_id}/schedules/${id}`)} />
+          </View>
 
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>NEXT</Text>
-          {loading && <ActivityIndicator color="#333333" />}
-          {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-          {!loading && !error && nextSchedules.length === 0 && (
-            <Text style={styles.emptyText}>今後のスケジュールはありません</Text>
-          )}
-          {!loading && !error && nextSchedules.length > 0 && (
-            <FlatList
-              data={nextSchedules}
-              keyExtractor={(item) => item.id.toString()}
-              scrollEnabled={false}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.card}
-                  onPress={() => handleSchedulePress(item.id)}
-                >
-                  <Text style={styles.cardDate}>
-                    {formatDateTimeUTC(item.datetime)}
-                  </Text>
-                  <Text style={styles.cardTitle} numberOfLines={2}>
-                    {item.title}
-                  </Text>
-                  <View style={styles.cardSubContainer}>
-                    {item.area && (
-                      <NotionTag
-                        label={item.area}
-                        color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
-                      />
-                    )}
-                    <Text style={styles.cardSub}>{item.venue}</Text>
-                  </View>
+          <View style={styles.sectionCard}>
+            <Text style={styles.eyebrow}>NEXT LIVE</Text>
+            {!nextSchedules.length ? (
+              <Text style={styles.emptyText}>今後のスケジュールはありません</Text>
+            ) : (
+              <FlatList
+                data={nextSchedules}
+                keyExtractor={(item) => String(item.id)}
+                scrollEnabled={false}
+                ItemSeparatorComponent={() => <View style={styles.divider} />}
+                renderItem={({ item }) => {
+                  const formatted = formatDateTimeUTC(item.datetime);
+                  return (
+                    <TouchableOpacity style={styles.eventRow} onPress={() => router.push(`/share/${share_id}/schedules/${item.id}`)}>
+                      <View style={styles.eventContent}>
+                        <Text style={styles.eventDate}>{formatted.date} <Text style={styles.eventTime}>{formatted.time}</Text></Text>
+                        <Text style={styles.eventTitle} numberOfLines={2}>{item.title}</Text>
+                        <View style={styles.metaRow}>
+                          {item.area && <NotionTag label={item.area} color={areaColors.get(item.id) || getOptionColorSync(item.area, 'AREAS')} />}
+                          {!!item.venue && <View style={styles.venuePill}><Ionicons name="business-outline" size={13} color={brand.muted} /><Text style={styles.venueText}>{item.venue}</Text></View>}
+                        </View>
+                      </View>
+                      <View style={styles.arrowButton}><Ionicons name="arrow-forward" size={20} color="#FFFFFF" /></View>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            )}
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.eyebrow}>ARCHIVE</Text>
+            <View style={styles.yearList}>
+              {availableYears.map((year, index) => (
+                <TouchableOpacity key={year} style={[styles.yearPill, index === 0 && styles.yearPillActive]} onPress={() => router.push(`/share/${share_id}/year/${year}`)}>
+                  <Text style={[styles.yearText, index === 0 && styles.yearTextActive]}>{year}</Text>
                 </TouchableOpacity>
-              )}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
-          )}
-        </View>
-
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>ARCHIVE</Text>
-          <View style={styles.yearListColumn}>
-            {availableYears.map((year) => (
-              <TouchableOpacity
-                key={year}
-                style={styles.yearRow}
-                onPress={() => router.push(`/share/${share_id}/year/${year}`)}
-              >
-                <Text style={styles.yearRowText}>{year}</Text>
-              </TouchableOpacity>
-            ))}
+              ))}
+            </View>
           </View>
         </View>
-        <View style={styles.bottomSpacer} />
-      </View>
+        <PublicFooter />
       </ScrollView>
-      ) : (
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          scrollEnabled={true}
-          nestedScrollEnabled={true}
-        >
-          <View style={styles.container}>
-            <View style={styles.header}>
-          <Text style={styles.title}>SCHEDULE</Text>
-        </View>
-
-        {/* カレンダー */}
-        <ScheduleCalendar 
-          schedules={schedules} 
-          isPublic={true}
-          onSchedulePress={handleSchedulePress}
-        />
-
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>NEXT</Text>
-          {loading && <ActivityIndicator color="#333333" />}
-          {error && <Text style={styles.errorText}>エラー: {error}</Text>}
-          {!loading && !error && nextSchedules.length === 0 && (
-            <Text style={styles.emptyText}>今後のスケジュールはありません</Text>
-          )}
-          {!loading && !error && nextSchedules.length > 0 && (
-            <FlatList
-              data={nextSchedules}
-              keyExtractor={(item) => item.id.toString()}
-              scrollEnabled={false}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.card}
-                  onPress={() => handleSchedulePress(item.id)}
-                >
-                  <Text style={styles.cardDate}>
-                    {formatDateTimeUTC(item.datetime)}
-                  </Text>
-                  <Text style={styles.cardTitle} numberOfLines={2}>
-                    {item.title}
-                  </Text>
-                  <View style={styles.cardSubContainer}>
-                    {item.area && (
-                      <NotionTag
-                        label={item.area}
-                        color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")}
-                      />
-                    )}
-                    <Text style={styles.cardSub}>{item.venue}</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
-          )}
-        </View>
-
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>ARCHIVE</Text>
-          <View style={styles.yearListColumn}>
-            {availableYears.map((year) => (
-              <TouchableOpacity
-                key={year}
-                style={styles.yearRow}
-                onPress={() => router.push(`/share/${share_id}/year/${year}`)}
-              >
-                <Text style={styles.yearRowText}>{year}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-        <View style={styles.bottomSpacer} />
-      </View>
-        </ScrollView>
-      )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  scrollContainer: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  scrollContent: {
-    paddingBottom: 40,
-    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {}),
-  },
-  container: {
-    paddingTop: 48,
-    paddingHorizontal: 24,
-    backgroundColor: '#ffffff',
-    maxWidth: 900,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#37352f',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  loadingText: {
-    marginTop: 16,
-    color: '#787774',
-    fontSize: 14,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  errorText: {
-    color: '#d93025',
-    fontSize: 16,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  retryButton: {
-    backgroundColor: '#37352f',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 4,
-  },
-  retryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  sectionContainer: {
-    backgroundColor: "#f7f6f3",
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 24,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#e9e9e7",
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#37352f',
-    marginTop: 0,
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    backgroundColor: "#f7f6f3",
-    paddingVertical: 4,
-    paddingHorizontal: 0,
-  },
-  yearListColumn: {
-    flexDirection: 'column',
-  },
-  yearRow: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9e9e7',
-  },
-  yearRowText: {
-    color: '#37352f',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  separator: {
-    height: 0,
-  },
-  emptyText: {
-    color: '#787774',
-    fontSize: 14,
-    marginVertical: 8,
-  },
-  bottomSpacer: {
-    height: 32,
-  },
-  card: {
-    padding: 16,
-    borderRadius: 3,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e9e9e7',
-    marginBottom: 8,
-  },
-  cardDate: {
-    fontSize: 12,
-    color: '#787774',
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#37352f',
-    marginBottom: 4,
-    lineHeight: 22,
-  },
-  cardSubContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 4,
-    flexWrap: "wrap",
-  },
-  cardSub: {
-    fontSize: 14,
-    color: "#787774",
-  },
-});
+const cardShadow = Platform.OS === 'web' ? ({ boxShadow: '0 10px 32px rgba(46,16,101,0.06)' } as any) : {};
 
+const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: brand.lavender },
+  scroll: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+  main: { width: '100%', maxWidth: 1080, alignSelf: 'center', paddingHorizontal: 24, paddingTop: 28, paddingBottom: 48, gap: 16 },
+  profileCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: brand.border, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', ...cardShadow },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#F0EEF3', alignItems: 'center', justifyContent: 'center' },
+  profileCopy: { marginLeft: 14, flex: 1 },
+  profileName: { color: brand.ink, fontSize: 17, fontWeight: '700' },
+  profileLabel: { color: brand.muted, fontSize: 13, marginTop: 3 },
+  shareButton: { minHeight: 42, borderWidth: 1, borderColor: brand.violet, borderRadius: 10, paddingHorizontal: 16, flexDirection: 'row', gap: 7, alignItems: 'center' },
+  shareText: { color: brand.violet, fontSize: 14, fontWeight: '700' },
+  calendarSection: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: brand.border, borderRadius: 18, padding: 22, ...cardShadow },
+  pageTitle: { fontSize: 28, fontWeight: '800', color: brand.ink, letterSpacing: -0.4, marginBottom: 2 },
+  sectionCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: brand.border, borderRadius: 16, padding: 20, ...cardShadow },
+  eyebrow: { color: brand.violet, fontSize: 12, fontWeight: '800', letterSpacing: 0.6, marginBottom: 12 },
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 4 },
+  eventContent: { flex: 1 },
+  eventDate: { color: brand.ink, fontSize: 14, fontWeight: '700' },
+  eventTime: { color: brand.muted, fontWeight: '600' },
+  eventTitle: { color: brand.ink, fontSize: 18, fontWeight: '700', lineHeight: 25, marginTop: 5 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  venuePill: { backgroundColor: '#F5F3F7', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  venueText: { color: brand.muted, fontSize: 12 },
+  arrowButton: { width: 46, height: 46, borderRadius: 23, backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center' },
+  divider: { height: 1, backgroundColor: brand.border, marginVertical: 16 },
+  yearList: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  yearPill: { backgroundColor: '#F5F3F7', borderRadius: 9, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'transparent' },
+  yearPillActive: { backgroundColor: '#FFFFFF', borderColor: brand.violet },
+  yearText: { color: brand.muted, fontSize: 14, fontWeight: '600' },
+  yearTextActive: { color: brand.violet },
+  emptyText: { color: brand.muted, fontSize: 14, paddingVertical: 8 },
+  statePage: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: brand.lavender, padding: 24 },
+  stateText: { color: brand.muted, fontSize: 14, marginTop: 14 },
+  errorText: { color: '#C2414B', fontSize: 15, textAlign: 'center', marginBottom: 18 },
+  retryButton: { backgroundColor: brand.violet, paddingHorizontal: 20, paddingVertical: 11, borderRadius: 10 },
+  retryText: { color: '#FFFFFF', fontWeight: '700' },
+});

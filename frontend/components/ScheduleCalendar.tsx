@@ -4,8 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Dimensions,
   Modal,
   FlatList,
 } from "react-native";
@@ -481,14 +479,9 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: 14,
+    paddingTop: 10,
+    marginVertical: 0,
   },
   header: {
     flexDirection: "row",
@@ -503,17 +496,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#F5F3FF",
   },
   navButtonText: {
     fontSize: 24,
-    color: "#333",
+    color: "#7C3AED",
     fontWeight: "bold",
   },
   monthYear: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#333",
+    color: "#201B2C",
   },
   weekdayHeader: {
     flexDirection: "row",
@@ -528,13 +521,13 @@ const styles = StyleSheet.create({
   weekdayText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#666",
+    color: "#6B6675",
   },
   sundayText: {
-    color: "#e53935",
+    color: "#F06B72",
   },
   saturdayText: {
-    color: "#1976d2",
+    color: "#4A90C2",
   },
   calendarGrid: {
     flexDirection: "row",
@@ -548,35 +541,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 4,
     position: "relative",
-    minHeight: 50,
+    minHeight: 62,
   },
   todayCell: {
-    backgroundColor: "#e3f2fd",
-    borderRadius: 25, // 円形にするための固定値
+    backgroundColor: "#EDE9FE",
+    borderRadius: 18,
   },
   todayWithScheduleCell: {
-    backgroundColor: "#e3f2fd", // 今日の青ベース
-    borderRadius: 25,
+    backgroundColor: "#EDE9FE",
+    borderRadius: 18,
     borderWidth: 2,
-    borderColor: "#2e7d32", // 予定の緑で縁取り
+    borderColor: "#7C3AED",
   },
   hasScheduleCell: {
-    backgroundColor: "#e8f5e9", // 薄い緑色の背景
+    backgroundColor: "#F5F3FF",
+    borderRadius: 18,
   },
   dayText: {
     fontSize: 14,
-    color: "#333",
+    color: "#201B2C",
     fontWeight: "500",
   },
   hasScheduleText: {
     fontWeight: "600",
-    color: "#2e7d32", // 緑色のテキスト
+    color: "#6D28D9",
   },
   scheduleBadge: {
     position: "absolute",
     top: 2,
     right: 2,
-    backgroundColor: "#4caf50", // 緑色のバッジ
+    backgroundColor: "#7C3AED",
     borderRadius: 10,
     minWidth: 18,
     height: 18,
@@ -670,7 +664,7 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    backgroundColor: "#007AFF",
+    backgroundColor: "#7C3AED",
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
@@ -687,4 +681,3 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
 });
-
