@@ -21,7 +21,7 @@ type Props = {
   fetchStays?: (year: string) => Promise<StaySummary[]>;
   fetchAvailableYears: () => Promise<number[]>;
   onBack: () => void;
-  onSelectYear: (year: number) => void;
+  onSelectYear: (year: string) => void;
   onSchedulePress: (id: number) => void;
   onStayPress?: (id: number) => void;
 };
@@ -38,6 +38,21 @@ type StaySummary = {
 };
 
 const shadow = Platform.OS === "web" ? ({ boxShadow: "0 8px 24px rgba(46,16,101,0.08)" } as any) : {};
+type SortOrder = "asc" | "desc";
+
+function scheduleDate(schedule: Schedule) {
+  return schedule.datetime || schedule.date || "";
+}
+
+function compareSchedules(a: Schedule, b: Schedule, order: SortOrder) {
+  const comparison = scheduleDate(a).localeCompare(scheduleDate(b));
+  return order === "asc" ? comparison : -comparison;
+}
+
+function groupBoundary(schedules: Schedule[], order: SortOrder) {
+  const timestamps = schedules.map(scheduleDate).sort();
+  return order === "asc" ? timestamps[0] ?? "" : timestamps[timestamps.length - 1] ?? "";
+}
 
 function dateParts(raw: string) {
   const [year, month, day] = raw.slice(0, 10).split("-").map(Number);
@@ -65,6 +80,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const [subGrouping, setSubGrouping] = useState<SubGroupingField>("none");
   const [archiveType, setArchiveType] = useState<"event" | "stay">("event");
   const [stayGrouping, setStayGrouping] = useState<"none" | "website" | "status">("none");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
   useEffect(() => { setYear(initialYear); }, [initialYear]);
 
@@ -74,7 +90,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
     Promise.all([fetchAvailableYears(), fetchSchedules(year), fetchStays ? fetchStays(year) : Promise.resolve([]), loadSelectOptionsMap(optionOwner)])
       .then(async ([available, data, stayData, optionMaps]) => {
         if (!active) return;
-        const sorted = [...data].sort((a, b) => (b.date ?? b.datetime).localeCompare(a.date ?? a.datetime));
+        const sorted = [...data].sort((a, b) => compareSchedules(a, b, "asc"));
         const [colors, trafficMap] = await Promise.all([
           Promise.all([
             loadSelectOptions("TARGETS", optionOwner).then((options) => preloadOptionColors(options, "TARGETS")),
@@ -92,7 +108,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
         if (!active) return;
         setYears(available);
         setSchedules(sorted);
-        setStays([...stayData].sort((a, b) => b.check_in.localeCompare(a.check_in)));
+        setStays(stayData);
         setSelectOptionsMap(optionMaps.orderMap);
         setTrafficBySchedule(trafficMap);
         setAreaColors(await fetchAreaColors(sorted));
@@ -103,33 +119,63 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
     return () => { active = false; };
   }, [year, shareId, authenticated, fetchAvailableYears, fetchSchedules, fetchStays]);
 
-  const visibleSchedules = useMemo(
-    () => subGrouping === "status" ? schedules : schedules.filter((item) => item.status !== "Canceled"),
-    [schedules, subGrouping]
-  );
+  const visibleSchedules = useMemo(() => {
+    const visible = subGrouping === "status" ? schedules : schedules.filter((item) => item.status !== "Canceled");
+    return [...visible].sort((a, b) => compareSchedules(a, b, sortOrder));
+  }, [schedules, subGrouping, sortOrder]);
 
   const monthGroups = useMemo(() => {
-    const map = new Map<number, Schedule[]>();
+    const map = new Map<string, { label: string; data: Schedule[] }>();
     visibleSchedules.forEach((item) => {
-      const month = Number((item.date ?? item.datetime).slice(5, 7));
-      map.set(month, [...(map.get(month) ?? []), item]);
+      const raw = scheduleDate(item);
+      const itemYear = raw.slice(0, 4);
+      const month = Number(raw.slice(5, 7));
+      const key = `${itemYear}-${String(month).padStart(2, "0")}`;
+      const label = year === "ALL" ? `${itemYear}年${month}月` : `${month}月`;
+      const current = map.get(key)?.data ?? [];
+      map.set(key, { label, data: [...current, item] });
     });
-    return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
-  }, [visibleSchedules]);
+    return Array.from(map.entries())
+      .sort(([keyA], [keyB]) => sortOrder === "asc" ? keyA.localeCompare(keyB) : keyB.localeCompare(keyA))
+      .map(([key, value]) => ({ key, ...value }));
+  }, [visibleSchedules, sortOrder, year]);
 
-  const groupedSchedules = useMemo(
-    () => groupSchedulesNested(visibleSchedules, mainGrouping, subGrouping, selectOptionsMap),
-    [visibleSchedules, mainGrouping, subGrouping, selectOptionsMap]
+  const groupedSchedules = useMemo(() => {
+    const grouped = groupSchedulesNested(visibleSchedules, mainGrouping, subGrouping, selectOptionsMap);
+    const compareGroups = (a: Schedule[], b: Schedule[]) => {
+      const comparison = groupBoundary(a, sortOrder).localeCompare(groupBoundary(b, sortOrder));
+      return sortOrder === "asc" ? comparison : -comparison;
+    };
+    return grouped
+      .map((mainGroup) => ({
+        ...mainGroup,
+        subGroups: [...mainGroup.subGroups]
+          .map((subGroup) => ({ ...subGroup, data: [...subGroup.data].sort((a, b) => compareSchedules(a, b, sortOrder)) }))
+          .sort((a, b) => compareGroups(a.data, b.data)),
+      }))
+      .sort((a, b) => compareGroups(a.subGroups.flatMap((group) => group.data), b.subGroups.flatMap((group) => group.data)));
+  }, [visibleSchedules, mainGrouping, subGrouping, selectOptionsMap, sortOrder]);
+
+  const sortedStays = useMemo(
+    () => [...stays].sort((a, b) => sortOrder === "asc" ? a.check_in.localeCompare(b.check_in) : b.check_in.localeCompare(a.check_in)),
+    [stays, sortOrder]
   );
 
   const stayGroups = useMemo(() => {
     const groups = new Map<string, StaySummary[]>();
-    stays.forEach((stay) => {
-      const key = stayGrouping === "website" ? (stay.website || "未設定") : stayGrouping === "status" ? (stay.status || "未設定") : `${Number(stay.check_in.slice(5, 7))}月`;
+    sortedStays.forEach((stay) => {
+      const stayYear = stay.check_in.slice(0, 4);
+      const month = Number(stay.check_in.slice(5, 7));
+      const monthLabel = year === "ALL" ? `${stayYear}年${month}月` : `${month}月`;
+      const key = stayGrouping === "website" ? (stay.website || "未設定") : stayGrouping === "status" ? (stay.status || "未設定") : monthLabel;
       groups.set(key, [...(groups.get(key) ?? []), stay]);
     });
-    return Array.from(groups.entries());
-  }, [stays, stayGrouping]);
+    return Array.from(groups.entries()).sort(([, itemsA], [, itemsB]) => {
+      const boundary = (items: StaySummary[]) => sortOrder === "asc" ? items[0]?.check_in ?? "" : items[items.length - 1]?.check_in ?? "";
+      const comparison = boundary(itemsA).localeCompare(boundary(itemsB));
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [sortedStays, stayGrouping, sortOrder, year]);
 
   const toggleSection = (key: string) => {
     setCollapsedSections((current) => {
@@ -210,9 +256,9 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
     );
   };
 
-  const selectYear = (next: number) => {
+  const selectYear = (next: string) => {
     setLoading(true);
-    setYear(String(next));
+    setYear(next);
     onSelectYear(next);
   };
 
@@ -236,8 +282,15 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
               <Ionicons name={yearMenuOpen ? "chevron-up" : "chevron-down"} size={18} color={brand.muted} />
             </TouchableOpacity>
             {yearMenuOpen && <View style={styles.yearMenu}>
-              {years.map((item) => <TouchableOpacity key={item} style={styles.yearOption} onPress={() => { setYearMenuOpen(false); selectYear(item); }}><Text style={[styles.yearOptionText, String(item) === year && styles.yearOptionTextActive]}>{item}</Text></TouchableOpacity>)}
+              {["ALL", ...years.map(String)].map((item) => <TouchableOpacity key={item} style={styles.yearOption} onPress={() => { setYearMenuOpen(false); selectYear(item); }}><Text style={[styles.yearOptionText, item === year && styles.yearOptionTextActive]}>{item}</Text></TouchableOpacity>)}
             </View>}
+          </View>
+
+          <View style={styles.sortRow}>
+            <Text style={styles.groupingLabel}>並び順</Text>
+            <View style={styles.sortButtons}>
+              {([['asc', '昇順'], ['desc', '降順']] as const).map(([value, label]) => <TouchableOpacity key={value} style={[styles.groupingButton, sortOrder === value && styles.groupingButtonActive]} onPress={() => setSortOrder(value)}><Text style={[styles.groupingButtonText, sortOrder === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}
+            </View>
           </View>
 
           {archiveType === "event" ? <View style={styles.groupingPanel}>
@@ -258,10 +311,10 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
               </View>;
             })
           ) : (
-            mainGrouping === "none" && subGrouping === "none" ? monthGroups.map(([month, items]) => (
-              <View key={month} style={styles.monthSection}>
-                <Text style={styles.monthTitle}>{month}月</Text>
-                <View style={styles.cardList}>{items.map(renderCard)}</View>
+            mainGrouping === "none" && subGrouping === "none" ? monthGroups.map((group) => (
+              <View key={group.key} style={styles.monthSection}>
+                <Text style={styles.monthTitle}>{group.label}</Text>
+                <View style={styles.cardList}>{group.data.map(renderCard)}</View>
               </View>
             )) : groupedSchedules.map((mainGroup) => {
               const mainKey = `main-${mainGroup.title}`;
@@ -331,6 +384,8 @@ const styles = StyleSheet.create({
   yearOptionText: { color: brand.ink, fontSize: 14 },
   yearOptionTextActive: { color: brand.violet, fontWeight: "700" },
   groupingPanel: { gap: 10, marginBottom: 28 },
+  sortRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 12 },
+  sortButtons: { flexDirection: "row", gap: 8 },
   groupingRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   groupingLabel: { width: 48, color: brand.ink, fontSize: 13, lineHeight: 36, fontWeight: "700" },
   groupingButtons: { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 8 },

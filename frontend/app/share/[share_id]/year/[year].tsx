@@ -62,6 +62,7 @@ export default function SharedYearScreen() {
     const data: Schedule[] = await res.json();
     
     // 年でフィルタリング
+    if (year === "ALL") return data;
     const yearNum = parseInt(year, 10);
     return data.filter((schedule) => {
       if (schedule.date) {

@@ -45,7 +45,8 @@ export default function YearScreen() {
 
   // スケジュールを取得する関数
   const fetchSchedules = async (year: string): Promise<Schedule[]> => {
-    const url = getApiUrl(`/schedules?year=${year}&include_canceled=true`);
+    const query = year === "ALL" ? "include_canceled=true" : `year=${year}&include_canceled=true`;
+    const url = getApiUrl(`/schedules?${query}`);
     const res = await authenticatedFetch(url);
 
     if (!res.ok) {
@@ -75,6 +76,7 @@ export default function YearScreen() {
     
     const allStays: any[] = await staysRes.json();
     // 年でフィルタリング
+    if (year === "ALL") return allStays;
     const yearNum = parseInt(year, 10);
     return allStays.filter((stay) => {
       if (stay.check_in) {
