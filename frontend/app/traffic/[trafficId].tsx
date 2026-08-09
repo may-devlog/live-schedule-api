@@ -312,7 +312,7 @@ export default function TrafficDetailScreen() {
         </View>
 
         {/* [Traffic Info] */}
-        <NotionPropertyBlock title="交通情報">
+        <NotionPropertyBlock title="交通情報" collapsibleOnMobile={false}>
           <NotionProperty
             label="利用日"
             value={formatDateValue(traffic.date)}
