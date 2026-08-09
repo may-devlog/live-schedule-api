@@ -1,0 +1,240 @@
+name: Repair SHISHAMO display order (AWS EC2)
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "inspect は確認のみ、apply はバックアップ後に更新"
+        required: true
+        default: inspect
+        type: choice
+        options:
+          - inspect
+          - apply
+      confirmation:
+        description: "apply の場合のみ SET_SHISHAMO_ORDER_0 と入力"
+        required: false
+        type: string
+
+concurrency:
+  group: repair-shishamo-order
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Validate inputs
+        env:
+          OPERATION: ${{ inputs.operation }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [[ "$OPERATION" == "apply" && "$CONFIRMATION" != "SET_SHISHAMO_ORDER_0" ]]; then
+            echo "apply requires the exact confirmation: SET_SHISHAMO_ORDER_0" >&2
+            exit 1
+          fi
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'ap-northeast-1' }}
+
+      - name: Inspect or repair via SSM
+        env:
+          EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+          OPERATION: ${{ inputs.operation }}
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/repair-shishamo-order.sh <<'REMOTE_SCRIPT'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          OPERATION="${1:?operation is required}"
+          SERVICE="live-schedule-api"
+          MAIN_PID="$(systemctl show "$SERVICE" --property=MainPID --value)"
+          WORKING_DIR="$(systemctl show "$SERVICE" --property=WorkingDirectory --value)"
+
+          if [[ -z "$MAIN_PID" || "$MAIN_PID" == "0" ]]; then
+            echo "The $SERVICE service is not running." >&2
+            exit 1
+          fi
+
+          DATABASE_URL="$(tr '\0' '\n' < "/proc/$MAIN_PID/environ" | sed -n 's/^DATABASE_URL=//p' | head -n 1)"
+          if [[ -z "$DATABASE_URL" ]]; then
+            DATABASE_URL="sqlite://data/app.db"
+          fi
+
+          export REPAIR_OPERATION="$OPERATION"
+          export REPAIR_DATABASE_URL="$DATABASE_URL"
+          export REPAIR_WORKING_DIR="$WORKING_DIR"
+
+          python3 <<'PYTHON'
+          import datetime
+          import json
+          import os
+          import pathlib
+          import sqlite3
+          import sys
+
+          operation = os.environ["REPAIR_OPERATION"]
+          database_url = os.environ["REPAIR_DATABASE_URL"].split("?", 1)[0]
+          working_dir = pathlib.Path(os.environ["REPAIR_WORKING_DIR"] or ".")
+
+          if database_url.startswith("sqlite://"):
+              database_path = database_url[len("sqlite://"):]
+          elif database_url.startswith("sqlite:"):
+              database_path = database_url[len("sqlite:"):]
+          else:
+              raise SystemExit("DATABASE_URL is not SQLite; refusing to continue.")
+
+          db_path = pathlib.Path(database_path)
+          if not db_path.is_absolute():
+              db_path = working_dir / db_path
+          db_path = db_path.resolve()
+
+          print(f"Operation: {operation}")
+          print(f"Database: {db_path}")
+          if not db_path.is_file():
+              raise SystemExit("Database file does not exist; refusing to continue.")
+
+          connection = sqlite3.connect(str(db_path), timeout=30)
+          connection.row_factory = sqlite3.Row
+          try:
+              integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+              if integrity != "ok":
+                  raise SystemExit(f"Integrity check failed: {integrity}")
+
+              rows = connection.execute(
+                  "SELECT id, user_id, options_json FROM select_options WHERE option_type = ?",
+                  ("targets",),
+              ).fetchall()
+
+              matches = []
+              for row in rows:
+                  options = json.loads(row["options_json"])
+                  for index, option in enumerate(options):
+                      if option.get("label") == "SHISHAMO":
+                          matches.append((row, options, index, option))
+
+              print(f"Matching SHISHAMO entries: {len(matches)}")
+              for row, _options, index, option in matches:
+                  print(
+                      f"select_options.id={row['id']} user_id={row['user_id']} "
+                      f"array_index={index} order={option.get('order', '<missing>')}"
+                  )
+
+              if operation == "inspect":
+                  print("Inspection completed; no data was changed.")
+                  sys.exit(0)
+
+              if operation != "apply":
+                  raise SystemExit(f"Unknown operation: {operation}")
+              if len(matches) != 1:
+                  raise SystemExit("Expected exactly one SHISHAMO entry; refusing to update.")
+
+              row, options, index, option = matches[0]
+              current_order = option.get("order")
+              if current_order == 0:
+                  print("SHISHAMO already has order=0; no update was needed.")
+                  sys.exit(0)
+              if current_order is not None:
+                  raise SystemExit(
+                      f"SHISHAMO has unexpected order={current_order}; refusing to overwrite it."
+                  )
+
+              conflicts = [
+                  item.get("label") for item in options
+                  if item.get("label") != "SHISHAMO" and item.get("order") == 0
+              ]
+              if conflicts:
+                  raise SystemExit(f"Another option already has order=0: {conflicts}")
+
+              timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+              backup_dir = db_path.parent / "backups"
+              backup_dir.mkdir(mode=0o750, parents=True, exist_ok=True)
+              backup_path = backup_dir / f"{db_path.name}.before-shishamo-order-{timestamp}"
+
+              backup_connection = sqlite3.connect(str(backup_path))
+              try:
+                  connection.backup(backup_connection)
+              finally:
+                  backup_connection.close()
+
+              backup_check = sqlite3.connect(str(backup_path))
+              try:
+                  backup_integrity = backup_check.execute("PRAGMA integrity_check").fetchone()[0]
+              finally:
+                  backup_check.close()
+              if backup_integrity != "ok":
+                  backup_path.unlink(missing_ok=True)
+                  raise SystemExit(f"Backup integrity check failed: {backup_integrity}")
+              print(f"Backup created: {backup_path}")
+
+              options[index]["order"] = 0
+              updated_json = json.dumps(options, ensure_ascii=False, separators=(",", ":"))
+              columns = {
+                  column[1] for column in connection.execute("PRAGMA table_info(select_options)")
+              }
+
+              connection.execute("BEGIN IMMEDIATE")
+              if "updated_at" in columns:
+                  cursor = connection.execute(
+                      "UPDATE select_options SET options_json = ?, updated_at = ? WHERE id = ?",
+                      (updated_json, datetime.datetime.now(datetime.timezone.utc).isoformat(), row["id"]),
+                  )
+              else:
+                  cursor = connection.execute(
+                      "UPDATE select_options SET options_json = ? WHERE id = ?",
+                      (updated_json, row["id"]),
+                  )
+              if cursor.rowcount != 1:
+                  connection.rollback()
+                  raise SystemExit(f"Expected one updated row, got {cursor.rowcount}.")
+              connection.commit()
+
+              saved_options = json.loads(connection.execute(
+                  "SELECT options_json FROM select_options WHERE id = ?", (row["id"],)
+              ).fetchone()[0])
+              saved = [item for item in saved_options if item.get("label") == "SHISHAMO"]
+              if len(saved) != 1 or saved[0].get("order") != 0:
+                  raise SystemExit("Post-update verification failed.")
+              print("Verified: SHISHAMO order=0")
+          finally:
+              connection.close()
+          PYTHON
+          REMOTE_SCRIPT
+
+          SCRIPT_BASE64="$(base64 -w 0 /tmp/repair-shishamo-order.sh)"
+          REMOTE_COMMAND="echo '$SCRIPT_BASE64' | base64 -d > /tmp/repair-shishamo-order.sh && chmod 700 /tmp/repair-shishamo-order.sh && sudo /tmp/repair-shishamo-order.sh '$OPERATION'"
+          PARAMETERS="$(jq -n --arg command "$REMOTE_COMMAND" '{commands: [$command]}')"
+
+          COMMAND_ID="$(
+            aws ssm send-command \
+              --instance-ids "$EC2_INSTANCE_ID" \
+              --document-name "AWS-RunShellScript" \
+              --comment "Inspect or repair SHISHAMO display order" \
+              --parameters "$PARAMETERS" \
+              --query "Command.CommandId" \
+              --output text
+          )"
+          echo "SSM command ID: $COMMAND_ID"
+
+          set +e
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$EC2_INSTANCE_ID"
+          WAIT_STATUS=$?
+          set -e
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$EC2_INSTANCE_ID" \
+            --query '{Status:Status,StandardOutput:StandardOutputContent,StandardError:StandardErrorContent}'
+
+          exit "$WAIT_STATUS"
