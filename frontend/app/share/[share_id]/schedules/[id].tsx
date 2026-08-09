@@ -392,7 +392,7 @@ export default function SharedScheduleDetailScreen() {
 
         <View style={[styles.primaryGrid, isDesktop && styles.primaryGridDesktop]}>
         <View style={[styles.primaryColumn, isDesktop && styles.eventColumnDesktop]}>
-          <NotionPropertyBlock title="イベント情報">
+          <NotionPropertyBlock title="イベント情報" iconName="people">
           <NotionProperty label="グループ">
             {schedule.group ? (
               <NotionTag label={schedule.group} color={groupColor || undefined} />
@@ -445,7 +445,7 @@ export default function SharedScheduleDetailScreen() {
         </View>
 
         <View style={[styles.primaryColumn, isDesktop && styles.costColumnDesktop]}>
-          <NotionPropertyBlock title="費用">
+          <NotionPropertyBlock title="費用" iconName="wallet">
           <NotionProperty label="販売元">
             {schedule.seller ? (
               <NotionTag label={schedule.seller} color={sellerColor || undefined} />
@@ -513,7 +513,7 @@ export default function SharedScheduleDetailScreen() {
 
         <View style={[styles.secondaryGrid, isDesktop && styles.secondaryGridDesktop]}>
         <View style={[styles.secondaryColumn, isDesktop && styles.relatedColumnDesktop]}>
-        <CollapsibleDetailSection title="関連スケジュール">
+        <CollapsibleDetailSection title="関連スケジュール" iconName="calendar">
           {relatedIds.length === 0 ? (
             <Text style={styles.emptyValue}>関連スケジュールはありません</Text>
           ) : (
@@ -560,7 +560,7 @@ export default function SharedScheduleDetailScreen() {
         </View>
 
         <View style={[styles.secondaryColumn, isDesktop && styles.trafficColumnDesktop]}>
-        <CollapsibleDetailSection title="交通">
+        <CollapsibleDetailSection title="交通" iconName="train">
           {trafficSummaries.length === 0 ? (
             <Text style={styles.emptyValue}>交通情報はありません</Text>
           ) : (
@@ -612,7 +612,7 @@ export default function SharedScheduleDetailScreen() {
         </View>
 
         <View style={[styles.secondaryColumn, isDesktop && styles.stayColumnDesktop]}>
-        <CollapsibleDetailSection title="宿泊">
+        <CollapsibleDetailSection title="宿泊" iconName="bed">
           {staySummaries.length === 0 ? (
             <Text style={styles.emptyValue}>宿泊情報はありません</Text>
           ) : (

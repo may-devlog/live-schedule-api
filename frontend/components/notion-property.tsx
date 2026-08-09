@@ -35,9 +35,10 @@ export function NotionProperty({ label, value, children, onPress, isLast }: Prop
 type PropertyBlockProps = {
   children: React.ReactNode;
   title?: string;
+  iconName?: keyof typeof Ionicons.glyphMap;
 };
 
-export function NotionPropertyBlock({ children, title }: PropertyBlockProps) {
+export function NotionPropertyBlock({ children, title, iconName }: PropertyBlockProps) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const [expanded, setExpanded] = useState(!isMobile);
@@ -64,6 +65,7 @@ export function NotionPropertyBlock({ children, title }: PropertyBlockProps) {
           accessibilityRole={isMobile ? "button" : undefined}
           accessibilityState={isMobile ? { expanded } : undefined}
         >
+          {!!iconName && <Ionicons name={iconName} size={22} color="#5B21B6" style={styles.blockIcon} />}
           <Text style={styles.blockTitle}>{title}</Text>
           {isMobile && <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color="#7C3AED" />}
         </TouchableOpacity>
@@ -99,7 +101,10 @@ const styles = StyleSheet.create({
   blockTitleContainer: {
     width: "100%",
     marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
   },
+  blockIcon: { marginRight: 10 },
   blockTitleContainerMobile: {
     minHeight: 42,
     paddingHorizontal: 0,
