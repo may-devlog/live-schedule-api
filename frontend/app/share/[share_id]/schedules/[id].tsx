@@ -548,15 +548,17 @@ export default function SharedScheduleDetailScreen() {
                       {related.date && (
                         <Text style={styles.relationDate}>{related.date}</Text>
                       )}
-                      <Text style={styles.relationTitle} numberOfLines={1}>
-                        {related.title}
-                      </Text>
+                      <View style={styles.relationScheduleRow}>
+                        {!!related.start && <Text style={styles.relationTime}>{related.start}</Text>}
+                        <Text style={styles.relationTitle} numberOfLines={2}>{related.title}</Text>
+                        <Ionicons name="chevron-forward" size={18} color={brand.muted} />
+                      </View>
                       {related.area && (
-                        <NotionTag
-                          label={related.area}
-                          color={relatedAreaColors.get(rid) || undefined}
-                        />
+                        <View style={styles.relationArea}>
+                          <NotionTag label={related.area} color={relatedAreaColors.get(rid) || undefined} />
+                        </View>
                       )}
+                      {!!related.venue && <Text style={styles.relationVenue}>{related.venue}</Text>}
                     </View>
                   </TouchableOpacity>
                 );
@@ -749,16 +751,22 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   relationDate: {
-    fontSize: 11,
-    color: "#9b9a97",
-    marginBottom: 2,
+    fontSize: 13,
+    color: brand.ink,
+    fontWeight: "600",
+    marginBottom: 6,
   },
+  relationScheduleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  relationTime: { fontSize: 13, lineHeight: 20, color: brand.muted, fontVariant: ["tabular-nums"] },
   relationTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#37352f",
-    marginBottom: 2,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: "600",
+    color: brand.ink,
   },
+  relationArea: { alignSelf: "flex-start", marginLeft: 48, marginTop: 4 },
+  relationVenue: { marginLeft: 48, marginTop: 4, color: brand.muted, fontSize: 12, lineHeight: 18 },
   relationLink: {
     fontSize: 14,
     color: "#37352f",
