@@ -14,7 +14,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  backup:
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/backup-db.yml
+    secrets: inherit
+
   deploy:
+    needs: backup
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -47,4 +55,3 @@ jobs:
             --instance-id "$EC2_INSTANCE_ID" \
             --query "StandardOutputContent" \
             --output text
-

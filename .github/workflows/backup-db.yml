@@ -1,6 +1,7 @@
 name: Database Backup (AWS)
 
 on:
+  workflow_call:
   schedule:
     # Every day at 03:00 UTC (12:00 JST)
     - cron: "0 3 * * *"
