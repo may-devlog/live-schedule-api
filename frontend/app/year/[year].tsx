@@ -4,7 +4,7 @@ import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import React from "react";
 import type { Schedule } from "../HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
-import { YearPageContent } from "../../components/YearPageContent";
+import { SharedArchivePage } from "../../components/SharedArchivePage";
 
 export default function YearScreen() {
   const params = useLocalSearchParams<{ year: string }>();
@@ -13,8 +13,8 @@ export default function YearScreen() {
   // 利用可能な年を取得する関数
   const fetchAvailableYears = async (): Promise<number[]> => {
     try {
-      const url = getApiUrl("/public/schedules");
-      const res = await fetch(url);
+      const url = getApiUrl("/schedules?include_canceled=true");
+      const res = await authenticatedFetch(url);
       if (!res.ok) return [];
 
       const data: Schedule[] = await res.json();
@@ -98,18 +98,17 @@ export default function YearScreen() {
       {/* ナビゲーションバーのタイトルを非表示 */}
       <Stack.Screen options={{ headerShown: false }} />
       
-      <YearPageContent
-        isShared={false}
+      <SharedArchivePage
+        authenticated
         fetchSchedules={fetchSchedules}
         fetchStays={fetchStays}
         fetchAvailableYears={fetchAvailableYears}
-        showStayTab={true}
-        homePath="/"
         onSchedulePress={handleOpenDetail}
         onStayPress={handleOpenStay}
-        initialYear={params.year ?? null}
+        initialYear={params.year ?? String(new Date().getFullYear())}
+        onBack={() => router.push("/")}
+        onSelectYear={(selectedYear) => router.replace(`/year/${selectedYear}`)}
       />
     </>
   );
 }
-
