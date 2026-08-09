@@ -311,7 +311,7 @@ export default function SharedScheduleDetailScreen() {
     const date = new Date(year, month - 1, day);
     const weekday = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][date.getDay()] ?? "";
     const tone = date.getDay() === 6 ? "saturday" as const : (date.getDay() === 0 || isJapaneseHolidayDate(datePart)) ? "holiday" as const : "normal" as const;
-    return { date: datePart, weekday, tone };
+    return { date: datePart.replace(/-/g, "."), weekday, tone };
   }
 
   const scheduleDateDisplay = dateDisplay(schedule.date ?? schedule.datetime);
@@ -641,7 +641,7 @@ export default function SharedScheduleDetailScreen() {
               const formatDateTime = (dateTimeStr: string) => {
                 const display = dateDisplay(dateTimeStr);
                 const time = dateTimeStr.includes(" ") ? dateTimeStr.split(" ")[1] : "";
-                return { ...display, date: display.date.replace(/-/g, "."), time };
+                return { ...display, time };
               };
               const checkInFormatted = formatDateTime(stay.check_in);
               const checkOutFormatted = formatDateTime(stay.check_out);
