@@ -7,7 +7,9 @@ const generatedFontDir = path.join(
   'assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts',
 );
 const publicFontDir = path.join(distDir, 'assets/fonts');
-const requiredFonts = ['Ionicons', 'MaterialIcons'];
+// MaterialIcons is only used by Expo's unused starter routes. Avoid making
+// every production page preload it before the application can render.
+const requiredFonts = ['Ionicons'];
 
 const generatedFonts = await readdir(generatedFontDir);
 await mkdir(publicFontDir, { recursive: true });

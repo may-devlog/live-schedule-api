@@ -20,6 +20,7 @@ import { AppHeader, PublicFooter, PublicHeader, brand } from '../../components/G
 import { authenticatedFetch, getApiUrl } from '../../utils/api';
 import { fetchAreaColors } from '../../utils/fetch-area-colors';
 import { getOptionColorSync } from '../../utils/get-option-color';
+import { fetchProfile } from '../../utils/profile-request';
 import type { Schedule } from '../HomeScreen';
 
 function nextDateDisplay(raw: string) {
@@ -95,11 +96,7 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
 
   useEffect(() => {
     if (!authenticated && !share_id) return;
-    const request = authenticated
-      ? authenticatedFetch(getApiUrl('/auth/profile'))
-      : fetch(getApiUrl(`/share/${share_id}/profile`));
-    request
-      .then((res) => res.ok ? res.json() : null)
+    fetchProfile(authenticated, share_id)
       .then((data) => {
         setAvatarDataUrl(data?.avatar_data_url ?? null);
         setDisplayName(data?.display_name ?? null);
@@ -127,7 +124,15 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
   };
 
   if (loading) {
-    return <View style={styles.statePage}><ActivityIndicator size="large" color={brand.violet} /><Text style={styles.stateText}>読み込み中...</Text></View>;
+    return (
+      <View style={styles.page}>
+        {authenticated ? <AppHeader active="schedule" /> : <PublicHeader />}
+        <View style={styles.statePage}>
+          <ActivityIndicator size="large" color={brand.violet} />
+          <Text style={styles.stateText}>読み込み中...</Text>
+        </View>
+      </View>
+    );
   }
 
   if (error) {

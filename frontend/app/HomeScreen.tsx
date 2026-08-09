@@ -15,7 +15,6 @@ import {
   RefreshControl,
   Image,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { PersonIcon, NotificationIcon } from "@/components/CustomIcons";
@@ -310,6 +309,7 @@ export default function HomeScreen() {
   const handlePickAvatar = async () => {
     try {
       setAvatarLoading(true);
+      const ImagePicker = await import("expo-image-picker");
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: true,

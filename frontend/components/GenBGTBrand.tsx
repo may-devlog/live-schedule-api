@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 import { AccountMenu } from './AccountMenu';
 import { NotificationMenu } from './NotificationMenu';
+import { fetchProfile } from '../utils/profile-request';
 
 export const brand = {
   violet: '#7C3AED',
@@ -105,8 +106,7 @@ export function AppHeader({ active = 'schedule', onDisplayNameChange }: { active
   const narrow = width < 720;
   const accountLabel = displayName || profileShareId || email?.split('@')[0] || 'ユーザー';
   useEffect(() => {
-    authenticatedFetch(getApiUrl('/auth/profile'))
-      .then((response) => response.ok ? response.json() : null)
+    fetchProfile(true)
       .then((profile) => {
         setAvatarDataUrl(profile?.avatar_data_url ?? null);
         setDisplayName(profile?.display_name ?? null);

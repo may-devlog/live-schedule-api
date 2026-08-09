@@ -15,6 +15,8 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="application-name" content="GenBGT" />
         <meta name="apple-mobile-web-app-title" content="GenBGT" />
         <meta name="theme-color" content="#5B21B6" />
+        <link rel="dns-prefetch" href="https://api.genbgt.com" />
+        <link rel="preconnect" href="https://api.genbgt.com" crossOrigin="anonymous" />
         <ScrollViewStyleReset />
       </head>
       <body>{children}</body>
