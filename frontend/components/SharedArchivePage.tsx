@@ -160,11 +160,16 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
       }))
       .sort((a, b) => compareGroups(a.subGroups.flatMap((group) => group.data), b.subGroups.flatMap((group) => group.data)));
 
-    if (mainSortMode === "kana" && (mainGrouping === "target" || mainGrouping === "lineup")) {
+    if (mainGrouping === "target" || mainGrouping === "lineup") {
       return sorted.sort((a, b) => {
         if (a.title === "未設定") return 1;
         if (b.title === "未設定") return -1;
-        return a.title.localeCompare(b.title, "ja");
+        if (mainSortMode === "kana") return a.title.localeCompare(b.title, "ja");
+
+        const schedulesA = a.subGroups.flatMap((group) => group.data);
+        const schedulesB = b.subGroups.flatMap((group) => group.data);
+        const comparison = groupBoundary(schedulesA, "asc").localeCompare(groupBoundary(schedulesB, "asc"));
+        return comparison || a.title.localeCompare(b.title, "ja");
       });
     }
     return sorted;
