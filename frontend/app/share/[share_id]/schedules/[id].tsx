@@ -360,11 +360,11 @@ export default function SharedScheduleDetailScreen() {
         {/* イベント概要 */}
         <View style={styles.heroCard}>
           <View style={styles.heroCopy}>
+            <Text style={styles.mainTitle}>{schedule.title}</Text>
             <View style={styles.heroBadges}>
               {!!schedule.area && <NotionTag label={schedule.area} color={areaColor || undefined} />}
               {!!schedule.status && <NotionTag label={schedule.status} color={statusColor || undefined} />}
             </View>
-            <Text style={styles.mainTitle}>{schedule.title}</Text>
             <View style={styles.heroMeta}>
               <View style={styles.metaItem}>
                 <Ionicons name="calendar-outline" size={16} color={brand.violet} />
@@ -446,7 +446,7 @@ export default function SharedScheduleDetailScreen() {
 
         <View style={[styles.primaryColumn, isDesktop && styles.costColumnDesktop]}>
           <NotionPropertyBlock title="費用" iconName="wallet">
-          <NotionProperty label="販売元">
+          <NotionProperty label="販売元" alignValue="right">
             {schedule.seller ? (
               <NotionTag label={schedule.seller} color={sellerColor || undefined} />
             ) : (
@@ -629,8 +629,6 @@ export default function SharedScheduleDetailScreen() {
               };
               const checkInFormatted = formatDateTime(stay.check_in);
               const checkOutFormatted = formatDateTime(stay.check_out);
-              const dateTimeText = `${checkInFormatted} → ${checkOutFormatted}`;
-              
               return (
                 <TouchableOpacity
                   key={stay.id}
@@ -644,10 +642,18 @@ export default function SharedScheduleDetailScreen() {
                     <Text style={styles.cardRoute}>{maskHotelName(stay.hotel_name, false)}</Text>
                     <View style={styles.cardSubRow}>
                       <Ionicons name="calendar-outline" size={15} color={brand.violet} />
-                      <Text style={styles.cardDateTime}>{dateTimeText}</Text>
+                      <Text style={styles.stayDateLabel}>チェックイン</Text>
+                      <Text style={styles.cardDateTime}>{checkInFormatted}</Text>
+                    </View>
+                    <View style={styles.cardSubRow}>
+                      <Ionicons name="calendar-outline" size={15} color={brand.violet} />
+                      <Text style={styles.stayDateLabel}>チェックアウト</Text>
+                      <Text style={styles.cardDateTime}>{checkOutFormatted}</Text>
                     </View>
                   </View>
-                  {stay.breakfast_flag && <Text style={styles.breakfastTag}>朝食あり</Text>}
+                  <Text style={[styles.breakfastTag, !stay.breakfast_flag && styles.breakfastTagOff]}>
+                    {stay.breakfast_flag ? "朝食あり" : "朝食なし"}
+                  </Text>
                   <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
                   <Ionicons name="chevron-forward" size={20} color={brand.muted} />
                 </TouchableOpacity>
@@ -700,7 +706,7 @@ const styles = StyleSheet.create({
     ...(Platform.OS === "web" ? ({ boxShadow: "0 14px 40px rgba(46,16,101,0.08)" } as any) : {}),
   },
   heroCopy: { flex: 1, minWidth: 0 },
-  heroBadges: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
+  heroBadges: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 },
   mainTitle: {
     fontSize: 30,
     fontWeight: "800",
@@ -818,6 +824,7 @@ const styles = StyleSheet.create({
   cardMain: { flex: 1, minWidth: 0, gap: 7 },
   cardRoute: { color: brand.ink, fontSize: 14, lineHeight: 20, fontWeight: "700" },
   cardSubRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  stayDateLabel: { width: 88, color: brand.muted, fontSize: 11, fontWeight: "600" },
   cardRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -862,4 +869,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  breakfastTagOff: { color: "#77717F", backgroundColor: "#F0EEF2" },
 });

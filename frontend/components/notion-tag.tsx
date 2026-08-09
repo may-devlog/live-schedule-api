@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   tag: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 3,
+    borderRadius: 999,
     alignSelf: "flex-start",
     maxWidth: "100%",
     borderWidth: 0,
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 12,
     color: "#37352f",
-    fontWeight: "500",
+    fontWeight: "600",
     flexShrink: 1,
     flexWrap: "wrap",
   },
