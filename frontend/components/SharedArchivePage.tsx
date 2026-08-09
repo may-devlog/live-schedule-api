@@ -4,7 +4,6 @@ import { Ionicons } from "@expo/vector-icons";
 import type { Schedule } from "../app/HomeScreen";
 import { PublicFooter, PublicHeader, brand } from "./GenBGTBrand";
 import { NotionTag } from "./notion-tag";
-import { fetchAreaColors } from "../utils/fetch-area-colors";
 import { getOptionColorSync } from "../utils/get-option-color";
 import { isJapaneseHolidayDate } from "./ScheduleCalendar";
 
@@ -18,7 +17,6 @@ type Props = {
 };
 
 const shadow = Platform.OS === "web" ? ({ boxShadow: "0 8px 24px rgba(46,16,101,0.08)" } as any) : {};
-const monoFont = Platform.OS === "web" ? "SFMono-Regular, Menlo, Consolas, monospace" : "monospace";
 
 function dateParts(raw: string) {
   const [year, month, day] = raw.slice(0, 10).split("-").map(Number);
@@ -34,21 +32,22 @@ export function SharedArchivePage({ initialYear, fetchSchedules, fetchAvailableY
   const [year, setYear] = useState(initialYear);
   const [years, setYears] = useState<number[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [yearMenuOpen, setYearMenuOpen] = useState(false);
+  const [mainGrouping, setMainGrouping] = useState<"none" | "target" | "lineup">("none");
+  const [subGrouping, setSubGrouping] = useState<"none" | "group" | "category" | "area" | "seller" | "status">("none");
 
   useEffect(() => { setYear(initialYear); }, [initialYear]);
 
   useEffect(() => {
     let active = true;
     Promise.all([fetchAvailableYears(), fetchSchedules(year)])
-      .then(async ([available, data]) => {
+      .then(([available, data]) => {
         if (!active) return;
         const visible = data.filter((item) => item.status !== "Canceled").sort((a, b) => (b.date ?? b.datetime).localeCompare(a.date ?? a.datetime));
         setYears(available);
         setSchedules(visible);
-        setAreaColors(await fetchAreaColors(visible));
         setError(null);
       })
       .catch((e) => active && setError(e.message ?? "アーカイブを取得できませんでした"))
@@ -57,13 +56,16 @@ export function SharedArchivePage({ initialYear, fetchSchedules, fetchAvailableY
   }, [year, fetchAvailableYears, fetchSchedules]);
 
   const groups = useMemo(() => {
-    const map = new Map<number, Schedule[]>();
+    const map = new Map<string, Schedule[]>();
     schedules.forEach((item) => {
       const month = Number((item.date ?? item.datetime).slice(5, 7));
-      map.set(month, [...(map.get(month) ?? []), item]);
+      const mainValue = mainGrouping === "target" ? (item.target || "未設定") : mainGrouping === "lineup" ? (item.lineup || "未設定") : "";
+      const subValue = subGrouping === "none" ? "" : String(item[subGrouping] || "未設定");
+      const key = mainValue || subValue ? [mainValue, subValue].filter(Boolean).join(" / ") : `${month}月`;
+      map.set(key, [...(map.get(key) ?? []), item]);
     });
-    return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
-  }, [schedules]);
+    return Array.from(map.entries());
+  }, [schedules, mainGrouping, subGrouping]);
 
   const selectYear = (next: number) => {
     setLoading(true);
@@ -81,17 +83,24 @@ export function SharedArchivePage({ initialYear, fetchSchedules, fetchAvailableY
             <Text style={styles.backText}>スケジュールに戻る</Text>
           </TouchableOpacity>
           <Text style={[styles.title, mobile && styles.titleMobile]}>{year} ARCHIVE</Text>
-          <View style={styles.yearTabs}>
-            {years.map((item) => (
-              <TouchableOpacity key={item} style={[styles.yearTab, String(item) === year && styles.yearTabActive]} onPress={() => selectYear(item)}>
-                <Text style={[styles.yearTabText, String(item) === year && styles.yearTabTextActive]}>{item}</Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.yearSelectorWrap}>
+            <TouchableOpacity style={styles.yearSelector} onPress={() => setYearMenuOpen((open) => !open)}>
+              <Text style={styles.yearSelectorText}>{year}</Text>
+              <Ionicons name={yearMenuOpen ? "chevron-up" : "chevron-down"} size={18} color={brand.muted} />
+            </TouchableOpacity>
+            {yearMenuOpen && <View style={styles.yearMenu}>
+              {years.map((item) => <TouchableOpacity key={item} style={styles.yearOption} onPress={() => { setYearMenuOpen(false); selectYear(item); }}><Text style={[styles.yearOptionText, String(item) === year && styles.yearOptionTextActive]}>{item}</Text></TouchableOpacity>)}
+            </View>}
           </View>
 
-          {loading ? <ActivityIndicator color={brand.violet} style={styles.loader} /> : error ? <Text style={styles.error}>{error}</Text> : groups.map(([month, items]) => (
-            <View key={month} style={styles.monthSection}>
-              <Text style={styles.monthTitle}>{month}月</Text>
+          <View style={styles.groupingPanel}>
+            <View style={styles.groupingRow}><Text style={styles.groupingLabel}>メイン</Text><View style={styles.groupingButtons}>{([['none','なし'],['target','お目当て'],['lineup','出演者']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, mainGrouping === value && styles.groupingButtonActive]} onPress={() => setMainGrouping(value)}><Text style={[styles.groupingButtonText, mainGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
+            <View style={styles.groupingRow}><Text style={styles.groupingLabel}>サブ</Text><View style={styles.groupingButtons}>{([['none','なし'],['group','グループ'],['category','カテゴリ'],['area','エリア'],['seller','販売元'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, subGrouping === value && styles.groupingButtonActive]} onPress={() => setSubGrouping(value)}><Text style={[styles.groupingButtonText, subGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
+          </View>
+
+          {loading ? <ActivityIndicator color={brand.violet} style={styles.loader} /> : error ? <Text style={styles.error}>{error}</Text> : groups.map(([groupTitle, items]) => (
+            <View key={groupTitle} style={styles.monthSection}>
+              <Text style={styles.monthTitle}>{groupTitle}</Text>
               <View style={styles.cardList}>
                 {items.map((item) => {
                   const parts = dateParts(item.date ?? item.datetime);
@@ -105,19 +114,12 @@ export function SharedArchivePage({ initialYear, fetchSchedules, fetchAvailableY
                       <View style={styles.cardBody}>
                         {mobile && <Text style={styles.mobileDate}>{String(parts.month).padStart(2, "0")}.{parts.day} <Text style={[styles.weekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text></Text>}
                         <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-                        <View style={styles.venueRow}>
-                          {!!item.area && <NotionTag label={item.area} color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")} />}
-                          {!!item.venue && <Text style={styles.venue} numberOfLines={1}>{item.venue}</Text>}
-                        </View>
-                        {mobile && <View style={styles.mobileTags}>
+                        <View style={styles.archiveTags}>
                           {!!item.category && <NotionTag label={item.category} color={getOptionColorSync(item.category, "CATEGORIES")} />}
                           {!!item.status && <NotionTag label={item.status} color={getOptionColorSync(item.status, "STATUSES")} />}
-                        </View>}
+                        </View>
+                        {!!item.venue && <Text style={styles.venue} numberOfLines={1}>{item.venue}</Text>}
                       </View>
-                      {!mobile && <View style={styles.sideTags}>
-                        {!!item.category && <NotionTag label={item.category} color={getOptionColorSync(item.category, "CATEGORIES")} />}
-                        {!!item.status && <NotionTag label={item.status} color={getOptionColorSync(item.status, "STATUSES")} />}
-                      </View>}
                       <Ionicons name="chevron-forward" size={24} color={brand.violet} />
                     </TouchableOpacity>
                   );
@@ -141,11 +143,21 @@ const styles = StyleSheet.create({
   backText: { color: brand.violet, fontSize: 14, fontWeight: "700" },
   title: { color: brand.plum, fontSize: 48, lineHeight: 56, fontWeight: "800", letterSpacing: -1.2 },
   titleMobile: { fontSize: 32, lineHeight: 40, letterSpacing: -0.6 },
-  yearTabs: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 22, marginBottom: 28 },
-  yearTab: { minWidth: 82, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 9, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", alignItems: "center" },
-  yearTabActive: { backgroundColor: brand.violet, borderColor: brand.violet },
-  yearTabText: { color: brand.plum, fontSize: 14, fontWeight: "700" },
-  yearTabTextActive: { color: "#FFFFFF" },
+  yearSelectorWrap: { position: "relative", marginTop: 22, marginBottom: 16, zIndex: 5 },
+  yearSelector: { minHeight: 46, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  yearSelectorText: { color: brand.ink, fontSize: 14, fontWeight: "500" },
+  yearMenu: { position: "absolute", top: 50, left: 0, right: 0, borderWidth: 1, borderColor: brand.border, borderRadius: 8, backgroundColor: "#FFFFFF", padding: 5, ...shadow },
+  yearOption: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 5 },
+  yearOptionText: { color: brand.ink, fontSize: 14 },
+  yearOptionTextActive: { color: brand.violet, fontWeight: "700" },
+  groupingPanel: { gap: 10, marginBottom: 28 },
+  groupingRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  groupingLabel: { width: 48, color: brand.ink, fontSize: 13, lineHeight: 36, fontWeight: "700" },
+  groupingButtons: { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  groupingButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  groupingButtonActive: { backgroundColor: brand.ink, borderColor: brand.ink },
+  groupingButtonText: { color: brand.ink, fontSize: 13, fontWeight: "400" },
+  groupingButtonTextActive: { color: "#FFFFFF", fontWeight: "600" },
   loader: { marginVertical: 60 },
   error: { color: "#C2414B", marginVertical: 30 },
   monthSection: { marginBottom: 28 },
@@ -155,17 +167,15 @@ const styles = StyleSheet.create({
   cardMobile: { minHeight: 0, paddingHorizontal: 14, paddingVertical: 14, gap: 10, alignItems: "flex-start" },
   dateBlock: { width: 104, alignItems: "center" },
   dateBlockMobile: { width: 0, display: "none" },
-  dateText: { color: brand.plum, fontSize: 29, lineHeight: 35, fontWeight: "800", fontVariant: ["tabular-nums"], fontFamily: monoFont },
+  dateText: { color: brand.plum, fontSize: 29, lineHeight: 35, fontWeight: "800", fontVariant: ["tabular-nums"] },
   dateTextMobile: { fontSize: 17, lineHeight: 22 },
-  weekday: { color: brand.violet, fontSize: 15, fontWeight: "800", marginTop: 2, fontFamily: monoFont },
+  weekday: { color: brand.violet, fontSize: 15, fontWeight: "800", minWidth: 32, textAlign: "center", marginTop: 2, fontVariant: ["tabular-nums"] },
   saturday: { color: "#2563EB" },
   holiday: { color: "#DC2626" },
   dateDivider: { width: 1, height: 66, backgroundColor: brand.border },
   cardBody: { flex: 1, minWidth: 0 },
-  mobileDate: { color: brand.violet, fontSize: 17, lineHeight: 22, fontWeight: "800", marginBottom: 7, fontVariant: ["tabular-nums"], fontFamily: monoFont },
+  mobileDate: { color: brand.violet, fontSize: 17, lineHeight: 22, fontWeight: "800", marginBottom: 7, fontVariant: ["tabular-nums"] },
   cardTitle: { color: brand.ink, fontSize: 16, lineHeight: 22, fontWeight: "800" },
-  venueRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 },
-  venue: { flex: 1, color: brand.muted, fontSize: 13 },
-  sideTags: { width: 150, gap: 8, alignItems: "flex-start" },
-  mobileTags: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
+  archiveTags: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 9 },
+  venue: { color: brand.muted, fontSize: 13, marginTop: 8 },
 });
