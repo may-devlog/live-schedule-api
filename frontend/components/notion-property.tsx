@@ -9,11 +9,12 @@ type PropertyProps = {
   children?: React.ReactNode;
   onPress?: () => void;
   isLast?: boolean;
+  alignValue?: "left" | "right";
 };
 
-export function NotionProperty({ label, value, children, onPress, isLast }: PropertyProps) {
+export function NotionProperty({ label, value, children, onPress, isLast, alignValue = "left" }: PropertyProps) {
   const content = children || (
-    <Text style={styles.value}>{value ?? "-"}</Text>
+    <Text style={[styles.value, alignValue === "right" && styles.valueRight]}>{value ?? "-"}</Text>
   );
 
   const Wrapper = onPress ? TouchableOpacity : View;
@@ -27,7 +28,7 @@ export function NotionProperty({ label, value, children, onPress, isLast }: Prop
       <View style={styles.labelContainer}>
         <Text style={styles.label}>{label}</Text>
       </View>
-      <View style={styles.valueContainer}>{content}</View>
+      <View style={[styles.valueContainer, alignValue === "right" && styles.valueContainerRight]}>{content}</View>
     </Wrapper>
   );
 }
@@ -160,4 +161,6 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     fontWeight: "500",
   },
+  valueContainerRight: { alignItems: "flex-end" },
+  valueRight: { textAlign: "right", fontVariant: ["tabular-nums"] },
 });

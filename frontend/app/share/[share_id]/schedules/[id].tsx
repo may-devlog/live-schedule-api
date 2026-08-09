@@ -456,13 +456,16 @@ export default function SharedScheduleDetailScreen() {
           <NotionProperty
             label="チケット代"
             value={formatCurrency(schedule.ticket_fee)}
+            alignValue="right"
           />
           <NotionProperty
             label="ドリンク代"
             value={formatCurrency(schedule.drink_fee)}
+            alignValue="right"
           />
           <NotionProperty
             label="交通費合計"
+            alignValue="right"
             value={formatCurrency(
               trafficSummaries.reduce((sum, traffic) => {
                 // 往復フラグがある場合は金額を2倍
@@ -473,6 +476,7 @@ export default function SharedScheduleDetailScreen() {
           {trafficSummaries.some(t => t.miles !== null && t.miles !== undefined) && (
             <NotionProperty
               label="消費マイル合計"
+              alignValue="right"
               value={
                 trafficSummaries.reduce((sum, traffic) => {
                   if (traffic.miles === null || traffic.miles === undefined) return sum;
@@ -485,9 +489,11 @@ export default function SharedScheduleDetailScreen() {
           <NotionProperty
             label="宿泊費合計"
             value={formatCurrency(schedule.stay_fee)}
+            alignValue="right"
           />
           <NotionProperty
             label="遠征費合計"
+            alignValue="right"
             value={formatCurrency(
               // 交通費合計（往復フラグ考慮済み）+ 宿泊費合計
               trafficSummaries.reduce((sum, traffic) => {
@@ -497,6 +503,7 @@ export default function SharedScheduleDetailScreen() {
           />
           <NotionProperty
             label="総費用"
+            alignValue="right"
             value={formatCurrency(
               // チケット代 + ドリンク代 + 遠征費合計（往復フラグ考慮済み）
               (schedule.ticket_fee || 0) + 
