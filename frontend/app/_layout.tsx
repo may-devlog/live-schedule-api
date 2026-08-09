@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
@@ -19,6 +20,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const pathname = usePathname();
   
   // @expo/vector-icons のフォントを起動時に確実に読み込む（Web/ネイティブ両方）
   const [fontsLoaded] = useFonts({
@@ -31,6 +33,12 @@ export default function RootLayout() {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.title = 'GenBGT';
+    }
+  }, [pathname]);
 
   if (!fontsLoaded) {
     return null;
