@@ -3387,6 +3387,15 @@ async fn delete_schedule(
         ));
     }
 
+    let mut transaction = pool.begin().await.map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "データベースエラーが発生しました".to_string(),
+            }),
+        )
+    })?;
+
     // 関連スケジュールからこのスケジュールへの参照を削除
     let related_ids: Vec<i32> = existing.related_schedule_ids
         .as_ref()
@@ -3458,28 +3467,49 @@ async fn delete_schedule(
             .bind(&updated_json)
             .bind(&now)
             .bind(related_id)
-            .execute(&pool)
-            .await;
+            .execute(&mut *transaction)
+            .await
+            .map_err(|_| (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse { error: "関連スケジュールの更新に失敗しました".to_string() }),
+            ))?;
         }
     }
 
-    // 関連するtrafficsを削除
-    let _ = sqlx::query("DELETE FROM traffics WHERE schedule_id = ?")
+    // 宿泊情報を参照する通知を先に削除
+    sqlx::query("DELETE FROM notifications WHERE schedule_id = ?")
         .bind(id)
-        .execute(&pool)
-        .await;
+        .execute(&mut *transaction)
+        .await
+        .map_err(|_| (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: "関連通知の削除に失敗しました".to_string() }),
+        ))?;
 
-    // 関連するstaysを削除
-    let _ = sqlx::query("DELETE FROM stays WHERE schedule_id = ?")
+    // 関連する交通・宿泊情報を同じトランザクションで削除
+    sqlx::query("DELETE FROM traffics WHERE schedule_id = ?")
         .bind(id)
-        .execute(&pool)
-        .await;
+        .execute(&mut *transaction)
+        .await
+        .map_err(|_| (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: "関連する交通情報の削除に失敗しました".to_string() }),
+        ))?;
+
+    sqlx::query("DELETE FROM stays WHERE schedule_id = ?")
+        .bind(id)
+        .execute(&mut *transaction)
+        .await
+        .map_err(|_| (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: "関連する宿泊情報の削除に失敗しました".to_string() }),
+        ))?;
 
     // スケジュールを削除
     let result = sqlx::query("DELETE FROM schedules WHERE id = ? AND user_id = ?")
         .bind(id)
         .bind(user.user_id)
-        .execute(&pool)
+        .execute(&mut *transaction)
         .await
         .map_err(|_| {
             (
@@ -3498,6 +3528,11 @@ async fn delete_schedule(
             }),
         ));
     }
+
+    transaction.commit().await.map_err(|_| (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(ErrorResponse { error: "削除処理の確定に失敗しました".to_string() }),
+    ))?;
 
     Ok(Json(serde_json::json!({
         "success": true,
