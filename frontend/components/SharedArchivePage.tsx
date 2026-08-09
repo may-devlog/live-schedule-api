@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   groupingLabel: { width: 48, color: brand.ink, fontSize: 13, lineHeight: 36, fontWeight: "700" },
   groupingButtons: { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 8 },
   groupingButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  groupingButtonActive: { backgroundColor: brand.violet, borderColor: brand.violet },
+  groupingButtonActive: { backgroundColor: brand.plum, borderColor: brand.plum },
   groupingButtonText: { color: brand.ink, fontSize: 13, fontWeight: "400" },
   groupingButtonTextActive: { color: "#FFFFFF", fontWeight: "600" },
   loader: { marginVertical: 60 },

@@ -14,13 +14,22 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScheduleCalendar } from '../../components/ScheduleCalendar';
+import { isJapaneseHolidayDate, ScheduleCalendar } from '../../components/ScheduleCalendar';
 import { NotionTag } from '../../components/notion-tag';
 import { PublicFooter, PublicHeader, brand } from '../../components/GenBGTBrand';
 import { getApiUrl } from '../../utils/api';
 import { fetchAreaColors } from '../../utils/fetch-area-colors';
 import { getOptionColorSync } from '../../utils/get-option-color';
 import type { Schedule } from '../HomeScreen';
+
+function nextDateDisplay(raw: string) {
+  const datePart = raw.slice(0, 10);
+  const [year, month, day] = datePart.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const weekday = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][date.getDay()];
+  const tone = date.getDay() === 6 ? 'saturday' : (date.getDay() === 0 || isJapaneseHolidayDate(datePart)) ? 'holiday' : 'weekday';
+  return { label: datePart.replace(/-/g, '.'), weekday, tone };
+}
 
 export default function SharedScheduleScreen() {
   const router = useRouter();
@@ -155,9 +164,14 @@ export default function SharedScheduleScreen() {
                 scrollEnabled={false}
                 ItemSeparatorComponent={() => <View style={styles.divider} />}
                 renderItem={({ item }) => {
+                  const dateDisplay = nextDateDisplay(item.date ?? item.datetime);
                   return (
                     <TouchableOpacity style={styles.eventRow} onPress={() => router.push(`/share/${share_id}/schedules/${item.id}`)}>
                       <View style={styles.eventContent}>
+                        <View style={styles.nextDateRow}>
+                          <Text style={styles.nextDate}>{dateDisplay.label}</Text>
+                          <Text style={[styles.nextWeekday, dateDisplay.tone === 'saturday' && styles.nextSaturday, dateDisplay.tone === 'holiday' && styles.nextHoliday]}>{dateDisplay.weekday}</Text>
+                        </View>
                         <Text style={styles.eventTitle} numberOfLines={2}>{item.title}</Text>
                         <View style={styles.metaRow}>
                           {item.area && <NotionTag label={item.area} color={areaColors.get(item.id) || getOptionColorSync(item.area, 'AREAS')} />}
@@ -211,6 +225,11 @@ const styles = StyleSheet.create({
   eyebrow: { color: brand.violet, fontSize: 12, fontWeight: '800', letterSpacing: 0.6, marginBottom: 12 },
   eventRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 4 },
   eventContent: { flex: 1 },
+  nextDateRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 5 },
+  nextDate: { color: brand.ink, fontSize: 14, lineHeight: 20, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  nextWeekday: { color: brand.ink, fontSize: 13, lineHeight: 18, fontWeight: '700', minWidth: 30, fontFamily: Platform.OS === 'web' ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'monospace' },
+  nextSaturday: { color: '#2563EB' },
+  nextHoliday: { color: '#DC2626' },
   eventDate: { color: brand.ink, fontSize: 14, fontWeight: '700' },
   eventTime: { color: brand.muted, fontWeight: '600' },
   eventTitle: { color: brand.ink, fontSize: 18, fontWeight: '700', lineHeight: 25, marginTop: 5 },
