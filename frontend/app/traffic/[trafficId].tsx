@@ -27,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "../../components/PageHeader";
 import type { Schedule } from "../HomeScreen";
 import { NotionRelation } from "../../components/notion-relation";
+import { BooleanSelectDisplay } from "../../components/boolean-select-display";
 
 export default function TrafficDetailScreen() {
   const { trafficId } = useLocalSearchParams<{ trafficId: string }>();
@@ -314,7 +315,7 @@ export default function TrafficDetailScreen() {
         <NotionPropertyBlock title="交通情報">
           <NotionProperty
             label="利用日"
-            value={traffic.date}
+            value={formatDateValue(traffic.date)}
           />
           <NotionProperty
             label="利用順"
@@ -355,10 +356,9 @@ export default function TrafficDetailScreen() {
                 : undefined
             }
           />
-          <NotionProperty
-            label="往復フラグ"
-            value={traffic.return_flag ? "あり" : "なし"}
-          />
+          <NotionProperty label="往復フラグ">
+            <BooleanSelectDisplay value={traffic.return_flag} />
+          </NotionProperty>
         </NotionPropertyBlock>
 
         {/* [Schedule Link] */}
@@ -430,6 +430,10 @@ export default function TrafficDetailScreen() {
 
 function formatCurrency(value: number): string {
   return `¥${value.toLocaleString("ja-JP")}`;
+}
+
+function formatDateValue(value: string): string {
+  return value.replace(/^(\d{4})-(\d{2})-(\d{2})/, "$1.$2.$3");
 }
 
 const styles = StyleSheet.create({

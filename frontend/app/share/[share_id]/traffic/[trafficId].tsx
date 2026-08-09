@@ -8,6 +8,7 @@ import { NotionProperty, NotionPropertyBlock } from "../../../../components/noti
 import { getOptionColor } from "../../../../utils/get-option-color";
 import { PageHeader } from "../../../../components/PageHeader";
 import type { Schedule } from "../../../HomeScreen";
+import { BooleanSelectDisplay } from "../../../../components/boolean-select-display";
 
 type Traffic = {
   id: number;
@@ -172,7 +173,7 @@ export default function SharedTrafficDetailScreen() {
         <NotionPropertyBlock title="交通情報">
           <NotionProperty
             label="利用日"
-            value={traffic.date}
+            value={formatDateValue(traffic.date)}
           />
           <NotionProperty
             label="利用順"
@@ -213,10 +214,9 @@ export default function SharedTrafficDetailScreen() {
                 : undefined
             }
           />
-          <NotionProperty
-            label="往復フラグ"
-            value={traffic.return_flag ? "あり" : "なし"}
-          />
+          <NotionProperty label="往復フラグ">
+            <BooleanSelectDisplay value={traffic.return_flag} />
+          </NotionProperty>
         </NotionPropertyBlock>
       </ScrollView>
     </View>
@@ -225,6 +225,10 @@ export default function SharedTrafficDetailScreen() {
 
 function formatCurrency(value: number): string {
   return `¥${value.toLocaleString("ja-JP")}`;
+}
+
+function formatDateValue(value: string): string {
+  return value.replace(/^(\d{4})-(\d{2})-(\d{2})/, "$1.$2.$3");
 }
 
 const styles = StyleSheet.create({
@@ -265,4 +269,3 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
-

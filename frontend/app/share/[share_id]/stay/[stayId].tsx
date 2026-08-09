@@ -10,6 +10,7 @@ import type { Schedule } from "../../../HomeScreen";
 import { maskHotelName } from "../../../../utils/mask-hotel-name";
 import type { SelectOption } from "../../../../types/select-option";
 import { loadStaySelectOptions } from "../../../../utils/select-options-storage";
+import { BooleanSelectDisplay } from "../../../../components/boolean-select-display";
 
 type Stay = {
   id: number;
@@ -173,11 +174,11 @@ export default function SharedStayDetailScreen() {
         <NotionPropertyBlock title="宿泊情報">
           <NotionProperty
             label="チェックイン"
-            value={stay.check_in}
+            value={formatDateValue(stay.check_in)}
           />
           <NotionProperty
             label="チェックアウト"
-            value={stay.check_out}
+            value={formatDateValue(stay.check_out)}
           />
           <NotionProperty label="予約サイト">
             {stay.website ? (() => {
@@ -200,10 +201,9 @@ export default function SharedStayDetailScreen() {
             label="宿泊費"
             value={formatCurrency(stay.fee)}
           />
-          <NotionProperty
-            label="朝食"
-            value={stay.breakfast_flag ? "あり" : "なし"}
-          />
+          <NotionProperty label="朝食">
+            <BooleanSelectDisplay value={stay.breakfast_flag} />
+          </NotionProperty>
           <NotionProperty
             label="取消料発生日時"
             value={
@@ -247,6 +247,10 @@ function formatCurrency(value: number): string {
   return `¥${value.toLocaleString("ja-JP")}`;
 }
 
+function formatDateValue(value: string): string {
+  return value.replace(/^(\d{4})-(\d{2})-(\d{2})/, "$1.$2.$3");
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -281,4 +285,3 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
-
