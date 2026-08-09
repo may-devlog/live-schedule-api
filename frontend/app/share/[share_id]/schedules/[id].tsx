@@ -429,8 +429,8 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
             </View>
           </View>
           {authenticated && <View style={[styles.heroActions, isMobile && styles.heroActionsMobile]}>
-            <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={brand.violet} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={brand.white} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Ionicons name="trash-outline" size={17} color="#DC2626" /><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
           </View>}
         </View>
 
@@ -770,9 +770,9 @@ const styles = StyleSheet.create({
   heroCopy: { flex: 1, minWidth: 0 },
   heroActions: { flexDirection: "row", alignItems: "center", gap: 16 },
   heroActionsMobile: { width: "100%", justifyContent: "flex-end" },
-  editAction: { minHeight: 42, paddingHorizontal: 20, borderWidth: 1, borderColor: brand.violet, borderRadius: 7, flexDirection: "row", alignItems: "center", gap: 8 },
-  editActionText: { color: brand.violet, fontSize: 14, fontWeight: "700" },
-  deleteAction: { minHeight: 42, paddingHorizontal: 12, justifyContent: "center" },
+  editAction: { minHeight: 42, paddingHorizontal: 20, backgroundColor: brand.violet, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, flexDirection: "row", alignItems: "center", gap: 8 },
+  editActionText: { color: brand.white, fontSize: 14, fontWeight: "700" },
+  deleteAction: { minHeight: 42, paddingHorizontal: 14, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: 7, borderWidth: 1, borderColor: "#FECACA", backgroundColor: "#FEF2F2", borderRadius: 9 },
   deleteActionText: { color: "#DC2626", fontSize: 14, fontWeight: "600" },
   heroBadges: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 },
   mainTitle: {

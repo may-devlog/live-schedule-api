@@ -2,6 +2,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, RefreshControl, Platform, Alert, useWindowDimensions } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 type Stay = {
   id: number;
@@ -321,18 +322,21 @@ export default function StayDetailScreen() {
                 style={styles.duplicateButton}
                 onPress={handleDuplicate}
               >
+                <Ionicons name="copy-outline" size={17} color="#5B21B6" />
                 <Text style={styles.duplicateButtonText}>複製</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.editButton}
                 onPress={handleEdit}
               >
+                <Ionicons name="create-outline" size={17} color="#FFFFFF" />
                 <Text style={styles.editButtonText}>編集</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={handleDelete}
               >
+                <Ionicons name="trash-outline" size={17} color="#DC2626" />
                 <Text style={styles.deleteButtonText}>削除</Text>
               </TouchableOpacity>
             </View>
@@ -509,23 +513,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   duplicateButton: {
-    backgroundColor: "#f7f6f3",
+    backgroundColor: "#F5F3FF",
     borderWidth: 1,
-    borderColor: "#e9e9e7",
+    borderColor: "#C4B5FD",
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 3,
+    minHeight: 42,
+    borderRadius: 9,
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7,
   },
   duplicateButtonText: {
-    color: "#37352f",
+    color: "#5B21B6",
     fontSize: 14,
     fontWeight: "600",
   },
   editButton: {
-    backgroundColor: "#37352f",
+    backgroundColor: "#7C3AED",
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 3,
+    minHeight: 42,
+    borderRadius: 9,
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7,
   },
   editButtonText: {
     color: "#ffffff",
@@ -533,13 +539,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   deleteButton: {
-    backgroundColor: "#d93025",
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 3,
+    minHeight: 42,
+    borderRadius: 9,
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7,
   },
   deleteButtonText: {
-    color: "#ffffff",
+    color: "#DC2626",
     fontSize: 14,
     fontWeight: "600",
   },
