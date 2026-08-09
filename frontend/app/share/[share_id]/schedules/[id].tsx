@@ -10,6 +10,7 @@ import {
   ScrollView,
   RefreshControl,
   Platform,
+  Alert,
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -287,9 +288,21 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
 
   const handleDelete = async () => {
     if (!authenticated || !id) return;
-    if (Platform.OS === "web" && typeof window !== "undefined" && !window.confirm("このイベントを削除しますか？")) return;
-    const response = await authenticatedFetch(getApiUrl(`/schedules/${id}`), { method: "DELETE" });
-    if (response.ok) router.replace("/");
+    const warning = "このイベントに紐づく交通情報と宿泊情報もすべて削除されます。\nこの操作は取り消せません。削除しますか？";
+    const performDelete = async () => {
+      const response = await authenticatedFetch(getApiUrl(`/schedules/${id}`), { method: "DELETE" });
+      if (response.ok) router.replace("/");
+    };
+
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      if (window.confirm(warning)) await performDelete();
+      return;
+    }
+
+    Alert.alert("イベントを削除", warning, [
+      { text: "キャンセル", style: "cancel" },
+      { text: "削除", style: "destructive", onPress: () => void performDelete() },
+    ]);
   };
 
   if (loading) {
