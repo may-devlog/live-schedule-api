@@ -208,7 +208,7 @@ export default function SharedStayDetailScreen() {
             label="取消料発生日時"
             value={
               stay.deadline && stay.deadline.trim().length > 0
-                ? stay.deadline
+                ? formatDateValue(stay.deadline)
                 : undefined
             }
           />
