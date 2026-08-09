@@ -359,23 +359,19 @@ export default function SharedScheduleDetailScreen() {
 
         {/* イベント概要 */}
         <View style={styles.heroCard}>
-          <View style={styles.heroIcon}>
-            <Ionicons name="musical-notes" size={25} color={brand.violet} />
-          </View>
           <View style={styles.heroCopy}>
-            <Text style={styles.heroEyebrow}>LIVE SCHEDULE</Text>
             <Text style={styles.mainTitle}>{schedule.title}</Text>
             <View style={styles.heroMeta}>
               <View style={styles.metaItem}>
                 <Ionicons name="calendar-outline" size={16} color={brand.violet} />
                 <Text style={styles.metaText}>{schedule.date ?? formatDateTimeUTC(schedule.datetime)}</Text>
               </View>
-              {!!schedule.start && (
-                <View style={styles.metaItem}>
-                  <Ionicons name="time-outline" size={16} color={brand.violet} />
-                  <Text style={styles.metaText}>{schedule.start} 開演</Text>
-                </View>
-              )}
+              <View style={styles.timeMetaRow}>
+                <Ionicons name="time-outline" size={16} color={brand.violet} />
+                {!!schedule.open && <Text style={styles.metaText}>開場 {schedule.open}</Text>}
+                {!!schedule.start && <Text style={styles.metaText}>開演 {schedule.start}</Text>}
+                {!!schedule.end && schedule.end !== "-" && <Text style={styles.metaText}>終演 {schedule.end}</Text>}
+              </View>
               {!!schedule.venue && (
                 <View style={styles.metaItem}>
                   <Ionicons name="location-outline" size={16} color={brand.violet} />
@@ -387,7 +383,7 @@ export default function SharedScheduleDetailScreen() {
         </View>
 
         <View style={[styles.primaryGrid, isDesktop && styles.primaryGridDesktop]}>
-        <View style={styles.primaryColumn}>
+        <View style={[styles.primaryColumn, isDesktop && styles.eventColumnDesktop]}>
           <NotionPropertyBlock title="イベント情報">
           <NotionProperty label="グループ">
             {schedule.group ? (
@@ -396,13 +392,6 @@ export default function SharedScheduleDetailScreen() {
               <Text style={styles.emptyValue}>-</Text>
             )}
           </NotionProperty>
-          <NotionProperty
-            label="日付"
-            value={schedule.date ?? formatDateTimeUTC(schedule.datetime)}
-          />
-          <NotionProperty label="開場" value={schedule.open} />
-          <NotionProperty label="開演" value={schedule.start} />
-          <NotionProperty label="終演" value={schedule.end} />
           <NotionProperty
             label="備考"
             value={
@@ -425,7 +414,6 @@ export default function SharedScheduleDetailScreen() {
               <Text style={styles.emptyValue}>-</Text>
             )}
           </NotionProperty>
-          <NotionProperty label="会場" value={schedule.venue} />
           <NotionProperty label="出演者">
             {filteredLineupOptions.length > 0 ? (
               <View
@@ -455,7 +443,7 @@ export default function SharedScheduleDetailScreen() {
           </NotionPropertyBlock>
         </View>
 
-        <View style={styles.primaryColumn}>
+        <View style={[styles.primaryColumn, isDesktop && styles.costColumnDesktop]}>
           <NotionPropertyBlock title="費用">
           <NotionProperty label="販売元">
             {schedule.seller ? (
@@ -530,7 +518,7 @@ export default function SharedScheduleDetailScreen() {
         </View>
 
         <View style={[styles.secondaryGrid, isDesktop && styles.secondaryGridDesktop]}>
-        <View style={styles.secondaryColumn}>
+        <View style={[styles.secondaryColumn, isDesktop && styles.relatedColumnDesktop]}>
         <CollapsibleDetailSection title="関連スケジュール">
           {relatedIds.length === 0 ? (
             <Text style={styles.emptyValue}>関連スケジュールはありません</Text>
@@ -577,7 +565,7 @@ export default function SharedScheduleDetailScreen() {
         </CollapsibleDetailSection>
         </View>
 
-        <View style={styles.secondaryColumn}>
+        <View style={[styles.secondaryColumn, isDesktop && styles.trafficColumnDesktop]}>
         <CollapsibleDetailSection title="交通">
           {trafficSummaries.length === 0 ? (
             <Text style={styles.emptyValue}>交通情報はありません</Text>
@@ -629,7 +617,7 @@ export default function SharedScheduleDetailScreen() {
         </CollapsibleDetailSection>
         </View>
 
-        <View style={styles.secondaryColumn}>
+        <View style={[styles.secondaryColumn, isDesktop && styles.stayColumnDesktop]}>
         <CollapsibleDetailSection title="宿泊">
           {staySummaries.length === 0 ? (
             <Text style={styles.emptyValue}>宿泊情報はありません</Text>
@@ -706,24 +694,28 @@ const styles = StyleSheet.create({
     backgroundColor: brand.white,
     ...(Platform.OS === "web" ? ({ boxShadow: "0 14px 40px rgba(46,16,101,0.08)" } as any) : {}),
   },
-  heroIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: "#EDE9FE", alignItems: "center", justifyContent: "center" },
   heroCopy: { flex: 1, minWidth: 0 },
-  heroEyebrow: { color: brand.violet, fontSize: 11, fontWeight: "800", letterSpacing: 1.4, marginBottom: 7 },
   mainTitle: {
     fontSize: 27,
     fontWeight: "800",
     color: brand.ink,
     lineHeight: 36,
   },
-  heroMeta: { flexDirection: "row", flexWrap: "wrap", gap: 16, marginTop: 16 },
+  heroMeta: { gap: 10, marginTop: 16 },
+  timeMetaRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 14 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
   metaText: { color: brand.muted, fontSize: 13, flexShrink: 1 },
   primaryGrid: { gap: 20 },
   primaryGridDesktop: { flexDirection: "row", alignItems: "flex-start" },
   primaryColumn: { flex: 1, minWidth: 0 },
+  eventColumnDesktop: { flex: 2 },
+  costColumnDesktop: { flex: 1 },
   secondaryGrid: { gap: 20 },
-  secondaryGridDesktop: { flexDirection: "row", alignItems: "flex-start" },
+  secondaryGridDesktop: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
   secondaryColumn: { flex: 1, minWidth: 0 },
+  trafficColumnDesktop: { order: 1, flexGrow: 0, flexBasis: "66%" },
+  relatedColumnDesktop: { order: 2, flexGrow: 1, flexBasis: "30%" },
+  stayColumnDesktop: { order: 3, flexGrow: 0, flexBasis: "66%" },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
