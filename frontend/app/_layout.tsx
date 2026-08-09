@@ -42,6 +42,7 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerShown: false, // デフォルトでヘッダーを非表示
+            title: 'GenBGT',
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
