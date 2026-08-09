@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -14,11 +14,14 @@ export const brand = {
   white: '#FFFFFF',
 };
 
-export function BrandMark({ size = 42 }: { size?: number }) {
+export function BrandMark({ size = 42, light = false }: { size?: number; light?: boolean }) {
+  const markColor = light ? brand.white : brand.violetDark;
   return (
-    <View style={[styles.mark, { width: size, height: size, borderRadius: size * 0.24 }]}>
-      <Ionicons name="calendar-outline" size={size * 0.58} color="#FFFFFF" />
-      <View style={styles.sparkle}><Ionicons name="sparkles" size={size * 0.25} color="#FFFFFF" /></View>
+    <View style={[styles.mark, { width: size, height: size }]}>
+      <Ionicons name="calendar-outline" size={size * 0.86} color={markColor} />
+      <View style={[styles.sparkle, { right: size * 0.06, bottom: size * 0.12 }]}>
+        <Text style={[styles.sparkleGlyph, { color: markColor, fontSize: size * 0.34, lineHeight: size * 0.34 }]}>✦</Text>
+      </View>
     </View>
   );
 }
@@ -26,7 +29,7 @@ export function BrandMark({ size = 42 }: { size?: number }) {
 export function BrandWordmark({ light = false, compact = false }: { light?: boolean; compact?: boolean }) {
   return (
     <View style={styles.wordmarkRow}>
-      <BrandMark size={compact ? 34 : 42} />
+      <BrandMark size={compact ? 34 : 42} light={light} />
       <Text style={[styles.wordmark, compact && styles.wordmarkCompact, light && styles.lightText]}>GenBGT</Text>
     </View>
   );
@@ -110,11 +113,10 @@ export function PublicFooter({ compact = false }: { compact?: boolean }) {
   );
 }
 
-const webShadow = Platform.OS === 'web' ? ({ boxShadow: '0 8px 28px rgba(46,16,101,0.08)' } as any) : {};
-
 const styles = StyleSheet.create({
-  mark: { backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center', position: 'relative', ...webShadow },
-  sparkle: { position: 'absolute', right: 1, bottom: 0 },
+  mark: { alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  sparkle: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  sparkleGlyph: { fontWeight: '800', textAlign: 'center' },
   wordmarkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   wordmark: { fontSize: 27, fontWeight: '800', letterSpacing: -0.8, color: brand.ink },
   wordmarkCompact: { fontSize: 23 },
