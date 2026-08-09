@@ -362,6 +362,7 @@ export default function SharedScheduleDetailScreen() {
           <View style={styles.heroCopy}>
             <View style={styles.heroBadges}>
               {!!schedule.area && <NotionTag label={schedule.area} color={areaColor || undefined} />}
+              {!!schedule.status && <NotionTag label={schedule.status} color={statusColor || undefined} />}
             </View>
             <Text style={styles.mainTitle}>{schedule.title}</Text>
             <View style={styles.heroMeta}>
@@ -509,13 +510,6 @@ export default function SharedScheduleDetailScreen() {
             )}
             isLast={false}
           />
-          <NotionProperty label="ステータス">
-            {schedule.status ? (
-              <NotionTag label={schedule.status} color={statusColor || undefined} />
-            ) : (
-              <Text style={styles.emptyValue}>-</Text>
-            )}
-          </NotionProperty>
           </NotionPropertyBlock>
         </View>
         </View>
