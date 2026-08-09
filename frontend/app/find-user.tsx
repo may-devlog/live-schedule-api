@@ -27,6 +27,24 @@ export default function FindUserScreen() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  const findFromExistingShareEndpoint = async (normalized: string): Promise<SearchResult | null> => {
+    const sharedRes = await fetch(getApiUrl(`/share/${encodeURIComponent(normalized)}`));
+    if (!sharedRes.ok) return null;
+
+    // 新しいプロフィールAPIが未デプロイの環境でも検索自体は成功させる
+    let avatarDataUrl: string | null = null;
+    try {
+      const profileRes = await fetch(getApiUrl(`/share/${encodeURIComponent(normalized)}/profile`));
+      if (profileRes.ok) {
+        const profile = await profileRes.json();
+        avatarDataUrl = profile.avatar_data_url ?? null;
+      }
+    } catch {
+      // プロフィール画像は任意なので、取得できなくても共有ページを表示する
+    }
+    return { share_id: normalized, avatar_data_url: avatarDataUrl };
+  };
+
   const search = async () => {
     const normalized = userId.trim();
     if (!/^[a-zA-Z0-9_-]{3,20}$/.test(normalized)) {
@@ -39,14 +57,21 @@ export default function FindUserScreen() {
       setLoading(true);
       setMessage(null);
       setResult(null);
-      const res = await fetch(getApiUrl(`/share/search-user?user_id=${encodeURIComponent(normalized)}`));
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '検索に失敗しました');
-      if (data.found) {
-        setResult({ share_id: data.share_id, avatar_data_url: data.avatar_data_url ?? null });
-      } else {
-        setMessage('共有中のユーザーが見つかりませんでした。ユーザーIDをご確認ください。');
+      let found: SearchResult | null = null;
+      try {
+        const res = await fetch(getApiUrl(`/share/search-user?user_id=${encodeURIComponent(normalized)}`));
+        if (res.ok) {
+          const data = await res.json();
+          if (data.found) found = { share_id: data.share_id, avatar_data_url: data.avatar_data_url ?? null };
+        } else {
+          found = await findFromExistingShareEndpoint(normalized);
+        }
+      } catch {
+        found = await findFromExistingShareEndpoint(normalized);
       }
+
+      if (found) setResult(found);
+      else setMessage('共有中のユーザーが見つかりませんでした。ユーザーIDをご確認ください。');
     } catch (error: any) {
       setMessage(error.message || '検索に失敗しました');
     } finally {
@@ -71,8 +96,6 @@ export default function FindUserScreen() {
                 value={userId}
                 onChangeText={(value) => { setUserId(value); setResult(null); setMessage(null); }}
                 onSubmitEditing={search}
-                placeholder="例: may04"
-                placeholderTextColor="#A6A0AE"
                 autoCapitalize="none"
                 autoCorrect={false}
                 returnKeyType="search"
