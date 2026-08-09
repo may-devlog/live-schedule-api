@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 import { AccountMenu } from './AccountMenu';
+import { NotificationMenu } from './NotificationMenu';
 
 export const brand = {
   violet: '#7C3AED',
@@ -115,11 +116,14 @@ export function AppHeader({ active = 'schedule' }: { active?: 'schedule' | 'arch
           <TouchableOpacity onPress={() => router.push('/')}><Text style={[styles.navText, active === 'schedule' && styles.navActive]}>スケジュール</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => router.push(`/year/${new Date().getFullYear()}`)}><Text style={[styles.navText, active === 'archive' && styles.navActive]}>アーカイブ</Text></TouchableOpacity>
         </View>}
-        <TouchableOpacity style={styles.accountButton} onPress={() => setMenuVisible(true)}>
-          <View style={styles.accountAvatar}>{avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.accountAvatarImage} /> : <Text style={styles.accountAvatarText}>{accountLabel.slice(0, 1).toUpperCase()}</Text>}</View>
-          {!narrow && <Text style={styles.accountLabel}>{accountLabel}</Text>}
-          <Ionicons name="chevron-down" size={16} color={brand.muted} />
-        </TouchableOpacity>
+        <View style={styles.appHeaderActions}>
+          <NotificationMenu />
+          <TouchableOpacity style={styles.accountButton} onPress={() => setMenuVisible(true)}>
+            <View style={styles.accountAvatar}>{avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.accountAvatarImage} /> : <Text style={styles.accountAvatarText}>{accountLabel.slice(0, 1).toUpperCase()}</Text>}</View>
+            {!narrow && <Text style={styles.accountLabel}>{accountLabel}</Text>}
+            <Ionicons name="chevron-down" size={16} color={brand.muted} />
+          </TouchableOpacity>
+        </View>
       </View>
       <AccountMenu visible={menuVisible} onClose={() => setMenuVisible(false)} avatarDataUrl={avatarDataUrl} onAvatarChange={setAvatarDataUrl} />
     </View>
@@ -169,7 +173,8 @@ const styles = StyleSheet.create({
   primaryButtonText: { color: brand.white, fontWeight: '700', fontSize: 14 },
   textButton: { minHeight: 42, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' },
   textButtonText: { color: brand.violet, fontWeight: '700', fontSize: 14 },
-  accountButton: { marginLeft: 'auto', minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  appHeaderActions: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 8 },
+  accountButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 9 },
   accountAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#EDE9FE', alignItems: 'center', justifyContent: 'center' },
   accountAvatarText: { color: brand.violetDark, fontSize: 14, fontWeight: '800' },
   accountAvatarImage: { width: '100%', height: '100%', borderRadius: 18 },
