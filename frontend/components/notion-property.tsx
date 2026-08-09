@@ -1,6 +1,7 @@
 // Notion風のプロパティ表示コンポーネント
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 type PropertyProps = {
   label: string;
@@ -37,6 +38,14 @@ type PropertyBlockProps = {
 };
 
 export function NotionPropertyBlock({ children, title }: PropertyBlockProps) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+  const [expanded, setExpanded] = useState(!isMobile);
+
+  useEffect(() => {
+    setExpanded(!isMobile);
+  }, [isMobile]);
+
   // 有効な子要素のみをフィルタリングして配列に変換
   const validChildren = React.Children.toArray(children).filter(
     (child) => React.isValidElement(child)
@@ -48,11 +57,18 @@ export function NotionPropertyBlock({ children, title }: PropertyBlockProps) {
   return (
     <View style={styles.block}>
       {title && (
-        <View style={styles.blockTitleContainer}>
+        <TouchableOpacity
+          style={[styles.blockTitleContainer, isMobile && styles.blockTitleContainerMobile]}
+          onPress={() => isMobile && setExpanded((value) => !value)}
+          disabled={!isMobile}
+          accessibilityRole={isMobile ? "button" : undefined}
+          accessibilityState={isMobile ? { expanded } : undefined}
+        >
           <Text style={styles.blockTitle}>{title}</Text>
-        </View>
+          {isMobile && <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color="#7C3AED" />}
+        </TouchableOpacity>
       )}
-      <View style={styles.properties}>
+      {expanded && <View style={styles.properties}>
         {React.Children.map(children, (child) => {
           if (React.isValidElement(child)) {
             // 有効な子要素のインデックスを使用
@@ -65,7 +81,7 @@ export function NotionPropertyBlock({ children, title }: PropertyBlockProps) {
           }
           return child;
         })}
-      </View>
+      </View>}
     </View>
   );
 }
@@ -78,18 +94,30 @@ const styles = StyleSheet.create({
     width: "100%",
     marginBottom: 12,
   },
+  blockTitleContainerMobile: {
+    minHeight: 58,
+    paddingHorizontal: 16,
+    marginBottom: 0,
+    borderWidth: 1,
+    borderColor: "#E8E3F1",
+    borderRadius: 14,
+    backgroundColor: "#ffffff",
+    flexDirection: "row",
+    alignItems: "center",
+  },
   blockTitle: {
     fontSize: 14,
     fontWeight: "700",
     color: "#37352f",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#F5F3FF",
     borderRadius: 4,
     borderLeftWidth: 4,
-    borderLeftColor: "#37352f",
+    borderLeftColor: "#7C3AED",
     letterSpacing: 0.3,
     width: "100%",
+    flex: 1,
   },
   properties: {
     backgroundColor: "#ffffff",

@@ -26,6 +26,7 @@ import { loadSelectOptions } from "../../utils/select-options-storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "../../components/PageHeader";
 import { maskHotelName } from "../../utils/mask-hotel-name";
+import { CollapsibleDetailSection } from "../../components/CollapsibleDetailSection";
 
 type TrafficSummary = {
   id: number;
@@ -923,10 +924,7 @@ export default function DetailScreen() {
         </NotionPropertyBlock>
 
         {/* [Relation] Live */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>関連スケジュール</Text>
-          </View>
+        <CollapsibleDetailSection title="関連スケジュール">
           {relatedIds.length === 0 ? (
             <Text style={styles.emptyValue}>関連スケジュールはありません</Text>
           ) : (
@@ -989,13 +987,10 @@ export default function DetailScreen() {
               </View>
             </View>
           )}
-        </View>
+        </CollapsibleDetailSection>
 
         {/* [Traffic] */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>交通</Text>
-          </View>
+        <CollapsibleDetailSection title="交通">
           {trafficSummaries.length === 0 ? (
             <Text style={styles.emptyValue}>交通情報はありません</Text>
           ) : (
@@ -1063,13 +1058,10 @@ export default function DetailScreen() {
               </View>
             </View>
           )}
-        </View>
+        </CollapsibleDetailSection>
 
         {/* [Stay] */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>宿泊</Text>
-          </View>
+        <CollapsibleDetailSection title="宿泊">
           {staySummaries.length === 0 ? (
             <Text style={styles.emptyValue}>宿泊情報はありません</Text>
           ) : (
@@ -1095,6 +1087,7 @@ export default function DetailScreen() {
                   </View>
                   <View style={styles.cardRow}>
                     <Text style={styles.cardDetail}>{maskHotelName(stay.hotel_name, isAuthenticated)}</Text>
+                    {stay.breakfast_flag && <Text style={styles.breakfastTag}>朝食あり</Text>}
                   </View>
         </TouchableOpacity>
               );
@@ -1120,7 +1113,7 @@ export default function DetailScreen() {
               </View>
             </View>
           )}
-        </View>
+        </CollapsibleDetailSection>
       </ScrollView>
     </View>
   );
@@ -1348,6 +1341,15 @@ const styles = StyleSheet.create({
     color: "#37352f",
     marginLeft: 6,
     flex: 1,
+  },
+  breakfastTag: {
+    color: "#6D28D9",
+    backgroundColor: "#F5F3FF",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: "600",
   },
   addLinksContainer: {
     marginTop: 8,
