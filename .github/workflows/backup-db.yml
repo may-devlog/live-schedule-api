@@ -125,11 +125,11 @@ jobs:
 
           aws s3 cp "$BACKUP_DIR/$ARCHIVE" "${S3_PREFIX}/${ARCHIVE}" \
             --only-show-errors \
-            --server-side-encryption AES256 \
+            --sse AES256 \
             --metadata "github-run-id=${GITHUB_RUN_ID:-unknown},integrity=ok"
           aws s3 cp "$BACKUP_DIR/$ARCHIVE.sha256" "${S3_PREFIX}/${ARCHIVE}.sha256" \
             --only-show-errors \
-            --server-side-encryption AES256
+            --sse AES256
           aws s3api head-object \
             --bucket "$S3_BUCKET" \
             --key "database/${YEAR}/${MONTH}/${ARCHIVE}" \
