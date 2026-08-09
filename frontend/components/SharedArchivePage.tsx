@@ -58,8 +58,9 @@ function groupBoundary(schedules: Schedule[], order: SortOrder) {
 function dateParts(raw: string) {
   const [year, month, day] = raw.slice(0, 10).split("-").map(Number);
   const date = new Date(year, month - 1, day);
-  const weekday = ["日", "月", "火", "水", "木", "金", "土"][date.getDay()];
-  const tone = date.getDay() === 6 ? "sat" : (date.getDay() === 0 || isJapaneseHolidayDate(raw)) ? "holiday" : "normal";
+  const holiday = isJapaneseHolidayDate(raw);
+  const weekday = `${["日", "月", "火", "水", "木", "金", "土"][date.getDay()]}${holiday ? "・祝" : ""}`;
+  const tone = date.getDay() === 6 ? "sat" : (date.getDay() === 0 || holiday) ? "holiday" : "normal";
   return { month, day: String(day).padStart(2, "0"), weekday, tone };
 }
 

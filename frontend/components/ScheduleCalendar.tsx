@@ -310,7 +310,7 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
     const month = date.getMonth() + 1;
     const day = date.getDate();
     const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
-    const weekday = weekdays[date.getDay()];
+    const weekday = `${weekdays[date.getDay()]}${isJapaneseHolidayDate(dateString) ? "・祝" : ""}`;
     return `${month}月${day}日(${weekday})`;
   };
 
