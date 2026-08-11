@@ -270,6 +270,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
         {!mobile && <View style={styles.dateDivider} />}
         <View style={styles.cardBody}>
           {mobile && <View style={styles.mobileDateRow}><Text style={styles.mobileDate}>{String(parts.month).padStart(2, "0")}.{parts.day}</Text><Text style={[styles.mobileWeekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text></View>}
+          {cost > 0 && mainGrouping !== "lineup" && <Text style={styles.cardCost}>¥{cost.toLocaleString()}</Text>}
           <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
           <View style={styles.archiveTags}>
             {!!item.area && subGrouping !== "area" && <NotionTag label={item.area} color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")} />}
@@ -277,7 +278,6 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           </View>
           {!!item.venue && <Text style={styles.venue} numberOfLines={1}>{item.venue}</Text>}
         </View>
-        {cost > 0 && mainGrouping !== "lineup" && <Text style={styles.cardCost}>¥{cost.toLocaleString()}</Text>}
         <Ionicons name="chevron-forward" size={24} color={brand.violet} />
       </TouchableOpacity>
     );
@@ -294,6 +294,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
         {!mobile && <View style={styles.dateDivider} />}
         <View style={styles.cardBody}>
           {mobile && <View style={styles.mobileDateRow}><Text style={styles.mobileDate}>{String(parts.month).padStart(2, "0")}.{parts.day}</Text><Text style={[styles.mobileWeekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text></View>}
+          <Text style={styles.cardCost}>¥{stay.fee.toLocaleString()}</Text>
           <Text style={styles.cardTitle} numberOfLines={2}>{stay.hotel_name}</Text>
           <View style={styles.archiveTags}>
             {!!stay.website && stayGrouping !== "website" && <NotionTag label={stay.website} color={getOptionColorSync(stay.website, "WEBSITE")} />}
@@ -302,7 +303,6 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           </View>
           <Text style={styles.venue}>{stay.check_in.replace(/-/g, ".")} → {stay.check_out.replace(/-/g, ".")}</Text>
         </View>
-        <Text style={styles.cardCost}>¥{stay.fee.toLocaleString()}</Text>
         <Ionicons name="chevron-forward" size={24} color={brand.violet} />
       </TouchableOpacity>
     );
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   holiday: { color: "#DC2626" },
   dateDivider: { width: 1, height: 66, backgroundColor: brand.border },
   cardBody: { flex: 1, minWidth: 0 },
-  cardCost: { color: brand.ink, fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"], textAlign: "right" },
+  cardCost: { alignSelf: "flex-end", color: brand.ink, fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"], textAlign: "right" },
   mobileDateRow: { flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 7 },
   mobileDate: { color: brand.ink, fontSize: 17, lineHeight: 22, fontWeight: "800", fontVariant: ["tabular-nums"] },
   mobileWeekday: { color: brand.ink, fontSize: 15, lineHeight: 20, fontWeight: "800", minWidth: 32, fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
