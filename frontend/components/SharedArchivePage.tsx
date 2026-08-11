@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   mobileDateRow: { flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 7 },
   mobileDate: { color: brand.ink, fontSize: 17, lineHeight: 22, fontWeight: "800", fontVariant: ["tabular-nums"] },
   mobileWeekday: { color: brand.ink, fontSize: 15, lineHeight: 20, fontWeight: "800", minWidth: 32, fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
-  cardTitle: { color: brand.ink, fontSize: 16, lineHeight: 22, fontWeight: "800" },
+  cardTitle: { color: brand.ink, fontSize: 16, lineHeight: 22, fontWeight: "800", flexShrink: 1 },
   archiveTags: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 9 },
   breakfastLabel: { color: brand.violetDark, backgroundColor: "#F5F3FF", borderRadius: 5, paddingHorizontal: 10, paddingVertical: 4, fontSize: 12 },
   breakfastLabelOff: { color: brand.muted, backgroundColor: "#F0EEF2" },
