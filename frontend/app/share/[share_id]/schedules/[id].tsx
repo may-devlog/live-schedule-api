@@ -366,6 +366,10 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
   return (
     <View style={styles.container}>
       {authenticated ? <AppHeader active="schedule" /> : <PublicHeader active="none" />}
+      <PageHeader
+        showBackButton={true}
+        homePath={authenticated ? "/" : `/share/${share_id}`}
+      />
       <ScrollView 
         contentContainerStyle={styles.scrollPage}
         refreshControl={
@@ -413,10 +417,6 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         scrollEventThrottle={16}
       >
         <View style={styles.scrollContent}>
-        <PageHeader
-          showBackButton={true}
-          homePath={authenticated ? "/" : `/share/${share_id}`}
-        />
 
         {/* イベント概要 */}
         <View style={[styles.heroCard, isMobile && styles.heroCardMobile]}>
