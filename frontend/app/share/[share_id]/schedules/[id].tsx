@@ -21,6 +21,7 @@ import { getOptionColor } from "../../../../utils/get-option-color";
 import { loadSelectOptions } from "../../../../utils/select-options-storage";
 import type { Schedule } from "../../../HomeScreen";
 import { CollapsibleDetailSection } from "../../../../components/CollapsibleDetailSection";
+import { PageHeader } from "../../../../components/PageHeader";
 import { AppHeader, PublicFooter, PublicHeader, brand } from "../../../../components/GenBGTBrand";
 import { isJapaneseHolidayDate } from "../../../../components/ScheduleCalendar";
 
@@ -412,10 +413,10 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         scrollEventThrottle={16}
       >
         <View style={styles.scrollContent}>
-        <TouchableOpacity style={styles.backLink} onPress={() => router.push(authenticated ? "/" : `/share/${share_id}`)}>
-          <Ionicons name="arrow-back" size={18} color={brand.violet} />
-          <Text style={styles.backLinkText}>スケジュールに戻る</Text>
-        </TouchableOpacity>
+        <PageHeader
+          showBackButton={true}
+          homePath={authenticated ? "/" : `/share/${share_id}`}
+        />
 
         {/* イベント概要 */}
         <View style={[styles.heroCard, isMobile && styles.heroCardMobile]}>
