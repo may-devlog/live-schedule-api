@@ -54,9 +54,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E3F1",
+    backgroundColor: "#F3F0FF",
     // Web環境では固定ヘッダーを避けて、アドレスバーの非表示を促進
     ...(Platform.OS === 'web' && {
       position: 'relative' as const,
