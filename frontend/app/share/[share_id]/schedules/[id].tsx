@@ -764,6 +764,12 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
   );
 }
 
+// PC表示のイベント情報/交通・宿泊（広い列）と費用/関連スケジュール（狭い列）で
+// 幅の基準がずれないよう、両グリッドで同じ値を共有する
+const DESKTOP_GRID_GAP = 20;
+const DESKTOP_WIDE_COLUMN = { flex: 2 } as const;
+const DESKTOP_NARROW_COLUMN = { flex: 1 } as const;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -829,15 +835,15 @@ const styles = StyleSheet.create({
   saturdayText: { color: "#2563EB" },
   holidayText: { color: "#DC2626" },
   primaryGrid: { gap: 0 },
-  primaryGridDesktop: { flexDirection: "row", alignItems: "flex-start", gap: 20 },
+  primaryGridDesktop: { flexDirection: "row", alignItems: "flex-start", gap: DESKTOP_GRID_GAP },
   primaryColumn: { minWidth: 0 },
-  eventColumnDesktop: { flex: 2 },
-  costColumnDesktop: { flex: 1 },
+  eventColumnDesktop: DESKTOP_WIDE_COLUMN,
+  costColumnDesktop: DESKTOP_NARROW_COLUMN,
   secondaryGrid: { gap: 0 },
-  secondaryGridDesktop: { flexDirection: "row-reverse", alignItems: "flex-start", gap: 20 },
+  secondaryGridDesktop: { flexDirection: "row-reverse", alignItems: "flex-start", gap: DESKTOP_GRID_GAP },
   secondaryColumn: { minWidth: 0 },
-  mainColumnDesktop: { flex: 2 },
-  relatedColumnDesktop: { flex: 1 },
+  mainColumnDesktop: DESKTOP_WIDE_COLUMN,
+  relatedColumnDesktop: DESKTOP_NARROW_COLUMN,
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
