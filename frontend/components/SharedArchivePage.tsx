@@ -358,7 +358,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             </View> : <View style={styles.groupingPanel}>
               <View style={styles.groupingRow}><Text style={styles.groupingLabel}>分類</Text><View style={styles.groupingButtons}>{([['none','なし'],['website','予約サイト'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, stayGrouping === value && styles.groupingButtonActive]} onPress={() => setStayGrouping(value)}><Text style={[styles.groupingButtonText, stayGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
             </View>)}
-            <View style={[styles.sortControls, mobile && styles.sortControlsMobile]}>
+            <View style={[styles.sortControls, mobile && styles.sortControlsMobile, !canUseGrouping && !mobile && styles.sortControlsSolo]}>
               {(mainGrouping === "target" || mainGrouping === "lineup") && archiveType === "event" && <View style={styles.compactSelectWrap}>
                 <Text style={styles.compactSelectLabel}>グループ順</Text>
                 <TouchableOpacity style={styles.compactSelect} onPress={() => { setMainSortMenuOpen((open) => !open); setSortMenuOpen(false); }}>
@@ -470,6 +470,7 @@ const styles = StyleSheet.create({
   groupingPanel: { flex: 1, gap: 10 },
   sortControls: { flexDirection: "row", alignItems: "flex-start", justifyContent: "flex-end", gap: 10 },
   sortControlsMobile: { alignSelf: "flex-end" },
+  sortControlsSolo: { marginLeft: "auto" },
   compactSelectWrap: { position: "relative", width: 126, zIndex: 5 },
   compactSelectLabel: { color: brand.ink, fontSize: 12, fontWeight: "700", marginBottom: 5, textAlign: "right" },
   compactSelect: { minHeight: 36, paddingHorizontal: 11, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
