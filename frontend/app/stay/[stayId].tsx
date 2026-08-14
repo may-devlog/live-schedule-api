@@ -164,31 +164,29 @@ export default function StayDetailScreen() {
       setStay(data);
       setSelectedScheduleId(data.schedule_id || null);
       
-      // 全スケジュール一覧を取得（スケジュール選択用）
+      // 全スケジュール一覧を取得（スケジュール選択用、親スケジュール情報の解決にも使う）
+      let schedulesData: Schedule[] = [];
       try {
         const schedulesRes = await authenticatedFetch(getApiUrl("/schedules"));
         if (schedulesRes.ok) {
-          const schedulesData: Schedule[] = await schedulesRes.json();
+          schedulesData = await schedulesRes.json();
           setAllSchedules(schedulesData);
         }
       } catch (e) {
         console.error("[StayDetail] Failed to fetch schedules:", e);
       }
-      
+
       // スケジュール情報を取得
+      // /public/schedules/:id はpublic_id（推測困難なランダムID）を要求するため、
+      // 認証済みユーザーの内部idであるstay.schedule_idでは解決できない。
+      // 取得済みの一覧（内部idベース）から該当スケジュールを探す。
       if (data.schedule_id) {
-        try {
-          // 公開APIを使用（認証不要）
-          const scheduleRes = await fetch(getApiUrl(`/public/schedules/${data.schedule_id}`));
-          if (scheduleRes.ok) {
-            const scheduleData: Schedule = await scheduleRes.json();
-            setSchedule(scheduleData);
-            console.log("[StayDetail] Schedule loaded:", scheduleData.title);
-          } else {
-            console.error("[StayDetail] Failed to fetch schedule, status:", scheduleRes.status);
-          }
-        } catch (e) {
-          console.error("[StayDetail] Failed to fetch schedule:", e);
+        const matched = schedulesData.find((s) => s.id === data.schedule_id);
+        if (matched) {
+          setSchedule(matched);
+          console.log("[StayDetail] Schedule loaded:", matched.title);
+        } else {
+          console.error("[StayDetail] Schedule not found in list for id:", data.schedule_id);
         }
       }
       
@@ -446,20 +444,10 @@ export default function StayDetailScreen() {
                     });
                     
                     if (updateRes.ok) {
-                      // スケジュール情報を更新
+                      // スケジュール情報を更新（内部idベースの一覧から解決）
                       if (newScheduleId) {
-                        try {
-                          const scheduleRes = await fetch(getApiUrl(`/public/schedules/${newScheduleId}`));
-                          if (scheduleRes.ok) {
-                            const scheduleData: Schedule = await scheduleRes.json();
-                            setSchedule(scheduleData);
-                          } else {
-                            setSchedule(null);
-                          }
-                        } catch (e) {
-                          console.error("[StayDetail] Failed to fetch schedule:", e);
-                          setSchedule(null);
-                        }
+                        const matched = allSchedules.find((s) => s.id === newScheduleId);
+                        setSchedule(matched ?? null);
                       } else {
                         setSchedule(null);
                       }
