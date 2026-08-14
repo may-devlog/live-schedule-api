@@ -370,6 +370,298 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
 
   const scheduleDateDisplay = dateDisplay(schedule.date ?? schedule.datetime);
 
+  // PCではイベント情報→交通→宿泊、費用→関連スケジュールをそれぞれ独立した縦の列として
+  // 積み上げたいので、各セクションを変数化して2カラムレイアウトとモバイルの縦積みで
+  // 同じ内容を並び替えて使う
+  const eventInfoBlock = (
+    <NotionPropertyBlock title="イベント情報" iconName="people">
+      <NotionProperty label="グループ">
+        {schedule.group ? (
+          <NotionTag label={schedule.group} color={groupColor || undefined} />
+        ) : (
+          <Text style={styles.emptyValue}>-</Text>
+        )}
+      </NotionProperty>
+      <NotionProperty label="カテゴリ">
+        {schedule.category ? (
+          <NotionTag label={schedule.category} color={categoryColor || undefined} />
+        ) : (
+          <Text style={styles.emptyValue}>-</Text>
+        )}
+      </NotionProperty>
+      <NotionProperty label="出演者">
+        {filteredLineupOptions.length > 0 ? (
+          <View
+            style={{
+              width: "100%",
+              minWidth: 0,
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 6,
+            }}
+          >
+            {filteredLineupOptions.map((opt) => (
+              <NotionTag key={opt.label} label={opt.label} color={opt.color} />
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.emptyValue}>-</Text>
+        )}
+      </NotionProperty>
+      <NotionProperty label="お目当て">
+        {filteredTarget ? (
+          <NotionTag label={filteredTarget} color={targetColor || undefined} />
+        ) : (
+          <Text style={styles.emptyValue}>-</Text>
+        )}
+      </NotionProperty>
+      <NotionProperty
+        label="備考"
+        value={
+          schedule.notes && schedule.notes.trim().length > 0
+            ? schedule.notes
+            : undefined
+        }
+      />
+    </NotionPropertyBlock>
+  );
+
+  const costBlock = (
+    <NotionPropertyBlock title="費用" iconName="wallet">
+      <NotionProperty label="販売元" alignValue="right">
+        {schedule.seller ? (
+          <NotionTag label={schedule.seller} color={sellerColor || undefined} align="end" />
+        ) : (
+          <Text style={styles.emptyValue}>-</Text>
+        )}
+      </NotionProperty>
+      <NotionProperty
+        label="チケット代"
+        value={formatCurrency(schedule.ticket_fee)}
+        alignValue="right"
+      />
+      <NotionProperty
+        label="ドリンク代"
+        value={formatCurrency(schedule.drink_fee)}
+        alignValue="right"
+      />
+      <NotionProperty
+        label="交通費合計"
+        alignValue="right"
+        value={formatCurrency(
+          trafficSummaries.reduce((sum, traffic) => {
+            // 往復フラグがある場合は金額を2倍
+            return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
+          }, 0)
+        )}
+      />
+      {trafficSummaries.some(t => t.miles !== null && t.miles !== undefined) && (
+        <NotionProperty
+          label="消費マイル合計"
+          alignValue="right"
+          value={
+            trafficSummaries.reduce((sum, traffic) => {
+              if (traffic.miles === null || traffic.miles === undefined) return sum;
+              // 往復フラグがある場合はマイルを2倍
+              return sum + (traffic.return_flag ? traffic.miles * 2 : traffic.miles);
+            }, 0).toString()
+          }
+        />
+      )}
+      <NotionProperty
+        label="宿泊費合計"
+        value={formatCurrency(schedule.stay_fee)}
+        alignValue="right"
+      />
+      <NotionProperty
+        label="遠征費合計"
+        alignValue="right"
+        value={formatCurrency(
+          // 交通費合計（往復フラグ考慮済み）+ 宿泊費合計
+          trafficSummaries.reduce((sum, traffic) => {
+            return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
+          }, 0) + (schedule.stay_fee || 0)
+        )}
+      />
+      <NotionProperty
+        label="総費用"
+        alignValue="right"
+        isLast={false}
+      >
+        <Text style={styles.totalCostText}>{formatCurrency(
+          // チケット代 + ドリンク代 + 遠征費合計（往復フラグ考慮済み）
+          (schedule.ticket_fee || 0) +
+          (schedule.drink_fee || 0) +
+          trafficSummaries.reduce((sum, traffic) => {
+            return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
+          }, 0) + (schedule.stay_fee || 0)
+        )}</Text>
+      </NotionProperty>
+    </NotionPropertyBlock>
+  );
+
+  const relatedBlock = (
+    <CollapsibleDetailSection title="関連スケジュール" iconName="calendar">
+      {relatedIds.length === 0 ? (
+        <Text style={styles.emptyValue}>関連スケジュールはありません</Text>
+      ) : (
+        <View style={styles.relationContainer}>
+          {relatedIds.map((rid) => {
+            const related = allSchedules.find((s) => s.id === rid);
+            if (!related) {
+              return (
+                <TouchableOpacity
+                  key={rid}
+                  onPress={() => router.push(authenticated ? `/live/${rid}` : `/share/${share_id}/schedules/${rid}`)}
+                >
+                  <Text style={styles.relationLink}>Live #${rid}</Text>
+                </TouchableOpacity>
+              );
+            }
+
+            return (
+              <TouchableOpacity
+                key={rid}
+                onPress={() => router.push(authenticated ? `/live/${rid}` : `/share/${share_id}/schedules/${rid}`)}
+                style={styles.relationCard}
+              >
+                <View style={styles.relationCardContent}>
+                  {related.date && (
+                    <Text style={styles.relationDate}>{dateDisplay(related.date).date} <Text style={[styles.weekdayText, dateDisplay(related.date).tone === "saturday" && styles.saturdayText, dateDisplay(related.date).tone === "holiday" && styles.holidayText]}>{dateDisplay(related.date).weekday}</Text></Text>
+                  )}
+                  <View style={styles.relationScheduleRow}>
+                    {!!related.start && <Text style={styles.relationTime}>{related.start}</Text>}
+                    <Text style={styles.relationTitle} numberOfLines={2}>{related.title}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={brand.muted} />
+                  </View>
+                  {(related.area || related.status) && (
+                    <View style={styles.relationArea}>
+                      {!!related.area && <NotionTag label={related.area} color={relatedAreaColors.get(rid) || undefined} />}
+                      {!!related.status && <NotionTag label={related.status} color={relatedStatusColors.get(rid) || undefined} />}
+                    </View>
+                  )}
+                  {!!related.venue && <Text style={styles.relationVenue}>{related.venue}</Text>}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+    </CollapsibleDetailSection>
+  );
+
+  const trafficBlock = (
+    <CollapsibleDetailSection title="交通" iconName="train">
+      {trafficSummaries.length === 0 ? (
+        <Text style={styles.emptyValue}>交通情報はありません</Text>
+      ) : (
+        trafficSummaries.map((traffic) => {
+          const detailText = traffic.return_flag
+            ? `${traffic.from} ⇔ ${traffic.to}`
+            : `${traffic.from} → ${traffic.to}`;
+          const detailWithNotes = traffic.notes
+            ? `${detailText} (${traffic.notes})`
+            : detailText;
+          // 往復フラグがある場合は金額を2倍
+          const displayFare = traffic.return_flag ? traffic.fare * 2 : traffic.fare;
+          // 往復フラグがある場合はマイルを2倍
+          const displayMiles = traffic.return_flag && traffic.miles
+            ? traffic.miles * 2
+            : traffic.miles;
+
+          return (
+            <TouchableOpacity
+              key={traffic.id}
+              style={[styles.trafficCard, isMobile && styles.transportCardMobile]}
+              onPress={() => router.push(authenticated ? `/traffic/${traffic.id}` : `/share/${share_id}/traffic/${traffic.id}`)}
+            >
+              {traffic.transportation && (
+                <View style={[styles.trafficTag, isMobile && styles.trafficTagMobile]}>
+                  <NotionTag label={traffic.transportation} color={transportationColors.get(traffic.id) || undefined} />
+                </View>
+              )}
+              <View style={[styles.cardMain, isMobile && styles.cardMainMobile]}>
+                <Text style={styles.cardRouteBold}>{detailWithNotes}</Text>
+                <View style={styles.cardSubRow}>
+                  <Ionicons name="calendar-outline" size={15} color={brand.violet} />
+                  <View style={styles.datePartsRow}>
+                    <Text style={styles.dateValue}>{dateDisplay(traffic.date).date}</Text>
+                    <Text style={[styles.weekdayText, dateDisplay(traffic.date).tone === "saturday" && styles.saturdayText, dateDisplay(traffic.date).tone === "holiday" && styles.holidayText]}>{dateDisplay(traffic.date).weekday}</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={[styles.cardPriceContainer, isMobile && styles.cardPriceMobile]}>
+                <Text style={styles.cardPrice}>{formatCurrency(displayFare)}</Text>
+                {displayMiles !== null && displayMiles !== undefined && <Text style={styles.cardMiles}>{displayMiles}マイル</Text>}
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={brand.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
+            </TouchableOpacity>
+          );
+        })
+      )}
+      {authenticated && <TouchableOpacity style={styles.addAction} onPress={() => router.push(`/traffic/new?scheduleId=${schedule.id}`)}><Text style={styles.addActionText}>＋ 交通を追加</Text></TouchableOpacity>}
+    </CollapsibleDetailSection>
+  );
+
+  const stayBlock = (
+    <CollapsibleDetailSection title="宿泊" iconName="bed">
+      {staySummaries.length === 0 ? (
+        <Text style={styles.emptyValue}>宿泊情報はありません</Text>
+      ) : (
+        staySummaries.map((stay) => {
+          // チェックイン/チェックアウトの日時をフォーマット
+          const formatDateTime = (dateTimeStr: string) => {
+            const display = dateDisplay(dateTimeStr);
+            const time = dateTimeStr.includes(" ") ? dateTimeStr.split(" ")[1] : "";
+            return { ...display, time };
+          };
+          const checkInFormatted = formatDateTime(stay.check_in);
+          const checkOutFormatted = formatDateTime(stay.check_out);
+          return (
+            <TouchableOpacity
+              key={stay.id}
+              style={[styles.stayCard, isMobile && styles.stayCardMobile]}
+              onPress={() => router.push(authenticated ? `/stay/${stay.id}` : `/share/${share_id}/stay/${stay.id}`)}
+            >
+              {authenticated && isDesktop && <View style={styles.stayIcon}>
+                <Ionicons name="bed" size={28} color="#FFFFFF" />
+              </View>}
+              <View style={[styles.cardMain, isMobile && styles.stayMainMobile]}>
+                {authenticated && <Text style={styles.cardRouteBold}>{stay.hotel_name}</Text>}
+                <View style={styles.cardSubRow}>
+                  {!isNarrowMobile && <Ionicons name="calendar-outline" size={15} color={brand.violet} />}
+                  <Text style={[styles.stayDateLabel, isMobile && styles.stayDateLabelMobile, isNarrowMobile && styles.stayDateLabelNarrow]}>チェックイン</Text>
+                  <View style={[styles.datePartsRow, isMobile && styles.stayDatePartsMobile, isNarrowMobile && styles.stayDatePartsNarrow]}>
+                    <Text style={styles.dateValue}>{checkInFormatted.date}</Text>
+                    <Text style={[styles.weekdayText, styles.stayWeekdayText, isMobile && styles.stayWeekdayTextMobile, isNarrowMobile && styles.stayWeekdayTextNarrow, checkInFormatted.tone === "saturday" && styles.saturdayText, checkInFormatted.tone === "holiday" && styles.holidayText]}>{checkInFormatted.weekday}</Text>
+                    {!!checkInFormatted.time && <Text style={styles.timeValue}>{checkInFormatted.time}</Text>}
+                  </View>
+                </View>
+                <View style={styles.cardSubRow}>
+                  {!isNarrowMobile && <Ionicons name="calendar-outline" size={15} color={brand.violet} />}
+                  <Text style={[styles.stayDateLabel, isMobile && styles.stayDateLabelMobile, isNarrowMobile && styles.stayDateLabelNarrow]}>チェックアウト</Text>
+                  <View style={[styles.datePartsRow, isMobile && styles.stayDatePartsMobile, isNarrowMobile && styles.stayDatePartsNarrow]}>
+                    <Text style={styles.dateValue}>{checkOutFormatted.date}</Text>
+                    <Text style={[styles.weekdayText, styles.stayWeekdayText, isMobile && styles.stayWeekdayTextMobile, isNarrowMobile && styles.stayWeekdayTextNarrow, checkOutFormatted.tone === "saturday" && styles.saturdayText, checkOutFormatted.tone === "holiday" && styles.holidayText]}>{checkOutFormatted.weekday}</Text>
+                    {!!checkOutFormatted.time && <Text style={styles.timeValue}>{checkOutFormatted.time}</Text>}
+                  </View>
+                </View>
+              </View>
+              <View style={[styles.stayCardActions, isMobile && styles.stayCardActionsMobile]}>
+                <Text style={[styles.breakfastTag, !stay.breakfast_flag && styles.breakfastTagOff]}>
+                  {stay.breakfast_flag ? "朝食あり" : "朝食なし"}
+                </Text>
+                <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={brand.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
+            </TouchableOpacity>
+          );
+        })
+      )}
+      {authenticated && <TouchableOpacity style={styles.addAction} onPress={() => router.push(`/stay/new?scheduleId=${schedule.id}`)}><Text style={styles.addActionText}>＋ 宿泊を追加</Text></TouchableOpacity>}
+    </CollapsibleDetailSection>
+  );
+
   return (
     <View style={styles.container}>
       {authenticated ? <AppHeader active="schedule" /> : <PublicHeader active="none" />}
@@ -467,296 +759,27 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
           </View>}
         </View>
 
-        <View style={[styles.primaryGrid, isDesktop && styles.primaryGridDesktop]}>
-        <View style={[styles.primaryColumn, isDesktop && styles.eventColumnDesktop]}>
-          <NotionPropertyBlock title="イベント情報" iconName="people">
-          <NotionProperty label="グループ">
-            {schedule.group ? (
-              <NotionTag label={schedule.group} color={groupColor || undefined} />
-            ) : (
-              <Text style={styles.emptyValue}>-</Text>
-            )}
-          </NotionProperty>
-          <NotionProperty label="カテゴリ">
-            {schedule.category ? (
-              <NotionTag label={schedule.category} color={categoryColor || undefined} />
-            ) : (
-              <Text style={styles.emptyValue}>-</Text>
-            )}
-          </NotionProperty>
-          <NotionProperty label="出演者">
-            {filteredLineupOptions.length > 0 ? (
-              <View
-                style={{
-                  width: "100%",
-                  minWidth: 0,
-                  flexDirection: "row",
-                  flexWrap: "wrap",
-                  gap: 6,
-                }}
-              >
-                {filteredLineupOptions.map((opt) => (
-                  <NotionTag key={opt.label} label={opt.label} color={opt.color} />
-                ))}
-              </View>
-            ) : (
-              <Text style={styles.emptyValue}>-</Text>
-            )}
-          </NotionProperty>
-          <NotionProperty label="お目当て">
-            {filteredTarget ? (
-              <NotionTag label={filteredTarget} color={targetColor || undefined} />
-            ) : (
-              <Text style={styles.emptyValue}>-</Text>
-            )}
-          </NotionProperty>
-          <NotionProperty
-            label="備考"
-            value={
-              schedule.notes && schedule.notes.trim().length > 0
-                ? schedule.notes
-                : undefined
-            }
-          />
-          </NotionPropertyBlock>
-        </View>
-
-        <View style={[styles.primaryColumn, isDesktop && styles.costColumnDesktop]}>
-          <NotionPropertyBlock title="費用" iconName="wallet">
-          <NotionProperty label="販売元" alignValue="right">
-            {schedule.seller ? (
-              <NotionTag label={schedule.seller} color={sellerColor || undefined} align="end" />
-            ) : (
-              <Text style={styles.emptyValue}>-</Text>
-            )}
-          </NotionProperty>
-          <NotionProperty
-            label="チケット代"
-            value={formatCurrency(schedule.ticket_fee)}
-            alignValue="right"
-          />
-          <NotionProperty
-            label="ドリンク代"
-            value={formatCurrency(schedule.drink_fee)}
-            alignValue="right"
-          />
-          <NotionProperty
-            label="交通費合計"
-            alignValue="right"
-            value={formatCurrency(
-              trafficSummaries.reduce((sum, traffic) => {
-                // 往復フラグがある場合は金額を2倍
-                return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
-              }, 0)
-            )}
-          />
-          {trafficSummaries.some(t => t.miles !== null && t.miles !== undefined) && (
-            <NotionProperty
-              label="消費マイル合計"
-              alignValue="right"
-              value={
-                trafficSummaries.reduce((sum, traffic) => {
-                  if (traffic.miles === null || traffic.miles === undefined) return sum;
-                  // 往復フラグがある場合はマイルを2倍
-                  return sum + (traffic.return_flag ? traffic.miles * 2 : traffic.miles);
-                }, 0).toString()
-              }
-            />
-          )}
-          <NotionProperty
-            label="宿泊費合計"
-            value={formatCurrency(schedule.stay_fee)}
-            alignValue="right"
-          />
-          <NotionProperty
-            label="遠征費合計"
-            alignValue="right"
-            value={formatCurrency(
-              // 交通費合計（往復フラグ考慮済み）+ 宿泊費合計
-              trafficSummaries.reduce((sum, traffic) => {
-                return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
-              }, 0) + (schedule.stay_fee || 0)
-            )}
-          />
-          <NotionProperty
-            label="総費用"
-            alignValue="right"
-            isLast={false}
-          >
-            <Text style={styles.totalCostText}>{formatCurrency(
-              // チケット代 + ドリンク代 + 遠征費合計（往復フラグ考慮済み）
-              (schedule.ticket_fee || 0) + 
-              (schedule.drink_fee || 0) + 
-              trafficSummaries.reduce((sum, traffic) => {
-                return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
-              }, 0) + (schedule.stay_fee || 0)
-            )}</Text>
-          </NotionProperty>
-          </NotionPropertyBlock>
-        </View>
-        </View>
-
-        <View style={[styles.secondaryGrid, isDesktop && styles.secondaryGridDesktop]}>
-        <View style={[styles.secondaryColumn, isDesktop && styles.relatedColumnDesktop]}>
-        <CollapsibleDetailSection title="関連スケジュール" iconName="calendar">
-          {relatedIds.length === 0 ? (
-            <Text style={styles.emptyValue}>関連スケジュールはありません</Text>
-          ) : (
-            <View style={styles.relationContainer}>
-              {relatedIds.map((rid) => {
-                const related = allSchedules.find((s) => s.id === rid);
-                if (!related) {
-                  return (
-                    <TouchableOpacity
-                      key={rid}
-                      onPress={() => router.push(authenticated ? `/live/${rid}` : `/share/${share_id}/schedules/${rid}`)}
-                    >
-                      <Text style={styles.relationLink}>Live #${rid}</Text>
-                    </TouchableOpacity>
-                  );
-                }
-
-                return (
-                  <TouchableOpacity
-                    key={rid}
-                    onPress={() => router.push(authenticated ? `/live/${rid}` : `/share/${share_id}/schedules/${rid}`)}
-                    style={styles.relationCard}
-                  >
-                    <View style={styles.relationCardContent}>
-                      {related.date && (
-                        <Text style={styles.relationDate}>{dateDisplay(related.date).date} <Text style={[styles.weekdayText, dateDisplay(related.date).tone === "saturday" && styles.saturdayText, dateDisplay(related.date).tone === "holiday" && styles.holidayText]}>{dateDisplay(related.date).weekday}</Text></Text>
-                      )}
-                      <View style={styles.relationScheduleRow}>
-                        {!!related.start && <Text style={styles.relationTime}>{related.start}</Text>}
-                        <Text style={styles.relationTitle} numberOfLines={2}>{related.title}</Text>
-                        <Ionicons name="chevron-forward" size={18} color={brand.muted} />
-                      </View>
-                      {(related.area || related.status) && (
-                        <View style={styles.relationArea}>
-                          {!!related.area && <NotionTag label={related.area} color={relatedAreaColors.get(rid) || undefined} />}
-                          {!!related.status && <NotionTag label={related.status} color={relatedStatusColors.get(rid) || undefined} />}
-                        </View>
-                      )}
-                      {!!related.venue && <Text style={styles.relationVenue}>{related.venue}</Text>}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+        {isDesktop ? (
+          <View style={styles.detailGridDesktop}>
+            <View style={styles.leftColumnDesktop}>
+              {eventInfoBlock}
+              {trafficBlock}
+              {stayBlock}
             </View>
-          )}
-        </CollapsibleDetailSection>
-        </View>
-
-        <View style={[styles.secondaryColumn, isDesktop && styles.mainColumnDesktop]}>
-        <CollapsibleDetailSection title="交通" iconName="train">
-          {trafficSummaries.length === 0 ? (
-            <Text style={styles.emptyValue}>交通情報はありません</Text>
-          ) : (
-            trafficSummaries.map((traffic) => {
-              const detailText = traffic.return_flag
-                ? `${traffic.from} ⇔ ${traffic.to}`
-                : `${traffic.from} → ${traffic.to}`;
-              const detailWithNotes = traffic.notes
-                ? `${detailText} (${traffic.notes})`
-                : detailText;
-              // 往復フラグがある場合は金額を2倍
-              const displayFare = traffic.return_flag ? traffic.fare * 2 : traffic.fare;
-              // 往復フラグがある場合はマイルを2倍
-              const displayMiles = traffic.return_flag && traffic.miles 
-                ? traffic.miles * 2 
-                : traffic.miles;
-              
-              return (
-                <TouchableOpacity
-                  key={traffic.id}
-                  style={[styles.trafficCard, isMobile && styles.transportCardMobile]}
-                  onPress={() => router.push(authenticated ? `/traffic/${traffic.id}` : `/share/${share_id}/traffic/${traffic.id}`)}
-                >
-                  {traffic.transportation && (
-                    <View style={[styles.trafficTag, isMobile && styles.trafficTagMobile]}>
-                      <NotionTag label={traffic.transportation} color={transportationColors.get(traffic.id) || undefined} />
-                    </View>
-                  )}
-                  <View style={[styles.cardMain, isMobile && styles.cardMainMobile]}>
-                    <Text style={styles.cardRouteBold}>{detailWithNotes}</Text>
-                    <View style={styles.cardSubRow}>
-                      <Ionicons name="calendar-outline" size={15} color={brand.violet} />
-                      <View style={styles.datePartsRow}>
-                        <Text style={styles.dateValue}>{dateDisplay(traffic.date).date}</Text>
-                        <Text style={[styles.weekdayText, dateDisplay(traffic.date).tone === "saturday" && styles.saturdayText, dateDisplay(traffic.date).tone === "holiday" && styles.holidayText]}>{dateDisplay(traffic.date).weekday}</Text>
-                      </View>
-                    </View>
-                  </View>
-                  <View style={[styles.cardPriceContainer, isMobile && styles.cardPriceMobile]}>
-                    <Text style={styles.cardPrice}>{formatCurrency(displayFare)}</Text>
-                    {displayMiles !== null && displayMiles !== undefined && <Text style={styles.cardMiles}>{displayMiles}マイル</Text>}
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={brand.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
-                </TouchableOpacity>
-              );
-            })
-          )}
-          {authenticated && <TouchableOpacity style={styles.addAction} onPress={() => router.push(`/traffic/new?scheduleId=${schedule.id}`)}><Text style={styles.addActionText}>＋ 交通を追加</Text></TouchableOpacity>}
-        </CollapsibleDetailSection>
-
-        <CollapsibleDetailSection title="宿泊" iconName="bed">
-          {staySummaries.length === 0 ? (
-            <Text style={styles.emptyValue}>宿泊情報はありません</Text>
-          ) : (
-            staySummaries.map((stay) => {
-              // チェックイン/チェックアウトの日時をフォーマット
-              const formatDateTime = (dateTimeStr: string) => {
-                const display = dateDisplay(dateTimeStr);
-                const time = dateTimeStr.includes(" ") ? dateTimeStr.split(" ")[1] : "";
-                return { ...display, time };
-              };
-              const checkInFormatted = formatDateTime(stay.check_in);
-              const checkOutFormatted = formatDateTime(stay.check_out);
-              return (
-                <TouchableOpacity
-                  key={stay.id}
-                  style={[styles.stayCard, isMobile && styles.stayCardMobile]}
-                  onPress={() => router.push(authenticated ? `/stay/${stay.id}` : `/share/${share_id}/stay/${stay.id}`)}
-                >
-                  {authenticated && isDesktop && <View style={styles.stayIcon}>
-                    <Ionicons name="bed" size={28} color="#FFFFFF" />
-                  </View>}
-                  <View style={[styles.cardMain, isMobile && styles.stayMainMobile]}>
-                    {authenticated && <Text style={styles.cardRouteBold}>{stay.hotel_name}</Text>}
-                    <View style={styles.cardSubRow}>
-                      {!isNarrowMobile && <Ionicons name="calendar-outline" size={15} color={brand.violet} />}
-                      <Text style={[styles.stayDateLabel, isMobile && styles.stayDateLabelMobile, isNarrowMobile && styles.stayDateLabelNarrow]}>チェックイン</Text>
-                      <View style={[styles.datePartsRow, isMobile && styles.stayDatePartsMobile, isNarrowMobile && styles.stayDatePartsNarrow]}>
-                        <Text style={styles.dateValue}>{checkInFormatted.date}</Text>
-                        <Text style={[styles.weekdayText, styles.stayWeekdayText, isMobile && styles.stayWeekdayTextMobile, isNarrowMobile && styles.stayWeekdayTextNarrow, checkInFormatted.tone === "saturday" && styles.saturdayText, checkInFormatted.tone === "holiday" && styles.holidayText]}>{checkInFormatted.weekday}</Text>
-                        {!!checkInFormatted.time && <Text style={styles.timeValue}>{checkInFormatted.time}</Text>}
-                      </View>
-                    </View>
-                    <View style={styles.cardSubRow}>
-                      {!isNarrowMobile && <Ionicons name="calendar-outline" size={15} color={brand.violet} />}
-                      <Text style={[styles.stayDateLabel, isMobile && styles.stayDateLabelMobile, isNarrowMobile && styles.stayDateLabelNarrow]}>チェックアウト</Text>
-                      <View style={[styles.datePartsRow, isMobile && styles.stayDatePartsMobile, isNarrowMobile && styles.stayDatePartsNarrow]}>
-                        <Text style={styles.dateValue}>{checkOutFormatted.date}</Text>
-                        <Text style={[styles.weekdayText, styles.stayWeekdayText, isMobile && styles.stayWeekdayTextMobile, isNarrowMobile && styles.stayWeekdayTextNarrow, checkOutFormatted.tone === "saturday" && styles.saturdayText, checkOutFormatted.tone === "holiday" && styles.holidayText]}>{checkOutFormatted.weekday}</Text>
-                        {!!checkOutFormatted.time && <Text style={styles.timeValue}>{checkOutFormatted.time}</Text>}
-                      </View>
-                    </View>
-                  </View>
-                  <View style={[styles.stayCardActions, isMobile && styles.stayCardActionsMobile]}>
-                    <Text style={[styles.breakfastTag, !stay.breakfast_flag && styles.breakfastTagOff]}>
-                      {stay.breakfast_flag ? "朝食あり" : "朝食なし"}
-                    </Text>
-                    <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={brand.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
-                </TouchableOpacity>
-              );
-            })
-          )}
-          {authenticated && <TouchableOpacity style={styles.addAction} onPress={() => router.push(`/stay/new?scheduleId=${schedule.id}`)}><Text style={styles.addActionText}>＋ 宿泊を追加</Text></TouchableOpacity>}
-        </CollapsibleDetailSection>
-        </View>
-        </View>
+            <View style={styles.rightColumnDesktop}>
+              {costBlock}
+              {relatedBlock}
+            </View>
+          </View>
+        ) : (
+          <>
+            {eventInfoBlock}
+            {costBlock}
+            {relatedBlock}
+            {trafficBlock}
+            {stayBlock}
+          </>
+        )}
         </View>
         <PublicFooter />
       </ScrollView>
@@ -832,16 +855,9 @@ const styles = StyleSheet.create({
   stayWeekdayTextNarrow: { width: 36, minWidth: 36, fontSize: 12 },
   saturdayText: { color: "#2563EB" },
   holidayText: { color: "#DC2626" },
-  primaryGrid: { gap: 0 },
-  primaryGridDesktop: { flexDirection: "row", alignItems: "flex-start", gap: DESKTOP_GRID_GAP },
-  primaryColumn: { minWidth: 0 },
-  eventColumnDesktop: DESKTOP_WIDE_COLUMN,
-  costColumnDesktop: DESKTOP_NARROW_COLUMN,
-  secondaryGrid: { gap: 0 },
-  secondaryGridDesktop: { flexDirection: "row-reverse", alignItems: "flex-start", gap: DESKTOP_GRID_GAP },
-  secondaryColumn: { minWidth: 0 },
-  mainColumnDesktop: DESKTOP_WIDE_COLUMN,
-  relatedColumnDesktop: DESKTOP_NARROW_COLUMN,
+  detailGridDesktop: { flexDirection: "row", alignItems: "flex-start", gap: DESKTOP_GRID_GAP },
+  leftColumnDesktop: { ...DESKTOP_WIDE_COLUMN, minWidth: 0 },
+  rightColumnDesktop: { ...DESKTOP_NARROW_COLUMN, minWidth: 0 },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
