@@ -44,14 +44,14 @@
 
       <text x="0" y="120" class="section">設定済み駅名</text>
       <rect x="0" y="130" width="420" height="44" rx="8" class="item"/>
-      <text x="14" y="157" class="itemText">東京駅</text>
+      <text x="14" y="157" class="itemText">東京</text>
       <rect x="290" y="140" width="52" height="24" rx="6" class="editBtn"/>
       <text x="316" y="156" class="editText" text-anchor="middle">編集</text>
       <rect x="350" y="140" width="52" height="24" rx="6" class="delBtn"/>
       <text x="376" y="156" class="delText" text-anchor="middle">削除</text>
 
       <rect x="0" y="182" width="420" height="44" rx="8" class="item"/>
-      <text x="14" y="209" class="itemText">品川駅</text>
+      <text x="14" y="209" class="itemText">品川</text>
       <rect x="290" y="192" width="52" height="24" rx="6" class="editBtn"/>
       <text x="316" y="208" class="editText" text-anchor="middle">編集</text>
       <rect x="350" y="192" width="52" height="24" rx="6" class="delBtn"/>
@@ -73,8 +73,8 @@
     <g transform="translate(44,92)">
       <text x="0" y="0" class="section">交通情報（マスク設定前）</text>
       <rect x="0" y="10" width="480" height="48" rx="8" class="row"/>
-      <text x="14" y="30" class="plainText">出発地: 東京駅</text>
-      <text x="14" y="48" class="plainText">到着地: 品川駅</text>
+      <text x="14" y="30" class="plainText">出発地: 東京</text>
+      <text x="14" y="48" class="plainText">到着地: 品川</text>
 
       <text x="0" y="86" class="section">交通情報（マスク設定後・共有ページ表示）</text>
       <rect x="0" y="96" width="480" height="48" rx="8" class="row"/>
