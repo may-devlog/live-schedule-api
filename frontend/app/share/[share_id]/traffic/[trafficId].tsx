@@ -109,7 +109,7 @@ export default function SharedTrafficDetailScreen() {
   return (
     <View style={styles.container}>
       <PublicHeader active="schedule" />
-      <PageHeader showBackButton={true} homePath={`/share/${share_id}`} contentMaxWidth={900} />
+      <PageHeader showBackButton={true} homePath={`/share/${share_id}`} />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={

@@ -7,6 +7,8 @@ import { AccountMenu } from './AccountMenu';
 import { NotificationMenu } from './NotificationMenu';
 import { fetchProfile } from '../utils/profile-request';
 
+export const HEADER_CONTENT_MAX_WIDTH = 1320;
+
 export const brand = {
   violet: '#7C3AED',
   violetDark: '#5B21B6',
@@ -167,7 +169,7 @@ const styles = StyleSheet.create({
   wordmarkCompact: { fontSize: 23 },
   lightText: { color: brand.white },
   header: { backgroundColor: brand.white, borderBottomWidth: 1, borderBottomColor: brand.border, zIndex: 10 },
-  headerInner: { width: '100%', maxWidth: 1320, minHeight: 72, paddingHorizontal: 24, alignSelf: 'center', flexDirection: 'row', alignItems: 'center' },
+  headerInner: { width: '100%', maxWidth: HEADER_CONTENT_MAX_WIDTH, minHeight: 72, paddingHorizontal: 24, alignSelf: 'center', flexDirection: 'row', alignItems: 'center' },
   nav: { flexDirection: 'row', alignItems: 'center', gap: 32, marginLeft: 54, flex: 1 },
   navText: { color: brand.ink, fontSize: 14, fontWeight: '600', paddingVertical: 26 },
   navActive: { color: brand.violet, borderBottomWidth: 2, borderBottomColor: brand.violet },
