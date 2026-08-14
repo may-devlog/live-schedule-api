@@ -246,7 +246,7 @@ export default function StayDetailScreen() {
   const renderStatePage = (content: React.ReactNode) => (
     <View style={styles.container}>
       <AppHeader active="schedule" />
-      <PageHeader homePath="/" />
+      <PageHeader homePath="/" contentMaxWidth={900} />
       <ScrollView contentContainerStyle={styles.stateScroll}>
         <View style={styles.stateContent}>{content}</View>
         <PublicFooter />
