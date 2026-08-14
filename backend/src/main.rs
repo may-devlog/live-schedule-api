@@ -2388,6 +2388,78 @@ async fn get_plan_status(
     })))
 }
 
+// POST /auth/start-trial - 1ヶ月お試し期間を開始する（1ユーザー1回のみ）
+async fn start_trial(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let row: Option<(String, i32)> = sqlx::query_as(
+        "SELECT plan, trial_used FROM users WHERE id = ?"
+    )
+    .bind(user.user_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[StartTrial] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    let Some((plan, trial_used)) = row else {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "ユーザーが見つかりません".to_string(),
+            }),
+        ));
+    };
+
+    if plan == "premium" {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "already_premium".to_string(),
+            }),
+        ));
+    }
+    if trial_used != 0 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "trial_already_used".to_string(),
+            }),
+        ));
+    }
+
+    let now = Utc::now().to_rfc3339();
+    sqlx::query(
+        "UPDATE users SET trial_started_at = ?, trial_used = 1, updated_at = ? WHERE id = ?"
+    )
+    .bind(&now)
+    .bind(&now)
+    .bind(user.user_id as i64)
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[StartTrial] Failed to start trial: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "trial_started_at": now
+    })))
+}
+
 // GET /auth/profile - ログイン中ユーザーのプロフィール取得
 async fn get_profile(
     user: AuthenticatedUser,
@@ -6546,6 +6618,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/auth/toggle-sharing", post(toggle_sharing))
         .route("/auth/sharing-status", get(get_sharing_status))
         .route("/auth/plan-status", get(get_plan_status))
+        .route("/auth/start-trial", post(start_trial))
         .route("/auth/profile", get(get_profile).put(update_profile))
         .route("/auth/profile-avatar", put(update_profile_avatar))
         .route("/masked-locations", get(list_masked_locations).post(create_masked_location))
