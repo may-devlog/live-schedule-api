@@ -187,6 +187,41 @@ fn generate_public_id() -> String {
         .collect()
 }
 
+#[cfg(test)]
+mod public_id_tests {
+    use super::generate_public_id;
+    use std::collections::HashSet;
+
+    #[test]
+    fn has_expected_length() {
+        assert_eq!(generate_public_id().len(), 21);
+    }
+
+    #[test]
+    fn only_contains_alphanumeric_ascii_characters() {
+        let id = generate_public_id();
+        assert!(id.chars().all(|c| c.is_ascii_alphanumeric()));
+    }
+
+    #[test]
+    fn generates_unique_values_across_many_calls() {
+        let ids: HashSet<String> = (0..10_000).map(|_| generate_public_id()).collect();
+        assert_eq!(ids.len(), 10_000, "expected no duplicates among 10,000 generated ids");
+    }
+}
+
+// 指定したテーブルに指定した列が既に存在するかを確認する
+async fn column_exists(pool: &Pool<Sqlite>, table: &str, column: &str) -> Result<bool, sqlx::Error> {
+    let count: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM pragma_table_info('{}') WHERE name = ?",
+        table
+    ))
+    .bind(column)
+    .fetch_one(pool)
+    .await?;
+    Ok(count > 0)
+}
+
 // public_idがNULLの既存行に、衝突しないランダムIDを1件ずつ発行してバックフィルする
 async fn backfill_public_ids(pool: &Pool<Sqlite>, table: &str) -> Result<(), sqlx::Error> {
     let select_sql = format!("SELECT id FROM {} WHERE public_id IS NULL", table);
@@ -7116,15 +7151,14 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     // テーブル再作成（上記のCASCADE等）でカラムごと失われるため、必ず再作成マイグレーションより後に実行する
     // SQLiteはALTER TABLE ADD COLUMNにUNIQUE制約を直接付けられないため、
     // 素のカラムを追加してから別途UNIQUE INDEXで一意性を担保する
-    let _ = sqlx::query("ALTER TABLE schedules ADD COLUMN public_id TEXT")
-        .execute(pool)
-        .await;
-    let _ = sqlx::query("ALTER TABLE traffics ADD COLUMN public_id TEXT")
-        .execute(pool)
-        .await;
-    let _ = sqlx::query("ALTER TABLE stays ADD COLUMN public_id TEXT")
-        .execute(pool)
-        .await;
+    // （既に列が存在する場合のみスキップし、それ以外のDBエラーはmigration失敗として伝播させる）
+    for table in ["schedules", "traffics", "stays"] {
+        if !column_exists(pool, table, "public_id").await? {
+            sqlx::query(&format!("ALTER TABLE {} ADD COLUMN public_id TEXT", table))
+                .execute(pool)
+                .await?;
+        }
+    }
 
     sqlx::query("CREATE UNIQUE INDEX IF NOT EXISTS idx_schedules_public_id ON schedules(public_id) WHERE public_id IS NOT NULL")
         .execute(pool)
