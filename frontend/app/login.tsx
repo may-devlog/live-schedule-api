@@ -112,7 +112,7 @@ export default function LoginScreen() {
               <Text style={styles.registerText}>新規アカウントを作成</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.tagline}>ライブの予定と思い出を、ひとつの場所に。</Text>
+          <Text style={styles.tagline}>ライブの予定と費用を、ひとつの場所に。</Text>
         </View>
         <PublicFooter compact />
       </ScrollView>

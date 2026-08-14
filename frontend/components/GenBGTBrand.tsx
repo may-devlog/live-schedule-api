@@ -144,7 +144,7 @@ export function PublicFooter({ compact = false }: { compact?: boolean }) {
       <View style={[styles.footerInner, narrow && styles.footerInnerNarrow]}>
         <View>
           <BrandWordmark light={!compact} compact />
-          {!compact && <Text style={styles.footerTagline}>ライブの予定と思い出を、ひとつの場所に。</Text>}
+          {!compact && <Text style={styles.footerTagline}>ライブの予定と費用を、ひとつの場所に。</Text>}
         </View>
         <View style={[styles.footerLinks, narrow && styles.footerLinksNarrow]}>
           {!compact && <TouchableOpacity onPress={() => router.push('/guide')}><Text style={styles.footerLink}>使い方</Text></TouchableOpacity>}
