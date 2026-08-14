@@ -249,7 +249,7 @@ export default function TrafficDetailScreen() {
   return (
     <View style={styles.container}>
       <AppHeader active="schedule" />
-      <PageHeader scheduleTitle={schedule?.title || null} homePath="/" />
+      <PageHeader scheduleTitle={schedule?.title || null} homePath="/" contentMaxWidth={900} />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
