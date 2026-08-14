@@ -6563,20 +6563,36 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     .await?;
 
     if schedules_created_at_default.is_none() {
+        // dateがNOT NULLになっているかは、上のマイグレーションがNULLレコードの存在で
+        // スキップされている可能性があるため、ここで改めて現在の状態を確認する。
+        // 決め打ちで「date TEXT NOT NULL」として再作成すると、NULLのdateが残っている
+        // 既存DBではこのテーブル再作成時のINSERTでNOT NULL制約違反となり、
+        // アプリの起動（DB初期化）ごと失敗してしまう。
+        let date_currently_not_null: i64 = sqlx::query_scalar(
+            "SELECT \"notnull\" FROM pragma_table_info('schedules') WHERE name = 'date'"
+        )
+        .fetch_one(pool)
+        .await?;
+        let date_column_ddl = if date_currently_not_null != 0 {
+            "TEXT NOT NULL"
+        } else {
+            "TEXT"
+        };
+
         let mut conn = pool.acquire().await?;
         sqlx::query("PRAGMA foreign_keys = OFF")
             .execute(&mut *conn)
             .await?;
 
         let mut tx = conn.begin().await?;
-        sqlx::query(
+        sqlx::query(&format!(
             r#"
             CREATE TABLE schedules_new (
               id           INTEGER PRIMARY KEY AUTOINCREMENT,
               user_id      INTEGER,
               title        TEXT NOT NULL,
               "group"      TEXT,
-              date         TEXT NOT NULL,
+              date         {date_column_ddl},
               open         TEXT,
               start        TEXT,
               "end"        TEXT,
@@ -6601,7 +6617,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
               FOREIGN KEY (user_id) REFERENCES users(id)
             )
             "#
-        )
+        ))
         .execute(&mut *tx)
         .await?;
         sqlx::query(
