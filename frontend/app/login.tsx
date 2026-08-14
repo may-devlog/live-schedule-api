@@ -60,7 +60,7 @@ export default function LoginScreen() {
           <View style={styles.form}>
             <View style={styles.logoWrap}><BrandMark size={58} /></View>
             <Text style={styles.title}>GenBGTにログイン</Text>
-            <Text style={styles.subtitle}>ログインして、ライブの予定や思い出を管理しましょう。</Text>
+            <Text style={styles.subtitle}>ログインして、ライブの予定や費用を管理しましょう。</Text>
 
             <Text style={styles.label}>メールアドレス</Text>
             <TextInput
@@ -112,7 +112,7 @@ export default function LoginScreen() {
               <Text style={styles.registerText}>新規アカウントを作成</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.tagline}>ライブの予定と思い出を、ひとつの場所に。</Text>
+          <Text style={styles.tagline}>ライブの予定と費用を、ひとつの場所に。</Text>
         </View>
         <PublicFooter compact />
       </ScrollView>
