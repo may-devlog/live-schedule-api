@@ -9,6 +9,22 @@ import { SharedArchivePage } from "../../components/SharedArchivePage";
 export default function YearScreen() {
   const params = useLocalSearchParams<{ year: string }>();
   const router = useRouter();
+  const [canUseGrouping, setCanUseGrouping] = React.useState(true);
+
+  React.useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await authenticatedFetch(getApiUrl("/auth/plan-status"));
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active) setCanUseGrouping(!!data.is_paid_effective);
+      } catch (e) {
+        console.error("ERROR FETCHING PLAN STATUS:", e);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   // 利用可能な年を取得する関数
   const fetchAvailableYears = async (): Promise<number[]> => {
@@ -110,6 +126,7 @@ export default function YearScreen() {
         initialYear={params.year ?? String(new Date().getFullYear())}
         onBack={() => router.push("/")}
         onSelectYear={(selectedYear) => router.replace(`/year/${selectedYear}`)}
+        canUseGrouping={canUseGrouping}
       />
     </>
   );

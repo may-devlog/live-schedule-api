@@ -28,6 +28,10 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
   const [newEmail, setNewEmail] = useState('');
   const [newShareId, setNewShareId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [plan, setPlan] = useState<'free' | 'premium'>('free');
+  const [isPaidEffective, setIsPaidEffective] = useState(false);
+  const [trialUsed, setTrialUsed] = useState(false);
+  const [trialStarting, setTrialStarting] = useState(false);
 
   const fetchSharing = useCallback(async () => {
     const response = await authenticatedFetch(getApiUrl('/auth/sharing-status'));
@@ -38,9 +42,36 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
     setSharingUrl(data.sharing_url ?? null);
   }, []);
 
+  const fetchPlanStatus = useCallback(async () => {
+    const response = await authenticatedFetch(getApiUrl('/auth/plan-status'));
+    if (!response.ok) return;
+    const data = await response.json();
+    setPlan(data.plan === 'premium' ? 'premium' : 'free');
+    setIsPaidEffective(Boolean(data.is_paid_effective));
+    setTrialUsed(Boolean(data.trial_used));
+  }, []);
+
   useEffect(() => {
-    if (visible) fetchSharing().catch(() => undefined);
-  }, [visible, fetchSharing]);
+    if (visible) {
+      fetchSharing().catch(() => undefined);
+      fetchPlanStatus().catch(() => undefined);
+    }
+  }, [visible, fetchSharing, fetchPlanStatus]);
+
+  const startTrial = async () => {
+    try {
+      setTrialStarting(true);
+      const response = await authenticatedFetch(getApiUrl('/auth/start-trial'), { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error === 'trial_already_used' ? 'お試し期間は既にご利用済みです' : '無料トライアルの開始に失敗しました');
+      await fetchPlanStatus();
+      Alert.alert('無料トライアルを開始しました', '1ヶ月間、プレミアム機能をお使いいただけます。');
+    } catch (error: any) {
+      Alert.alert('エラー', error.message);
+    } finally {
+      setTrialStarting(false);
+    }
+  };
 
   const saveAvatar = async (value: string | null) => {
     const response = await authenticatedFetch(getApiUrl('/auth/profile-avatar'), {
@@ -78,7 +109,10 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       const response = await authenticatedFetch(getApiUrl('/auth/toggle-sharing'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),
       });
-      if (!response.ok) throw new Error('共有設定の更新に失敗しました');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error === 'premium_required' ? '共有化はプレミアムプラン限定の機能です。無料トライアルをお試しください。' : '共有設定の更新に失敗しました');
+      }
       await fetchSharing();
     } catch (error: any) {
       setSharingEnabled(!enabled);
@@ -174,10 +208,34 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               {menuItem('shield-checkmark-outline', '出発地・到着地マスク設定', () => { onClose(); router.push('/settings/masked-locations'); })}
               <View style={styles.menuItem}>
                 <View style={styles.iconBox}><Ionicons name="share-social-outline" size={19} color={brand.violetDark} /></View>
-                <View style={styles.shareCopy}><Text style={styles.menuLabel}>共有化</Text>{sharingUrl && sharingEnabled && <Text numberOfLines={1} style={styles.shareUrl}>{sharingUrl}</Text>}</View>
+                <View style={styles.shareCopy}><Text style={styles.menuLabel}>共有化 <Text style={styles.premiumBadge}>🔒</Text></Text>{sharingUrl && sharingEnabled && <Text numberOfLines={1} style={styles.shareUrl}>{sharingUrl}</Text>}</View>
                 <Switch value={sharingEnabled} onValueChange={toggleSharing} trackColor={{ false: '#D9D4E2', true: '#A78BFA' }} thumbColor={sharingEnabled ? brand.violetDark : '#FFFFFF'} />
               </View>
             </View>
+            {plan === 'premium' ? (
+              <View style={styles.planCard}>
+                <Ionicons name="star" size={16} color={brand.violetDark} />
+                <Text style={styles.planCardText}>プレミアムプランをご利用中です</Text>
+              </View>
+            ) : isPaidEffective ? (
+              <View style={styles.planCard}>
+                <Ionicons name="time-outline" size={16} color={brand.violetDark} />
+                <Text style={styles.planCardText}>無料トライアル中です（プレミアム機能を利用できます）</Text>
+              </View>
+            ) : trialUsed ? (
+              <View style={styles.planCard}>
+                <Ionicons name="information-circle-outline" size={16} color={brand.muted} />
+                <Text style={styles.planCardText}>無料トライアルは利用済みです</Text>
+              </View>
+            ) : (
+              <View style={styles.trialCard}>
+                <Text style={styles.trialTitle}>1ヶ月無料トライアル</Text>
+                <Text style={styles.trialDescription}>共有化やアーカイブのグループ化など、プレミアム機能を1ヶ月間お試しいただけます。</Text>
+                <TouchableOpacity style={styles.trialButton} onPress={startTrial} disabled={trialStarting}>
+                  {trialStarting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.trialButtonText}>無料トライアルを始める</Text>}
+                </TouchableOpacity>
+              </View>
+            )}
             <TouchableOpacity style={styles.logoutButton} onPress={confirmLogout}><Ionicons name="log-out-outline" size={19} color="#DC2626" /><Text style={styles.logoutText}>ログアウト</Text></TouchableOpacity>
           </ScrollView>
         </View>
@@ -204,7 +262,10 @@ const styles = StyleSheet.create({
   avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: brand.white, borderWidth: 2, borderColor: '#DDD6FE', alignItems: 'center', justifyContent: 'center' }, avatarImage: { width: '100%', height: '100%', borderRadius: 27 },
   profileCopy: { flex: 1, minWidth: 0 }, profileName: { color: brand.ink, fontSize: 16, fontWeight: '800' }, email: { color: brand.muted, fontSize: 12, marginTop: 3 },
   avatarButton: { minHeight: 38, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }, avatarButtonText: { color: brand.violetDark, fontSize: 12, fontWeight: '700' }, removeAvatar: { color: brand.muted, textAlign: 'right', fontSize: 12, marginTop: 8 },
-  menuGroup: { marginTop: 22, borderWidth: 1, borderColor: brand.border, borderRadius: 14, overflow: 'hidden' }, menuItem: { minHeight: 64, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: brand.border }, iconBox: { width: 34, height: 34, borderRadius: 9, backgroundColor: brand.lavender, alignItems: 'center', justifyContent: 'center' }, menuLabel: { color: brand.ink, fontSize: 14, fontWeight: '600' }, shareCopy: { flex: 1 }, shareUrl: { color: brand.muted, fontSize: 10, marginTop: 3 },
+  menuGroup: { marginTop: 22, borderWidth: 1, borderColor: brand.border, borderRadius: 14, overflow: 'hidden' }, menuItem: { minHeight: 64, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: brand.border }, iconBox: { width: 34, height: 34, borderRadius: 9, backgroundColor: brand.lavender, alignItems: 'center', justifyContent: 'center' }, menuLabel: { color: brand.ink, fontSize: 14, fontWeight: '600' }, premiumBadge: { fontSize: 12 }, shareCopy: { flex: 1 }, shareUrl: { color: brand.muted, fontSize: 10, marginTop: 3 },
   logoutButton: { marginTop: 18, minHeight: 52, borderRadius: 11, backgroundColor: '#FEF2F2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, logoutText: { color: '#DC2626', fontWeight: '700' },
+  planCard: { marginTop: 18, minHeight: 44, borderRadius: 11, backgroundColor: brand.lavender, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14 }, planCardText: { color: brand.ink, fontSize: 13, fontWeight: '600', flex: 1 },
+  trialCard: { marginTop: 18, borderRadius: 14, borderWidth: 1, borderColor: '#DDD6FE', backgroundColor: brand.lavender, padding: 16 }, trialTitle: { color: brand.violetDark, fontSize: 15, fontWeight: '800' }, trialDescription: { color: brand.muted, fontSize: 12, marginTop: 6, lineHeight: 18 },
+  trialButton: { marginTop: 14, minHeight: 44, borderRadius: 10, backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center' }, trialButtonText: { color: brand.white, fontWeight: '800', fontSize: 13 },
   dialogOverlay: { flex: 1, backgroundColor: 'rgba(32,27,44,0.48)', alignItems: 'center', justifyContent: 'center', padding: 20 }, dialog: { width: '100%', maxWidth: 480, backgroundColor: brand.white, borderRadius: 16, padding: 24 }, dialogHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, dialogTitle: { color: brand.ink, fontSize: 20, fontWeight: '800' }, dialogHelp: { color: brand.muted, fontSize: 13, marginTop: 18, marginBottom: 8 }, input: { minHeight: 48, borderWidth: 1, borderColor: brand.border, borderRadius: 10, paddingHorizontal: 14, color: brand.ink }, saveButton: { marginTop: 18, minHeight: 48, borderRadius: 10, backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center' }, saveText: { color: brand.white, fontWeight: '800' },
 });
