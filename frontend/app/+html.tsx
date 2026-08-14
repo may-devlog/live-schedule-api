@@ -12,9 +12,11 @@ export default function Root({ children }: PropsWithChildren) {
           content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
         />
         <title>GenBGT</title>
+        <meta name="description" content="ライブの予定と費用を、ひとつの場所に。" />
         <meta name="application-name" content="GenBGT" />
         <meta name="apple-mobile-web-app-title" content="GenBGT" />
         <meta name="theme-color" content="#5B21B6" />
+        <link rel="icon" href="/favicon.ico" />
         <link rel="dns-prefetch" href="https://api.genbgt.com" />
         <link rel="preconnect" href="https://api.genbgt.com" crossOrigin="anonymous" />
         <script dangerouslySetInnerHTML={{ __html: 'window.__genbgtReplaceState = window.history.replaceState.bind(window.history);' }} />
