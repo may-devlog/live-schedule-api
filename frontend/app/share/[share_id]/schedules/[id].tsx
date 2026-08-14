@@ -376,6 +376,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
       <PageHeader
         showBackButton={true}
         homePath={authenticated ? "/" : `/share/${share_id}`}
+        contentMaxWidth={1180}
       />
       <ScrollView 
         contentContainerStyle={styles.scrollPage}
