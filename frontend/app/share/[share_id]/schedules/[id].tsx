@@ -647,7 +647,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         </CollapsibleDetailSection>
         </View>
 
-        <View style={[styles.secondaryColumn, isDesktop && styles.trafficColumnDesktop]}>
+        <View style={[styles.secondaryColumn, isDesktop && styles.mainColumnDesktop]}>
         <CollapsibleDetailSection title="交通" iconName="train">
           {trafficSummaries.length === 0 ? (
             <Text style={styles.emptyValue}>交通情報はありません</Text>
@@ -698,9 +698,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
           )}
           {authenticated && <TouchableOpacity style={styles.addAction} onPress={() => router.push(`/traffic/new?scheduleId=${schedule.id}`)}><Text style={styles.addActionText}>＋ 交通を追加</Text></TouchableOpacity>}
         </CollapsibleDetailSection>
-        </View>
 
-        <View style={[styles.secondaryColumn, isDesktop && styles.stayColumnDesktop]}>
         <CollapsibleDetailSection title="宿泊" iconName="bed">
           {staySummaries.length === 0 ? (
             <Text style={styles.emptyValue}>宿泊情報はありません</Text>
@@ -836,11 +834,10 @@ const styles = StyleSheet.create({
   eventColumnDesktop: { flex: 2 },
   costColumnDesktop: { flex: 1 },
   secondaryGrid: { gap: 0 },
-  secondaryGridDesktop: { position: "relative", alignItems: "flex-start", gap: 20 },
+  secondaryGridDesktop: { flexDirection: "row-reverse", alignItems: "flex-start", gap: 20 },
   secondaryColumn: { minWidth: 0 },
-  trafficColumnDesktop: { width: "66%", marginTop: -92 },
-  relatedColumnDesktop: { position: "absolute", right: 0, top: 0, width: "31%" },
-  stayColumnDesktop: { width: "66%" },
+  mainColumnDesktop: { flex: 2 },
+  relatedColumnDesktop: { flex: 1 },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
