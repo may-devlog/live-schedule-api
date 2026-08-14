@@ -222,6 +222,24 @@ async fn column_exists(pool: &Pool<Sqlite>, table: &str, column: &str) -> Result
     Ok(count > 0)
 }
 
+// 有料プラン相当の機能にアクセスできるかどうかを判定する
+// trial_started_atがある場合、期限（開始から1ヶ月）は保存せず都度計算する
+fn has_paid_access(plan: &str, trial_started_at: Option<&str>) -> bool {
+    if plan == "premium" {
+        return true;
+    }
+    let Some(started_at) = trial_started_at else {
+        return false;
+    };
+    let Ok(started) = DateTime::parse_from_rfc3339(started_at) else {
+        return false;
+    };
+    let Some(trial_ends_at) = started.checked_add_months(chrono::Months::new(1)) else {
+        return false;
+    };
+    Utc::now() < trial_ends_at
+}
+
 // public_idがNULLの既存行に、衝突しないランダムIDを1件ずつ発行してバックフィルする
 async fn backfill_public_ids(pool: &Pool<Sqlite>, table: &str) -> Result<(), sqlx::Error> {
     let select_sql = format!("SELECT id FROM {} WHERE public_id IS NULL", table);
@@ -2256,6 +2274,47 @@ async fn get_sharing_status(
             }),
         ))
     }
+}
+
+// GET /auth/plan-status - プラン種別とお試し期間の状態取得
+async fn get_plan_status(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let row: Option<(String, Option<String>, i32, Option<String>)> = sqlx::query_as(
+        "SELECT plan, premium_started_at, trial_used, trial_started_at FROM users WHERE id = ?"
+    )
+    .bind(user.user_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[GetPlanStatus] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    let Some((plan, premium_started_at, trial_used, trial_started_at)) = row else {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: "ユーザーが見つかりません".to_string(),
+            }),
+        ));
+    };
+
+    let is_paid_effective = has_paid_access(&plan, trial_started_at.as_deref());
+
+    Ok(Json(serde_json::json!({
+        "plan": plan,
+        "is_paid_effective": is_paid_effective,
+        "premium_started_at": premium_started_at,
+        "trial_used": trial_used != 0,
+        "trial_started_at": trial_started_at
+    })))
 }
 
 // GET /auth/profile - ログイン中ユーザーのプロフィール取得
@@ -6391,6 +6450,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/auth/change-share-id", post(change_share_id))
         .route("/auth/toggle-sharing", post(toggle_sharing))
         .route("/auth/sharing-status", get(get_sharing_status))
+        .route("/auth/plan-status", get(get_plan_status))
         .route("/auth/profile", get(get_profile).put(update_profile))
         .route("/auth/profile-avatar", put(update_profile_avatar))
         .route("/masked-locations", get(list_masked_locations).post(create_masked_location))
@@ -7173,6 +7233,29 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     backfill_public_ids(pool, "schedules").await?;
     backfill_public_ids(pool, "traffics").await?;
     backfill_public_ids(pool, "stays").await?;
+
+    // 有料プラン（premium）と1ヶ月お試し期間の管理用カラムを追加（マイグレーション）
+    // trial_ends_atは持たず、trial_started_at + 1ヶ月を都度計算して判定する（has_paid_accessを参照）
+    if !column_exists(pool, "users", "plan").await? {
+        sqlx::query("ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'free'")
+            .execute(pool)
+            .await?;
+    }
+    if !column_exists(pool, "users", "premium_started_at").await? {
+        sqlx::query("ALTER TABLE users ADD COLUMN premium_started_at TEXT")
+            .execute(pool)
+            .await?;
+    }
+    if !column_exists(pool, "users", "trial_used").await? {
+        sqlx::query("ALTER TABLE users ADD COLUMN trial_used INTEGER NOT NULL DEFAULT 0")
+            .execute(pool)
+            .await?;
+    }
+    if !column_exists(pool, "users", "trial_started_at").await? {
+        sqlx::query("ALTER TABLE users ADD COLUMN trial_started_at TEXT")
+            .execute(pool)
+            .await?;
+    }
 
     // パフォーマンス向上のためのインデックス追加
     // CREATE INDEX IF NOT EXISTSのため、テーブル再作成が発生した場合でも安全に再実行できる
