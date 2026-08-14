@@ -378,6 +378,7 @@ export default function TrafficDetailScreen() {
             <NotionRelation
               label=""
               value={selectedScheduleId ? [selectedScheduleId] : []}
+              confirmChangeMessage="紐づくスケジュールを変更しますか？この交通情報が別のスケジュールに移動します。"
               onValueChange={async (ids) => {
                 const newScheduleId = ids.length > 0 ? ids[0] : null;
                 setSelectedScheduleId(newScheduleId);

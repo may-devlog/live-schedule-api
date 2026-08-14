@@ -419,6 +419,7 @@ export default function StayDetailScreen() {
             <NotionRelation
               label=""
               value={selectedScheduleId ? [selectedScheduleId] : []}
+              confirmChangeMessage="紐づくスケジュールを変更しますか？この宿泊情報が別のスケジュールに移動します。"
               onValueChange={async (ids) => {
                 const newScheduleId = ids.length > 0 ? ids[0] : null;
                 setSelectedScheduleId(newScheduleId);

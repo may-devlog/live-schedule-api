@@ -8,6 +8,8 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
+  Platform,
+  Alert,
 } from "react-native";
 import { NotionTag } from "./notion-tag";
 import { ScheduleLinkCard } from "./ScheduleLinkCard";
@@ -24,6 +26,7 @@ type NotionRelationProps = {
   placeholder?: string;
   hideSelectedCards?: boolean; // 選択されたカードを非表示にするか
   singleSelect?: boolean; // 単一選択モード（trueの場合、新しい選択時に既存の選択を解除）
+  confirmChangeMessage?: string; // 指定すると、選択の変更・解除の前に確認ダイアログを挟む
 };
 
 export function NotionRelation({
@@ -34,6 +37,7 @@ export function NotionRelation({
   placeholder = "関連スケジュールを選択",
   hideSelectedCards = false,
   singleSelect = false,
+  confirmChangeMessage,
 }: NotionRelationProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
@@ -83,30 +87,49 @@ export function NotionRelation({
   // 選択されたスケジュール情報を取得
   const selectedSchedules = allSchedules.filter((s) => value.includes(s.id));
 
-  const handleToggleSchedule = (scheduleId: number) => {
-    if (singleSelect) {
-      // 単一選択モード: 既に選択されている場合は解除、そうでない場合は選択（既存の選択を解除）
-      if (value.includes(scheduleId)) {
-        // 削除
-        onValueChange([]);
-      } else {
-        // 新しい選択（既存の選択を解除）
-        onValueChange([scheduleId]);
-      }
+  // confirmChangeMessageが指定されている場合、選択の変更・解除をワンクッション確認してから反映する
+  // （紐付け変更が即時保存されるSchedule単一選択フィールドでの誤操作防止用）
+  const confirmThen = (action: () => void) => {
+    if (!confirmChangeMessage) {
+      action();
+      return;
+    }
+    if (Platform.OS === "web" && typeof window !== "undefined" && window.confirm) {
+      if (window.confirm(confirmChangeMessage)) action();
     } else {
-      // 複数選択モード: 既存の動作
-      if (value.includes(scheduleId)) {
-        // 削除
-        onValueChange(value.filter((id) => id !== scheduleId));
-      } else {
-        // 追加
-        onValueChange([...value, scheduleId]);
-      }
+      Alert.alert("確認", confirmChangeMessage, [
+        { text: "キャンセル", style: "cancel" },
+        { text: "変更する", style: "destructive", onPress: action },
+      ]);
     }
   };
 
+  const handleToggleSchedule = (scheduleId: number) => {
+    confirmThen(() => {
+      if (singleSelect) {
+        // 単一選択モード: 既に選択されている場合は解除、そうでない場合は選択（既存の選択を解除）
+        if (value.includes(scheduleId)) {
+          // 削除
+          onValueChange([]);
+        } else {
+          // 新しい選択（既存の選択を解除）
+          onValueChange([scheduleId]);
+        }
+      } else {
+        // 複数選択モード: 既存の動作
+        if (value.includes(scheduleId)) {
+          // 削除
+          onValueChange(value.filter((id) => id !== scheduleId));
+        } else {
+          // 追加
+          onValueChange([...value, scheduleId]);
+        }
+      }
+    });
+  };
+
   const handleRemoveSchedule = (scheduleId: number) => {
-    onValueChange(value.filter((id) => id !== scheduleId));
+    confirmThen(() => onValueChange(value.filter((id) => id !== scheduleId)));
   };
 
   return (
