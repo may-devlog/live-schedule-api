@@ -13,44 +13,15 @@ import { NotionProperty, NotionPropertyBlock } from "../../components/notion-pro
 import { NotionTag } from "../../components/notion-tag";
 import { getOptionColor } from "../../utils/get-option-color";
 import { loadSelectOptions } from "../../utils/select-options-storage";
-import type { Schedule } from "../HomeScreen";
 import { maskHotelName } from "../../utils/mask-hotel-name";
-
-type TrafficSummary = {
-  id: number;
-  schedule_id: number;
-  date: string;
-  order: number;
-  transportation?: string | null;
-  from: string;
-  to: string;
-  notes?: string | null;
-  fare: number;
-  miles?: number | null;
-  return_flag: boolean;
-  total_fare?: number | null;
-  total_miles?: number | null;
-};
-
-type StaySummary = {
-  id: number;
-  schedule_id: number;
-  check_in: string;
-  check_out: string;
-  hotel_name: string;
-  fee: number;
-  breakfast_flag: boolean;
-  deadline?: string | null;
-  penalty?: number | null;
-  status: string;
-};
+import type { PublicSchedule, PublicTraffic, PublicStay } from "../../types/public-schedule";
 
 export default function PublicDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const [schedule, setSchedule] = useState<Schedule | null>(null);
-  const [trafficSummaries, setTrafficSummaries] = useState<TrafficSummary[]>([]);
-  const [staySummaries, setStaySummaries] = useState<StaySummary[]>([]);
+  const [schedule, setSchedule] = useState<PublicSchedule | null>(null);
+  const [trafficSummaries, setTrafficSummaries] = useState<PublicTraffic[]>([]);
+  const [staySummaries, setStaySummaries] = useState<PublicStay[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -79,7 +50,7 @@ export default function PublicDetailScreen() {
           }
           throw new Error(`status: ${res.status}`);
         }
-        const found: Schedule = await res.json();
+        const found: PublicSchedule = await res.json();
         setSchedule(found);
 
         await fetchTrafficAndStay(found.id);
@@ -147,12 +118,12 @@ export default function PublicDetailScreen() {
     fetchDetail();
   }, [id]);
 
-  const fetchTrafficAndStay = async (scheduleId: number) => {
+  const fetchTrafficAndStay = async (scheduleId: string) => {
     // Traffic 一覧（schedule_id ごと）
     try {
       const res = await fetch(getApiUrl(`/public/traffic?schedule_id=${scheduleId}`));
       if (res.ok) {
-        const list: TrafficSummary[] = await res.json();
+        const list: PublicTraffic[] = await res.json();
         // DateとOrderでソート
         list.sort((a, b) => {
           if (a.date !== b.date) {
@@ -170,7 +141,7 @@ export default function PublicDetailScreen() {
     try {
       const res = await fetch(getApiUrl(`/public/stay?schedule_id=${scheduleId}`));
       if (res.ok) {
-        const list: StaySummary[] = await res.json();
+        const list: PublicStay[] = await res.json();
         setStaySummaries(list);
       }
     } catch {

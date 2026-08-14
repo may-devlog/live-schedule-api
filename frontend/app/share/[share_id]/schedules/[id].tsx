@@ -25,9 +25,16 @@ import { PageHeader } from "../../../../components/PageHeader";
 import { AppHeader, PublicFooter, PublicHeader, brand } from "../../../../components/GenBGTBrand";
 import { isJapaneseHolidayDate } from "../../../../components/ScheduleCalendar";
 
+// 本人認証時（内部数値id）と共有・公開時（推測困難なpublic_id文字列）の両方をこの画面で扱うため、
+// id系のフィールドは string | number として扱う
+type ScheduleLike = Omit<Schedule, "id" | "related_schedule_ids"> & {
+  id: string | number;
+  related_schedule_ids?: (string | number)[];
+};
+
 type TrafficSummary = {
-  id: number;
-  schedule_id: number;
+  id: string | number;
+  schedule_id: string | number;
   date: string;
   order: number;
   transportation?: string | null;
@@ -42,8 +49,8 @@ type TrafficSummary = {
 };
 
 type StaySummary = {
-  id: number;
-  schedule_id: number;
+  id: string | number;
+  schedule_id: string | number;
   check_in: string;
   check_out: string;
   hotel_name: string;
@@ -65,8 +72,8 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
   const share_id = params.share_id;
   const id = scheduleId ?? params.id;
   const router = useRouter();
-  const [schedule, setSchedule] = useState<Schedule | null>(null);
-  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
+  const [schedule, setSchedule] = useState<ScheduleLike | null>(null);
+  const [allSchedules, setAllSchedules] = useState<ScheduleLike[]>([]);
   const [trafficSummaries, setTrafficSummaries] = useState<TrafficSummary[]>([]);
   const [staySummaries, setStaySummaries] = useState<StaySummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,11 +96,11 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
   const [filteredLineupOptions, setFilteredLineupOptions] = useState<Array<{ label: string; color: string }>>([]);
   
   // Related SchedulesのArea色情報
-  const [relatedAreaColors, setRelatedAreaColors] = useState<Map<number, string>>(new Map());
-  const [relatedStatusColors, setRelatedStatusColors] = useState<Map<number, string>>(new Map());
-  
+  const [relatedAreaColors, setRelatedAreaColors] = useState<Map<string | number, string>>(new Map());
+  const [relatedStatusColors, setRelatedStatusColors] = useState<Map<string | number, string>>(new Map());
+
   // TrafficのTransportation色情報
-  const [transportationColors, setTransportationColors] = useState<Map<number, string>>(new Map());
+  const [transportationColors, setTransportationColors] = useState<Map<string | number, string>>(new Map());
 
   const fetchDetail = async () => {
     if ((!authenticated && !share_id) || !id) return;
@@ -102,7 +109,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
       setLoading(true);
       setError(null);
 
-      let found: Schedule;
+      let found: ScheduleLike;
       if (authenticated) {
         const res = await authenticatedFetch(getApiUrl('/schedules?include_canceled=true'));
         if (!res.ok) throw new Error(`status: ${res.status}`);
@@ -127,7 +134,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
       if (!authenticated) {
         const allRes = await fetch(getApiUrl(`/share/${share_id}`));
         if (allRes.ok) {
-        const allData: Schedule[] = await allRes.json();
+        const allData: ScheduleLike[] = await allRes.json();
         setAllSchedules(allData);
         }
       }
@@ -217,8 +224,8 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
     if (relatedIds.length === 0) return;
     
     const fetchRelatedAreaColors = async () => {
-      const colorMap = new Map<number, string>();
-      const statusColorMap = new Map<number, string>();
+      const colorMap = new Map<string | number, string>();
+      const statusColorMap = new Map<string | number, string>();
       for (const rid of relatedIds) {
         const related = allSchedules.find((s) => s.id === rid);
         if (related && related.area) {
@@ -242,7 +249,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
     if (trafficSummaries.length === 0) return;
     
     const fetchTransportationColors = async () => {
-      const colorMap = new Map<number, string>();
+      const colorMap = new Map<string | number, string>();
       for (const traffic of trafficSummaries) {
         if (traffic.transportation) {
           const color = await getOptionColor(traffic.transportation, "TRANSPORTATIONS");
@@ -255,7 +262,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
     fetchTransportationColors();
   }, [trafficSummaries]);
 
-  const fetchTrafficAndStay = async (scheduleId: number) => {
+  const fetchTrafficAndStay = async (scheduleId: string | number) => {
     try {
       const res = authenticated
         ? await authenticatedFetch(getApiUrl(`/traffic?schedule_id=${scheduleId}`))

@@ -11,12 +11,12 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { getApiUrl } from "../../utils/api";
-import type { Schedule } from "../HomeScreen";
+import type { PublicSchedule } from "../../types/public-schedule";
 
 export default function PublicIndexScreen() {
   const router = useRouter();
 
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [schedules, setSchedules] = useState<PublicSchedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,7 +31,7 @@ export default function PublicIndexScreen() {
       if (!res.ok) {
         throw new Error(`status: ${res.status}`);
       }
-      const data: Schedule[] = await res.json();
+      const data: PublicSchedule[] = await res.json();
       console.log("Public schedules received:", data.length, "items");
       
       // 日付順にソート（未来のイベントを先に）
@@ -50,7 +50,7 @@ export default function PublicIndexScreen() {
     }
   };
 
-  const handleOpenSchedule = (id: number) => {
+  const handleOpenSchedule = (id: string) => {
     router.push(`/public/${id}`);
   };
 

@@ -7,30 +7,16 @@ import { NotionProperty, NotionPropertyBlock } from "../../../../components/noti
 import { NotionTag } from "../../../../components/notion-tag";
 import { PageHeader } from "../../../../components/PageHeader";
 import { PublicFooter, PublicHeader } from "../../../../components/GenBGTBrand";
-import type { Schedule } from "../../../HomeScreen";
 import type { SelectOption } from "../../../../types/select-option";
 import { loadStaySelectOptions } from "../../../../utils/select-options-storage";
 import { BooleanSelectDisplay } from "../../../../components/boolean-select-display";
-
-type Stay = {
-  id: number;
-  schedule_id: number;
-  check_in: string;
-  check_out: string;
-  hotel_name: string;
-  website?: string | null;
-  fee: number;
-  breakfast_flag: boolean;
-  deadline?: string | null;
-  penalty?: number | null;
-  status: string;
-};
+import type { PublicSchedule, PublicStay } from "../../../../types/public-schedule";
 
 export default function SharedStayDetailScreen() {
   const { share_id, stayId } = useLocalSearchParams<{ share_id: string; stayId: string }>();
   const router = useRouter();
-  const [stay, setStay] = useState<Stay | null>(null);
-  const [schedule, setSchedule] = useState<Schedule | null>(null);
+  const [stay, setStay] = useState<PublicStay | null>(null);
+  const [schedule, setSchedule] = useState<PublicSchedule | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -51,15 +37,15 @@ export default function SharedStayDetailScreen() {
         }
         throw new Error(`status: ${res.status}`);
       }
-      const data: Stay = await res.json();
+      const data: PublicStay = await res.json();
       setStay(data);
-      
+
       // スケジュール情報を取得
       if (data.schedule_id) {
         try {
           const scheduleRes = await fetch(getApiUrl(`/share/${share_id}/schedules/${data.schedule_id}`));
           if (scheduleRes.ok) {
-            const scheduleData: Schedule = await scheduleRes.json();
+            const scheduleData: PublicSchedule = await scheduleRes.json();
             setSchedule(scheduleData);
           }
         } catch (e) {
