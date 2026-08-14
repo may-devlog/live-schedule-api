@@ -240,6 +240,26 @@ fn has_paid_access(plan: &str, trial_started_at: Option<&str>) -> bool {
     Utc::now() < trial_ends_at
 }
 
+// 指定ユーザーのplanとtrial_started_atを取得する
+// （過去アーカイブの閲覧制限など、user_idしか持たないハンドラでのプラン判定に使う）
+async fn fetch_user_plan(pool: &Pool<Sqlite>, user_id: i32) -> Result<(String, Option<String>), sqlx::Error> {
+    sqlx::query_as("SELECT plan, trial_started_at FROM users WHERE id = ?")
+        .bind(user_id as i64)
+        .fetch_one(pool)
+        .await
+}
+
+// 無料プランで閲覧できる過去アーカイブの下限年（暦年ベース、今年と去年の2年分）を返す
+// 未来の予定はこの制限の対象外（呼び出し側で年の上限は設けない）
+fn free_plan_earliest_archive_year(now: DateTime<Utc>) -> i32 {
+    now.year() - 1
+}
+
+// "YYYY-MM-DD" 形式の日付文字列から年を取り出す（stays.check_inの絞り込みに使う）
+fn parse_year_prefix(date: &str) -> Option<i32> {
+    date.get(0..4)?.parse().ok()
+}
+
 // share_idの所有者を解決する。sharing_enabledがOFF、または所有者が無料プラン相当
 // （premiumでもトライアル中でもない）の場合は、共有されていないものとして扱う
 // （premium失効時にsharing_enabledのDB値を書き換えるのではなく、都度動的に判定する）
@@ -3136,6 +3156,24 @@ async fn list_schedules(
             .collect();
     }
 
+    let (plan, trial_started_at) = fetch_user_plan(&pool, user.user_id).await.map_err(|e| {
+        eprintln!("[ListSchedules] Failed to fetch plan: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+    if !has_paid_access(&plan, trial_started_at.as_deref()) {
+        // 無料プランは過去アーカイブを直近2年分（今年+去年）のみ閲覧可能。未来の予定は制限しない
+        let earliest_visible_year = free_plan_earliest_archive_year(Utc::now());
+        schedules = schedules
+            .into_iter()
+            .filter(|s| s.datetime.year() >= earliest_visible_year)
+            .collect();
+    }
+
     eprintln!("[ListSchedules] Returning {} schedules for user_id: {}", schedules.len(), user.user_id);
     Ok(Json(schedules))
 }
@@ -5083,7 +5121,23 @@ async fn list_all_stays(
         vec![]
     });
 
-    let stays = rows.into_iter().map(row_to_stay).collect();
+    let mut stays: Vec<Stay> = rows.into_iter().map(row_to_stay).collect();
+
+    let (plan, trial_started_at) = fetch_user_plan(&pool, user.user_id)
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Error fetching plan for user {}: {}", user.user_id, e);
+            ("free".to_string(), None)
+        });
+    if !has_paid_access(&plan, trial_started_at.as_deref()) {
+        // 無料プランは過去アーカイブを直近2年分（今年+去年）のみ閲覧可能。未来の予定は制限しない
+        let earliest_visible_year = free_plan_earliest_archive_year(Utc::now());
+        stays = stays
+            .into_iter()
+            .filter(|s| parse_year_prefix(&s.check_in).map_or(true, |y| y >= earliest_visible_year))
+            .collect();
+    }
+
     Json(stays)
 }
 
