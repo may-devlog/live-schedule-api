@@ -275,7 +275,7 @@ export default function StayDetailScreen() {
   return (
     <View style={styles.container}>
       <AppHeader active="schedule" />
-      <PageHeader scheduleTitle={schedule?.title || null} homePath="/" contentMaxWidth={900} />
+      <PageHeader homePath="/" contentMaxWidth={900} />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -419,6 +419,7 @@ export default function StayDetailScreen() {
             <NotionRelation
               label=""
               value={selectedScheduleId ? [selectedScheduleId] : []}
+              confirmChangeMessage="紐づくスケジュールを変更しますか？この宿泊情報が別のスケジュールに移動します。"
               onValueChange={async (ids) => {
                 const newScheduleId = ids.length > 0 ? ids[0] : null;
                 setSelectedScheduleId(newScheduleId);
@@ -458,6 +459,7 @@ export default function StayDetailScreen() {
                 }
               }}
               placeholder="↗ スケジュールにリンク"
+              changeButtonLabel="↻ 親スケジュールを変更"
               hideSelectedCards={false}
             />
           </View>

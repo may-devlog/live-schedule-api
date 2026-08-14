@@ -8,10 +8,15 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
+  Platform,
+  Alert,
 } from "react-native";
 import { NotionTag } from "./notion-tag";
+import { ScheduleLinkCard } from "./ScheduleLinkCard";
 import type { Schedule } from "../app/HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../utils/api";
+import { getOptionColorSync } from "../utils/get-option-color";
+import { fetchAreaColors } from "../utils/fetch-area-colors";
 
 type NotionRelationProps = {
   label: string;
@@ -21,6 +26,8 @@ type NotionRelationProps = {
   placeholder?: string;
   hideSelectedCards?: boolean; // 選択されたカードを非表示にするか
   singleSelect?: boolean; // 単一選択モード（trueの場合、新しい選択時に既存の選択を解除）
+  confirmChangeMessage?: string; // 指定すると、選択の変更・解除の前に確認ダイアログを挟む
+  changeButtonLabel?: string; // 選択済み時のボタンラベル（未指定時は「N件選択中」）
 };
 
 export function NotionRelation({
@@ -31,18 +38,21 @@ export function NotionRelation({
   placeholder = "関連スケジュールを選択",
   hideSelectedCards = false,
   singleSelect = false,
+  confirmChangeMessage,
+  changeButtonLabel,
 }: NotionRelationProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
+  const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
 
   // スケジュール一覧を読み込む
+  // 選択済みカードを初期表示するため、モーダルを開く前から読み込んでおく
   useEffect(() => {
-    if (modalVisible) {
-      loadSchedules();
-    }
-  }, [modalVisible]);
+    loadSchedules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadSchedules = async () => {
     try {
@@ -55,6 +65,7 @@ export function NotionRelation({
         ? data.filter((s) => s.id !== currentScheduleId)
         : data;
       setAllSchedules(filtered);
+      fetchAreaColors(filtered).then(setAreaColors);
     } catch (error) {
       console.error("Error loading schedules:", error);
       setAllSchedules([]);
@@ -78,30 +89,49 @@ export function NotionRelation({
   // 選択されたスケジュール情報を取得
   const selectedSchedules = allSchedules.filter((s) => value.includes(s.id));
 
-  const handleToggleSchedule = (scheduleId: number) => {
-    if (singleSelect) {
-      // 単一選択モード: 既に選択されている場合は解除、そうでない場合は選択（既存の選択を解除）
-      if (value.includes(scheduleId)) {
-        // 削除
-        onValueChange([]);
-      } else {
-        // 新しい選択（既存の選択を解除）
-        onValueChange([scheduleId]);
-      }
+  // confirmChangeMessageが指定されている場合、選択の変更・解除をワンクッション確認してから反映する
+  // （紐付け変更が即時保存されるSchedule単一選択フィールドでの誤操作防止用）
+  const confirmThen = (action: () => void) => {
+    if (!confirmChangeMessage) {
+      action();
+      return;
+    }
+    if (Platform.OS === "web" && typeof window !== "undefined" && window.confirm) {
+      if (window.confirm(confirmChangeMessage)) action();
     } else {
-      // 複数選択モード: 既存の動作
-      if (value.includes(scheduleId)) {
-        // 削除
-        onValueChange(value.filter((id) => id !== scheduleId));
-      } else {
-        // 追加
-        onValueChange([...value, scheduleId]);
-      }
+      Alert.alert("確認", confirmChangeMessage, [
+        { text: "キャンセル", style: "cancel" },
+        { text: "変更する", style: "destructive", onPress: action },
+      ]);
     }
   };
 
+  const handleToggleSchedule = (scheduleId: number) => {
+    confirmThen(() => {
+      if (singleSelect) {
+        // 単一選択モード: 既に選択されている場合は解除、そうでない場合は選択（既存の選択を解除）
+        if (value.includes(scheduleId)) {
+          // 削除
+          onValueChange([]);
+        } else {
+          // 新しい選択（既存の選択を解除）
+          onValueChange([scheduleId]);
+        }
+      } else {
+        // 複数選択モード: 既存の動作
+        if (value.includes(scheduleId)) {
+          // 削除
+          onValueChange(value.filter((id) => id !== scheduleId));
+        } else {
+          // 追加
+          onValueChange([...value, scheduleId]);
+        }
+      }
+    });
+  };
+
   const handleRemoveSchedule = (scheduleId: number) => {
-    onValueChange(value.filter((id) => id !== scheduleId));
+    confirmThen(() => onValueChange(value.filter((id) => id !== scheduleId)));
   };
 
   return (
@@ -116,25 +146,13 @@ export function NotionRelation({
       {!hideSelectedCards && selectedSchedules.length > 0 && (
         <View style={styles.selectedContainer}>
           {selectedSchedules.map((schedule) => (
-            <View key={schedule.id} style={styles.cardContainer}>
-              <View style={styles.cardContent}>
-                {schedule.date && (
-                  <Text style={styles.cardDate}>{schedule.date}</Text>
-                )}
-                <Text style={styles.cardTitle} numberOfLines={1}>
-                  {schedule.title}
-                </Text>
-                <Text style={styles.cardArea} numberOfLines={1}>
-                  {schedule.area}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleRemoveSchedule(schedule.id)}
-                style={styles.removeButton}
-              >
-                <Text style={styles.removeIcon}>×</Text>
-              </TouchableOpacity>
-            </View>
+            <ScheduleLinkCard
+              key={schedule.id}
+              date={schedule.date}
+              title={schedule.title}
+              area={schedule.area}
+              onRemove={() => handleRemoveSchedule(schedule.id)}
+            />
           ))}
         </View>
       )}
@@ -144,12 +162,11 @@ export function NotionRelation({
         style={styles.selectButton}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={[styles.selectText, selectedSchedules.length === 0 && styles.placeholder]}>
+        <Text style={styles.selectText}>
           {selectedSchedules.length > 0
-            ? `${selectedSchedules.length}件選択中`
+            ? changeButtonLabel ?? `${selectedSchedules.length}件選択中`
             : placeholder}
         </Text>
-        {!label && <Text style={styles.arrow}>▼</Text>}
       </TouchableOpacity>
 
       {/* モーダル */}
@@ -234,9 +251,12 @@ export function NotionRelation({
                           <Text style={styles.optionTitle} numberOfLines={1}>
                             {schedule.title}
                           </Text>
-                          <Text style={styles.optionSubtitle} numberOfLines={1}>
-                            {schedule.area}
-                          </Text>
+                          {!!schedule.area && (
+                            <NotionTag
+                              label={schedule.area}
+                              color={areaColors.get(schedule.id) || getOptionColorSync(schedule.area, "AREAS")}
+                            />
+                          )}
                         </View>
                         {isSelected && (
                           <Text style={styles.checkmark}>✓</Text>
@@ -278,66 +298,23 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 8,
   },
-  cardContainer: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "#f7f6f3",
-    borderWidth: 1,
-    borderColor: "#e9e9e7",
-    borderRadius: 3,
-    padding: 12,
-    gap: 8,
-  },
-  cardContent: {
-    flex: 1,
-    gap: 4,
-  },
-  cardDate: {
-    fontSize: 11,
-    color: "#9b9a97",
-    marginBottom: 2,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#37352f",
-    marginBottom: 2,
-  },
-  cardArea: {
-    fontSize: 12,
-    color: "#9b9a97",
-  },
-  removeButton: {
-    padding: 4,
-  },
-  removeIcon: {
-    fontSize: 18,
-    color: "#9b9a97",
-  },
   selectButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "transparent",
-    borderWidth: 0,
-    borderColor: "transparent",
-    borderRadius: 0,
-    paddingHorizontal: 4,
-    paddingVertical: 6,
-    minHeight: 0,
+    justifyContent: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#F5F3FF",
+    borderWidth: 1,
+    borderColor: "#C4B5FD",
+    borderRadius: 9,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginTop: 4,
   },
   selectText: {
-    fontSize: 14,
-    color: "#787774",
-    flex: 1,
-  },
-  placeholder: {
-    color: "#787774",
-  },
-  arrow: {
-    fontSize: 12,
-    color: "#787774",
-    display: "none",
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#5B21B6",
   },
   modalOverlay: {
     flex: 1,
@@ -403,11 +380,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#37352f",
     marginBottom: 4,
-  },
-  optionSubtitle: {
-    fontSize: 12,
-    color: "#9b9a97",
-    marginBottom: 2,
   },
   optionDate: {
     fontSize: 11,

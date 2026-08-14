@@ -253,6 +253,7 @@ export default function NewTrafficScreen() {
             setScheduleId(ids.length > 0 ? ids[0].toString() : null);
           }}
           placeholder="↗ スケジュールにリンク"
+          changeButtonLabel="↻ 親スケジュールを変更"
           hideSelectedCards={false}
           singleSelect={true}
         />

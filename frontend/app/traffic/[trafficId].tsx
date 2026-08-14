@@ -247,7 +247,7 @@ export default function TrafficDetailScreen() {
   return (
     <View style={styles.container}>
       <AppHeader active="schedule" />
-      <PageHeader scheduleTitle={schedule?.title || null} homePath="/" contentMaxWidth={900} />
+      <PageHeader homePath="/" contentMaxWidth={900} />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -378,6 +378,7 @@ export default function TrafficDetailScreen() {
             <NotionRelation
               label=""
               value={selectedScheduleId ? [selectedScheduleId] : []}
+              confirmChangeMessage="紐づくスケジュールを変更しますか？この交通情報が別のスケジュールに移動します。"
               onValueChange={async (ids) => {
                 const newScheduleId = ids.length > 0 ? ids[0] : null;
                 setSelectedScheduleId(newScheduleId);
@@ -417,6 +418,7 @@ export default function TrafficDetailScreen() {
                 }
               }}
               placeholder="↗ スケジュールにリンク"
+              changeButtonLabel="↻ 親スケジュールを変更"
               hideSelectedCards={false}
             />
           </View>

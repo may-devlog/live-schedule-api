@@ -7,9 +7,11 @@ import { NotionProperty, NotionPropertyBlock } from "../../../components/notion-
 import { NotionTag } from "../../../components/notion-tag";
 import { PageHeader } from "../../../components/PageHeader";
 import { PublicFooter, PublicHeader } from "../../../components/GenBGTBrand";
+import { ScheduleLinkCard } from "../../../components/ScheduleLinkCard";
 import { maskHotelName } from "../../../utils/mask-hotel-name";
 import type { SelectOption } from "../../../types/select-option";
 import { BooleanSelectDisplay } from "../../../components/boolean-select-display";
+import { publicScheduleHref } from "../../../utils/public-schedule-links";
 import type { PublicSchedule, PublicStay } from "../../../types/public-schedule";
 
 export default function PublicStayDetailScreen() {
@@ -98,7 +100,7 @@ export default function PublicStayDetailScreen() {
   return (
     <View style={styles.container}>
       <PublicHeader active="schedule" />
-      <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} contentMaxWidth={900} />
+      <PageHeader showBackButton={true} contentMaxWidth={900} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.detailContent}>
         {/* タイトル */}
@@ -157,6 +159,21 @@ export default function PublicStayDetailScreen() {
             value={stay.status}
           />
         </NotionPropertyBlock>
+
+        {/* [Schedule Link] 閲覧専用: リンク先の変更はできない */}
+        {schedule && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Schedule</Text>
+            </View>
+            <ScheduleLinkCard
+              date={schedule.date}
+              title={schedule.title}
+              area={schedule.area}
+              onPress={() => router.push(publicScheduleHref(schedule))}
+            />
+          </View>
+        )}
         </View>
         <PublicFooter />
       </ScrollView>
@@ -205,5 +222,20 @@ const styles = StyleSheet.create({
     color: "#d93025",
     marginVertical: 8,
     fontSize: 14,
+  },
+  section: {
+    marginTop: 24,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#37352f",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
 });
