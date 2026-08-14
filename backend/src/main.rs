@@ -6243,8 +6243,8 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       status       TEXT NOT NULL,
       related_schedule_ids TEXT,
       is_public    INTEGER NOT NULL DEFAULT 0,
-      created_at   TEXT,
-      updated_at   TEXT,
+      created_at   TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at   TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
     "#;
@@ -6264,9 +6264,9 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       return_flag  INTEGER NOT NULL,
       total_fare   INTEGER,
       total_miles  INTEGER,
-      created_at   TEXT,
-      updated_at   TEXT,
-      FOREIGN KEY (schedule_id) REFERENCES schedules(id)
+      created_at   TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at   TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE
     );
     "#;
 
@@ -6283,9 +6283,9 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       deadline       TEXT,
       penalty        INTEGER,
       status         TEXT NOT NULL,
-      created_at     TEXT,
-      updated_at     TEXT,
-      FOREIGN KEY (schedule_id) REFERENCES schedules(id)
+      created_at     TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at     TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE
     );
     "#;
 
@@ -6552,6 +6552,300 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
             );
         }
     }
+
+    // schedules.created_at/updated_atにDEFAULTを設定する（既存のデータベース用マイグレーション）
+    // これまではアプリケーション側で都度INSERT時に値をセットしていたが、
+    // DB側にもDEFAULTを持たせることで、セットし忘れた場合の保険とする
+    let schedules_created_at_default: Option<String> = sqlx::query_scalar(
+        "SELECT dflt_value FROM pragma_table_info('schedules') WHERE name = 'created_at'"
+    )
+    .fetch_one(pool)
+    .await?;
+
+    if schedules_created_at_default.is_none() {
+        let mut conn = pool.acquire().await?;
+        sqlx::query("PRAGMA foreign_keys = OFF")
+            .execute(&mut *conn)
+            .await?;
+
+        let mut tx = conn.begin().await?;
+        sqlx::query(
+            r#"
+            CREATE TABLE schedules_new (
+              id           INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id      INTEGER,
+              title        TEXT NOT NULL,
+              "group"      TEXT,
+              date         TEXT NOT NULL,
+              open         TEXT,
+              start        TEXT,
+              "end"        TEXT,
+              notes        TEXT,
+              category     TEXT,
+              area         TEXT NOT NULL,
+              venue        TEXT NOT NULL,
+              target       TEXT,
+              lineup       TEXT,
+              seller       TEXT,
+              ticket_fee   INTEGER,
+              drink_fee    INTEGER,
+              total_fare   INTEGER,
+              stay_fee     INTEGER,
+              travel_cost  INTEGER,
+              total_cost   INTEGER,
+              status       TEXT NOT NULL,
+              related_schedule_ids TEXT,
+              is_public    INTEGER NOT NULL DEFAULT 0,
+              created_at   TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+              updated_at   TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+              FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+            "#
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query(
+            r#"
+            INSERT INTO schedules_new (
+              id, user_id, title, "group", date, open, start, "end", notes, category,
+              area, venue, target, lineup, seller, ticket_fee, drink_fee, total_fare,
+              stay_fee, travel_cost, total_cost, status, related_schedule_ids, is_public,
+              created_at, updated_at
+            )
+            SELECT
+              id, user_id, title, "group", date, open, start, "end", notes, category,
+              area, venue, target, lineup, seller, ticket_fee, drink_fee, total_fare,
+              stay_fee, travel_cost, total_cost, status, related_schedule_ids, is_public,
+              created_at, updated_at
+            FROM schedules
+            "#
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query("DROP TABLE schedules").execute(&mut *tx).await?;
+        sqlx::query("ALTER TABLE schedules_new RENAME TO schedules")
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&mut *conn)
+            .await?;
+
+        let fk_violations: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM pragma_foreign_key_check")
+            .fetch_one(&mut *conn)
+            .await?;
+        if fk_violations > 0 {
+            eprintln!("[Migration] WARNING: {} foreign key violations detected after schedules created_at/updated_at migration", fk_violations);
+        }
+
+        eprintln!("[Migration] schedules.created_at/updated_at now have DB-level defaults");
+    }
+
+    // traffics.schedule_idにON DELETE CASCADEを追加し、created_at/updated_atにDEFAULTを設定する
+    // （既存のデータベース用マイグレーション）
+    // これまではスケジュール削除時にアプリケーション側で明示的にtraffics/staysを削除していたが、
+    // DB側の外部キー制約にCASCADEを持たせることで、削除経路が増えても消し漏れが起きないようにする
+    let traffics_on_delete: Option<String> = sqlx::query_scalar(
+        "SELECT \"on_delete\" FROM pragma_foreign_key_list('traffics') WHERE \"table\" = 'schedules' AND \"from\" = 'schedule_id'"
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    if traffics_on_delete.as_deref() != Some("CASCADE") {
+        let mut conn = pool.acquire().await?;
+        sqlx::query("PRAGMA foreign_keys = OFF")
+            .execute(&mut *conn)
+            .await?;
+
+        let mut tx = conn.begin().await?;
+        sqlx::query(
+            r#"
+            CREATE TABLE traffics_new (
+              id           INTEGER PRIMARY KEY AUTOINCREMENT,
+              schedule_id  INTEGER NOT NULL,
+              date         TEXT NOT NULL,
+              "order"      INTEGER NOT NULL,
+              transportation TEXT,
+              from_place   TEXT NOT NULL,
+              to_place     TEXT NOT NULL,
+              notes        TEXT,
+              fare         INTEGER NOT NULL,
+              miles        INTEGER,
+              return_flag  INTEGER NOT NULL,
+              total_fare   INTEGER,
+              total_miles  INTEGER,
+              created_at   TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+              updated_at   TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+              FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE
+            )
+            "#
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query(
+            r#"
+            INSERT INTO traffics_new (
+              id, schedule_id, date, "order", transportation, from_place, to_place, notes,
+              fare, miles, return_flag, total_fare, total_miles, created_at, updated_at
+            )
+            SELECT
+              id, schedule_id, date, "order", transportation, from_place, to_place, notes,
+              fare, miles, return_flag, total_fare, total_miles, created_at, updated_at
+            FROM traffics
+            "#
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query("DROP TABLE traffics").execute(&mut *tx).await?;
+        sqlx::query("ALTER TABLE traffics_new RENAME TO traffics")
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&mut *conn)
+            .await?;
+
+        let fk_violations: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM pragma_foreign_key_check")
+            .fetch_one(&mut *conn)
+            .await?;
+        if fk_violations > 0 {
+            eprintln!("[Migration] WARNING: {} foreign key violations detected after traffics CASCADE migration", fk_violations);
+        }
+
+        eprintln!("[Migration] traffics.schedule_id now has ON DELETE CASCADE");
+    }
+
+    // stays.schedule_idにON DELETE CASCADEを追加し、created_at/updated_atにDEFAULTを設定する
+    // （既存のデータベース用マイグレーション、traffics側と同様の理由）
+    let stays_on_delete: Option<String> = sqlx::query_scalar(
+        "SELECT \"on_delete\" FROM pragma_foreign_key_list('stays') WHERE \"table\" = 'schedules' AND \"from\" = 'schedule_id'"
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    if stays_on_delete.as_deref() != Some("CASCADE") {
+        let mut conn = pool.acquire().await?;
+        sqlx::query("PRAGMA foreign_keys = OFF")
+            .execute(&mut *conn)
+            .await?;
+
+        let mut tx = conn.begin().await?;
+        sqlx::query(
+            r#"
+            CREATE TABLE stays_new (
+              id             INTEGER PRIMARY KEY AUTOINCREMENT,
+              schedule_id    INTEGER NOT NULL,
+              check_in       TEXT NOT NULL,
+              check_out      TEXT NOT NULL,
+              hotel_name     TEXT NOT NULL,
+              website        TEXT,
+              fee            INTEGER NOT NULL,
+              breakfast_flag INTEGER NOT NULL,
+              deadline       TEXT,
+              penalty        INTEGER,
+              status         TEXT NOT NULL,
+              created_at     TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+              updated_at     TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+              FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE
+            )
+            "#
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query(
+            r#"
+            INSERT INTO stays_new (
+              id, schedule_id, check_in, check_out, hotel_name, website, fee, breakfast_flag,
+              deadline, penalty, status, created_at, updated_at
+            )
+            SELECT
+              id, schedule_id, check_in, check_out, hotel_name, website, fee, breakfast_flag,
+              deadline, penalty, status, created_at, updated_at
+            FROM stays
+            "#
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query("DROP TABLE stays").execute(&mut *tx).await?;
+        sqlx::query("ALTER TABLE stays_new RENAME TO stays")
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&mut *conn)
+            .await?;
+
+        let fk_violations: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM pragma_foreign_key_check")
+            .fetch_one(&mut *conn)
+            .await?;
+        if fk_violations > 0 {
+            eprintln!("[Migration] WARNING: {} foreign key violations detected after stays CASCADE migration", fk_violations);
+        }
+
+        eprintln!("[Migration] stays.schedule_id now has ON DELETE CASCADE");
+    }
+
+    // パフォーマンス向上のためのインデックス追加
+    // CREATE INDEX IF NOT EXISTSのため、テーブル再作成が発生した場合でも安全に再実行できる
+    // (テーブル再作成を伴うマイグレーションより後、init_dbの最後で必ず実行する)
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_schedules_date ON schedules(date)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_schedules_status ON schedules(status)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_traffics_schedule_id ON traffics(schedule_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_stays_schedule_id ON stays(schedule_id)")
+        .execute(pool)
+        .await?;
+
+    // updated_atをDBトリガーで自動更新する
+    // アプリケーション側でupdated_atのセットを忘れた場合でも、UPDATEが実行されれば
+    // 必ず最新時刻が反映されるようにする
+    // (テーブル再作成を伴うマイグレーションより後、init_dbの最後で必ず実行する。
+    //  SQLiteのrecursive_triggersはデフォルトOFFのため、トリガー内のUPDATEが
+    //  自分自身を再度発火させることはない)
+    sqlx::query(
+        r#"
+        CREATE TRIGGER IF NOT EXISTS trg_schedules_updated_at
+        AFTER UPDATE ON schedules
+        FOR EACH ROW
+        BEGIN
+          UPDATE schedules SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id;
+        END;
+        "#
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        r#"
+        CREATE TRIGGER IF NOT EXISTS trg_traffics_updated_at
+        AFTER UPDATE ON traffics
+        FOR EACH ROW
+        BEGIN
+          UPDATE traffics SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id;
+        END;
+        "#
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        r#"
+        CREATE TRIGGER IF NOT EXISTS trg_stays_updated_at
+        AFTER UPDATE ON stays
+        FOR EACH ROW
+        BEGIN
+          UPDATE stays SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id;
+        END;
+        "#
+    )
+    .execute(pool)
+    .await?;
 
     Ok(())
 }

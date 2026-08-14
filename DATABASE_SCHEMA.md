@@ -55,13 +55,13 @@
 | travel_cost | INTEGER | YES | NULL | 遠征費合計 | Number | 円単位（計算値） |
 | total_cost | INTEGER | YES | NULL | 総費用 | Number | 円単位（計算値） |
 | status | TEXT | NO | 'Pending' | ステータス | Select | Canceled, Pending, Keep, Done |
-| created_at | TEXT | YES | NULL | 作成日時 | Created time | ISO 8601形式 |
-| updated_at | TEXT | YES | NULL | 更新日時 | Last edited time | ISO 8601形式 |
+| created_at | TEXT | YES | 自動設定（DEFAULT） | 作成日時 | Created time | ISO 8601形式、DB側でDEFAULT値を自動設定 |
+| updated_at | TEXT | YES | 自動設定（DEFAULT） | 更新日時 | Last edited time | ISO 8601形式、UPDATE時にDBトリガーで自動更新 |
 
 **インデックス:**
 - PRIMARY KEY: id
-- INDEX: date（将来追加推奨）
-- INDEX: status（将来追加推奨）
+- INDEX: date
+- INDEX: status
 
 **制約:**
 - date, area, venueは必須
@@ -92,13 +92,13 @@
 | return_flag | INTEGER | NO | 0 | 往復フラグ | Checkbox | 0: 片道, 1: 往復 |
 | total_fare | INTEGER | YES | NULL | 運賃合計 | Number | 円単位（計算値） |
 | total_miles | INTEGER | YES | NULL | 消費マイル合計 | Number | マイル単位（計算値） |
-| created_at | TEXT | YES | NULL | 作成日時 | Created time | ISO 8601形式 |
-| updated_at | TEXT | YES | NULL | 更新日時 | Last edited time | ISO 8601形式 |
+| created_at | TEXT | YES | 自動設定（DEFAULT） | 作成日時 | Created time | ISO 8601形式、DB側でDEFAULT値を自動設定 |
+| updated_at | TEXT | YES | 自動設定（DEFAULT） | 更新日時 | Last edited time | ISO 8601形式、UPDATE時にDBトリガーで自動更新 |
 
 **インデックス:**
 - PRIMARY KEY: id
-- FOREIGN KEY: schedule_id → schedules.id
-- INDEX: schedule_id（将来追加推奨）
+- FOREIGN KEY: schedule_id → schedules.id（ON DELETE CASCADE）
+- INDEX: schedule_id
 
 **制約:**
 - schedule_idは必須
@@ -123,13 +123,13 @@
 | deadline | TEXT | YES | - | 取消料発生日時 | Date | YYYY-MM-DD HH:MM形式 |
 | penalty | INTEGER | YES | - | 取消料 | Number | パーセント単位 |
 | status | TEXT | NO | 'Keep' | ステータス | Select | Canceled, Keep, Done |
-| created_at | TEXT | YES | NULL | 作成日時 | Created time | ISO 8601形式 |
-| updated_at | TEXT | YES | NULL | 更新日時 | Last edited time | ISO 8601形式 |
+| created_at | TEXT | YES | 自動設定（DEFAULT） | 作成日時 | Created time | ISO 8601形式、DB側でDEFAULT値を自動設定 |
+| updated_at | TEXT | YES | 自動設定（DEFAULT） | 更新日時 | Last edited time | ISO 8601形式、UPDATE時にDBトリガーで自動更新 |
 
 **インデックス:**
 - PRIMARY KEY: id
-- FOREIGN KEY: schedule_id → schedules.id
-- INDEX: schedule_id（将来追加推奨）
+- FOREIGN KEY: schedule_id → schedules.id（ON DELETE CASCADE）
+- INDEX: schedule_id
 
 **制約:**
 - schedule_idは必須
@@ -174,7 +174,7 @@ schedules (1) ──< (N) stays
 ```
 
 - 1つのスケジュールに対して、複数の交通情報と宿泊情報を紐付けることができます
-- スケジュールが削除される場合、関連するtrafficsとstaysも削除される（CASCADE、将来実装推奨）
+- スケジュールが削除される場合、関連するtrafficsとstaysも削除される（ON DELETE CASCADE）
 
 ---
 
@@ -224,11 +224,8 @@ schedules (1) ──< (N) stays
 
 ## 将来の拡張案
 
-1. **created_at, updated_at**: 作成日時・更新日時の自動管理
-2. **インデックス**: パフォーマンス向上のためのインデックス追加
-3. **CASCADE削除**: 外部キー制約の強化
-4. **バリデーション**: データ整合性チェックの強化
-5. **スキーマバージョン管理**: マイグレーション機能の追加
+1. **バリデーション**: データ整合性チェックの強化
+2. **スキーマバージョン管理**: マイグレーション機能の追加
 
 ---
 
@@ -237,3 +234,4 @@ schedules (1) ──< (N) stays
 | 日付 | バージョン | 変更内容 | 変更者 |
 |------|-----------|---------|--------|
 | 2025-01-XX | 1.0.0 | 初版作成 | - |
+| 2026-08-14 | 1.1.0 | created_at/updated_atのDB側自動管理（DEFAULT・トリガー）、インデックス追加（schedules.date/status, traffics.schedule_id, stays.schedule_id）、traffics/staysのCASCADE削除を実装 | - |
