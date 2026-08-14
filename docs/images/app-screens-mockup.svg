@@ -1,0 +1,161 @@
+<svg viewBox="0 0 1200 460" xmlns="http://www.w3.org/2000/svg" font-family="'Hiragino Sans', 'Noto Sans JP', sans-serif">
+  <defs>
+    <style>
+      .frame { fill: #FFFFFF; stroke: #E8E3F1; stroke-width: 1.5; }
+      .bar { fill: #F5F3FF; }
+      .caption { fill: #201B2C; font-size: 20px; font-weight: 700; }
+      .sub { fill: #6B6675; font-size: 13px; }
+      .chip { fill: #7C3AED; }
+      .chipText { fill: #FFFFFF; font-size: 11px; font-weight: 700; }
+      .day { fill: #201B2C; font-size: 11px; }
+      .dayOther { fill: #6B6675; font-size: 11px; }
+      .cell { fill: #FAF9FC; stroke: #EFEAF7; }
+      .cellToday { fill: #EDE9FE; stroke: #C4B5FD; }
+      .row { fill: #FAF9FC; stroke: #EFEAF7; }
+      .tab { fill: #7C3AED; }
+      .tabOff { fill: #F5F3FF; }
+      .tabText { fill: #FFFFFF; font-size: 11px; font-weight: 700; }
+      .tabTextOff { fill: #6B6675; font-size: 11px; font-weight: 700; }
+      .lock { fill: #6B6675; font-size: 11px; }
+      .badge { fill: #EDE9FE; stroke: #C4B5FD; }
+      .badgeText { fill: #5B21B6; font-size: 11px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="460" fill="none"/>
+
+  <!-- Frame 1: トップ -->
+  <g>
+    <text x="20" y="28" class="caption">トップ</text>
+    <text x="20" y="48" class="sub">カレンダーと「NEXT」で直近の予定を確認</text>
+    <rect x="20" y="64" width="360" height="380" rx="14" class="frame"/>
+    <rect x="20" y="64" width="360" height="40" rx="14" class="bar"/>
+    <rect x="20" y="90" width="360" height="14" class="bar"/>
+    <circle cx="42" cy="84" r="9" fill="#7C3AED"/>
+    <text x="58" y="89" font-size="13" font-weight="700" fill="#201B2C">GenBGT</text>
+    <rect x="290" y="72" width="70" height="24" rx="12" class="chip"/>
+    <text x="304" y="88" class="chipText">NEXT</text>
+
+    <!-- calendar grid -->
+    <g transform="translate(36,120)">
+      <text x="130" y="10" font-size="13" font-weight="700" fill="#201B2C" text-anchor="middle">2026年 8月</text>
+      <g font-size="10" fill="#6B6675">
+        <text x="12" y="30">月</text><text x="55" y="30">火</text><text x="98" y="30">水</text>
+        <text x="141" y="30">木</text><text x="184" y="30">金</text><text x="227" y="30" fill="#2563EB">土</text>
+        <text x="260" y="30" fill="#DC2626">日</text>
+      </g>
+      <!-- rows of cells -->
+      <g>
+        <!-- row1 -->
+        <rect x="4" y="40" width="36" height="36" rx="6" class="cell"/>
+        <rect x="47" y="40" width="36" height="36" rx="6" class="cell"/>
+        <rect x="90" y="40" width="36" height="36" rx="6" class="cell"/>
+        <rect x="133" y="40" width="36" height="36" rx="6" class="cell"/>
+        <rect x="176" y="40" width="36" height="36" rx="6" class="cell"/>
+        <rect x="219" y="40" width="36" height="36" rx="6" class="cell"/>
+        <text x="237" y="62" class="day" text-anchor="middle">1</text>
+        <rect x="219" y="82" width="36" height="4" rx="2" fill="#7C3AED"/>
+        <rect x="262" y="40" width="36" height="36" rx="6" class="cell"/>
+        <text x="280" y="62" class="dayOther" text-anchor="middle" fill="#DC2626">2</text>
+        <!-- row2 -->
+        <rect x="4" y="82" width="36" height="36" rx="6" class="cell"/>
+        <text x="22" y="104" class="day" text-anchor="middle">3</text>
+        <rect x="47" y="82" width="36" height="36" rx="6" class="cell"/>
+        <text x="65" y="104" class="day" text-anchor="middle">4</text>
+        <rect x="90" y="82" width="36" height="36" rx="6" class="cell"/>
+        <text x="108" y="104" class="day" text-anchor="middle">5</text>
+        <rect x="133" y="82" width="36" height="36" rx="6" class="cellToday"/>
+        <text x="151" y="104" class="day" text-anchor="middle" font-weight="700">6</text>
+        <rect x="176" y="82" width="36" height="36" rx="6" class="cell"/>
+        <text x="194" y="104" class="day" text-anchor="middle">7</text>
+        <rect x="219" y="82" width="36" height="36" rx="6" class="cell"/>
+        <text x="237" y="104" class="day" text-anchor="middle">8</text>
+        <rect x="262" y="82" width="36" height="36" rx="6" class="cell"/>
+        <text x="280" y="104" class="dayOther" text-anchor="middle" fill="#DC2626">9</text>
+      </g>
+    </g>
+
+    <!-- NEXT card -->
+    <rect x="36" y="270" width="328" height="86" rx="12" fill="#FAF9FC" stroke="#EFEAF7"/>
+    <rect x="52" y="286" width="6" height="54" rx="3" fill="#7C3AED"/>
+    <text x="70" y="304" font-size="13" font-weight="700" fill="#201B2C">サマーライブ 2026</text>
+    <text x="70" y="322" class="sub">8/15(土) 会場: 東京ドーム</text>
+    <text x="70" y="338" class="sub">開場 17:00 / 開演 18:00</text>
+
+    <rect x="36" y="368" width="328" height="60" rx="12" fill="#FAF9FC" stroke="#EFEAF7"/>
+    <text x="52" y="392" font-size="12" fill="#6B6675">次回の予定はカレンダーからも確認できます</text>
+    <text x="52" y="410" font-size="12" fill="#6B6675">タップで詳細ページへ</text>
+  </g>
+
+  <!-- Frame 2: 年別 -->
+  <g transform="translate(420,0)">
+    <text x="20" y="28" class="caption">年別</text>
+    <text x="20" y="48" class="sub">1年分の予定を一覧・グルーピングで確認</text>
+    <rect x="20" y="64" width="360" height="380" rx="14" class="frame"/>
+    <rect x="20" y="64" width="360" height="40" rx="14" class="bar"/>
+    <rect x="20" y="90" width="360" height="14" class="bar"/>
+    <text x="40" y="89" font-size="13" font-weight="700" fill="#201B2C">2026年</text>
+
+    <g transform="translate(36,118)">
+      <text x="0" y="0" font-size="11" fill="#6B6675">メイン</text>
+      <rect x="0" y="8" width="64" height="26" rx="13" class="tab"/>
+      <text x="32" y="25" class="tabText" text-anchor="middle">お目当て</text>
+      <rect x="70" y="8" width="64" height="26" rx="13" class="tabOff"/>
+      <text x="102" y="25" class="tabTextOff" text-anchor="middle">出演者</text>
+      <rect x="140" y="8" width="50" height="26" rx="13" class="tabOff"/>
+      <text x="165" y="25" class="tabTextOff" text-anchor="middle">なし</text>
+
+      <text x="0" y="56" font-size="11" fill="#6B6675">サブ</text>
+      <rect x="0" y="64" width="60" height="26" rx="13" class="tabOff"/>
+      <text x="30" y="81" class="tabTextOff" text-anchor="middle">エリア</text>
+      <rect x="66" y="64" width="72" height="26" rx="13" class="tab"/>
+      <text x="102" y="81" class="tabText" text-anchor="middle">ステータス</text>
+
+      <text x="0" y="112" font-size="11" fill="#6B6675">並び順</text>
+      <rect x="0" y="120" width="80" height="26" rx="13" class="tab"/>
+      <text x="40" y="137" class="tabText" text-anchor="middle">開演日順</text>
+      <rect x="86" y="120" width="72" height="26" rx="13" class="tabOff"/>
+      <text x="122" y="137" class="tabTextOff" text-anchor="middle">五十音順</text>
+    </g>
+
+    <g transform="translate(36,272)">
+      <rect x="0" y="0" width="328" height="28" rx="6" fill="#EDE9FE"/>
+      <text x="12" y="19" font-size="12" font-weight="700" fill="#5B21B6">Keep（3件）</text>
+      <rect x="0" y="36" width="328" height="40" rx="8" class="row"/>
+      <text x="12" y="60" font-size="12" fill="#201B2C">サマーライブ 2026 ・ 8/15</text>
+      <rect x="0" y="84" width="328" height="40" rx="8" class="row"/>
+      <text x="12" y="108" font-size="12" fill="#201B2C">対バンツアー ・ 9/2</text>
+    </g>
+  </g>
+
+  <!-- Frame 3: 共有 -->
+  <g transform="translate(820,0)">
+    <text x="20" y="28" class="caption">共有</text>
+    <text x="20" y="48" class="sub">ログイン不要の閲覧ページ</text>
+    <rect x="20" y="64" width="360" height="380" rx="14" class="frame"/>
+    <rect x="20" y="64" width="360" height="40" rx="14" class="bar"/>
+    <rect x="20" y="90" width="360" height="14" class="bar"/>
+    <text x="40" y="89" font-size="13" font-weight="700" fill="#201B2C">GenBGT</text>
+    <rect x="290" y="72" width="70" height="24" rx="12" class="badge"/>
+    <text x="325" y="88" class="badgeText" text-anchor="middle">閲覧専用</text>
+
+    <g transform="translate(36,118)">
+      <circle cx="24" cy="24" r="24" fill="#EDE9FE"/>
+      <text x="24" y="29" font-size="14" text-anchor="middle" fill="#7C3AED">May</text>
+      <text x="58" y="20" font-size="13" font-weight="700" fill="#201B2C">May</text>
+      <text x="58" y="36" font-size="11" fill="#6B6675">@may04</text>
+    </g>
+
+    <g transform="translate(36,180)">
+      <text x="0" y="0" font-size="12" font-weight="700" fill="#5B21B6">SCHEDULE</text>
+      <rect x="0" y="10" width="328" height="52" rx="8" class="row"/>
+      <text x="12" y="32" font-size="12" fill="#201B2C">サマーライブ 2026</text>
+      <text x="12" y="50" font-size="11" fill="#6B6675">8/15(土) 東京ドーム</text>
+
+      <rect x="0" y="72" width="328" height="70" rx="8" class="row"/>
+      <text x="12" y="94" font-size="11" font-weight="700" fill="#201B2C">交通情報</text>
+      <text x="12" y="112" font-size="11" fill="#6B6675">出発地: *** → 到着地: ***</text>
+      <text x="12" y="128" font-size="10" fill="#9CA3AF">（マスク設定した駅名は非公開）</text>
+    </g>
+  </g>
+</svg>

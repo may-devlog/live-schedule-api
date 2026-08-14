@@ -1,0 +1,92 @@
+<svg viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg" font-family="'Hiragino Sans', 'Noto Sans JP', sans-serif">
+  <defs>
+    <style>
+      .caption { fill: #201B2C; font-size: 20px; font-weight: 700; }
+      .sub { fill: #6B6675; font-size: 13px; }
+      .card { fill: #FFFFFF; stroke: #E8E3F1; stroke-width: 1.5; }
+      .cardHead { fill: #FAF9FC; }
+      .cardHeadPremium { fill: #7C3AED; }
+      .planName { fill: #201B2C; font-size: 16px; font-weight: 800; }
+      .planNamePremium { fill: #FFFFFF; font-size: 16px; font-weight: 800; }
+      .row { fill: #FAF9FC; }
+      .rowAlt { fill: #FFFFFF; }
+      .feature { fill: #201B2C; font-size: 12px; }
+      .ok { fill: #16A34A; font-size: 14px; font-weight: 800; }
+      .ng { fill: #9CA3AF; font-size: 14px; font-weight: 800; }
+      .val { fill: #201B2C; font-size: 11px; }
+      .valMuted { fill: #6B6675; font-size: 11px; }
+      .lockChip { fill: #F3F4F6; }
+      .lockText { fill: #6B6675; font-size: 10px; font-weight: 700; }
+      .trialChip { fill: #EDE9FE; }
+      .trialText { fill: #5B21B6; font-size: 10px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <text x="20" y="30" class="caption">有料・無料プランの機能差異</text>
+  <text x="20" y="52" class="sub">無料プランは基本機能を無期限で利用可能。共有・アーカイブの一部機能はプレミアムプラン限定です。</text>
+
+  <!-- table -->
+  <g transform="translate(20,76)">
+    <!-- header row -->
+    <rect x="0" y="0" width="360" height="44" class="cardHead"/>
+    <text x="16" y="27" font-size="12" font-weight="700" fill="#6B6675">機能</text>
+    <rect x="360" y="0" width="290" height="44" class="cardHead"/>
+    <text x="505" y="27" class="planName" text-anchor="middle">無料プラン</text>
+    <rect x="650" y="0" width="290" height="44" class="cardHeadPremium"/>
+    <text x="795" y="27" class="planNamePremium" text-anchor="middle">プレミアムプラン</text>
+
+    <!-- rows -->
+    <!-- row 1 -->
+    <rect x="0" y="44" width="940" height="52" class="row"/>
+    <text x="16" y="66" class="feature" font-weight="700">共有ページの公開</text>
+    <text x="16" y="82" class="valMuted">ログイン不要の閲覧URLを発行</text>
+    <text x="505" y="76" text-anchor="middle" class="ng">✕</text>
+    <rect x="465" y="60" width="80" height="20" rx="10" class="lockChip"/>
+    <text x="505" y="74" class="lockText" text-anchor="middle">🔒 要プレミアム</text>
+    <text x="795" y="76" text-anchor="middle" class="ok">◯</text>
+
+    <!-- row 2 -->
+    <rect x="0" y="96" width="940" height="52" class="rowAlt"/>
+    <text x="16" y="118" class="feature" font-weight="700">アーカイブ（年別）閲覧範囲</text>
+    <text x="16" y="134" class="valMuted">過去の予定をどこまで遡って見られるか</text>
+    <text x="505" y="122" text-anchor="middle" class="val">直近2年分（今年＋昨年）</text>
+    <text x="795" y="122" text-anchor="middle" class="val" font-weight="700">全期間</text>
+
+    <!-- row 3 -->
+    <rect x="0" y="148" width="940" height="52" class="row"/>
+    <text x="16" y="170" class="feature" font-weight="700">アーカイブのグルーピング</text>
+    <text x="16" y="186" class="valMuted">メイン／サブでのグループ分け表示</text>
+    <text x="505" y="176" text-anchor="middle" class="val">並び順（昇順・降順）のみ</text>
+    <text x="795" y="176" text-anchor="middle" class="val" font-weight="700">メイン／サブとも全項目で利用可</text>
+
+    <!-- row 4 -->
+    <rect x="0" y="200" width="940" height="52" class="rowAlt"/>
+    <text x="16" y="222" class="feature" font-weight="700">予定・交通・宿泊の登録／管理</text>
+    <text x="16" y="238" class="valMuted">基本の記録・費用計算機能</text>
+    <text x="505" y="226" text-anchor="middle" class="ok">◯</text>
+    <text x="795" y="226" text-anchor="middle" class="ok">◯</text>
+
+    <!-- row 5 -->
+    <rect x="0" y="252" width="940" height="52" class="row"/>
+    <text x="16" y="274" class="feature" font-weight="700">出発地・到着地マスク設定</text>
+    <text x="16" y="290" class="valMuted">共有ページで駅名を非公開にする</text>
+    <text x="505" y="278" text-anchor="middle" class="ok">◯</text>
+    <text x="795" y="278" text-anchor="middle" class="ok">◯</text>
+
+    <!-- row 6 -->
+    <rect x="0" y="304" width="940" height="60" class="rowAlt"/>
+    <text x="16" y="328" class="feature" font-weight="700">1ヶ月無料トライアル</text>
+    <text x="16" y="344" class="valMuted">アカウントごとに1回、プレミアム機能を1ヶ月お試し</text>
+    <rect x="450" y="316" width="110" height="24" rx="12" class="trialChip"/>
+    <text x="505" y="332" class="trialText" text-anchor="middle">開始できる（1回）</text>
+    <text x="795" y="332" text-anchor="middle" class="valMuted">（すでにプレミアム）</text>
+
+    <!-- borders -->
+    <rect x="0" y="0" width="360" height="364" fill="none" stroke="#E8E3F1"/>
+    <rect x="360" y="0" width="290" height="364" fill="none" stroke="#E8E3F1"/>
+    <rect x="650" y="0" width="290" height="364" fill="none" stroke="#7C3AED" stroke-width="2"/>
+  </g>
+
+  <text x="20" y="470" font-size="11" fill="#9CA3AF">※ 共有ページの公開は、プレミアムプラン中またはトライアル中のみ有効です（期限が切れると既存の共有URLも自動的に非公開になります）</text>
+  <text x="20" y="488" font-size="11" fill="#9CA3AF">※ アーカイブの閲覧範囲・グルーピング制限は画面の年別ページのみに適用され、登録データ自体は無料プランでも失われません</text>
+</svg>

@@ -152,10 +152,20 @@
 | display_name | TEXT | YES | NULL | プロフィールに表示する名前（最大50文字） | 公開 |
 | sharing_enabled | INTEGER | NO | 0 | 共有ページ公開フラグ | 非公開 |
 | avatar_data_url | TEXT | YES | NULL | プロフィール画像 | 公開 |
+| plan | TEXT | NO | 'free' | プラン種別（'free' または 'premium'） | 非公開 |
+| premium_started_at | TEXT | YES | NULL | プレミアムプラン開始日時（ISO 8601形式） | 非公開 |
+| trial_used | INTEGER | NO | 0 | 無料トライアル利用済みフラグ（0: 未利用, 1: 利用済み。1アカウント1回まで） | 非公開 |
+| trial_started_at | TEXT | YES | NULL | 無料トライアル開始日時（ISO 8601形式）。終了日時は保存せず開始日時+1ヶ月を都度計算 | 非公開 |
 | created_at | TEXT | YES | NULL | 作成日時 | 非公開 |
 | updated_at | TEXT | YES | NULL | 更新日時 | 非公開 |
 
 `display_name`と`share_id`は別項目です。名前は重複可能で、空の場合は画面上で`share_id`を代替表示します。共有ページが無効なユーザーの名前・画像は公開APIから取得できません。
+
+**プラン・トライアル関連カラムについて:**
+
+- `plan`が`'premium'`の場合、または`trial_started_at`から1ヶ月以内（都度計算、`trial_ends_at`のようなカラムは持たない）の場合に、有料プラン相当の機能（`has_paid_access()`）が有効になります
+- `trial_used`は無料トライアルを一度でも開始すると`1`になり、以降は再度開始できません
+- 有料・無料プランで利用できる機能の違いは [README.md](README.md#有料無料プランの機能差異) を参照してください
 
 **プロフィールAPI:**
 
@@ -163,6 +173,39 @@
 - `PUT /auth/profile`: 名前を更新。`{ "display_name": "名前" }`、`null`または空文字で未設定に戻す
 - `PUT /auth/profile-avatar`: プロフィール画像を更新
 - `GET /share/:share_id/profile`: 公開中ユーザーのユーザーID、名前、画像を取得
+
+**プラン関連API:**
+
+- `GET /auth/plan-status`: プラン種別（`plan`）、有料機能利用可否（`is_paid_effective`）、プレミアム開始日時、トライアル利用状況を取得
+- `POST /auth/start-trial`: 1ヶ月無料トライアルを開始（`trial_started_at`を現在時刻に設定、`trial_used`を`1`に更新）。プレミアムユーザーは`already_premium`、トライアル利用済みの場合は`trial_already_used`エラーで400を返す
+
+---
+
+### 5. masked_locations（出発地・到着地マスク設定）
+
+共有ページで非公開にしたい駅名（出発地・到着地）をユーザーごとに管理するテーブルです。
+
+| カラム名 | データ型 | NULL許可 | デフォルト値 | 説明 | 備考 |
+|---------|---------|---------|------------|------|------|
+| id | INTEGER | NO | AUTO_INCREMENT | 主キー | PRIMARY KEY |
+| user_id | INTEGER | NO | - | ユーザーID | FOREIGN KEY → users.id |
+| location_name | TEXT | NO | - | マスク対象の駅名 | traffics.from_place / to_place と一致した場合にマスク |
+| created_at | TEXT | YES | NULL | 作成日時 | |
+| updated_at | TEXT | YES | NULL | 更新日時 | |
+
+**制約:**
+- UNIQUE(user_id, location_name)（同じユーザーが同じ駅名を重複登録できない）
+
+**マスク処理について:**
+- 共有ページ（`/share/:share_id/...`）でtrafficsを返す際、`from_place`または`to_place`が登録済みの`location_name`と一致する場合、値を`"***"`に置き換えて返す
+- ログイン中の本人の画面（共有ページ以外）には影響しない
+
+**マスク設定API:**
+
+- `GET /masked-locations`: マスク設定一覧を取得
+- `POST /masked-locations`: マスク対象の駅名を追加
+- `PUT /masked-locations/:id`: マスク対象の駅名を更新
+- `DELETE /masked-locations/:id`: マスク設定を削除
 
 ---
 
@@ -235,3 +278,4 @@ schedules (1) ──< (N) stays
 |------|-----------|---------|--------|
 | 2025-01-XX | 1.0.0 | 初版作成 | - |
 | 2026-08-14 | 1.1.0 | created_at/updated_atのDB側自動管理（DEFAULT・トリガー）、インデックス追加（schedules.date/status, traffics.schedule_id, stays.schedule_id）、traffics/staysのCASCADE削除を実装 | - |
+| 2026-08-15 | 1.2.0 | usersテーブルに有料・無料プラン対応のカラムを追加（plan, premium_started_at, trial_used, trial_started_at）、masked_locationsテーブルの説明を追加 | - |
