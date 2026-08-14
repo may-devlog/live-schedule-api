@@ -52,8 +52,8 @@ export function PublicHeader({ active = 'schedule' }: { active?: 'schedule' | 'a
         </TouchableOpacity>
         {!narrow && (
           <View style={styles.nav}>
-            <Text style={[styles.navText, active === 'schedule' && styles.navActive]}>スケジュール</Text>
-            <Text style={[styles.navText, active === 'archive' && styles.navActive]}>アーカイブ</Text>
+            <Text style={[styles.navText, active === 'schedule' && styles.navActive]}>SCHEDULE</Text>
+            <Text style={[styles.navText, active === 'archive' && styles.navActive]}>ARCHIVE</Text>
           </View>
         )}
         <View style={styles.headerActions}>
@@ -118,8 +118,8 @@ export function AppHeader({ active = 'schedule', onDisplayNameChange }: { active
       <View style={styles.headerInner}>
         <TouchableOpacity onPress={() => router.push('/')} activeOpacity={0.8}><BrandWordmark compact={narrow} /></TouchableOpacity>
         {!narrow && <View style={styles.nav}>
-          <TouchableOpacity onPress={() => router.push('/')}><Text style={[styles.navText, active === 'schedule' && styles.navActive]}>スケジュール</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push(`/year/${new Date().getFullYear()}`)}><Text style={[styles.navText, active === 'archive' && styles.navActive]}>アーカイブ</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/')}><Text style={[styles.navText, active === 'schedule' && styles.navActive]}>SCHEDULE</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push(`/year/${new Date().getFullYear()}`)}><Text style={[styles.navText, active === 'archive' && styles.navActive]}>ARCHIVE</Text></TouchableOpacity>
         </View>}
         <View style={styles.appHeaderActions}>
           <NotificationMenu />
