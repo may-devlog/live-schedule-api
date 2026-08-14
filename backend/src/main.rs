@@ -2580,6 +2580,9 @@ async fn create_checkout_session(
         ("client_reference_id".to_string(), user.user_id.to_string()),
         ("success_url".to_string(), format!("{}/billing/success?session_id={{CHECKOUT_SESSION_ID}}", frontend_url)),
         ("cancel_url".to_string(), format!("{}/billing/cancel", frontend_url)),
+        // Managed Payments（税区分の設定が必要）は現時点で未対応のため、このセッションでは無効化する
+        // 本番移行前に税務対応の要否を判断し、必要ならProductにtax_codeを設定した上で有効化を検討する
+        ("managed_payments[enabled]".to_string(), "false".to_string()),
     ];
 
     if let Some((customer_id,)) = existing_customer_id {
@@ -2605,6 +2608,62 @@ async fn create_checkout_session(
     })?;
 
     Ok(Json(CheckoutSessionResponse { url: url.to_string() }))
+}
+
+#[derive(Debug, Serialize)]
+struct PortalSessionResponse {
+    url: String,
+}
+
+// POST /billing/create-portal-session - 解約・支払い方法変更用のStripe Billing Portalセッションを作成
+async fn create_portal_session(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<PortalSessionResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let customer_id: Option<(String,)> = sqlx::query_as(
+        "SELECT provider_customer_id FROM subscriptions WHERE user_id = ? AND provider = 'stripe' AND provider_customer_id IS NOT NULL ORDER BY id DESC LIMIT 1"
+    )
+    .bind(user.user_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[CreatePortalSession] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: "Database error".to_string() }),
+        )
+    })?;
+
+    let Some((customer_id,)) = customer_id else {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse { error: "no_stripe_customer".to_string() }),
+        ));
+    };
+
+    let frontend_url = get_frontend_url();
+    let params = vec![
+        ("customer".to_string(), customer_id),
+        ("return_url".to_string(), format!("{}/billing/portal-return", frontend_url)),
+    ];
+
+    let session = stripe_api_post("billing_portal/sessions", params).await.map_err(|e| {
+        eprintln!("[CreatePortalSession] Stripe error: {}", e);
+        (
+            StatusCode::BAD_GATEWAY,
+            Json(ErrorResponse { error: "ポータルセッションの作成に失敗しました".to_string() }),
+        )
+    })?;
+
+    let url = session["url"].as_str().ok_or_else(|| {
+        eprintln!("[CreatePortalSession] Stripe response missing url: {:?}", session);
+        (
+            StatusCode::BAD_GATEWAY,
+            Json(ErrorResponse { error: "ポータルセッションの作成に失敗しました".to_string() }),
+        )
+    })?;
+
+    Ok(Json(PortalSessionResponse { url: url.to_string() }))
 }
 
 // Stripe Webhook署名を検証する（HMAC-SHA256。タイムスタンプが現在時刻から5分以上ずれている場合はリプレイとみなし拒否する）
@@ -7068,6 +7127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/auth/plan-status", get(get_plan_status))
         .route("/auth/start-trial", post(start_trial))
         .route("/billing/create-checkout-session", post(create_checkout_session))
+        .route("/billing/create-portal-session", post(create_portal_session))
         .route("/billing/webhook", post(stripe_webhook))
         .route("/auth/profile", get(get_profile).put(update_profile))
         .route("/auth/profile-avatar", put(update_profile_avatar))
