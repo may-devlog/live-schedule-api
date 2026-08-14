@@ -37,7 +37,7 @@
 | id | INTEGER | NO | AUTO_INCREMENT | 主キー | - | PRIMARY KEY |
 | title | TEXT | NO | - | タイトル | Title | |
 | group | TEXT | YES | NULL | グループ | Select | 選択肢から選択（未選択時はtitleを使用） |
-| date | TEXT | YES | NULL | 日付 | Date | YYYY-MM-DD形式 |
+| date | TEXT | NO | - | 日付 | Date | YYYY-MM-DD形式 |
 | open | TEXT | YES | NULL | 開場 | Time | HH:MM形式 |
 | start | TEXT | YES | NULL | 開演 | Time | HH:MM形式 |
 | end | TEXT | YES | NULL | 終演 | Time | HH:MM形式 |
@@ -64,7 +64,7 @@
 - INDEX: status（将来追加推奨）
 
 **制約:**
-- area, venueは必須
+- date, area, venueは必須
 
 **計算フィールド（アプリケーション側で生成）:**
 - `datetime`: date + start から自動生成（ISO 8601形式: `YYYY-MM-DDTHH:MM:00Z`）

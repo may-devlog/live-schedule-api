@@ -12,7 +12,7 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqlitePoolOptions;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Connection, Pool, Sqlite};
 use std::net::SocketAddr;
 use tower_http::cors::{Any, AllowOrigin, CorsLayer};
 use resend_rs::types::CreateEmailBaseOptions;
@@ -6223,7 +6223,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       user_id      INTEGER,
       title        TEXT NOT NULL,
       "group"      TEXT,
-      date         TEXT,
+      date         TEXT NOT NULL,
       open         TEXT,
       start        TEXT,
       "end"        TEXT,
@@ -6440,13 +6440,118 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     // 既存のデータベースでも問題なく動作するはずですが、念のため空文字列をNULLに変換
     let _ = sqlx::query(
         r#"
-        UPDATE schedules 
-        SET target = NULL 
+        UPDATE schedules
+        SET target = NULL
         WHERE target = ''
         "#
     )
     .execute(pool)
     .await;
+
+    // dateカラムをNOT NULLに変更（既存のデータベース用マイグレーション）
+    // date未設定のレコードはどのスケジュール一覧からも参照できず、
+    // データが埋もれてしまうため、NOT NULL制約を追加する
+    // SQLiteではALTER TABLE MODIFY COLUMNがサポートされていないため、
+    // テーブルを再作成して制約を反映する
+    let date_not_null: i64 = sqlx::query_scalar(
+        "SELECT \"notnull\" FROM pragma_table_info('schedules') WHERE name = 'date'"
+    )
+    .fetch_one(pool)
+    .await?;
+
+    if date_not_null == 0 {
+        let null_date_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM schedules WHERE date IS NULL")
+            .fetch_one(pool)
+            .await?;
+
+        if null_date_count == 0 {
+            // traffics/staysがschedulesを外部キー参照しているため、
+            // foreign_keysを一時的に無効化した上で同一コネクション内で再作成する
+            // (SQLite公式手順: https://www.sqlite.org/lang_altertable.html#otheralter)
+            let mut conn = pool.acquire().await?;
+            sqlx::query("PRAGMA foreign_keys = OFF")
+                .execute(&mut *conn)
+                .await?;
+
+            let mut tx = conn.begin().await?;
+            sqlx::query(
+                r#"
+                CREATE TABLE schedules_new (
+                  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                  user_id      INTEGER,
+                  title        TEXT NOT NULL,
+                  "group"      TEXT,
+                  date         TEXT NOT NULL,
+                  open         TEXT,
+                  start        TEXT,
+                  "end"        TEXT,
+                  notes        TEXT,
+                  category     TEXT,
+                  area         TEXT NOT NULL,
+                  venue        TEXT NOT NULL,
+                  target       TEXT,
+                  lineup       TEXT,
+                  seller       TEXT,
+                  ticket_fee   INTEGER,
+                  drink_fee    INTEGER,
+                  total_fare   INTEGER,
+                  stay_fee     INTEGER,
+                  travel_cost  INTEGER,
+                  total_cost   INTEGER,
+                  status       TEXT NOT NULL,
+                  related_schedule_ids TEXT,
+                  is_public    INTEGER NOT NULL DEFAULT 0,
+                  created_at   TEXT,
+                  updated_at   TEXT,
+                  FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+                "#
+            )
+            .execute(&mut *tx)
+            .await?;
+            sqlx::query(
+                r#"
+                INSERT INTO schedules_new (
+                  id, user_id, title, "group", date, open, start, "end", notes, category,
+                  area, venue, target, lineup, seller, ticket_fee, drink_fee, total_fare,
+                  stay_fee, travel_cost, total_cost, status, related_schedule_ids, is_public,
+                  created_at, updated_at
+                )
+                SELECT
+                  id, user_id, title, "group", date, open, start, "end", notes, category,
+                  area, venue, target, lineup, seller, ticket_fee, drink_fee, total_fare,
+                  stay_fee, travel_cost, total_cost, status, related_schedule_ids, is_public,
+                  created_at, updated_at
+                FROM schedules
+                "#
+            )
+            .execute(&mut *tx)
+            .await?;
+            sqlx::query("DROP TABLE schedules").execute(&mut *tx).await?;
+            sqlx::query("ALTER TABLE schedules_new RENAME TO schedules")
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+
+            sqlx::query("PRAGMA foreign_keys = ON")
+                .execute(&mut *conn)
+                .await?;
+
+            let fk_violations: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM pragma_foreign_key_check")
+                .fetch_one(&mut *conn)
+                .await?;
+            if fk_violations > 0 {
+                eprintln!("[Migration] WARNING: {} foreign key violations detected after schedules.date migration", fk_violations);
+            }
+
+            eprintln!("[Migration] schedules.date is now NOT NULL");
+        } else {
+            eprintln!(
+                "[Migration] WARNING: {} schedules have NULL date; skipping NOT NULL migration until they are fixed",
+                null_date_count
+            );
+        }
+    }
 
     Ok(())
 }
