@@ -781,8 +781,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 48,
     maxWidth: 1180,
-    flexGrow: 1,
-    minHeight: '100%',
     alignSelf: "center",
     width: "100%",
   },
