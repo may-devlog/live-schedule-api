@@ -98,7 +98,7 @@ export default function PublicStayDetailScreen() {
   return (
     <View style={styles.container}>
       <PublicHeader active="schedule" />
-      <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} />
+      <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} contentMaxWidth={900} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.detailContent}>
         {/* タイトル */}

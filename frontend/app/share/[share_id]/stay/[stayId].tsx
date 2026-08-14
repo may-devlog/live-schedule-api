@@ -109,7 +109,7 @@ export default function SharedStayDetailScreen() {
   return (
     <View style={styles.container}>
       <PublicHeader active="schedule" />
-      <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} homePath={`/share/${share_id}`} />
+      <PageHeader scheduleTitle={schedule?.title || null} showBackButton={true} homePath={`/share/${share_id}`} contentMaxWidth={900} />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
