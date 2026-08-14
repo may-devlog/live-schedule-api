@@ -229,9 +229,13 @@ Stripe / Google Play / Apple など、決済プロバイダごとのサブスク
 **制約:**
 - UNIQUE(provider, provider_subscription_id)（Webhook処理を冪等にするため、同一プロバイダ内でのサブスクリプションIDの重複を防ぐ）
 
-**現時点のステータス:**
-- テーブル定義のみで、決済プロバイダとの連携（Webhook受信によるレコード作成・更新、`users.plan`/`premium_started_at`への反映）は未実装
-- 1ユーザーが複数プロバイダのサブスクリプションを持ちうる構成を想定（将来のAndroid/iOSアプリ化でGoogle Play Billing / StoreKitを追加する際、既存のStripe実装に影響を与えずに拡張できるようにするため）
+**Stripe連携について:**
+- `POST /billing/create-checkout-session`: 認証中ユーザー向けにStripe Checkout（`mode=subscription`）のセッションを作成し、決済ページのURLを返す。既にpremiumのユーザーは`already_premium`エラーで400を返す
+- `POST /billing/webhook`: Stripe Webhookの受信エンドポイント。`Stripe-Signature`ヘッダーをHMAC-SHA256で検証（タイムスタンプが5分以上ずれている場合は拒否）した上で、以下のイベントを処理する
+  - `checkout.session.completed`: `client_reference_id`（内部user_id）と Stripeの`customer`/`subscription`をこのテーブルに紐付けて保存し、premiumへ昇格させる
+  - `customer.subscription.created` / `customer.subscription.updated`: `status`・`current_period_end`・`cancel_at_period_end`を反映。`status`が`active`/`trialing`ならpremiumへ昇格、`canceled`/`unpaid`/`incomplete_expired`ならfreeへ降格する（`past_due`等は支払いリトライ中の猶予期間としてplanを変更しない）
+  - `customer.subscription.deleted`: `status`を`canceled`にし、freeへ降格する
+- Google Play / Appleは1ユーザーが複数プロバイダのサブスクリプションを持ちうる構成を想定した設計だが、連携自体は未実装（将来のAndroid/iOSアプリ化で追加予定）
 
 ---
 
@@ -306,3 +310,4 @@ schedules (1) ──< (N) stays
 | 2026-08-14 | 1.1.0 | created_at/updated_atのDB側自動管理（DEFAULT・トリガー）、インデックス追加（schedules.date/status, traffics.schedule_id, stays.schedule_id）、traffics/staysのCASCADE削除を実装 | - |
 | 2026-08-15 | 1.2.0 | usersテーブルに有料・無料プラン対応のカラムを追加（plan, premium_started_at, trial_used, trial_started_at）、masked_locationsテーブルの説明を追加 | - |
 | 2026-08-15 | 1.3.0 | Stripe決済連携に向けてsubscriptionsテーブルを追加（決済プロバイダ非依存の設計で、将来のGoogle Play Billing / StoreKit対応も見据える） | - |
+| 2026-08-15 | 1.4.0 | Stripe Checkout Session作成・Webhook受信エンドポイントを実装し、subscriptionsテーブルとusers.planの同期を実装 | - |
