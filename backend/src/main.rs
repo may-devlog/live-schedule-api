@@ -178,6 +178,86 @@ fn generate_token() -> String {
     hex::encode(bytes)
 }
 
+// 公開URL・共有URLに使う推測困難なランダムID（21文字の英数字）を生成
+fn generate_public_id() -> String {
+    const CHARS: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let mut rng = rand::thread_rng();
+    (0..21)
+        .map(|_| CHARS[rng.gen_range(0..CHARS.len())] as char)
+        .collect()
+}
+
+#[cfg(test)]
+mod public_id_tests {
+    use super::generate_public_id;
+    use std::collections::HashSet;
+
+    #[test]
+    fn has_expected_length() {
+        assert_eq!(generate_public_id().len(), 21);
+    }
+
+    #[test]
+    fn only_contains_alphanumeric_ascii_characters() {
+        let id = generate_public_id();
+        assert!(id.chars().all(|c| c.is_ascii_alphanumeric()));
+    }
+
+    #[test]
+    fn generates_unique_values_across_many_calls() {
+        let ids: HashSet<String> = (0..10_000).map(|_| generate_public_id()).collect();
+        assert_eq!(ids.len(), 10_000, "expected no duplicates among 10,000 generated ids");
+    }
+}
+
+// 指定したテーブルに指定した列が既に存在するかを確認する
+async fn column_exists(pool: &Pool<Sqlite>, table: &str, column: &str) -> Result<bool, sqlx::Error> {
+    let count: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM pragma_table_info('{}') WHERE name = ?",
+        table
+    ))
+    .bind(column)
+    .fetch_one(pool)
+    .await?;
+    Ok(count > 0)
+}
+
+// public_idがNULLの既存行に、衝突しないランダムIDを1件ずつ発行してバックフィルする
+async fn backfill_public_ids(pool: &Pool<Sqlite>, table: &str) -> Result<(), sqlx::Error> {
+    let select_sql = format!("SELECT id FROM {} WHERE public_id IS NULL", table);
+    let ids: Vec<i64> = sqlx::query_scalar(&select_sql).fetch_all(pool).await?;
+
+    if ids.is_empty() {
+        return Ok(());
+    }
+
+    let update_sql = format!("UPDATE {} SET public_id = ? WHERE id = ?", table);
+    for id in ids {
+        // UNIQUE制約に衝突した場合のみ再生成してリトライ（衝突確率は無視できるレベル）
+        for attempt in 0..5 {
+            let result = sqlx::query(&update_sql)
+                .bind(generate_public_id())
+                .bind(id)
+                .execute(pool)
+                .await;
+            match result {
+                Ok(_) => break,
+                Err(e) if attempt < 4 => {
+                    eprintln!(
+                        "[Migration] Retry backfilling public_id for {}.{}: {}",
+                        table, id, e
+                    );
+                    continue;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    }
+
+    eprintln!("[Migration] Backfilled public_id for existing {} rows", table);
+    Ok(())
+}
+
 fn get_email_from() -> String {
     std::env::var("EMAIL_FROM")
         .unwrap_or_else(|_| "GenBGT <onboarding@resend.dev>".to_string())
@@ -738,6 +818,175 @@ struct NewStay {
     status: Option<String>,
 }
 
+// ====== 公開・共有API用の型定義 ======
+// 内部の連番idの代わりに、推測困難なランダムID（public_id）をURL・レスポンスで使う
+
+#[derive(Serialize)]
+struct PublicSchedule {
+    id: String, // = public_id
+    title: String,
+    group: Option<String>,
+    datetime: DateTime<Utc>,
+    date: Option<String>,
+    open: Option<String>,
+    start: Option<String>,
+    end: Option<String>,
+    notes: Option<String>,
+    category: Option<String>,
+    area: String,
+    venue: String,
+    target: Option<String>,
+    lineup: Option<String>,
+    seller: Option<String>,
+    ticket_fee: Option<i32>,
+    drink_fee: Option<i32>,
+    total_fare: Option<i32>,
+    stay_fee: Option<i32>,
+    travel_cost: Option<i32>,
+    total_cost: Option<i32>,
+    status: String,
+    related_schedule_ids: Vec<String>, // 関連スケジュールのpublic_id
+    is_public: bool,
+}
+
+#[derive(sqlx::FromRow)]
+struct PublicScheduleRow {
+    id: i64, // 関連スケジュールIDの解決にのみ使用、レスポンスには含めない
+    public_id: String,
+    title: String,
+    #[sqlx(rename = "group")]
+    group_name: Option<String>,
+    date: Option<String>,
+    open: Option<String>,
+    start: Option<String>,
+    #[sqlx(rename = "end")]
+    end_time: Option<String>,
+    notes: Option<String>,
+    category: Option<String>,
+    area: String,
+    venue: String,
+    target: Option<String>,
+    lineup: Option<String>,
+    seller: Option<String>,
+    ticket_fee: Option<i32>,
+    drink_fee: Option<i32>,
+    total_fare: Option<i32>,
+    stay_fee: Option<i32>,
+    travel_cost: Option<i32>,
+    total_cost: Option<i32>,
+    status: String,
+    related_schedule_ids: Option<String>, // JSON形式（内部id）で保存
+    is_public: i32,
+}
+
+#[derive(Serialize, Clone)]
+struct PublicTraffic {
+    id: String,          // = public_id
+    schedule_id: String, // = 親スケジュールのpublic_id
+    date: String,
+    order: i32,
+    transportation: Option<String>,
+    from: String,
+    to: String,
+    notes: Option<String>,
+    fare: i32,
+    miles: Option<i32>,
+    return_flag: bool,
+    total_fare: Option<i32>,
+    total_miles: Option<i32>,
+}
+
+#[derive(sqlx::FromRow)]
+struct PublicTrafficRow {
+    public_id: String,
+    date: String,
+    #[sqlx(rename = "order")]
+    order_value: i64,
+    transportation: Option<String>,
+    from_place: String,
+    to_place: String,
+    notes: Option<String>,
+    fare: i32,
+    miles: Option<i32>,
+    return_flag: i32,
+    total_fare: Option<i32>,
+    total_miles: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PublicTrafficQuery {
+    schedule_id: String, // = スケジュールのpublic_id
+}
+
+// list_shared_traffics用: schedules とのJOINで親スケジュールのpublic_idも一緒に取得する
+#[derive(sqlx::FromRow)]
+struct SharedTrafficRow {
+    public_id: String,
+    date: String,
+    #[sqlx(rename = "order")]
+    order_value: i64,
+    transportation: Option<String>,
+    from_place: String,
+    to_place: String,
+    notes: Option<String>,
+    fare: i32,
+    miles: Option<i32>,
+    return_flag: i32,
+    total_fare: Option<i32>,
+    total_miles: Option<i32>,
+    schedule_public_id: String,
+}
+
+#[derive(Serialize, Clone)]
+struct PublicStay {
+    id: String,          // = public_id
+    schedule_id: String, // = 親スケジュールのpublic_id
+    check_in: String,
+    check_out: String,
+    hotel_name: String,
+    website: Option<String>,
+    fee: i32,
+    breakfast_flag: bool,
+    deadline: Option<String>,
+    penalty: Option<i32>,
+    status: String,
+}
+
+#[derive(sqlx::FromRow)]
+struct PublicStayRow {
+    public_id: String,
+    check_in: String,
+    check_out: String,
+    hotel_name: String,
+    website: Option<String>,
+    fee: i32,
+    breakfast_flag: i32,
+    deadline: Option<String>,
+    penalty: Option<i32>,
+    status: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct PublicStayQuery {
+    schedule_id: String, // = スケジュールのpublic_id
+}
+
+// get_shared_stay用: schedules とのJOINで親スケジュールのpublic_idも一緒に取得する
+#[derive(sqlx::FromRow)]
+struct SharedStayRow {
+    public_id: String,
+    check_in: String,
+    check_out: String,
+    hotel_name: String,
+    website: Option<String>,
+    fee: i32,
+    breakfast_flag: i32,
+    deadline: Option<String>,
+    penalty: Option<i32>,
+    status: String,
+    schedule_public_id: String,
+}
+
 // ====== Row → API 用への変換 ======
 
 fn row_to_schedule(row: ScheduleRow) -> Schedule {
@@ -843,6 +1092,147 @@ fn row_to_stay(row: StayRow) -> Stay {
     }
 }
 
+// ====== 公開・共有API用の変換 ======
+
+// 内部の関連スケジュールid（Vec<i32>）を、対応するpublic_idの配列に変換する
+// 削除済みなど解決できないidはスキップする
+async fn resolve_schedule_public_ids(pool: &Pool<Sqlite>, ids: &[i32]) -> Vec<String> {
+    let mut result = Vec::with_capacity(ids.len());
+    for id in ids {
+        if let Ok(Some(public_id)) = sqlx::query_scalar::<_, String>(
+            "SELECT public_id FROM schedules WHERE id = ?",
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        {
+            result.push(public_id);
+        }
+    }
+    result
+}
+
+async fn row_to_public_schedule(pool: &Pool<Sqlite>, row: PublicScheduleRow) -> PublicSchedule {
+    let datetime = if let (Some(date), Some(start)) = (&row.date, &row.start) {
+        format!("{}T{}:00Z", date, start)
+            .parse::<DateTime<Utc>>()
+            .unwrap_or_else(|_| Utc::now())
+    } else if let Some(date) = &row.date {
+        format!("{}T00:00:00Z", date)
+            .parse::<DateTime<Utc>>()
+            .unwrap_or_else(|_| Utc::now())
+    } else {
+        Utc::now()
+    };
+
+    let group = row
+        .group_name
+        .filter(|g| !g.trim().is_empty())
+        .map(|g| g.trim().to_string());
+
+    let related_internal_ids: Vec<i32> = row
+        .related_schedule_ids
+        .as_ref()
+        .and_then(|json| serde_json::from_str::<Vec<i32>>(json).ok())
+        .unwrap_or_default();
+    let related_schedule_ids = resolve_schedule_public_ids(pool, &related_internal_ids).await;
+
+    PublicSchedule {
+        id: row.public_id,
+        title: row.title,
+        group,
+        datetime,
+        date: row.date,
+        open: row.open,
+        start: row.start,
+        end: row.end_time,
+        notes: row.notes,
+        category: row.category,
+        area: row.area,
+        venue: row.venue,
+        target: row.target,
+        lineup: row.lineup,
+        seller: row.seller,
+        ticket_fee: row.ticket_fee,
+        drink_fee: row.drink_fee,
+        total_fare: row.total_fare,
+        stay_fee: row.stay_fee,
+        travel_cost: row.travel_cost,
+        total_cost: row.total_cost,
+        status: row.status,
+        related_schedule_ids,
+        is_public: row.is_public != 0,
+    }
+}
+
+fn row_to_public_traffic(row: PublicTrafficRow, schedule_public_id: &str) -> PublicTraffic {
+    PublicTraffic {
+        id: row.public_id,
+        schedule_id: schedule_public_id.to_string(),
+        date: row.date,
+        order: row.order_value as i32,
+        transportation: row.transportation,
+        from: row.from_place,
+        to: row.to_place,
+        notes: row.notes,
+        fare: row.fare,
+        miles: row.miles,
+        return_flag: row.return_flag != 0,
+        total_fare: row.total_fare,
+        total_miles: row.total_miles,
+    }
+}
+
+fn shared_row_to_public_traffic(row: SharedTrafficRow) -> PublicTraffic {
+    PublicTraffic {
+        id: row.public_id,
+        schedule_id: row.schedule_public_id,
+        date: row.date,
+        order: row.order_value as i32,
+        transportation: row.transportation,
+        from: row.from_place,
+        to: row.to_place,
+        notes: row.notes,
+        fare: row.fare,
+        miles: row.miles,
+        return_flag: row.return_flag != 0,
+        total_fare: row.total_fare,
+        total_miles: row.total_miles,
+    }
+}
+
+fn row_to_public_stay(row: PublicStayRow, schedule_public_id: &str) -> PublicStay {
+    PublicStay {
+        id: row.public_id,
+        schedule_id: schedule_public_id.to_string(),
+        check_in: row.check_in,
+        check_out: row.check_out,
+        hotel_name: row.hotel_name,
+        website: row.website,
+        fee: row.fee,
+        breakfast_flag: row.breakfast_flag != 0,
+        deadline: row.deadline,
+        penalty: row.penalty,
+        status: row.status,
+    }
+}
+
+fn shared_row_to_public_stay(row: SharedStayRow) -> PublicStay {
+    PublicStay {
+        id: row.public_id,
+        schedule_id: row.schedule_public_id,
+        check_in: row.check_in,
+        check_out: row.check_out,
+        hotel_name: row.hotel_name,
+        website: row.website,
+        fee: row.fee,
+        breakfast_flag: row.breakfast_flag != 0,
+        deadline: row.deadline,
+        penalty: row.penalty,
+        status: row.status,
+    }
+}
+
 // ====== マスク処理ヘルパー ======
 
 // ユーザーのマスク設定を取得
@@ -861,16 +1251,16 @@ async fn get_masked_locations_for_user(
 }
 
 // 交通情報にマスク処理を適用
-fn apply_mask_to_traffic(mut traffic: Traffic, masked_locations: &[String]) -> Traffic {
+fn apply_mask_to_public_traffic(mut traffic: PublicTraffic, masked_locations: &[String]) -> PublicTraffic {
     let mask_text = "***";
-    
+
     if masked_locations.contains(&traffic.from) {
         traffic.from = mask_text.to_string();
     }
     if masked_locations.contains(&traffic.to) {
         traffic.to = mask_text.to_string();
     }
-    
+
     traffic
 }
 
@@ -2322,7 +2712,7 @@ async fn delete_masked_location(
 async fn get_shared_schedules(
     Path(share_id): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Vec<Schedule>>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<Vec<PublicSchedule>>, (StatusCode, Json<ErrorResponse>)> {
     // share_idからユーザーIDを取得
     let user_row: Option<(i64, i32)> = sqlx::query_as(
         "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
@@ -2339,7 +2729,7 @@ async fn get_shared_schedules(
             }),
         )
     })?;
-    
+
     if let Some((user_id, sharing_enabled)) = user_row {
         if sharing_enabled == 0 {
             return Err((
@@ -2349,13 +2739,14 @@ async fn get_shared_schedules(
                 }),
             ));
         }
-        
+
         // 共有されているスケジュールを取得（is_public = 1 のみ）
         eprintln!("[GetSharedSchedules] Fetching schedules for user_id: {}, checking is_public = 1", user_id);
-        let rows: Vec<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
+        let rows: Vec<PublicScheduleRow> = sqlx::query_as::<_, PublicScheduleRow>(
             r#"
             SELECT
               id,
+              public_id,
               title,
               "group",
               date,
@@ -2377,10 +2768,7 @@ async fn get_shared_schedules(
               total_cost,
               status,
               related_schedule_ids,
-              user_id,
-              CAST(is_public AS INTEGER) as is_public,
-              created_at,
-              updated_at
+              CAST(is_public AS INTEGER) as is_public
             FROM schedules
             WHERE user_id = ? AND CAST(is_public AS INTEGER) = 1
             ORDER BY date ASC, start ASC
@@ -2398,9 +2786,12 @@ async fn get_shared_schedules(
                 }),
             )
         })?;
-        
+
         eprintln!("[GetSharedSchedules] Found {} schedules with is_public = 1", rows.len());
-        let schedules: Vec<Schedule> = rows.into_iter().map(|row| row_to_schedule(row)).collect();
+        let mut schedules = Vec::with_capacity(rows.len());
+        for row in rows {
+            schedules.push(row_to_public_schedule(&pool, row).await);
+        }
         Ok(Json(schedules))
     } else {
         Err((
@@ -2414,9 +2805,9 @@ async fn get_shared_schedules(
 
 // GET /share/:share_id/schedules/:id - 共有ページ用のスケジュール詳細取得
 async fn get_shared_schedule(
-    Path((share_id, id)): Path<(String, i32)>,
+    Path((share_id, public_id)): Path<(String, String)>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Schedule>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<PublicSchedule>, (StatusCode, Json<ErrorResponse>)> {
     // share_idからユーザーIDを取得
     let user_row: Option<(i64, i32)> = sqlx::query_as(
         "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
@@ -2433,7 +2824,7 @@ async fn get_shared_schedule(
             }),
         )
     })?;
-    
+
     if let Some((user_id, sharing_enabled)) = user_row {
         if sharing_enabled == 0 {
             return Err((
@@ -2443,12 +2834,13 @@ async fn get_shared_schedule(
                 }),
             ));
         }
-        
+
         // 共有されているスケジュールを取得（is_public = 1 のみ）
-        let row: Option<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
+        let row: Option<PublicScheduleRow> = sqlx::query_as::<_, PublicScheduleRow>(
             r#"
             SELECT
               id,
+              public_id,
               title,
               "group",
               date,
@@ -2470,15 +2862,12 @@ async fn get_shared_schedule(
               total_cost,
               status,
               related_schedule_ids,
-              user_id,
-              CAST(is_public AS INTEGER) as is_public,
-              created_at,
-              updated_at
+              CAST(is_public AS INTEGER) as is_public
             FROM schedules
-            WHERE id = ? AND user_id = ? AND CAST(is_public AS INTEGER) = 1
+            WHERE public_id = ? AND user_id = ? AND CAST(is_public AS INTEGER) = 1
             "#
         )
-        .bind(id)
+        .bind(public_id)
         .bind(user_id)
         .fetch_optional(&pool)
         .await
@@ -2491,9 +2880,9 @@ async fn get_shared_schedule(
                 }),
             )
         })?;
-        
+
         if let Some(schedule_row) = row {
-            Ok(Json(row_to_schedule(schedule_row)))
+            Ok(Json(row_to_public_schedule(&pool, schedule_row).await))
         } else {
             Err((
                 StatusCode::NOT_FOUND,
@@ -2843,10 +3232,11 @@ async fn create_schedule(
           status,
           related_schedule_ids,
           is_public,
+          public_id,
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?
         )
         "#,
     )
@@ -2878,6 +3268,7 @@ async fn create_schedule(
         }
     }))
     .bind(is_public)
+    .bind(generate_public_id())
     .bind(&now)
     .bind(&now)
     .execute(&pool)
@@ -3613,15 +4004,16 @@ async fn delete_schedule(
 async fn list_public_schedules(
     Query(params): Query<ScheduleQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Json<Vec<Schedule>> {
+) -> Json<Vec<PublicSchedule>> {
     // DISABLE_AUTHが設定されている場合、全てのスケジュールを取得（ユーザーIDによるフィルタリングなし）
-    let rows: Vec<ScheduleRow> = if std::env::var("DISABLE_AUTH").is_ok() {
+    let rows: Vec<PublicScheduleRow> = if std::env::var("DISABLE_AUTH").is_ok() {
         // 認証が無効化されている場合、全てのスケジュールを返す
         println!("[PUBLIC SCHEDULES] DISABLE_AUTH is set, returning ALL schedules (ignoring user_id and is_public)");
-        let rows = sqlx::query_as::<_, ScheduleRow>(
+        let rows = sqlx::query_as::<_, PublicScheduleRow>(
             r#"
             SELECT
               id,
+              public_id,
               title,
               "group",
               date,
@@ -3643,34 +4035,32 @@ async fn list_public_schedules(
               total_cost,
               status,
               related_schedule_ids,
-              user_id,
-              CAST(is_public AS INTEGER) as is_public,
-              created_at,
-              updated_at
+              CAST(is_public AS INTEGER) as is_public
             FROM schedules
             "#,
         )
         .fetch_all(&pool)
         .await
         .expect("failed to fetch all schedules");
-        
+
         println!("[PUBLIC SCHEDULES] Found {} schedules in database", rows.len());
         if rows.is_empty() {
             println!("[PUBLIC SCHEDULES] WARNING: No schedules found in database. The database might be empty.");
         } else {
-            println!("[PUBLIC SCHEDULES] First schedule: id={}, title={}", 
-                rows[0].id, 
+            println!("[PUBLIC SCHEDULES] First schedule: id={}, title={}",
+                rows[0].id,
                 rows[0].title
             );
         }
-        
+
         rows
     } else {
         // 通常の動作：公開スケジュールのみ
-        sqlx::query_as::<_, ScheduleRow>(
+        sqlx::query_as::<_, PublicScheduleRow>(
             r#"
             SELECT
               id,
+              public_id,
               title,
               "group",
               date,
@@ -3692,10 +4082,7 @@ async fn list_public_schedules(
               total_cost,
               status,
               related_schedule_ids,
-              user_id,
-              CAST(is_public AS INTEGER) as is_public,
-              created_at,
-              updated_at
+              CAST(is_public AS INTEGER) as is_public
             FROM schedules
             WHERE CAST(is_public AS INTEGER) = 1
             "#,
@@ -3705,7 +4092,10 @@ async fn list_public_schedules(
         .expect("failed to fetch public schedules")
     };
 
-    let mut schedules: Vec<Schedule> = rows.into_iter().map(row_to_schedule).collect();
+    let mut schedules = Vec::with_capacity(rows.len());
+    for row in rows {
+        schedules.push(row_to_public_schedule(&pool, row).await);
+    }
 
     if let Some(year) = params.year {
         schedules = schedules
@@ -3727,15 +4117,16 @@ async fn list_public_schedules(
 // GET /public/schedules/:id - 公開されているスケジュール詳細
 // DISABLE_AUTHが設定されている場合、全てのスケジュールを返す
 async fn get_public_schedule(
-    Path(id): Path<i32>,
+    Path(public_id): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Schedule>, StatusCode> {
+) -> Result<Json<PublicSchedule>, StatusCode> {
     // DISABLE_AUTHが設定されている場合、is_publicの条件を無視
-    let row: ScheduleRow = if std::env::var("DISABLE_AUTH").is_ok() {
-        sqlx::query_as::<_, ScheduleRow>(
+    let row: PublicScheduleRow = if std::env::var("DISABLE_AUTH").is_ok() {
+        sqlx::query_as::<_, PublicScheduleRow>(
             r#"
             SELECT
               id,
+              public_id,
               title,
               "group",
               date,
@@ -3757,23 +4148,21 @@ async fn get_public_schedule(
               total_cost,
               status,
               related_schedule_ids,
-              user_id,
-              is_public,
-              created_at,
-              updated_at
+              is_public
             FROM schedules
-            WHERE id = ?
+            WHERE public_id = ?
             "#,
         )
-        .bind(id)
+        .bind(&public_id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?
     } else {
-        sqlx::query_as::<_, ScheduleRow>(
+        sqlx::query_as::<_, PublicScheduleRow>(
             r#"
             SELECT
               id,
+              public_id,
               title,
               "group",
               date,
@@ -3795,54 +4184,50 @@ async fn get_public_schedule(
               total_cost,
               status,
               related_schedule_ids,
-              user_id,
-              CAST(is_public AS INTEGER) as is_public,
-              created_at,
-              updated_at
+              CAST(is_public AS INTEGER) as is_public
             FROM schedules
-            WHERE id = ? AND CAST(is_public AS INTEGER) = 1
+            WHERE public_id = ? AND CAST(is_public AS INTEGER) = 1
             "#,
         )
-        .bind(id)
+        .bind(&public_id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?
     };
 
-    let schedule = row_to_schedule(row);
+    let schedule = row_to_public_schedule(&pool, row).await;
     Ok(Json(schedule))
 }
 
 // GET /public/traffic?schedule_id=... - 公開スケジュールの交通情報
 // DISABLE_AUTHが設定されている場合、全てのスケジュールの交通情報を返す
 async fn list_public_traffics(
-    Query(params): Query<TrafficQuery>,
+    Query(params): Query<PublicTrafficQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Json<Vec<Traffic>> {
+) -> Json<Vec<PublicTraffic>> {
     // DISABLE_AUTHが設定されている場合、is_publicの条件を無視
     let schedule_exists: Option<i64> = if std::env::var("DISABLE_AUTH").is_ok() {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ?")
-            .bind(params.schedule_id)
+        sqlx::query_scalar("SELECT id FROM schedules WHERE public_id = ?")
+            .bind(&params.schedule_id)
             .fetch_optional(&pool)
             .await
             .expect("failed to check schedule")
     } else {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND CAST(is_public AS INTEGER) = 1")
-            .bind(params.schedule_id)
+        sqlx::query_scalar("SELECT id FROM schedules WHERE public_id = ? AND CAST(is_public AS INTEGER) = 1")
+            .bind(&params.schedule_id)
             .fetch_optional(&pool)
             .await
             .expect("failed to check schedule")
     };
 
-    if schedule_exists.is_none() {
+    let Some(schedule_internal_id) = schedule_exists else {
         return Json(vec![]);
-    }
+    };
 
-    let rows: Vec<TrafficRow> = sqlx::query_as::<_, TrafficRow>(
+    let rows: Vec<PublicTrafficRow> = sqlx::query_as::<_, PublicTrafficRow>(
         r#"
         SELECT
-          id,
-          schedule_id,
+          public_id,
           date,
           "order",
           transportation,
@@ -3859,64 +4244,64 @@ async fn list_public_traffics(
         ORDER BY date ASC, "order" ASC
         "#,
     )
-    .bind(params.schedule_id)
+    .bind(schedule_internal_id)
     .fetch_all(&pool)
     .await
     .expect("failed to fetch traffics");
 
-    let mut traffics: Vec<Traffic> = rows.into_iter().map(row_to_traffic).collect();
-    
+    let mut traffics: Vec<PublicTraffic> = rows
+        .into_iter()
+        .map(|row| row_to_public_traffic(row, &params.schedule_id))
+        .collect();
+
     // スケジュールのユーザーIDを取得してマスク処理を適用
-    if let Some(schedule_id) = schedule_exists {
-        let user_id: Option<i64> = sqlx::query_scalar("SELECT user_id FROM schedules WHERE id = ?")
-            .bind(schedule_id)
-            .fetch_optional(&pool)
-            .await
-            .ok()
-            .flatten();
-        
-        if let Some(uid) = user_id {
-            if let Ok(masked_locations) = get_masked_locations_for_user(&pool, uid).await {
-                traffics = traffics.into_iter()
-                    .map(|t| apply_mask_to_traffic(t, &masked_locations))
-                    .collect();
-            }
+    let user_id: Option<i64> = sqlx::query_scalar("SELECT user_id FROM schedules WHERE id = ?")
+        .bind(schedule_internal_id)
+        .fetch_optional(&pool)
+        .await
+        .ok()
+        .flatten();
+
+    if let Some(uid) = user_id {
+        if let Ok(masked_locations) = get_masked_locations_for_user(&pool, uid).await {
+            traffics = traffics.into_iter()
+                .map(|t| apply_mask_to_public_traffic(t, &masked_locations))
+                .collect();
         }
     }
-    
+
     Json(traffics)
 }
 
 // GET /public/stay?schedule_id=... - 公開スケジュールの宿泊情報
 // DISABLE_AUTHが設定されている場合、全てのスケジュールの宿泊情報を返す
 async fn list_public_stays(
-    Query(params): Query<StayQuery>,
+    Query(params): Query<PublicStayQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Json<Vec<Stay>> {
+) -> Json<Vec<PublicStay>> {
     // DISABLE_AUTHが設定されている場合、is_publicの条件を無視
     let schedule_exists: Option<i64> = if std::env::var("DISABLE_AUTH").is_ok() {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ?")
-            .bind(params.schedule_id)
+        sqlx::query_scalar("SELECT id FROM schedules WHERE public_id = ?")
+            .bind(&params.schedule_id)
             .fetch_optional(&pool)
             .await
             .expect("failed to check schedule")
     } else {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND CAST(is_public AS INTEGER) = 1")
-            .bind(params.schedule_id)
+        sqlx::query_scalar("SELECT id FROM schedules WHERE public_id = ? AND CAST(is_public AS INTEGER) = 1")
+            .bind(&params.schedule_id)
             .fetch_optional(&pool)
             .await
             .expect("failed to check schedule")
     };
 
-    if schedule_exists.is_none() {
+    let Some(schedule_internal_id) = schedule_exists else {
         return Json(vec![]);
-    }
+    };
 
-    let rows: Vec<StayRow> = sqlx::query_as::<_, StayRow>(
+    let rows: Vec<PublicStayRow> = sqlx::query_as::<_, PublicStayRow>(
         r#"
         SELECT
-          id,
-          schedule_id,
+          public_id,
           check_in,
           check_out,
           hotel_name,
@@ -3930,25 +4315,37 @@ async fn list_public_stays(
         WHERE schedule_id = ?
         "#,
     )
-    .bind(params.schedule_id)
+    .bind(schedule_internal_id)
     .fetch_all(&pool)
     .await
     .expect("failed to fetch stays");
 
-    let stays = rows.into_iter().map(row_to_stay).collect();
+    let stays = rows
+        .into_iter()
+        .map(|row| row_to_public_stay(row, &params.schedule_id))
+        .collect();
     Json(stays)
 }
 
 // GET /public/traffic/:id - 公開スケジュールの交通情報（個別）
 async fn get_public_traffic(
-    Path(id): Path<i32>,
+    Path(public_id): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Traffic>, StatusCode> {
-    let row: Option<TrafficRow> = sqlx::query_as::<_, TrafficRow>(
+) -> Result<Json<PublicTraffic>, StatusCode> {
+    let schedule_internal_id: Option<i64> = sqlx::query_scalar(
+        "SELECT schedule_id FROM traffics WHERE public_id = ?",
+    )
+    .bind(&public_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let schedule_internal_id = schedule_internal_id.ok_or(StatusCode::NOT_FOUND)?;
+
+    let row: Option<PublicTrafficRow> = sqlx::query_as::<_, PublicTrafficRow>(
         r#"
         SELECT
-          id,
-          schedule_id,
+          public_id,
           date,
           "order",
           transportation,
@@ -3961,10 +4358,10 @@ async fn get_public_traffic(
           total_fare,
           total_miles
         FROM traffics
-        WHERE id = ?
+        WHERE public_id = ?
         "#,
     )
-    .bind(id)
+    .bind(&public_id)
     .fetch_optional(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -3972,53 +4369,62 @@ async fn get_public_traffic(
     let row = row.ok_or(StatusCode::NOT_FOUND)?;
 
     // 関連するスケジュールが公開されているか確認
-    let schedule_is_public: Option<i64> = if std::env::var("DISABLE_AUTH").is_ok() {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ?")
-            .bind(row.schedule_id)
+    let schedule: Option<(i64, Option<String>)> = if std::env::var("DISABLE_AUTH").is_ok() {
+        sqlx::query_as("SELECT id, public_id FROM schedules WHERE id = ?")
+            .bind(schedule_internal_id)
             .fetch_optional(&pool)
             .await
             .expect("failed to check schedule")
     } else {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND CAST(is_public AS INTEGER) = 1")
-            .bind(row.schedule_id)
+        sqlx::query_as("SELECT id, public_id FROM schedules WHERE id = ? AND CAST(is_public AS INTEGER) = 1")
+            .bind(schedule_internal_id)
             .fetch_optional(&pool)
             .await
             .expect("failed to check schedule")
     };
 
-    if schedule_is_public.is_none() {
+    let Some((_, Some(schedule_public_id))) = schedule else {
         return Err(StatusCode::NOT_FOUND);
-    }
+    };
 
-    let mut traffic = row_to_traffic(row);
-    
+    let mut traffic = row_to_public_traffic(row, &schedule_public_id);
+
     // スケジュールのユーザーIDを取得してマスク処理を適用
     let user_id: Option<i64> = sqlx::query_scalar("SELECT user_id FROM schedules WHERE id = ?")
-        .bind(traffic.schedule_id as i64)
+        .bind(schedule_internal_id)
         .fetch_optional(&pool)
         .await
         .ok()
         .flatten();
-    
+
     if let Some(uid) = user_id {
         if let Ok(masked_locations) = get_masked_locations_for_user(&pool, uid).await {
-            traffic = apply_mask_to_traffic(traffic, &masked_locations);
+            traffic = apply_mask_to_public_traffic(traffic, &masked_locations);
         }
     }
-    
+
     Ok(Json(traffic))
 }
 
 // GET /public/stay/:id - 公開スケジュールの宿泊情報（個別）
 async fn get_public_stay(
-    Path(id): Path<i32>,
+    Path(public_id): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Stay>, StatusCode> {
-    let row: Option<StayRow> = sqlx::query_as::<_, StayRow>(
+) -> Result<Json<PublicStay>, StatusCode> {
+    let schedule_internal_id: Option<i64> = sqlx::query_scalar(
+        "SELECT schedule_id FROM stays WHERE public_id = ?",
+    )
+    .bind(&public_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let schedule_internal_id = schedule_internal_id.ok_or(StatusCode::NOT_FOUND)?;
+
+    let row: Option<PublicStayRow> = sqlx::query_as::<_, PublicStayRow>(
         r#"
         SELECT
-          id,
-          schedule_id,
+          public_id,
           check_in,
           check_out,
           hotel_name,
@@ -4029,10 +4435,10 @@ async fn get_public_stay(
           penalty,
           status
         FROM stays
-        WHERE id = ?
+        WHERE public_id = ?
         "#,
     )
-    .bind(id)
+    .bind(&public_id)
     .fetch_optional(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -4040,32 +4446,32 @@ async fn get_public_stay(
     let row = row.ok_or(StatusCode::NOT_FOUND)?;
 
     // 関連するスケジュールが公開されているか確認
-    let schedule_is_public: Option<i64> = if std::env::var("DISABLE_AUTH").is_ok() {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ?")
-            .bind(row.schedule_id)
+    let schedule: Option<(i64, Option<String>)> = if std::env::var("DISABLE_AUTH").is_ok() {
+        sqlx::query_as("SELECT id, public_id FROM schedules WHERE id = ?")
+            .bind(schedule_internal_id)
             .fetch_optional(&pool)
             .await
             .expect("failed to check schedule")
     } else {
-        sqlx::query_scalar("SELECT id FROM schedules WHERE id = ? AND CAST(is_public AS INTEGER) = 1")
-            .bind(row.schedule_id)
+        sqlx::query_as("SELECT id, public_id FROM schedules WHERE id = ? AND CAST(is_public AS INTEGER) = 1")
+            .bind(schedule_internal_id)
             .fetch_optional(&pool)
             .await
             .expect("failed to check schedule")
     };
 
-    if schedule_is_public.is_none() {
+    let Some((_, Some(schedule_public_id))) = schedule else {
         return Err(StatusCode::NOT_FOUND);
-    }
+    };
 
-    Ok(Json(row_to_stay(row)))
+    Ok(Json(row_to_public_stay(row, &schedule_public_id)))
 }
 
 // GET /share/:share_id/traffic/:id - 共有ページ用の交通情報（個別）
 async fn list_shared_traffics(
     Path(share_id): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Vec<Traffic>>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<Vec<PublicTraffic>>, (StatusCode, Json<ErrorResponse>)> {
     let user_row: Option<(i64, i32)> = sqlx::query_as(
         "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
     )
@@ -4082,11 +4488,12 @@ async fn list_shared_traffics(
         return Err((StatusCode::FORBIDDEN, Json(ErrorResponse { error: "このユーザーのスケジュールは共有されていません".to_string() })));
     }
 
-    let rows: Vec<TrafficRow> = sqlx::query_as::<_, TrafficRow>(
+    let rows: Vec<SharedTrafficRow> = sqlx::query_as::<_, SharedTrafficRow>(
         r#"
-        SELECT t.id, t.schedule_id, t.date, t."order", t.transportation,
+        SELECT t.public_id, t.date, t."order", t.transportation,
                t.from_place, t.to_place, t.notes, t.fare, t.miles,
-               t.return_flag, t.total_fare, t.total_miles
+               t.return_flag, t.total_fare, t.total_miles,
+               s.public_id AS schedule_public_id
         FROM traffics t
         INNER JOIN schedules s ON s.id = t.schedule_id
         WHERE s.user_id = ? AND CAST(s.is_public AS INTEGER) = 1
@@ -4100,16 +4507,16 @@ async fn list_shared_traffics(
 
     let masked_locations = get_masked_locations_for_user(&pool, user_id).await.unwrap_or_default();
     let traffics = rows.into_iter()
-        .map(row_to_traffic)
-        .map(|traffic| apply_mask_to_traffic(traffic, &masked_locations))
+        .map(shared_row_to_public_traffic)
+        .map(|traffic| apply_mask_to_public_traffic(traffic, &masked_locations))
         .collect();
     Ok(Json(traffics))
 }
 
 async fn get_shared_traffic(
-    Path((share_id, id)): Path<(String, i32)>,
+    Path((share_id, public_id)): Path<(String, String)>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Traffic>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<PublicTraffic>, (StatusCode, Json<ErrorResponse>)> {
     // share_idからユーザーIDを取得
     let user_row: Option<(i64, i32)> = sqlx::query_as(
         "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
@@ -4137,28 +4544,20 @@ async fn get_shared_traffic(
             ));
         }
         
-        // 交通情報を取得
-        let row: Option<TrafficRow> = sqlx::query_as::<_, TrafficRow>(
+        // 交通情報を取得（このユーザーの公開スケジュールに属するもののみ）
+        let row: Option<SharedTrafficRow> = sqlx::query_as::<_, SharedTrafficRow>(
             r#"
-            SELECT
-              id,
-              schedule_id,
-              date,
-              "order",
-              transportation,
-              from_place,
-              to_place,
-              notes,
-              fare,
-              miles,
-              return_flag,
-              total_fare,
-              total_miles
-            FROM traffics
-            WHERE id = ?
+            SELECT t.public_id, t.date, t."order", t.transportation,
+                   t.from_place, t.to_place, t.notes, t.fare, t.miles,
+                   t.return_flag, t.total_fare, t.total_miles,
+                   s.public_id AS schedule_public_id
+            FROM traffics t
+            INNER JOIN schedules s ON s.id = t.schedule_id
+            WHERE t.public_id = ? AND s.user_id = ? AND CAST(s.is_public AS INTEGER) = 1
             "#,
         )
-        .bind(id)
+        .bind(&public_id)
+        .bind(user_id)
         .fetch_optional(&pool)
         .await
         .map_err(|e| {
@@ -4178,40 +4577,13 @@ async fn get_shared_traffic(
             }),
         ))?;
 
-        // 関連するスケジュールがこのユーザーの公開スケジュールか確認
-        let schedule_is_valid: Option<i64> = sqlx::query_scalar(
-            "SELECT id FROM schedules WHERE id = ? AND user_id = ? AND CAST(is_public AS INTEGER) = 1"
-        )
-        .bind(row.schedule_id)
-        .bind(user_id)
-        .fetch_optional(&pool)
-        .await
-        .map_err(|e| {
-            eprintln!("[GetSharedTraffic] Database error: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: "Database error".to_string(),
-                }),
-            )
-        })?;
+        let mut traffic = shared_row_to_public_traffic(row);
 
-        if schedule_is_valid.is_none() {
-            return Err((
-                StatusCode::NOT_FOUND,
-                Json(ErrorResponse {
-                    error: "Traffic not found".to_string(),
-                }),
-            ));
-        }
-
-        let mut traffic = row_to_traffic(row);
-        
         // マスク処理を適用
         if let Ok(masked_locations) = get_masked_locations_for_user(&pool, user_id).await {
-            traffic = apply_mask_to_traffic(traffic, &masked_locations);
+            traffic = apply_mask_to_public_traffic(traffic, &masked_locations);
         }
-        
+
         Ok(Json(traffic))
     } else {
         Err((
@@ -4225,9 +4597,9 @@ async fn get_shared_traffic(
 
 // GET /share/:share_id/stay/:id - 共有ページ用の宿泊情報（個別）
 async fn get_shared_stay(
-    Path((share_id, id)): Path<(String, i32)>,
+    Path((share_id, public_id)): Path<(String, String)>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Stay>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<PublicStay>, (StatusCode, Json<ErrorResponse>)> {
     // share_idからユーザーIDを取得
     let user_row: Option<(i64, i32)> = sqlx::query_as(
         "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
@@ -4255,26 +4627,20 @@ async fn get_shared_stay(
             ));
         }
         
-        // 宿泊情報を取得
-        let row: Option<StayRow> = sqlx::query_as::<_, StayRow>(
+        // 宿泊情報を取得（このユーザーの公開スケジュールに属するもののみ）
+        let row: Option<SharedStayRow> = sqlx::query_as::<_, SharedStayRow>(
             r#"
-            SELECT
-              id,
-              schedule_id,
-              check_in,
-              check_out,
-              hotel_name,
-              website,
-              fee,
-              breakfast_flag,
-              deadline,
-              penalty,
-              status
-            FROM stays
-            WHERE id = ?
+            SELECT st.public_id, st.check_in, st.check_out, st.hotel_name,
+                   st.website, st.fee, st.breakfast_flag, st.deadline,
+                   st.penalty, st.status,
+                   s.public_id AS schedule_public_id
+            FROM stays st
+            INNER JOIN schedules s ON s.id = st.schedule_id
+            WHERE st.public_id = ? AND s.user_id = ? AND CAST(s.is_public AS INTEGER) = 1
             "#,
         )
-        .bind(id)
+        .bind(&public_id)
+        .bind(user_id)
         .fetch_optional(&pool)
         .await
         .map_err(|e| {
@@ -4294,34 +4660,7 @@ async fn get_shared_stay(
             }),
         ))?;
 
-        // 関連するスケジュールがこのユーザーの公開スケジュールか確認
-        let schedule_is_valid: Option<i64> = sqlx::query_scalar(
-            "SELECT id FROM schedules WHERE id = ? AND user_id = ? AND CAST(is_public AS INTEGER) = 1"
-        )
-        .bind(row.schedule_id)
-        .bind(user_id)
-        .fetch_optional(&pool)
-        .await
-        .map_err(|e| {
-            eprintln!("[GetSharedStay] Database error: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: "Database error".to_string(),
-                }),
-            )
-        })?;
-
-        if schedule_is_valid.is_none() {
-            return Err((
-                StatusCode::NOT_FOUND,
-                Json(ErrorResponse {
-                    error: "Stay not found".to_string(),
-                }),
-            ));
-        }
-
-        Ok(Json(row_to_stay(row)))
+        Ok(Json(shared_row_to_public_stay(row)))
     } else {
         Err((
             StatusCode::NOT_FOUND,
@@ -4439,10 +4778,11 @@ async fn create_traffic(
           return_flag,
           total_fare,
           total_miles,
+          public_id,
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?
         )
         "#,
     )
@@ -4456,6 +4796,7 @@ async fn create_traffic(
     .bind(payload.fare)
     .bind(payload.miles)
     .bind(if payload.return_flag { 1 } else { 0 })
+    .bind(generate_public_id())
     .bind(&now)
     .bind(&now)
     .execute(&pool)
@@ -4765,10 +5106,11 @@ async fn create_stay(
           deadline,
           penalty,
           status,
+          public_id,
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
         "#,
     )
@@ -4782,6 +5124,7 @@ async fn create_stay(
     .bind(&payload.deadline)
     .bind(payload.penalty)
     .bind(payload.status.as_deref().unwrap_or("Keep"))
+    .bind(generate_public_id())
     .bind(&now)
     .bind(&now)
     .execute(&pool)
@@ -6803,6 +7146,33 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
 
         eprintln!("[Migration] stays.schedule_id now has ON DELETE CASCADE");
     }
+
+    // 公開URL・共有URLで内部連番の代わりに使う推測困難なランダムIDカラムを追加（マイグレーション）
+    // テーブル再作成（上記のCASCADE等）でカラムごと失われるため、必ず再作成マイグレーションより後に実行する
+    // SQLiteはALTER TABLE ADD COLUMNにUNIQUE制約を直接付けられないため、
+    // 素のカラムを追加してから別途UNIQUE INDEXで一意性を担保する
+    // （既に列が存在する場合のみスキップし、それ以外のDBエラーはmigration失敗として伝播させる）
+    for table in ["schedules", "traffics", "stays"] {
+        if !column_exists(pool, table, "public_id").await? {
+            sqlx::query(&format!("ALTER TABLE {} ADD COLUMN public_id TEXT", table))
+                .execute(pool)
+                .await?;
+        }
+    }
+
+    sqlx::query("CREATE UNIQUE INDEX IF NOT EXISTS idx_schedules_public_id ON schedules(public_id) WHERE public_id IS NOT NULL")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE UNIQUE INDEX IF NOT EXISTS idx_traffics_public_id ON traffics(public_id) WHERE public_id IS NOT NULL")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE UNIQUE INDEX IF NOT EXISTS idx_stays_public_id ON stays(public_id) WHERE public_id IS NOT NULL")
+        .execute(pool)
+        .await?;
+
+    backfill_public_ids(pool, "schedules").await?;
+    backfill_public_ids(pool, "traffics").await?;
+    backfill_public_ids(pool, "stays").await?;
 
     // パフォーマンス向上のためのインデックス追加
     // CREATE INDEX IF NOT EXISTSのため、テーブル再作成が発生した場合でも安全に再実行できる

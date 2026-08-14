@@ -8,30 +8,14 @@ import { NotionProperty, NotionPropertyBlock } from "../../../components/notion-
 import { getOptionColor } from "../../../utils/get-option-color";
 import { PageHeader } from "../../../components/PageHeader";
 import { PublicFooter, PublicHeader } from "../../../components/GenBGTBrand";
-import type { Schedule } from "../../HomeScreen";
 import { BooleanSelectDisplay } from "../../../components/boolean-select-display";
-
-type Traffic = {
-  id: number;
-  schedule_id: number;
-  date: string;
-  order: number;
-  transportation?: string | null;
-  from: string;
-  to: string;
-  notes?: string | null;
-  fare: number;
-  miles?: number | null;
-  return_flag: boolean;
-  total_fare?: number | null;
-  total_miles?: number | null;
-};
+import type { PublicSchedule, PublicTraffic } from "../../../types/public-schedule";
 
 export default function PublicTrafficDetailScreen() {
   const { trafficId } = useLocalSearchParams<{ trafficId: string }>();
   const router = useRouter();
-  const [traffic, setTraffic] = useState<Traffic | null>(null);
-  const [schedule, setSchedule] = useState<Schedule | null>(null);
+  const [traffic, setTraffic] = useState<PublicTraffic | null>(null);
+  const [schedule, setSchedule] = useState<PublicSchedule | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transportationColor, setTransportationColor] = useState<string | null>(null);
@@ -50,15 +34,15 @@ export default function PublicTrafficDetailScreen() {
           }
           throw new Error(`status: ${res.status}`);
         }
-        const data: Traffic = await res.json();
+        const data: PublicTraffic = await res.json();
         setTraffic(data);
-        
+
         // スケジュール情報を取得
         if (data.schedule_id) {
           try {
             const scheduleRes = await fetch(getApiUrl(`/public/schedules/${data.schedule_id}`));
             if (scheduleRes.ok) {
-              const scheduleData: Schedule = await scheduleRes.json();
+              const scheduleData: PublicSchedule = await scheduleRes.json();
               setSchedule(scheduleData);
             }
           } catch (e) {

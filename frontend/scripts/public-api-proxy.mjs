@@ -1,7 +1,9 @@
 import http from 'node:http';
 import https from 'node:https';
 
-const host = '127.0.0.1';
+// '::' でIPv4/IPv6の両方を待ち受ける（macOSではlocalhostがIPv6(::1)に解決されることがあり、
+// IPv4のみのバインドだとSafari等からの接続が失敗するため）
+const host = '::';
 const port = Number(process.env.PUBLIC_PROXY_PORT || 3002);
 const upstream = new URL(process.env.PUBLIC_API_UPSTREAM || 'https://api.genbgt.com');
 
@@ -9,7 +11,7 @@ const isAllowedPath = (pathname) =>
   pathname.startsWith('/share/') || pathname.startsWith('/public/');
 
 const server = http.createServer((request, response) => {
-  const requestUrl = new URL(request.url || '/', `http://${host}:${port}`);
+  const requestUrl = new URL(request.url || '/', `http://localhost:${port}`);
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -44,6 +46,6 @@ const server = http.createServer((request, response) => {
 });
 
 server.listen(port, host, () => {
-  console.log(`Read-only public API proxy: http://${host}:${port}`);
+  console.log(`Read-only public API proxy: http://localhost:${port}`);
   console.log(`Upstream: ${upstream.origin}`);
 });
