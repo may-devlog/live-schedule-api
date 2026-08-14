@@ -246,7 +246,7 @@ export default function StayDetailScreen() {
   const renderStatePage = (content: React.ReactNode) => (
     <View style={styles.container}>
       <AppHeader active="schedule" />
-      <PageHeader homePath="/" contentMaxWidth={900} />
+      <PageHeader homePath="/" />
       <ScrollView contentContainerStyle={styles.stateScroll}>
         <View style={styles.stateContent}>{content}</View>
         <PublicFooter />
@@ -275,7 +275,7 @@ export default function StayDetailScreen() {
   return (
     <View style={styles.container}>
       <AppHeader active="schedule" />
-      <PageHeader homePath="/" contentMaxWidth={900} />
+      <PageHeader homePath="/" />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={

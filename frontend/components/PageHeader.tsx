@@ -2,20 +2,20 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { IconArrowLeft, IconHome } from '@/components/FeatherSvgIcons';
+import { HEADER_CONTENT_MAX_WIDTH } from '@/components/GenBGTBrand';
 
 type PageHeaderProps = {
   scheduleTitle?: string | null;
   showBackButton?: boolean;
   homePath?: string; // カスタムホームパス（指定しない場合は '/'）
-  contentMaxWidth?: number; // ページ本体のコンテンツ幅に合わせて中央揃えする場合に指定
 };
 
-export function PageHeader({ scheduleTitle, showBackButton = true, homePath, contentMaxWidth }: PageHeaderProps) {
+export function PageHeader({ scheduleTitle, showBackButton = true, homePath }: PageHeaderProps) {
   const router = useRouter();
 
   return (
     <View style={styles.header}>
-      <View style={[styles.headerInner, contentMaxWidth ? { maxWidth: contentMaxWidth } : null]}>
+      <View style={styles.headerInner}>
         <View style={styles.headerRow}>
           {showBackButton && (
             <TouchableOpacity
@@ -65,6 +65,7 @@ const styles = StyleSheet.create({
   },
   headerInner: {
     width: "100%",
+    maxWidth: HEADER_CONTENT_MAX_WIDTH,
     alignSelf: "center",
     paddingHorizontal: 24,
   },

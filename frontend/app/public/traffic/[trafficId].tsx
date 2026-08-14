@@ -98,7 +98,7 @@ export default function PublicTrafficDetailScreen() {
   return (
     <View style={styles.container}>
       <PublicHeader active="schedule" />
-      <PageHeader showBackButton={true} contentMaxWidth={900} />
+      <PageHeader showBackButton={true} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.detailContent}>
         {/* タイトル */}

@@ -668,7 +668,6 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
       <PageHeader
         showBackButton={true}
         homePath={authenticated ? "/" : `/share/${share_id}`}
-        contentMaxWidth={1180}
       />
       <ScrollView 
         contentContainerStyle={styles.scrollPage}
@@ -752,7 +751,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
               )}
             </View>
           </View>
-          {authenticated && <View style={[styles.heroActions, isMobile && styles.heroActionsMobile]}>
+          {authenticated && <View style={[styles.heroActions, styles.heroActionsDesktop]}>
             <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={brand.violetDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
             <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={brand.white} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
             <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Ionicons name="trash-outline" size={17} color="#DC2626" /><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
@@ -826,13 +825,13 @@ const styles = StyleSheet.create({
     backgroundColor: brand.white,
     ...(Platform.OS === "web" ? ({ boxShadow: "0 14px 40px rgba(46,16,101,0.08)" } as any) : {}),
   },
-  heroCardMobile: { flexDirection: "column", padding: 18 },
+  heroCardMobile: { padding: 18 },
   heroCopy: { flex: 1, minWidth: 0 },
   heroActions: { flexDirection: "row", alignItems: "center", gap: 16 },
-  heroActionsMobile: { width: "100%", justifyContent: "flex-end" },
-  duplicateAction: { minHeight: 42, paddingHorizontal: 18, backgroundColor: brand.lavender, borderWidth: 1, borderColor: "#C4B5FD", borderRadius: 9, flexDirection: "row", alignItems: "center", gap: 8 },
+  heroActionsDesktop: { flexDirection: "column", alignItems: "stretch", gap: 8 },
+  duplicateAction: { minHeight: 42, paddingHorizontal: 18, backgroundColor: brand.lavender, borderWidth: 1, borderColor: "#C4B5FD", borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   duplicateActionText: { color: brand.violetDark, fontSize: 14, fontWeight: "700" },
-  editAction: { minHeight: 42, paddingHorizontal: 20, backgroundColor: brand.violet, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, flexDirection: "row", alignItems: "center", gap: 8 },
+  editAction: { minHeight: 42, paddingHorizontal: 20, backgroundColor: brand.violet, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   editActionText: { color: brand.white, fontSize: 14, fontWeight: "700" },
   deleteAction: { minHeight: 42, paddingHorizontal: 14, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: 7, borderWidth: 1, borderColor: "#FECACA", backgroundColor: "#FEF2F2", borderRadius: 9 },
   deleteActionText: { color: "#DC2626", fontSize: 14, fontWeight: "600" },
