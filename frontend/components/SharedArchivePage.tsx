@@ -352,12 +352,12 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           </View>
 
           <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
-            {archiveType === "event" ? <View style={styles.groupingPanel}>
-              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>メイン</Text><View style={styles.groupingButtons}>{([['none','なし'],['target','お目当て'],['lineup','出演者']] as const).map(([value,label]) => { const locked = !canUseGrouping && value !== 'none'; return <TouchableOpacity key={value} disabled={locked} style={[styles.groupingButton, mainGrouping === value && styles.groupingButtonActive, locked && styles.groupingButtonDisabled]} onPress={() => setMainGrouping(value)}><Text style={[styles.groupingButtonText, mainGrouping === value && styles.groupingButtonTextActive, locked && styles.groupingButtonTextDisabled]}>{label}{locked ? ' 🔒' : ''}</Text></TouchableOpacity>; })}</View></View>
-              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>サブ</Text><View style={styles.groupingButtons}>{([['none','なし'],['group','グループ'],['category','カテゴリ'],['area','エリア'],['seller','販売元'],['status','ステータス']] as const).map(([value,label]) => { const locked = !canUseGrouping && value !== 'none'; return <TouchableOpacity key={value} disabled={locked} style={[styles.groupingButton, subGrouping === value && styles.groupingButtonActive, locked && styles.groupingButtonDisabled]} onPress={() => setSubGrouping(value)}><Text style={[styles.groupingButtonText, subGrouping === value && styles.groupingButtonTextActive, locked && styles.groupingButtonTextDisabled]}>{label}{locked ? ' 🔒' : ''}</Text></TouchableOpacity>; })}</View></View>
+            {canUseGrouping && (archiveType === "event" ? <View style={styles.groupingPanel}>
+              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>メイン</Text><View style={styles.groupingButtons}>{([['none','なし'],['target','お目当て'],['lineup','出演者']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, mainGrouping === value && styles.groupingButtonActive]} onPress={() => setMainGrouping(value)}><Text style={[styles.groupingButtonText, mainGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
+              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>サブ</Text><View style={styles.groupingButtons}>{([['none','なし'],['group','グループ'],['category','カテゴリ'],['area','エリア'],['seller','販売元'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, subGrouping === value && styles.groupingButtonActive]} onPress={() => setSubGrouping(value)}><Text style={[styles.groupingButtonText, subGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
             </View> : <View style={styles.groupingPanel}>
-              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>分類</Text><View style={styles.groupingButtons}>{([['none','なし'],['website','予約サイト'],['status','ステータス']] as const).map(([value,label]) => { const locked = !canUseGrouping && value !== 'none'; return <TouchableOpacity key={value} disabled={locked} style={[styles.groupingButton, stayGrouping === value && styles.groupingButtonActive, locked && styles.groupingButtonDisabled]} onPress={() => setStayGrouping(value)}><Text style={[styles.groupingButtonText, stayGrouping === value && styles.groupingButtonTextActive, locked && styles.groupingButtonTextDisabled]}>{label}{locked ? ' 🔒' : ''}</Text></TouchableOpacity>; })}</View></View>
-            </View>}
+              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>分類</Text><View style={styles.groupingButtons}>{([['none','なし'],['website','予約サイト'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, stayGrouping === value && styles.groupingButtonActive]} onPress={() => setStayGrouping(value)}><Text style={[styles.groupingButtonText, stayGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
+            </View>)}
             <View style={[styles.sortControls, mobile && styles.sortControlsMobile]}>
               {(mainGrouping === "target" || mainGrouping === "lineup") && archiveType === "event" && <View style={styles.compactSelectWrap}>
                 <Text style={styles.compactSelectLabel}>グループ順</Text>
@@ -483,10 +483,8 @@ const styles = StyleSheet.create({
   groupingButtons: { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 8 },
   groupingButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   groupingButtonActive: { backgroundColor: brand.plum, borderColor: brand.plum },
-  groupingButtonDisabled: { backgroundColor: "#F4F3F6", borderColor: brand.border, opacity: 0.6 },
   groupingButtonText: { color: brand.ink, fontSize: 13, fontWeight: "400" },
   groupingButtonTextActive: { color: "#FFFFFF", fontWeight: "600" },
-  groupingButtonTextDisabled: { color: brand.muted },
   loader: { marginVertical: 60 },
   error: { color: "#C2414B", marginVertical: 30 },
   monthSection: { marginBottom: 28 },
