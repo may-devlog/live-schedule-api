@@ -11,6 +11,7 @@ import { ScheduleLinkCard } from "../../../../components/ScheduleLinkCard";
 import type { SelectOption } from "../../../../types/select-option";
 import { loadStaySelectOptions } from "../../../../utils/select-options-storage";
 import { BooleanSelectDisplay } from "../../../../components/boolean-select-display";
+import { shareScheduleHref } from "../../../../utils/public-schedule-links";
 import type { PublicSchedule, PublicStay } from "../../../../types/public-schedule";
 
 export default function SharedStayDetailScreen() {
@@ -231,7 +232,7 @@ export default function SharedStayDetailScreen() {
               date={schedule.date}
               title={schedule.title}
               area={schedule.area}
-              onPress={() => router.push(`/share/${share_id}/schedules/${schedule.id}`)}
+              onPress={() => router.push(shareScheduleHref(share_id, schedule))}
             />
           </View>
         )}

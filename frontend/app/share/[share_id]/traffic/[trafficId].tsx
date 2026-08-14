@@ -10,6 +10,7 @@ import { PageHeader } from "../../../../components/PageHeader";
 import { PublicFooter, PublicHeader } from "../../../../components/GenBGTBrand";
 import { ScheduleLinkCard } from "../../../../components/ScheduleLinkCard";
 import { BooleanSelectDisplay } from "../../../../components/boolean-select-display";
+import { shareScheduleHref } from "../../../../utils/public-schedule-links";
 import type { PublicSchedule, PublicTraffic } from "../../../../types/public-schedule";
 
 export default function SharedTrafficDetailScreen() {
@@ -217,7 +218,7 @@ export default function SharedTrafficDetailScreen() {
               date={schedule.date}
               title={schedule.title}
               area={schedule.area}
-              onPress={() => router.push(`/share/${share_id}/schedules/${schedule.id}`)}
+              onPress={() => router.push(shareScheduleHref(share_id, schedule))}
             />
           </View>
         )}

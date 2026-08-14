@@ -11,6 +11,7 @@ import { ScheduleLinkCard } from "../../../components/ScheduleLinkCard";
 import { maskHotelName } from "../../../utils/mask-hotel-name";
 import type { SelectOption } from "../../../types/select-option";
 import { BooleanSelectDisplay } from "../../../components/boolean-select-display";
+import { publicScheduleHref } from "../../../utils/public-schedule-links";
 import type { PublicSchedule, PublicStay } from "../../../types/public-schedule";
 
 export default function PublicStayDetailScreen() {
@@ -169,7 +170,7 @@ export default function PublicStayDetailScreen() {
               date={schedule.date}
               title={schedule.title}
               area={schedule.area}
-              onPress={() => router.push(`/public/${schedule.id}`)}
+              onPress={() => router.push(publicScheduleHref(schedule))}
             />
           </View>
         )}

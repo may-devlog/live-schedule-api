@@ -10,6 +10,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PublicFooter, PublicHeader } from "../../../components/GenBGTBrand";
 import { ScheduleLinkCard } from "../../../components/ScheduleLinkCard";
 import { BooleanSelectDisplay } from "../../../components/boolean-select-display";
+import { publicScheduleHref } from "../../../utils/public-schedule-links";
 import type { PublicSchedule, PublicTraffic } from "../../../types/public-schedule";
 
 export default function PublicTrafficDetailScreen() {
@@ -167,7 +168,7 @@ export default function PublicTrafficDetailScreen() {
               date={schedule.date}
               title={schedule.title}
               area={schedule.area}
-              onPress={() => router.push(`/public/${schedule.id}`)}
+              onPress={() => router.push(publicScheduleHref(schedule))}
             />
           </View>
         )}
