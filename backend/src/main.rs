@@ -5164,7 +5164,7 @@ async fn list_all_traffics(
 async fn list_all_stays(
     user: AuthenticatedUser,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Json<Vec<Stay>> {
+) -> Result<Json<Vec<Stay>>, (StatusCode, Json<ErrorResponse>)> {
     let rows: Vec<StayRow> = sqlx::query_as::<_, StayRow>(
         r#"
         SELECT
@@ -5195,12 +5195,15 @@ async fn list_all_stays(
 
     let mut stays: Vec<Stay> = rows.into_iter().map(row_to_stay).collect();
 
-    let (plan, trial_started_at) = fetch_user_plan(&pool, user.user_id)
-        .await
-        .unwrap_or_else(|e| {
-            eprintln!("Error fetching plan for user {}: {}", user.user_id, e);
-            ("free".to_string(), None)
-        });
+    let (plan, trial_started_at) = fetch_user_plan(&pool, user.user_id).await.map_err(|e| {
+        eprintln!("Error fetching plan for user {}: {}", user.user_id, e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
     if !has_paid_access(&plan, trial_started_at.as_deref()) {
         // 無料プランは過去アーカイブを直近2年分（今年+去年）のみ閲覧可能。未来の予定は制限しない
         let earliest_visible_year = free_plan_earliest_archive_year(Utc::now());
@@ -5210,7 +5213,7 @@ async fn list_all_stays(
             .collect();
     }
 
-    Json(stays)
+    Ok(Json(stays))
 }
 
 // GET /stay?schedule_id=...
