@@ -240,6 +240,48 @@ fn has_paid_access(plan: &str, trial_started_at: Option<&str>) -> bool {
     Utc::now() < trial_ends_at
 }
 
+// share_idの所有者を解決する。sharing_enabledがOFF、または所有者が無料プラン相当
+// （premiumでもトライアル中でもない）の場合は、共有されていないものとして扱う
+// （premium失効時にsharing_enabledのDB値を書き換えるのではなく、都度動的に判定する）
+async fn resolve_active_share_owner(
+    pool: &Pool<Sqlite>,
+    share_id: &str,
+) -> Result<i64, (StatusCode, Json<ErrorResponse>)> {
+    let row: Option<(i64, i32, String, Option<String>)> = sqlx::query_as(
+        "SELECT id, sharing_enabled, plan, trial_started_at FROM users WHERE share_id = ?"
+    )
+    .bind(share_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[ResolveActiveShareOwner] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Database error".to_string(),
+            }),
+        )
+    })?;
+
+    let (user_id, sharing_enabled, plan, trial_started_at) = row.ok_or((
+        StatusCode::NOT_FOUND,
+        Json(ErrorResponse {
+            error: "ユーザーが見つかりません".to_string(),
+        }),
+    ))?;
+
+    if sharing_enabled == 0 || !has_paid_access(&plan, trial_started_at.as_deref()) {
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(ErrorResponse {
+                error: "このユーザーのスケジュールは共有されていません".to_string(),
+            }),
+        ));
+    }
+
+    Ok(user_id)
+}
+
 // public_idがNULLの既存行に、衝突しないランダムIDを1件ずつ発行してバックフィルする
 async fn backfill_public_ids(pool: &Pool<Sqlite>, table: &str) -> Result<(), sqlx::Error> {
     let select_sql = format!("SELECT id FROM {} WHERE public_id IS NULL", table);
@@ -2156,8 +2198,8 @@ async fn toggle_sharing(
     eprintln!("[ToggleSharing] Request payload: enabled={}", payload.enabled);
     
     // まず、ユーザーが存在するか確認（全カラムを取得してデバッグ）
-    let user_row_full: Option<(i64, String, Option<String>, i32)> = sqlx::query_as(
-        "SELECT id, email, share_id, sharing_enabled FROM users WHERE id = ?"
+    let user_row_full: Option<(i64, String, Option<String>, i32, String, Option<String>)> = sqlx::query_as(
+        "SELECT id, email, share_id, sharing_enabled, plan, trial_started_at FROM users WHERE id = ?"
     )
     .bind(user.user_id as i64)
     .fetch_optional(&pool)
@@ -2171,16 +2213,25 @@ async fn toggle_sharing(
             }),
         )
     })?;
-    
-    if let Some((id, email, share_id, sharing_enabled)) = user_row_full {
-        eprintln!("[ToggleSharing] Found user: id={}, email={}, share_id={:?}, sharing_enabled={}", 
+
+    if let Some((id, email, share_id, sharing_enabled, plan, trial_started_at)) = user_row_full {
+        eprintln!("[ToggleSharing] Found user: id={}, email={}, share_id={:?}, sharing_enabled={}",
                  id, email, share_id, sharing_enabled);
-        
+
         if share_id.is_none() {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ErrorResponse {
                     error: "ユーザーIDが設定されていません。まずユーザーIDを設定してください".to_string(),
+                }),
+            ));
+        }
+
+        if payload.enabled && !has_paid_access(&plan, trial_started_at.as_deref()) {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ErrorResponse {
+                    error: "premium_required".to_string(),
                 }),
             ));
         }
@@ -2407,8 +2458,8 @@ async fn get_shared_profile(
     Path(share_id): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
-    let row: Option<(Option<String>, Option<String>, i32)> = sqlx::query_as(
-        "SELECT avatar_data_url, display_name, sharing_enabled FROM users WHERE share_id = ?"
+    let row: Option<(Option<String>, Option<String>, i32, String, Option<String>)> = sqlx::query_as(
+        "SELECT avatar_data_url, display_name, sharing_enabled, plan, trial_started_at FROM users WHERE share_id = ?"
     )
     .bind(&share_id)
     .fetch_optional(&pool)
@@ -2416,7 +2467,9 @@ async fn get_shared_profile(
     .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "プロフィールの取得に失敗しました".to_string() })))?;
 
     match row {
-        Some((avatar_data_url, display_name, sharing_enabled)) if sharing_enabled != 0 => Ok(Json(serde_json::json!({
+        Some((avatar_data_url, display_name, sharing_enabled, plan, trial_started_at))
+            if sharing_enabled != 0 && has_paid_access(&plan, trial_started_at.as_deref()) =>
+        Ok(Json(serde_json::json!({
             "share_id": share_id,
             "avatar_data_url": avatar_data_url,
             "display_name": display_name,
@@ -2441,8 +2494,8 @@ async fn search_shared_user(
         ));
     }
 
-    let row: Option<(String, Option<String>, Option<String>)> = sqlx::query_as(
-        "SELECT share_id, avatar_data_url, display_name FROM users WHERE share_id = ? AND sharing_enabled = 1"
+    let row: Option<(String, Option<String>, Option<String>, String, Option<String>)> = sqlx::query_as(
+        "SELECT share_id, avatar_data_url, display_name, plan, trial_started_at FROM users WHERE share_id = ? AND sharing_enabled = 1"
     )
     .bind(user_id)
     .fetch_optional(&pool)
@@ -2452,17 +2505,19 @@ async fn search_shared_user(
         Json(ErrorResponse { error: "ユーザー検索に失敗しました".to_string() }),
     ))?;
 
-    if let Some((share_id, avatar_data_url, display_name)) = row {
-        Ok(Json(serde_json::json!({
-            "found": true,
-            "share_id": share_id,
-            "avatar_data_url": avatar_data_url,
-            "display_name": display_name,
-        })))
-    } else {
-        // 未登録と非公開を区別せず、非公開ユーザーの存在を開示しない
-        Ok(Json(serde_json::json!({ "found": false })))
+    if let Some((share_id, avatar_data_url, display_name, plan, trial_started_at)) = row {
+        if has_paid_access(&plan, trial_started_at.as_deref()) {
+            return Ok(Json(serde_json::json!({
+                "found": true,
+                "share_id": share_id,
+                "avatar_data_url": avatar_data_url,
+                "display_name": display_name,
+            })));
+        }
     }
+
+    // 未登録と非公開を区別せず、非公開ユーザーの存在を開示しない
+    Ok(Json(serde_json::json!({ "found": false })))
 }
 
 // ====== MaskedLocation API ======
@@ -2773,8 +2828,8 @@ async fn get_shared_schedules(
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<Vec<PublicSchedule>>, (StatusCode, Json<ErrorResponse>)> {
     // share_idからユーザーIDを取得
-    let user_row: Option<(i64, i32)> = sqlx::query_as(
-        "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
+    let user_row: Option<(i64, i32, String, Option<String>)> = sqlx::query_as(
+        "SELECT id, sharing_enabled, plan, trial_started_at FROM users WHERE share_id = ?"
     )
     .bind(&share_id)
     .fetch_optional(&pool)
@@ -2789,8 +2844,8 @@ async fn get_shared_schedules(
         )
     })?;
 
-    if let Some((user_id, sharing_enabled)) = user_row {
-        if sharing_enabled == 0 {
+    if let Some((user_id, sharing_enabled, plan, trial_started_at)) = user_row {
+        if sharing_enabled == 0 || !has_paid_access(&plan, trial_started_at.as_deref()) {
             return Err((
                 StatusCode::FORBIDDEN,
                 Json(ErrorResponse {
@@ -2868,8 +2923,8 @@ async fn get_shared_schedule(
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<PublicSchedule>, (StatusCode, Json<ErrorResponse>)> {
     // share_idからユーザーIDを取得
-    let user_row: Option<(i64, i32)> = sqlx::query_as(
-        "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
+    let user_row: Option<(i64, i32, String, Option<String>)> = sqlx::query_as(
+        "SELECT id, sharing_enabled, plan, trial_started_at FROM users WHERE share_id = ?"
     )
     .bind(&share_id)
     .fetch_optional(&pool)
@@ -2884,8 +2939,8 @@ async fn get_shared_schedule(
         )
     })?;
 
-    if let Some((user_id, sharing_enabled)) = user_row {
-        if sharing_enabled == 0 {
+    if let Some((user_id, sharing_enabled, plan, trial_started_at)) = user_row {
+        if sharing_enabled == 0 || !has_paid_access(&plan, trial_started_at.as_deref()) {
             return Err((
                 StatusCode::FORBIDDEN,
                 Json(ErrorResponse {
@@ -4531,21 +4586,7 @@ async fn list_shared_traffics(
     Path(share_id): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<Vec<PublicTraffic>>, (StatusCode, Json<ErrorResponse>)> {
-    let user_row: Option<(i64, i32)> = sqlx::query_as(
-        "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
-    )
-    .bind(&share_id)
-    .fetch_optional(&pool)
-    .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "Database error".to_string() })))?;
-
-    let (user_id, sharing_enabled) = user_row.ok_or((
-        StatusCode::NOT_FOUND,
-        Json(ErrorResponse { error: "User not found".to_string() }),
-    ))?;
-    if sharing_enabled == 0 {
-        return Err((StatusCode::FORBIDDEN, Json(ErrorResponse { error: "このユーザーのスケジュールは共有されていません".to_string() })));
-    }
+    let user_id = resolve_active_share_owner(&pool, &share_id).await?;
 
     let rows: Vec<SharedTrafficRow> = sqlx::query_as::<_, SharedTrafficRow>(
         r#"
@@ -4577,8 +4618,8 @@ async fn get_shared_traffic(
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<PublicTraffic>, (StatusCode, Json<ErrorResponse>)> {
     // share_idからユーザーIDを取得
-    let user_row: Option<(i64, i32)> = sqlx::query_as(
-        "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
+    let user_row: Option<(i64, i32, String, Option<String>)> = sqlx::query_as(
+        "SELECT id, sharing_enabled, plan, trial_started_at FROM users WHERE share_id = ?"
     )
     .bind(&share_id)
     .fetch_optional(&pool)
@@ -4592,9 +4633,9 @@ async fn get_shared_traffic(
             }),
         )
     })?;
-    
-    if let Some((user_id, sharing_enabled)) = user_row {
-        if sharing_enabled == 0 {
+
+    if let Some((user_id, sharing_enabled, plan, trial_started_at)) = user_row {
+        if sharing_enabled == 0 || !has_paid_access(&plan, trial_started_at.as_deref()) {
             return Err((
                 StatusCode::FORBIDDEN,
                 Json(ErrorResponse {
@@ -4602,7 +4643,7 @@ async fn get_shared_traffic(
                 }),
             ));
         }
-        
+
         // 交通情報を取得（このユーザーの公開スケジュールに属するもののみ）
         let row: Option<SharedTrafficRow> = sqlx::query_as::<_, SharedTrafficRow>(
             r#"
@@ -4660,8 +4701,8 @@ async fn get_shared_stay(
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<PublicStay>, (StatusCode, Json<ErrorResponse>)> {
     // share_idからユーザーIDを取得
-    let user_row: Option<(i64, i32)> = sqlx::query_as(
-        "SELECT id, sharing_enabled FROM users WHERE share_id = ?"
+    let user_row: Option<(i64, i32, String, Option<String>)> = sqlx::query_as(
+        "SELECT id, sharing_enabled, plan, trial_started_at FROM users WHERE share_id = ?"
     )
     .bind(&share_id)
     .fetch_optional(&pool)
@@ -4675,9 +4716,9 @@ async fn get_shared_stay(
             }),
         )
     })?;
-    
-    if let Some((user_id, sharing_enabled)) = user_row {
-        if sharing_enabled == 0 {
+
+    if let Some((user_id, sharing_enabled, plan, trial_started_at)) = user_row {
+        if sharing_enabled == 0 || !has_paid_access(&plan, trial_started_at.as_deref()) {
             return Err((
                 StatusCode::FORBIDDEN,
                 Json(ErrorResponse {
@@ -4685,7 +4726,7 @@ async fn get_shared_stay(
                 }),
             ));
         }
-        
+
         // 宿泊情報を取得（このユーザーの公開スケジュールに属するもののみ）
         let row: Option<SharedStayRow> = sqlx::query_as::<_, SharedStayRow>(
             r#"
