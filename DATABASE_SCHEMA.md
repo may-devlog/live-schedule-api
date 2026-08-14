@@ -209,6 +209,32 @@
 
 ---
 
+### 6. subscriptions（決済プロバイダのサブスクリプション情報）
+
+Stripe / Google Play / Apple など、決済プロバイダごとのサブスクリプション状態を管理するテーブルです。
+
+| カラム名 | データ型 | NULL許可 | デフォルト値 | 説明 | 備考 |
+|---------|---------|---------|------------|------|------|
+| id | INTEGER | NO | AUTO_INCREMENT | 主キー | PRIMARY KEY |
+| user_id | INTEGER | NO | - | ユーザーID | FOREIGN KEY → users.id |
+| provider | TEXT | NO | - | 決済プロバイダ種別 | `'stripe'` / `'google_play'` / `'apple'` |
+| provider_customer_id | TEXT | YES | NULL | プロバイダ側の顧客ID | Stripeの`customer`ID等。プロバイダによっては未使用 |
+| provider_subscription_id | TEXT | NO | - | プロバイダ側のサブスクリプションID | Stripeの`subscription`ID、Google Playの購入トークン、AppleのoriginalTransactionId等 |
+| status | TEXT | NO | - | サブスクリプション状態 | プロバイダのstatusをほぼそのまま保持（例: `active`, `trialing`, `past_due`, `canceled`） |
+| current_period_end | TEXT | YES | NULL | 現在の課金期間の終了日時（ISO 8601形式） | |
+| cancel_at_period_end | INTEGER | NO | 0 | 期間終了時に解約予定かどうか（0: 継続, 1: 解約予定） | |
+| created_at | TEXT | YES | NULL | 作成日時 | |
+| updated_at | TEXT | YES | NULL | 更新日時 | |
+
+**制約:**
+- UNIQUE(provider, provider_subscription_id)（Webhook処理を冪等にするため、同一プロバイダ内でのサブスクリプションIDの重複を防ぐ）
+
+**現時点のステータス:**
+- テーブル定義のみで、決済プロバイダとの連携（Webhook受信によるレコード作成・更新、`users.plan`/`premium_started_at`への反映）は未実装
+- 1ユーザーが複数プロバイダのサブスクリプションを持ちうる構成を想定（将来のAndroid/iOSアプリ化でGoogle Play Billing / StoreKitを追加する際、既存のStripe実装に影響を与えずに拡張できるようにするため）
+
+---
+
 ## リレーション
 
 ```
@@ -279,3 +305,4 @@ schedules (1) ──< (N) stays
 | 2025-01-XX | 1.0.0 | 初版作成 | - |
 | 2026-08-14 | 1.1.0 | created_at/updated_atのDB側自動管理（DEFAULT・トリガー）、インデックス追加（schedules.date/status, traffics.schedule_id, stays.schedule_id）、traffics/staysのCASCADE削除を実装 | - |
 | 2026-08-15 | 1.2.0 | usersテーブルに有料・無料プラン対応のカラムを追加（plan, premium_started_at, trial_used, trial_started_at）、masked_locationsテーブルの説明を追加 | - |
+| 2026-08-15 | 1.3.0 | Stripe決済連携に向けてsubscriptionsテーブルを追加（決済プロバイダ非依存の設計で、将来のGoogle Play Billing / StoreKit対応も見据える） | - |

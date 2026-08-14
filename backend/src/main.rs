@@ -6916,6 +6916,25 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     );
     "#;
 
+    // provider（'stripe' / 'google_play' / 'apple'）ごとに決済プロバイダ側のサブスクリプション状態を保持する。
+    // usersのplan/premium_started_atはこのテーブルの状態からWebhook処理側で更新する想定（現時点では未配線）。
+    let create_subscriptions = r#"
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id                   INTEGER NOT NULL,
+      provider                  TEXT NOT NULL,
+      provider_customer_id      TEXT,
+      provider_subscription_id  TEXT NOT NULL,
+      status                    TEXT NOT NULL,
+      current_period_end        TEXT,
+      cancel_at_period_end      INTEGER NOT NULL DEFAULT 0,
+      created_at                TEXT,
+      updated_at                TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      UNIQUE(provider, provider_subscription_id)
+    );
+    "#;
+
     sqlx::query(create_users).execute(pool).await?;
     sqlx::query(create_schedules).execute(pool).await?;
     sqlx::query(create_traffics).execute(pool).await?;
@@ -6924,6 +6943,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     sqlx::query(create_stay_select_options).execute(pool).await?;
     sqlx::query(create_notifications).execute(pool).await?;
     sqlx::query(create_masked_locations).execute(pool).await?;
+    sqlx::query(create_subscriptions).execute(pool).await?;
     
     // 既存のselect_optionsテーブルからFOREIGN KEY制約を削除（マイグレーション）
     // SQLiteではALTER TABLEでFOREIGN KEY制約を削除できないため、
@@ -7441,6 +7461,9 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_stays_schedule_id ON stays(schedule_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)")
         .execute(pool)
         .await?;
 
