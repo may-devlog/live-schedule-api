@@ -418,6 +418,7 @@ export default function TrafficDetailScreen() {
                 }
               }}
               placeholder="↗ スケジュールにリンク"
+              changeButtonLabel="↻ 親スケジュールを変更"
               hideSelectedCards={false}
             />
           </View>

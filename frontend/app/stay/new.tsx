@@ -454,6 +454,7 @@ export default function NewStayScreen() {
           }}
           singleSelect={true}
           placeholder="↗ スケジュールにリンク"
+          changeButtonLabel="↻ 親スケジュールを変更"
           hideSelectedCards={false}
         />
       </View>

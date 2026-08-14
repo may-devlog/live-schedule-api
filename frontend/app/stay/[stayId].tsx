@@ -459,6 +459,7 @@ export default function StayDetailScreen() {
                 }
               }}
               placeholder="↗ スケジュールにリンク"
+              changeButtonLabel="↻ 親スケジュールを変更"
               hideSelectedCards={false}
             />
           </View>

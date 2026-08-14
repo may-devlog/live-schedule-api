@@ -27,6 +27,7 @@ type NotionRelationProps = {
   hideSelectedCards?: boolean; // 選択されたカードを非表示にするか
   singleSelect?: boolean; // 単一選択モード（trueの場合、新しい選択時に既存の選択を解除）
   confirmChangeMessage?: string; // 指定すると、選択の変更・解除の前に確認ダイアログを挟む
+  changeButtonLabel?: string; // 選択済み時のボタンラベル（未指定時は「N件選択中」）
 };
 
 export function NotionRelation({
@@ -38,6 +39,7 @@ export function NotionRelation({
   hideSelectedCards = false,
   singleSelect = false,
   confirmChangeMessage,
+  changeButtonLabel,
 }: NotionRelationProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
@@ -160,12 +162,11 @@ export function NotionRelation({
         style={styles.selectButton}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={[styles.selectText, selectedSchedules.length === 0 && styles.placeholder]}>
+        <Text style={styles.selectText}>
           {selectedSchedules.length > 0
-            ? `${selectedSchedules.length}件選択中`
+            ? changeButtonLabel ?? `${selectedSchedules.length}件選択中`
             : placeholder}
         </Text>
-        {!label && <Text style={styles.arrow}>▼</Text>}
       </TouchableOpacity>
 
       {/* モーダル */}
@@ -300,27 +301,20 @@ const styles = StyleSheet.create({
   selectButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "transparent",
-    borderWidth: 0,
-    borderColor: "transparent",
-    borderRadius: 0,
-    paddingHorizontal: 4,
-    paddingVertical: 6,
-    minHeight: 0,
+    justifyContent: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#F5F3FF",
+    borderWidth: 1,
+    borderColor: "#C4B5FD",
+    borderRadius: 9,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginTop: 4,
   },
   selectText: {
-    fontSize: 14,
-    color: "#787774",
-    flex: 1,
-  },
-  placeholder: {
-    color: "#787774",
-  },
-  arrow: {
-    fontSize: 12,
-    color: "#787774",
-    display: "none",
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#5B21B6",
   },
   modalOverlay: {
     flex: 1,
