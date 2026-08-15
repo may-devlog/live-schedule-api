@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Image, Modal, Platform, ScrollView, StyleShee
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
+import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../contexts/AuthContext';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 
@@ -32,9 +33,11 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
   const [plan, setPlan] = useState<'free' | 'premium'>('free');
   const [isPaidEffective, setIsPaidEffective] = useState(false);
   const [trialUsed, setTrialUsed] = useState(false);
+  const [trialStartedAt, setTrialStartedAt] = useState<string | null>(null);
   const [trialStarting, setTrialStarting] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
 
   const fetchSharing = useCallback(async () => {
     const response = await authenticatedFetch(getApiUrl('/auth/sharing-status'));
@@ -52,7 +55,16 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
     setPlan(data.plan === 'premium' ? 'premium' : 'free');
     setIsPaidEffective(Boolean(data.is_paid_effective));
     setTrialUsed(Boolean(data.trial_used));
+    setTrialStartedAt(data.trial_started_at ?? null);
   }, []);
+
+  // トライアル終了日（開始日+1ヶ月）。バックエンドのhas_paid_access()と同じ「開始日から1ヶ月」ルールを表示用に計算する
+  const trialEndsAtLabel = (() => {
+    if (!trialStartedAt) return null;
+    const endsAt = new Date(trialStartedAt);
+    endsAt.setMonth(endsAt.getMonth() + 1);
+    return `${endsAt.getFullYear()}年${endsAt.getMonth() + 1}月${endsAt.getDate()}日`;
+  })();
 
   useEffect(() => {
     if (visible) {
@@ -113,6 +125,13 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
     } finally {
       setPortalLoading(false);
     }
+  };
+
+  const copySharingUrl = async () => {
+    if (!sharingUrl) return;
+    await Clipboard.setStringAsync(sharingUrl);
+    setUrlCopied(true);
+    setTimeout(() => setUrlCopied(false), 1500);
   };
 
   const saveAvatar = async (value: string | null) => {
@@ -250,8 +269,18 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               {menuItem('shield-checkmark-outline', '出発地・到着地マスク設定', () => { onClose(); router.push('/settings/masked-locations'); })}
               <View style={styles.menuItem}>
                 <View style={styles.iconBox}><Ionicons name="share-social-outline" size={19} color={brand.violetDark} /></View>
-                <View style={styles.shareCopy}><Text style={styles.menuLabel}>共有化 <Text style={styles.premiumBadge}>🔒</Text></Text>{sharingUrl && sharingEnabled && <Text numberOfLines={1} style={styles.shareUrl}>{sharingUrl}</Text>}</View>
-                <Switch value={sharingEnabled} onValueChange={toggleSharing} trackColor={{ false: '#D9D4E2', true: '#A78BFA' }} thumbColor={sharingEnabled ? brand.violetDark : '#FFFFFF'} />
+                <View style={styles.shareCopy}>
+                  <Text style={styles.menuLabel}>共有化{!isPaidEffective && <Text style={styles.premiumBadge}> 🔒</Text>}</Text>
+                  {sharingUrl && sharingEnabled && (
+                    <View style={styles.shareUrlRow}>
+                      <Text numberOfLines={1} style={styles.shareUrl}>{sharingUrl}</Text>
+                      <TouchableOpacity onPress={copySharingUrl} hitSlop={8}>
+                        <Ionicons name={urlCopied ? 'checkmark' : 'copy-outline'} size={14} color={urlCopied ? '#16A34A' : brand.violetDark} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+                <Switch value={sharingEnabled} onValueChange={toggleSharing} disabled={!isPaidEffective} trackColor={{ false: '#D9D4E2', true: '#A78BFA' }} thumbColor={sharingEnabled ? brand.violetDark : '#FFFFFF'} />
               </View>
             </View>
             {plan === 'premium' ? (
@@ -262,7 +291,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
             ) : isPaidEffective ? (
               <View style={styles.planCard}>
                 <Ionicons name="time-outline" size={16} color={brand.violetDark} />
-                <Text style={styles.planCardText}>無料トライアル中です（プレミアム機能を利用できます）</Text>
+                <Text style={styles.planCardText}>無料トライアル中です（プレミアム機能を利用できます）{trialEndsAtLabel ? `\n${trialEndsAtLabel}まで` : ''}</Text>
               </View>
             ) : trialUsed ? (
               <View style={styles.planCard}>
@@ -282,7 +311,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               <TouchableOpacity style={styles.manageBillingButton} onPress={openBillingPortal} disabled={portalLoading}>
                 {portalLoading ? <ActivityIndicator color={brand.violetDark} /> : <Text style={styles.manageBillingButtonText}>お支払い方法の確認・解約</Text>}
               </TouchableOpacity>
-            ) : (
+            ) : isPaidEffective ? null : (
               <TouchableOpacity style={styles.upgradeButton} onPress={startCheckout} disabled={checkoutLoading}>
                 {checkoutLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.upgradeButtonText}>プレミアムプランに登録する（月額400円）</Text>}
               </TouchableOpacity>
@@ -313,7 +342,7 @@ const styles = StyleSheet.create({
   avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: brand.white, borderWidth: 2, borderColor: '#DDD6FE', alignItems: 'center', justifyContent: 'center' }, avatarImage: { width: '100%', height: '100%', borderRadius: 27 },
   profileCopy: { flex: 1, minWidth: 0 }, profileName: { color: brand.ink, fontSize: 16, fontWeight: '800' }, email: { color: brand.muted, fontSize: 12, marginTop: 3 },
   avatarButton: { minHeight: 38, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }, avatarButtonText: { color: brand.violetDark, fontSize: 12, fontWeight: '700' }, removeAvatar: { color: brand.muted, textAlign: 'right', fontSize: 12, marginTop: 8 },
-  menuGroup: { marginTop: 22, borderWidth: 1, borderColor: brand.border, borderRadius: 14, overflow: 'hidden' }, menuItem: { minHeight: 64, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: brand.border }, iconBox: { width: 34, height: 34, borderRadius: 9, backgroundColor: brand.lavender, alignItems: 'center', justifyContent: 'center' }, menuLabel: { color: brand.ink, fontSize: 14, fontWeight: '600' }, premiumBadge: { fontSize: 12 }, shareCopy: { flex: 1 }, shareUrl: { color: brand.muted, fontSize: 10, marginTop: 3 },
+  menuGroup: { marginTop: 22, borderWidth: 1, borderColor: brand.border, borderRadius: 14, overflow: 'hidden' }, menuItem: { minHeight: 64, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: brand.border }, iconBox: { width: 34, height: 34, borderRadius: 9, backgroundColor: brand.lavender, alignItems: 'center', justifyContent: 'center' }, menuLabel: { color: brand.ink, fontSize: 14, fontWeight: '600' }, premiumBadge: { fontSize: 12 }, shareCopy: { flex: 1 }, shareUrlRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }, shareUrl: { color: brand.muted, fontSize: 10, flexShrink: 1 },
   logoutButton: { marginTop: 18, minHeight: 52, borderRadius: 11, backgroundColor: '#FEF2F2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, logoutText: { color: '#DC2626', fontWeight: '700' },
   planCard: { marginTop: 18, minHeight: 44, borderRadius: 11, backgroundColor: brand.lavender, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14 }, planCardText: { color: brand.ink, fontSize: 13, fontWeight: '600', flex: 1 },
   trialCard: { marginTop: 18, borderRadius: 14, borderWidth: 1, borderColor: '#DDD6FE', backgroundColor: brand.lavender, padding: 16 }, trialTitle: { color: brand.violetDark, fontSize: 15, fontWeight: '800' }, trialDescription: { color: brand.muted, fontSize: 12, marginTop: 6, lineHeight: 18 },
