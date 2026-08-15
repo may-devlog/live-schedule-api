@@ -35,6 +35,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
   const [trialUsed, setTrialUsed] = useState(false);
   const [trialStartedAt, setTrialStartedAt] = useState<string | null>(null);
   const [trialStarting, setTrialStarting] = useState(false);
+  const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
@@ -56,6 +57,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
     setIsPaidEffective(Boolean(data.is_paid_effective));
     setTrialUsed(Boolean(data.trial_used));
     setTrialStartedAt(data.trial_started_at ?? null);
+    setHasStripeSubscription(Boolean(data.has_stripe_subscription));
   }, []);
 
   // トライアル終了日（開始日+1ヶ月）。バックエンドのhas_paid_access()と同じ「開始日から1ヶ月」ルールを表示用に計算する
@@ -320,11 +322,11 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                 </TouchableOpacity>
               </View>
             )}
-            {plan === 'premium' ? (
+            {plan === 'premium' && hasStripeSubscription ? (
               <TouchableOpacity style={styles.manageBillingButton} onPress={openBillingPortal} disabled={portalLoading}>
                 {portalLoading ? <ActivityIndicator color={brand.violetDark} /> : <Text style={styles.manageBillingButtonText}>お支払い方法の確認・解約</Text>}
               </TouchableOpacity>
-            ) : isPaidEffective || !trialUsed ? null : (
+            ) : plan === 'premium' || isPaidEffective || !trialUsed ? null : (
               <TouchableOpacity style={styles.upgradeButton} onPress={startCheckout} disabled={checkoutLoading}>
                 {checkoutLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.upgradeButtonText}>プレミアムプランに登録する（月額400円）</Text>}
               </TouchableOpacity>

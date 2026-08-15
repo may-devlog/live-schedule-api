@@ -2397,12 +2397,23 @@ async fn get_plan_status(
 
     let is_paid_effective = has_paid_access(&plan, trial_started_at.as_deref());
 
+    // Billing Portal（解約・支払い方法変更）を案内できるのは、Stripeのサブスクリプションに
+    // 紐付いているアカウントのみ。管理者が手動でplan='premium'に固定したアカウント等は対象外
+    let has_stripe_subscription: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM subscriptions WHERE user_id = ? AND provider = 'stripe')"
+    )
+    .bind(user.user_id as i64)
+    .fetch_one(&pool)
+    .await
+    .unwrap_or(false);
+
     Ok(Json(serde_json::json!({
         "plan": plan,
         "is_paid_effective": is_paid_effective,
         "premium_started_at": premium_started_at,
         "trial_used": trial_used != 0,
-        "trial_started_at": trial_started_at
+        "trial_started_at": trial_started_at,
+        "has_stripe_subscription": has_stripe_subscription
     })))
 }
 
