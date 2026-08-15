@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
@@ -46,6 +46,8 @@ export function PublicHeader({ active = 'schedule' }: { active?: 'schedule' | 'a
   const { width } = useWindowDimensions();
   const narrow = width < 720;
 
+  if (Platform.OS !== 'web') return null;
+
   return (
     <View style={styles.header}>
       <View style={styles.headerInner}>
@@ -77,6 +79,9 @@ export function AuthHeader() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const narrow = width < 640;
+
+  if (Platform.OS !== 'web') return null;
+
   return (
     <View style={styles.header}>
       <View style={styles.headerInner}>
@@ -115,6 +120,9 @@ export function AppHeader({ active = 'schedule', onDisplayNameChange }: { active
       })
       .catch(() => { setAvatarDataUrl(null); setDisplayName(null); setProfileShareId(null); });
   }, []);
+
+  if (Platform.OS !== 'web') return null;
+
   return (
     <View style={styles.header}>
       <View style={styles.headerInner}>
@@ -141,6 +149,9 @@ export function PublicFooter({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const narrow = width < 720;
+
+  if (Platform.OS !== 'web') return null;
+
   return (
     <View style={[styles.footer, compact && styles.footerCompact]}>
       <View style={[styles.footerInner, narrow && styles.footerInnerNarrow]}>

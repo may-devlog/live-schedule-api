@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpa
 import { Ionicons } from "@expo/vector-icons";
 import type { Schedule } from "../app/HomeScreen";
 import { AppHeader, PublicFooter, PublicHeader, brand } from "./GenBGTBrand";
+import { AppTabBar } from "./AppTabBar";
 import { NotionTag } from "./notion-tag";
 import { getOptionColorSync, preloadOptionColors } from "../utils/get-option-color";
 import { fetchAreaColors } from "../utils/fetch-area-colors";
@@ -440,6 +441,12 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
         </View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar
+        active="archive"
+        homePath={authenticated ? '/' : `/share/${shareId}`}
+        schedulePath={authenticated ? '/' : `/share/${shareId}`}
+        archivePath={authenticated ? `/year/${year}` : `/share/${shareId}/year/${year}`}
+      />
     </View>
   );
 }

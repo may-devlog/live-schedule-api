@@ -17,6 +17,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { isJapaneseHolidayDate, ScheduleCalendar } from '../../components/ScheduleCalendar';
 import { NotionTag } from '../../components/notion-tag';
 import { AppHeader, PublicFooter, PublicHeader, brand } from '../../components/GenBGTBrand';
+import { AppTabBar } from '../../components/AppTabBar';
 import { authenticatedFetch, getApiUrl } from '../../utils/api';
 import { fetchAreaColors } from '../../utils/fetch-area-colors';
 import { getOptionColorSync } from '../../utils/get-option-color';
@@ -219,6 +220,12 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
         </View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar
+        active="schedule"
+        homePath={authenticated ? '/' : `/share/${share_id}`}
+        schedulePath={authenticated ? '/' : `/share/${share_id}`}
+        archivePath={authenticated ? `/year/${availableYears[0] ?? new Date().getFullYear()}` : `/share/${share_id}/year/${availableYears[0] ?? new Date().getFullYear()}`}
+      />
     </View>
   );
 }
