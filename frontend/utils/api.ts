@@ -12,21 +12,36 @@ async function getToken(): Promise<string | null> {
   }
 }
 
+// トークンが期限切れ・無効化された場合に401を検知してログイン画面へ戻すためのハンドラ。
+// AuthProviderがマウント時にlogout関数を登録する（utils/api.tsはコンポーネント外の
+// プレーンな関数なのでReact contextを直接参照できないため、この登録方式にしている）
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler;
+}
+
 export async function authenticatedFetch(
   url: string,
   options: RequestInit = {}
 ): Promise<Response> {
   const token = await getToken();
   const headers = new Headers(options.headers);
-  
+
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  
-  return fetch(url, {
+
+  const response = await fetch(url, {
     ...options,
     headers,
   });
+
+  if (response.status === 401 && token) {
+    unauthorizedHandler?.();
+  }
+
+  return response;
 }
 
 export function getApiUrl(path: string): string {
