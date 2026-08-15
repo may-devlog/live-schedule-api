@@ -271,7 +271,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                 <View style={styles.iconBox}><Ionicons name="share-social-outline" size={19} color={brand.violetDark} /></View>
                 <View style={styles.shareCopy}>
                   <Text style={styles.menuLabel}>共有化{!isPaidEffective && <Text style={styles.premiumBadge}> 🔒</Text>}</Text>
-                  {sharingUrl && sharingEnabled && (
+                  {sharingUrl && sharingEnabled && isPaidEffective && (
                     <View style={styles.shareUrlRow}>
                       <Text numberOfLines={1} style={styles.shareUrl}>{sharingUrl}</Text>
                       <TouchableOpacity onPress={copySharingUrl} hitSlop={8}>
@@ -311,7 +311,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               <TouchableOpacity style={styles.manageBillingButton} onPress={openBillingPortal} disabled={portalLoading}>
                 {portalLoading ? <ActivityIndicator color={brand.violetDark} /> : <Text style={styles.manageBillingButtonText}>お支払い方法の確認・解約</Text>}
               </TouchableOpacity>
-            ) : isPaidEffective ? null : (
+            ) : isPaidEffective || !trialUsed ? null : (
               <TouchableOpacity style={styles.upgradeButton} onPress={startCheckout} disabled={checkoutLoading}>
                 {checkoutLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.upgradeButtonText}>プレミアムプランに登録する（月額400円）</Text>}
               </TouchableOpacity>
