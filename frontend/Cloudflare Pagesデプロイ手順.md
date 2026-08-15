@@ -15,10 +15,10 @@
 
 ```bash
 cd frontend
-echo "EXPO_PUBLIC_API_BASE=https://live-schedule-api.fly.dev" > .env.production
+echo "EXPO_PUBLIC_API_BASE=https://<バックエンドの公開URL>" > .env.production
 ```
 
-**注意**: `https://live-schedule-api.fly.dev`は、Fly.ioでデプロイしたAPIのURLに置き換えてください。
+**注意**: `<バックエンドの公開URL>`は、AWS EC2でデプロイしているバックエンドAPIのURLに置き換えてください。
 
 ### 2-2. package.jsonにビルドスクリプトを追加
 
@@ -85,7 +85,7 @@ Cloudflare Pagesの設定画面で：
 
 1. 「Settings」→「Environment variables」を開く
 2. 以下を追加：
-   - `EXPO_PUBLIC_API_BASE`: `https://live-schedule-api.fly.dev`
+   - `EXPO_PUBLIC_API_BASE`: `https://<バックエンドの公開URL>`
 
 ## 7. デプロイ
 
@@ -134,7 +134,7 @@ git push
 
 ### API接続エラーの場合
 
-1. Fly.ioのAPIが起動しているか確認
+1. バックエンド（AWS EC2）のAPIが起動しているか確認
 2. CORS設定を確認（`ALLOWED_ORIGIN`が正しく設定されているか）
 
 
