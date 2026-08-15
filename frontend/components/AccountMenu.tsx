@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { openBrowserAsync } from 'expo-web-browser';
 import { useAuth } from '../contexts/AuthContext';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 
@@ -32,6 +33,8 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
   const [isPaidEffective, setIsPaidEffective] = useState(false);
   const [trialUsed, setTrialUsed] = useState(false);
   const [trialStarting, setTrialStarting] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   const fetchSharing = useCallback(async () => {
     const response = await authenticatedFetch(getApiUrl('/auth/sharing-status'));
@@ -70,6 +73,45 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       Alert.alert('エラー', error.message);
     } finally {
       setTrialStarting(false);
+    }
+  };
+
+  // Stripe CheckoutやBilling PortalのURLを開く。Webは同一タブで遷移し、
+  // ネイティブはアプリ内ブラウザで開いて戻ってきたタイミングでプラン状況を再取得する
+  const openBillingUrl = async (url: string) => {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') window.location.href = url;
+      return;
+    }
+    await openBrowserAsync(url);
+    await fetchPlanStatus().catch(() => undefined);
+  };
+
+  const startCheckout = async () => {
+    try {
+      setCheckoutLoading(true);
+      const response = await authenticatedFetch(getApiUrl('/billing/create-checkout-session'), { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error === 'already_premium' ? '既にプレミアムプランをご利用中です' : '決済ページの作成に失敗しました');
+      await openBillingUrl(data.url);
+    } catch (error: any) {
+      Alert.alert('エラー', error.message);
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const openBillingPortal = async () => {
+    try {
+      setPortalLoading(true);
+      const response = await authenticatedFetch(getApiUrl('/billing/create-portal-session'), { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error === 'no_stripe_customer' ? 'お支払い履歴が見つかりませんでした' : 'お支払い設定ページの作成に失敗しました');
+      await openBillingUrl(data.url);
+    } catch (error: any) {
+      Alert.alert('エラー', error.message);
+    } finally {
+      setPortalLoading(false);
     }
   };
 
@@ -236,6 +278,15 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                 </TouchableOpacity>
               </View>
             )}
+            {plan === 'premium' ? (
+              <TouchableOpacity style={styles.manageBillingButton} onPress={openBillingPortal} disabled={portalLoading}>
+                {portalLoading ? <ActivityIndicator color={brand.violetDark} /> : <Text style={styles.manageBillingButtonText}>お支払い方法の確認・解約</Text>}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.upgradeButton} onPress={startCheckout} disabled={checkoutLoading}>
+                {checkoutLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.upgradeButtonText}>プレミアムプランに登録する（月額400円）</Text>}
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.logoutButton} onPress={confirmLogout}><Ionicons name="log-out-outline" size={19} color="#DC2626" /><Text style={styles.logoutText}>ログアウト</Text></TouchableOpacity>
           </ScrollView>
         </View>
@@ -267,5 +318,7 @@ const styles = StyleSheet.create({
   planCard: { marginTop: 18, minHeight: 44, borderRadius: 11, backgroundColor: brand.lavender, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14 }, planCardText: { color: brand.ink, fontSize: 13, fontWeight: '600', flex: 1 },
   trialCard: { marginTop: 18, borderRadius: 14, borderWidth: 1, borderColor: '#DDD6FE', backgroundColor: brand.lavender, padding: 16 }, trialTitle: { color: brand.violetDark, fontSize: 15, fontWeight: '800' }, trialDescription: { color: brand.muted, fontSize: 12, marginTop: 6, lineHeight: 18 },
   trialButton: { marginTop: 14, minHeight: 44, borderRadius: 10, backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center' }, trialButtonText: { color: brand.white, fontWeight: '800', fontSize: 13 },
+  upgradeButton: { marginTop: 12, minHeight: 48, borderRadius: 10, backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }, upgradeButtonText: { color: brand.white, fontWeight: '800', fontSize: 13, textAlign: 'center' },
+  manageBillingButton: { marginTop: 12, minHeight: 44, borderRadius: 10, borderWidth: 1, borderColor: brand.violet, alignItems: 'center', justifyContent: 'center' }, manageBillingButtonText: { color: brand.violetDark, fontWeight: '700', fontSize: 13 },
   dialogOverlay: { flex: 1, backgroundColor: 'rgba(32,27,44,0.48)', alignItems: 'center', justifyContent: 'center', padding: 20 }, dialog: { width: '100%', maxWidth: 480, backgroundColor: brand.white, borderRadius: 16, padding: 24 }, dialogHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, dialogTitle: { color: brand.ink, fontSize: 20, fontWeight: '800' }, dialogHelp: { color: brand.muted, fontSize: 13, marginTop: 18, marginBottom: 8 }, input: { minHeight: 48, borderWidth: 1, borderColor: brand.border, borderRadius: 10, paddingHorizontal: 14, color: brand.ink }, saveButton: { marginTop: 18, minHeight: 48, borderRadius: 10, backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center' }, saveText: { color: brand.white, fontWeight: '800' },
 });

@@ -1,5 +1,6 @@
 #[allow(unused_imports)]
 use axum::{
+    body::Bytes,
     extract::{Extension, Path, Query},
     http::{header::AUTHORIZATION, HeaderValue, StatusCode, HeaderMap, request::Parts},
     response::Json,
@@ -7,10 +8,12 @@ use axum::{
     Router,
 };
 use axum::async_trait;
-use chrono::{DateTime, Datelike, Utc};
+use chrono::{DateTime, Datelike, TimeZone, Utc};
+use hmac::{Hmac, Mac};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::{Connection, Pool, Sqlite};
 use std::net::SocketAddr;
@@ -167,6 +170,21 @@ fn get_frontend_url() -> String {
             base_url
         }
     }
+}
+
+// Stripeシークレットキー（テストモードは sk_test_、本番は sk_live_ から始まる）
+fn get_stripe_secret_key() -> String {
+    std::env::var("STRIPE_SECRET_KEY").unwrap_or_default()
+}
+
+// プレミアムプラン（月額）のStripe Price ID
+fn get_stripe_premium_price_id() -> String {
+    std::env::var("STRIPE_PREMIUM_PRICE_ID").unwrap_or_default()
+}
+
+// Webhookエンドポイントシークレット（Stripeダッシュボード、またはローカルでは`stripe listen`の出力から取得）
+fn get_stripe_webhook_secret() -> String {
+    std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default()
 }
 
 // ====== 認証ヘルパー関数 ======
@@ -2458,6 +2476,492 @@ async fn start_trial(
         "success": true,
         "trial_started_at": now
     })))
+}
+
+// ====== Billing (Stripe) API ======
+
+#[derive(Debug, Serialize)]
+struct CheckoutSessionResponse {
+    url: String,
+}
+
+// StripeへPOSTリクエストを送るヘルパー（フォームエンコード、Basic認証）
+async fn stripe_api_post(path: &str, params: Vec<(String, String)>) -> Result<serde_json::Value, String> {
+    let secret_key = get_stripe_secret_key();
+    if secret_key.is_empty() {
+        return Err("STRIPE_SECRET_KEY is not set".to_string());
+    }
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("https://api.stripe.com/v1/{}", path))
+        .basic_auth(secret_key, Option::<String>::None)
+        .form(&params)
+        .send()
+        .await
+        .map_err(|e| format!("Stripe request failed: {}", e))?;
+
+    let status = response.status();
+    let body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse Stripe response: {}", e))?;
+
+    if !status.is_success() {
+        let message = body["error"]["message"].as_str().unwrap_or("Unknown Stripe error");
+        return Err(format!("Stripe API error ({}): {}", status, message));
+    }
+
+    Ok(body)
+}
+
+// POST /billing/create-checkout-session - プレミアムプラン購読用のStripe Checkoutセッションを作成
+async fn create_checkout_session(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<CheckoutSessionResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let row: Option<(String, String)> = sqlx::query_as(
+        "SELECT plan, email FROM users WHERE id = ?"
+    )
+    .bind(user.user_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[CreateCheckoutSession] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: "Database error".to_string() }),
+        )
+    })?;
+
+    let Some((plan, email)) = row else {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse { error: "ユーザーが見つかりません".to_string() }),
+        ));
+    };
+
+    if plan == "premium" {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse { error: "already_premium".to_string() }),
+        ));
+    }
+
+    let price_id = get_stripe_premium_price_id();
+    if price_id.is_empty() {
+        eprintln!("[CreateCheckoutSession] STRIPE_PREMIUM_PRICE_ID is not set");
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: "Billing is not configured".to_string() }),
+        ));
+    }
+
+    // 過去にStripe顧客が作成済みなら再利用し、重複した顧客レコードを作らないようにする
+    let existing_customer_id: Option<(String,)> = sqlx::query_as(
+        "SELECT provider_customer_id FROM subscriptions WHERE user_id = ? AND provider = 'stripe' AND provider_customer_id IS NOT NULL ORDER BY id DESC LIMIT 1"
+    )
+    .bind(user.user_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[CreateCheckoutSession] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: "Database error".to_string() }),
+        )
+    })?;
+
+    let frontend_url = get_frontend_url();
+    let mut params = vec![
+        ("mode".to_string(), "subscription".to_string()),
+        ("line_items[0][price]".to_string(), price_id),
+        ("line_items[0][quantity]".to_string(), "1".to_string()),
+        ("client_reference_id".to_string(), user.user_id.to_string()),
+        ("success_url".to_string(), format!("{}/billing/success?session_id={{CHECKOUT_SESSION_ID}}", frontend_url)),
+        ("cancel_url".to_string(), format!("{}/billing/cancel", frontend_url)),
+        // Managed Payments（税区分の設定が必要）は現時点で未対応のため、このセッションでは無効化する
+        // 本番移行前に税務対応の要否を判断し、必要ならProductにtax_codeを設定した上で有効化を検討する
+        ("managed_payments[enabled]".to_string(), "false".to_string()),
+    ];
+
+    if let Some((customer_id,)) = existing_customer_id {
+        params.push(("customer".to_string(), customer_id));
+    } else {
+        params.push(("customer_email".to_string(), email));
+    }
+
+    let session = stripe_api_post("checkout/sessions", params).await.map_err(|e| {
+        eprintln!("[CreateCheckoutSession] Stripe error: {}", e);
+        (
+            StatusCode::BAD_GATEWAY,
+            Json(ErrorResponse { error: "決済セッションの作成に失敗しました".to_string() }),
+        )
+    })?;
+
+    let url = session["url"].as_str().ok_or_else(|| {
+        eprintln!("[CreateCheckoutSession] Stripe response missing url: {:?}", session);
+        (
+            StatusCode::BAD_GATEWAY,
+            Json(ErrorResponse { error: "決済セッションの作成に失敗しました".to_string() }),
+        )
+    })?;
+
+    Ok(Json(CheckoutSessionResponse { url: url.to_string() }))
+}
+
+#[derive(Debug, Serialize)]
+struct PortalSessionResponse {
+    url: String,
+}
+
+// POST /billing/create-portal-session - 解約・支払い方法変更用のStripe Billing Portalセッションを作成
+async fn create_portal_session(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<PortalSessionResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let customer_id: Option<(String,)> = sqlx::query_as(
+        "SELECT provider_customer_id FROM subscriptions WHERE user_id = ? AND provider = 'stripe' AND provider_customer_id IS NOT NULL ORDER BY id DESC LIMIT 1"
+    )
+    .bind(user.user_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("[CreatePortalSession] Database error: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: "Database error".to_string() }),
+        )
+    })?;
+
+    let Some((customer_id,)) = customer_id else {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse { error: "no_stripe_customer".to_string() }),
+        ));
+    };
+
+    let frontend_url = get_frontend_url();
+    let params = vec![
+        ("customer".to_string(), customer_id),
+        ("return_url".to_string(), format!("{}/billing/portal-return", frontend_url)),
+    ];
+
+    let session = stripe_api_post("billing_portal/sessions", params).await.map_err(|e| {
+        eprintln!("[CreatePortalSession] Stripe error: {}", e);
+        (
+            StatusCode::BAD_GATEWAY,
+            Json(ErrorResponse { error: "ポータルセッションの作成に失敗しました".to_string() }),
+        )
+    })?;
+
+    let url = session["url"].as_str().ok_or_else(|| {
+        eprintln!("[CreatePortalSession] Stripe response missing url: {:?}", session);
+        (
+            StatusCode::BAD_GATEWAY,
+            Json(ErrorResponse { error: "ポータルセッションの作成に失敗しました".to_string() }),
+        )
+    })?;
+
+    Ok(Json(PortalSessionResponse { url: url.to_string() }))
+}
+
+// Stripe Webhook署名を検証する（HMAC-SHA256。タイムスタンプが現在時刻から5分以上ずれている場合はリプレイとみなし拒否する）
+fn verify_stripe_signature(payload: &[u8], signature_header: &str, secret: &str) -> bool {
+    type HmacSha256 = Hmac<Sha256>;
+
+    let mut timestamp: Option<i64> = None;
+    let mut v1_signatures: Vec<&str> = Vec::new();
+
+    for part in signature_header.split(',') {
+        let mut kv = part.splitn(2, '=');
+        match (kv.next(), kv.next()) {
+            (Some("t"), Some(v)) => timestamp = v.parse::<i64>().ok(),
+            (Some("v1"), Some(v)) => v1_signatures.push(v),
+            _ => {}
+        }
+    }
+
+    let Some(timestamp) = timestamp else { return false };
+    if v1_signatures.is_empty() {
+        return false;
+    }
+    if (Utc::now().timestamp() - timestamp).abs() > 300 {
+        return false;
+    }
+
+    let mut signed_payload = format!("{}.", timestamp).into_bytes();
+    signed_payload.extend_from_slice(payload);
+
+    let Ok(mac) = HmacSha256::new_from_slice(secret.as_bytes()) else { return false };
+
+    v1_signatures.iter().any(|sig| match hex::decode(sig) {
+        Ok(expected) => mac.clone().chain_update(&signed_payload).verify_slice(&expected).is_ok(),
+        Err(_) => false,
+    })
+}
+
+// ユーザーを有料プランに昇格する。既にpremiumの場合はpremium_started_atを上書きしない
+async fn grant_premium_access(pool: &Pool<Sqlite>, user_id: i64, now: &str) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        UPDATE users
+        SET plan = 'premium',
+            premium_started_at = CASE WHEN plan != 'premium' THEN ? ELSE premium_started_at END,
+            updated_at = ?
+        WHERE id = ?
+        "#
+    )
+    .bind(now)
+    .bind(now)
+    .bind(user_id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+// ユーザーを無料プランに戻す
+// 注意: 現時点ではStripeのみ対応のため単純にfreeへ戻すが、将来Google Play/Apple等の
+// 複数プロバイダに対応する際は、他プロバイダの有効なサブスクリプションが残っていないか
+// 確認してからdowngradeする必要がある
+async fn revoke_premium_access(pool: &Pool<Sqlite>, user_id: i64, now: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE users SET plan = 'free', updated_at = ? WHERE id = ?")
+        .bind(now)
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+// checkout.session.completedを処理: user_id・customer_id・subscription_idを紐付けてsubscriptionsに保存する
+async fn handle_checkout_session_completed(pool: &Pool<Sqlite>, session: &serde_json::Value) {
+    let Some(user_id) = session["client_reference_id"].as_str().and_then(|s| s.parse::<i64>().ok()) else {
+        eprintln!("[StripeWebhook] checkout.session.completed missing client_reference_id: {:?}", session);
+        return;
+    };
+    let Some(customer_id) = session["customer"].as_str() else {
+        eprintln!("[StripeWebhook] checkout.session.completed missing customer: {:?}", session);
+        return;
+    };
+    let Some(subscription_id) = session["subscription"].as_str() else {
+        // mode=subscription以外、またはサブスクリプション未確定のセッションは対象外
+        return;
+    };
+
+    let now = Utc::now().to_rfc3339();
+    let result = sqlx::query(
+        r#"
+        INSERT INTO subscriptions (user_id, provider, provider_customer_id, provider_subscription_id, status, created_at, updated_at)
+        VALUES (?, 'stripe', ?, ?, 'active', ?, ?)
+        ON CONFLICT(provider, provider_subscription_id) DO UPDATE SET
+            user_id = excluded.user_id,
+            provider_customer_id = excluded.provider_customer_id,
+            updated_at = excluded.updated_at
+        "#
+    )
+    .bind(user_id)
+    .bind(customer_id)
+    .bind(subscription_id)
+    .bind(&now)
+    .bind(&now)
+    .execute(pool)
+    .await;
+
+    if let Err(e) = result {
+        eprintln!("[StripeWebhook] Failed to upsert subscription from checkout.session.completed: {}", e);
+        return;
+    }
+
+    if let Err(e) = grant_premium_access(pool, user_id, &now).await {
+        eprintln!("[StripeWebhook] Failed to grant premium access: {}", e);
+    }
+}
+
+// customer.subscription.created/updatedを処理: ステータス・期間終了日時を反映し、users.planを同期する
+async fn handle_subscription_updated(pool: &Pool<Sqlite>, subscription: &serde_json::Value) {
+    let Some(subscription_id) = subscription["id"].as_str() else { return };
+    let Some(customer_id) = subscription["customer"].as_str() else { return };
+    let status = subscription["status"].as_str().unwrap_or("unknown");
+    let cancel_at_period_end = subscription["cancel_at_period_end"].as_bool().unwrap_or(false) as i32;
+    let current_period_end = subscription["current_period_end"]
+        .as_i64()
+        .and_then(|ts| Utc.timestamp_opt(ts, 0).single())
+        .map(|dt| dt.to_rfc3339());
+
+    let now = Utc::now().to_rfc3339();
+
+    let update_result = sqlx::query(
+        r#"
+        UPDATE subscriptions
+        SET status = ?, current_period_end = ?, cancel_at_period_end = ?, provider_customer_id = ?, updated_at = ?
+        WHERE provider = 'stripe' AND provider_subscription_id = ?
+        "#
+    )
+    .bind(status)
+    .bind(&current_period_end)
+    .bind(cancel_at_period_end)
+    .bind(customer_id)
+    .bind(&now)
+    .bind(subscription_id)
+    .execute(pool)
+    .await;
+
+    let rows_affected = match update_result {
+        Ok(r) => r.rows_affected(),
+        Err(e) => {
+            eprintln!("[StripeWebhook] Failed to update subscription: {}", e);
+            return;
+        }
+    };
+
+    let user_id: Option<i64> = if rows_affected > 0 {
+        sqlx::query_scalar(
+            "SELECT user_id FROM subscriptions WHERE provider = 'stripe' AND provider_subscription_id = ?"
+        )
+        .bind(subscription_id)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten()
+    } else {
+        // checkout.session.completedより先にこのイベントが届いた場合は、同一顧客の既存レコードからuser_idを補完する
+        let existing_user_id: Option<i64> = sqlx::query_scalar(
+            "SELECT user_id FROM subscriptions WHERE provider = 'stripe' AND provider_customer_id = ? ORDER BY id DESC LIMIT 1"
+        )
+        .bind(customer_id)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten();
+
+        let Some(resolved_user_id) = existing_user_id else {
+            eprintln!(
+                "[StripeWebhook] Cannot resolve user for subscription {} (customer {}), skipping",
+                subscription_id, customer_id
+            );
+            return;
+        };
+
+        let insert_result = sqlx::query(
+            r#"
+            INSERT INTO subscriptions (user_id, provider, provider_customer_id, provider_subscription_id, status, current_period_end, cancel_at_period_end, created_at, updated_at)
+            VALUES (?, 'stripe', ?, ?, ?, ?, ?, ?, ?)
+            "#
+        )
+        .bind(resolved_user_id)
+        .bind(customer_id)
+        .bind(subscription_id)
+        .bind(status)
+        .bind(&current_period_end)
+        .bind(cancel_at_period_end)
+        .bind(&now)
+        .bind(&now)
+        .execute(pool)
+        .await;
+
+        if let Err(e) = insert_result {
+            eprintln!("[StripeWebhook] Failed to insert subscription: {}", e);
+            return;
+        }
+
+        Some(resolved_user_id)
+    };
+
+    let Some(user_id) = user_id else { return };
+
+    match status {
+        "active" | "trialing" => {
+            if let Err(e) = grant_premium_access(pool, user_id, &now).await {
+                eprintln!("[StripeWebhook] Failed to grant premium access: {}", e);
+            }
+        }
+        "canceled" | "unpaid" | "incomplete_expired" => {
+            if let Err(e) = revoke_premium_access(pool, user_id, &now).await {
+                eprintln!("[StripeWebhook] Failed to revoke premium access: {}", e);
+            }
+        }
+        _ => {
+            // past_due/incomplete等は支払いリトライ中の猶予期間のため、planを変更しない
+        }
+    }
+}
+
+// customer.subscription.deletedを処理: 状態をcanceledにし、有料プランへのアクセスを外す
+async fn handle_subscription_deleted(pool: &Pool<Sqlite>, subscription: &serde_json::Value) {
+    let Some(subscription_id) = subscription["id"].as_str() else { return };
+    let now = Utc::now().to_rfc3339();
+
+    if let Err(e) = sqlx::query(
+        "UPDATE subscriptions SET status = 'canceled', updated_at = ? WHERE provider = 'stripe' AND provider_subscription_id = ?"
+    )
+    .bind(&now)
+    .bind(subscription_id)
+    .execute(pool)
+    .await
+    {
+        eprintln!("[StripeWebhook] Failed to mark subscription canceled: {}", e);
+        return;
+    }
+
+    let user_id: Option<i64> = sqlx::query_scalar(
+        "SELECT user_id FROM subscriptions WHERE provider = 'stripe' AND provider_subscription_id = ?"
+    )
+    .bind(subscription_id)
+    .fetch_optional(pool)
+    .await
+    .ok()
+    .flatten();
+
+    let Some(user_id) = user_id else { return };
+
+    if let Err(e) = revoke_premium_access(pool, user_id, &now).await {
+        eprintln!("[StripeWebhook] Failed to revoke premium access: {}", e);
+    }
+}
+
+// POST /billing/webhook - Stripe Webhook受信
+// 注意: 署名検証に生のリクエストボディが必要なため、Jsonエクストラクタではなくbytesで受け取る
+async fn stripe_webhook(
+    Extension(pool): Extension<Pool<Sqlite>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<StatusCode, StatusCode> {
+    let webhook_secret = get_stripe_webhook_secret();
+    if webhook_secret.is_empty() {
+        eprintln!("[StripeWebhook] STRIPE_WEBHOOK_SECRET is not set");
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    let signature_header = headers
+        .get("stripe-signature")
+        .and_then(|v| v.to_str().ok())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+
+    if !verify_stripe_signature(&body, signature_header, &webhook_secret) {
+        eprintln!("[StripeWebhook] Signature verification failed");
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let event: serde_json::Value = serde_json::from_slice(&body).map_err(|e| {
+        eprintln!("[StripeWebhook] Failed to parse event JSON: {}", e);
+        StatusCode::BAD_REQUEST
+    })?;
+
+    let event_type = event["type"].as_str().unwrap_or_default();
+    let data = &event["data"]["object"];
+
+    match event_type {
+        "checkout.session.completed" => handle_checkout_session_completed(&pool, data).await,
+        "customer.subscription.created" | "customer.subscription.updated" => {
+            handle_subscription_updated(&pool, data).await
+        }
+        "customer.subscription.deleted" => handle_subscription_deleted(&pool, data).await,
+        _ => {
+            // その他のイベントは現時点では未対応（受信のみ確認しACKする）
+        }
+    }
+
+    Ok(StatusCode::OK)
 }
 
 // GET /auth/profile - ログイン中ユーザーのプロフィール取得
@@ -6622,6 +7126,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/auth/sharing-status", get(get_sharing_status))
         .route("/auth/plan-status", get(get_plan_status))
         .route("/auth/start-trial", post(start_trial))
+        .route("/billing/create-checkout-session", post(create_checkout_session))
+        .route("/billing/create-portal-session", post(create_portal_session))
+        .route("/billing/webhook", post(stripe_webhook))
         .route("/auth/profile", get(get_profile).put(update_profile))
         .route("/auth/profile-avatar", put(update_profile_avatar))
         .route("/masked-locations", get(list_masked_locations).post(create_masked_location))
@@ -6916,6 +7423,25 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     );
     "#;
 
+    // provider（'stripe' / 'google_play' / 'apple'）ごとに決済プロバイダ側のサブスクリプション状態を保持する。
+    // usersのplan/premium_started_atはこのテーブルの状態からWebhook処理側で更新する想定（現時点では未配線）。
+    let create_subscriptions = r#"
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id                   INTEGER NOT NULL,
+      provider                  TEXT NOT NULL,
+      provider_customer_id      TEXT,
+      provider_subscription_id  TEXT NOT NULL,
+      status                    TEXT NOT NULL,
+      current_period_end        TEXT,
+      cancel_at_period_end      INTEGER NOT NULL DEFAULT 0,
+      created_at                TEXT,
+      updated_at                TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      UNIQUE(provider, provider_subscription_id)
+    );
+    "#;
+
     sqlx::query(create_users).execute(pool).await?;
     sqlx::query(create_schedules).execute(pool).await?;
     sqlx::query(create_traffics).execute(pool).await?;
@@ -6924,6 +7450,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     sqlx::query(create_stay_select_options).execute(pool).await?;
     sqlx::query(create_notifications).execute(pool).await?;
     sqlx::query(create_masked_locations).execute(pool).await?;
+    sqlx::query(create_subscriptions).execute(pool).await?;
     
     // 既存のselect_optionsテーブルからFOREIGN KEY制約を削除（マイグレーション）
     // SQLiteではALTER TABLEでFOREIGN KEY制約を削除できないため、
@@ -7441,6 +7968,9 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         .execute(pool)
         .await?;
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_stays_schedule_id ON stays(schedule_id)")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)")
         .execute(pool)
         .await?;
 
