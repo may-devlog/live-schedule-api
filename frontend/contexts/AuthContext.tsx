@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE } from '../constants/api';
+import { setUnauthorizedHandler } from '../utils/api';
 
 interface AuthResponse {
   token: string | null;
@@ -147,6 +148,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Failed to logout:', error);
     }
   };
+
+  useEffect(() => {
+    // トークン期限切れ等でAPIが401を返した場合、自動的にログアウトしてログイン画面へ戻す
+    setUnauthorizedHandler(() => logout());
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   const changeEmail = async (newEmail: string) => {
     try {
