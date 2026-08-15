@@ -29,26 +29,21 @@
    - 「✓」マークが表示されていれば成功
    - 各ステップをクリックして詳細を確認
 
-2. **バックアップファイルの作成**
-   - 「✓ バックアップが完了しました」が表示される
-   - バックアップサイズが表示される
+2. **SQLiteバックアップの整合性検証**
+   - 「SQLite backup verified: tables=..., schedules=...」が表示される
 
-3. **整合性チェック**
-   - 「✓ バックアップファイルは正常です」が表示される
-   - テーブル数とスケジュール数が表示される
-
-4. **GitHub Releasesへのアップロード**
-   - 「Release created」が表示される
-   - GitHubリポジトリの「Releases」タブで確認可能
+3. **S3へのアップロード**
+   - 「Backup completed: s3://.../database/YYYY/MM/app.db.<timestamp>.gz」が表示される
+   - AWSコンソールまたは `aws s3 ls s3://<AWS_BACKUP_BUCKET>/database/` で確認可能
 
 ### まだ失敗する場合
 
 各ステップのログを確認して、エラーメッセージを確認してください。
 
 よくあるエラー：
-- 「FLY_API_TOKEN not found」→ シークレットが正しく設定されていない
-- 「Authentication failed」→ トークンが無効
-- 「sftp shell failed」→ Fly.ioアプリが起動していない
+- 「EC2_INSTANCE_ID secret is not set」「AWS_BACKUP_BUCKET repository variable is not set」→ リポジトリのSecrets/Variablesが未設定
+- 「configure-aws-credentials」ステップで失敗 → `AWS_ROLE_ARN` のOIDC信頼関係を確認
+- 「The live-schedule-api service is not running.」→ EC2インスタンス側でサービスが停止している
 
 
 

@@ -1,8 +1,13 @@
 #!/bin/bash
-# 本番環境のユーザーパスワードを更新するスクリプト
-# 使用方法: ./update-password.sh <email> <password>
+# 本番環境（AWS EC2）のユーザーパスワードを更新するスクリプト
+# 使用方法: EC2_INSTANCE_ID=i-xxxxxxxxxxxx ./update-password.sh <email> <password>
+#
+# 本番のSQLiteデータベースはEC2インスタンス上にあるため、AWS SSM経由で
+# EC2上のcreate_userバイナリを直接実行してデータベースを更新します
+# （.github/workflows/backup-db.yml と同じDATABASE_URL解決方法を使用）。
+# 実行にはAWS CLIの設定と、対象EC2インスタンスへのSSM実行権限が必要です。
 
-set -e
+set -euo pipefail
 
 if [ $# -ne 2 ]; then
     echo "使用方法: $0 <email> <password>"
@@ -12,46 +17,54 @@ fi
 
 EMAIL="$1"
 PASSWORD="$2"
-APP_NAME="live-schedule-api"
 
-echo "本番環境のユーザーパスワードを更新中..."
+if [ -z "${EC2_INSTANCE_ID:-}" ]; then
+    echo "エラー: 環境変数 EC2_INSTANCE_ID を設定してください（対象EC2インスタンスID）"
+    exit 1
+fi
+
+echo "本番環境のユーザーパスワードを更新します"
 echo "メールアドレス: $EMAIL"
-echo "警告: 本番環境のデータベースが更新されます。続行しますか？ (y/N)"
+echo "対象インスタンス: $EC2_INSTANCE_ID"
+echo "警告: 本番環境のデータベースが直接更新されます。続行しますか？ (y/N)"
 read -r response
 if [[ ! "$response" =~ ^[Yy]$ ]]; then
     echo "更新をキャンセルしました"
     exit 0
 fi
 
-# Rustスクリプトを実行してパスワードをハッシュ化し、SQLを生成
-echo "パスワードハッシュを生成中..."
-HASH_OUTPUT=$(cd backend && cargo run --quiet --bin create_user -- "$EMAIL" "$PASSWORD" 2>&1)
-
-if [ $? -ne 0 ]; then
-    echo "エラー: パスワードハッシュの生成に失敗しました"
-    echo "$HASH_OUTPUT"
-    exit 1
+REMOTE_COMMAND=$(cat <<EOF
+set -euo pipefail
+SERVICE="live-schedule-api"
+MAIN_PID="\$(systemctl show "\$SERVICE" --property=MainPID --value)"
+WORKING_DIR="\$(systemctl show "\$SERVICE" --property=WorkingDirectory --value)"
+if [[ -z "\$MAIN_PID" || "\$MAIN_PID" == "0" ]]; then
+  echo "\$SERVICE service is not running." >&2
+  exit 1
 fi
+DATABASE_URL="\$(tr '\0' '\n' < "/proc/\$MAIN_PID/environ" | sed -n 's/^DATABASE_URL=//p' | head -n 1)"
+cd "\$WORKING_DIR"
+DATABASE_URL="\$DATABASE_URL" ./target/release/create_user "$EMAIL" "$PASSWORD"
+EOF
+)
 
-echo "✓ パスワードハッシュを生成しました"
-echo "本番環境のデータベースを更新中..."
+PARAMETERS="$(jq -n --arg command "$REMOTE_COMMAND" '{commands: [$command]}')"
+COMMAND_ID="$(
+  aws ssm send-command \
+    --instance-ids "$EC2_INSTANCE_ID" \
+    --document-name "AWS-RunShellScript" \
+    --comment "Update live-schedule-api user password" \
+    --parameters "$PARAMETERS" \
+    --query "Command.CommandId" \
+    --output text
+)"
+echo "SSM command ID: $COMMAND_ID"
 
-# 本番環境で直接SQLを実行する方法がないため、
-# ローカルでデータベースを更新してから同期する
-echo "ローカルのデータベースを更新中..."
-cd backend
-cargo run --bin create_user -- "$EMAIL" "$PASSWORD"
-cd ..
+aws ssm wait command-executed \
+  --command-id "$COMMAND_ID" \
+  --instance-id "$EC2_INSTANCE_ID"
 
-echo "✓ ローカルのデータベースを更新しました"
-echo "本番環境に同期しますか？ (y/N)"
-read -r sync_response
-if [[ "$sync_response" =~ ^[Yy]$ ]]; then
-    echo "y" | bash backend/scripts/sync-db.sh upload
-    echo "✓ 完了しました"
-else
-    echo "本番環境への同期をスキップしました"
-    echo "後で手動で同期する場合は以下を実行してください:"
-    echo "  bash backend/scripts/sync-db.sh upload"
-fi
-
+aws ssm get-command-invocation \
+  --command-id "$COMMAND_ID" \
+  --instance-id "$EC2_INSTANCE_ID" \
+  --query '{Status:Status,StandardOutput:StandardOutputContent,StandardError:StandardErrorContent}'

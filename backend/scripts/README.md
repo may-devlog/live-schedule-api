@@ -1,115 +1,25 @@
 # データベース管理スクリプト
 
-## sync-db.sh（手動同期）
-
-ローカルと本番環境のデータベースを手動で同期するスクリプトです。
-
-### 使用方法
-
-```bash
-# 本番環境からローカルにダウンロード
-bash backend/scripts/sync-db.sh download
-
-# ローカルから本番環境にアップロード
-bash backend/scripts/sync-db.sh upload
-```
-
-## sync-db-auto.sh（自動同期）
-
-ローカルと本番環境のデータベースを自動的に同期するスクリプトです。
-
-### 主な機能
-
-- **自動同期**: 指定した間隔で自動的にデータベースを同期
-- **整合性チェック**: データベースの整合性を自動的にチェック
-- **統計表示**: データベースの統計情報を表示
-- **バックアップ**: 同期前に自動的にバックアップを作成
-
-### 使用方法
+本番環境（AWS EC2）のSQLiteデータベースは、毎日 `.github/workflows/backup-db.yml` によって
+S3バケット（`database/YYYY/MM/app.db.<timestamp>.gz`）に自動バックアップされています。
+閲覧用に取得したい場合は、AWSコンソールまたは `aws s3 cp` で最新のバックアップをダウンロードし、
+`gunzip` して SQLite閲覧アプリ（TablePlus、DB Browser for SQLiteなど）で開いてください。
 
 ```bash
-# 本番環境からローカルへ自動同期（60秒間隔）
-bash backend/scripts/sync-db-auto.sh auto-from
-
-# ローカルから本番環境へ自動同期（60秒間隔）
-bash backend/scripts/sync-db-auto.sh auto-to
-
-# 同期間隔を変更（例: 5分間隔）
-bash backend/scripts/sync-db-auto.sh auto-from --interval 300
-
-# 1回だけ同期
-bash backend/scripts/sync-db-auto.sh download  # 本番 → ローカル
-bash backend/scripts/sync-db-auto.sh upload    # ローカル → 本番
-
-# データベース統計を表示
-bash backend/scripts/sync-db-auto.sh stats         # ローカル
-bash backend/scripts/sync-db-auto.sh stats-remote # 本番
-
-# データベース整合性チェック
-bash backend/scripts/sync-db-auto.sh integrity
+aws s3 ls s3://<AWS_BACKUP_BUCKET>/database/ --recursive | tail -5
+aws s3 cp s3://<AWS_BACKUP_BUCKET>/database/2026/08/app.db.<timestamp>.gz .
+gunzip app.db.<timestamp>.gz
 ```
-
-### 同期されるデータ
-
-以下のテーブルが完全に同期されます：
-- `users` - ユーザー情報
-- `schedules` - スケジュール
-- `traffic` - 交通情報
-- `stays` - ホテル情報
-
-### 注意事項
-
-- 自動同期中は、Ctrl+Cで停止できます
-- アップロード時は本番環境のアプリケーションが一時的に停止します
-- 同期前に自動的にバックアップが作成されます
-
-## download-db-for-browser.sh（本番データベースを閲覧用にダウンロード）
-
-本番データベースをダウンロードして、SQLite閲覧アプリ（TablePlus、DB Browser for SQLiteなど）で開くためのスクリプトです。
-
-### データベースの場所
-
-- **本番環境（Fly.io）**: `/app/data/app.db`（Fly.ioサーバー上）
-- **ローカル環境**: `backend/data/app.db`（ローカル）
-- **ダウンロード先**: `backend/data/production.db`（ローカルのデータベースは上書きされません）
-
-### 使用方法
-
-```bash
-cd backend
-bash scripts/download-db-for-browser.sh
-```
-
-### 推奨アプリ
-
-1. **TablePlus**（無料版あり）: https://tableplus.com/
-   - モダンで美しいUI
-   - 複数のデータベースタイプに対応
-   - おすすめ！
-
-2. **DB Browser for SQLite**: https://sqlitebrowser.org/
-   - シンプルで使いやすい
-   - 無料
-
-### 注意事項
-
-- ローカルのデータベース（`data/app.db`）は変更されません
-- 本番データベースは`data/production.db`として別ファイルで保存されます
-- データを編集しても、本番環境には反映されません（読み取り専用として使用）
 
 ## パスワードの更新
 
-### 方法1: create_userバイナリを使用（推奨）
+### 方法1: update-password.shを使用（推奨）
+
+AWS SSM経由でEC2上のcreate_userバイナリを直接実行し、本番データベースを更新します。
 
 ```bash
-cd backend
-cargo run --bin create_user -- may04re@gmail.com "新しいパスワード"
-```
-
-その後、データベースを本番環境に同期：
-
-```bash
-bash backend/scripts/sync-db.sh upload
+export EC2_INSTANCE_ID=i-xxxxxxxxxxxx
+bash backend/scripts/update-password.sh may04re@gmail.com "新しいパスワード"
 ```
 
 ### 方法2: パスワードリセット機能を使用
