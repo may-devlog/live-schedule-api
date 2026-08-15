@@ -88,6 +88,19 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
     }
   };
 
+  // トライアルは1アカウント1回しか使えないため、誤タップで消費しないよう確認を挟む
+  const confirmStartTrial = () => {
+    const message = '1ヶ月無料トライアルを開始しますか？トライアルは1アカウントにつき1回のみ利用できます。';
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (window.confirm(message)) startTrial();
+    } else {
+      Alert.alert('無料トライアルを開始しますか？', 'トライアルは1アカウントにつき1回のみ利用できます。', [
+        { text: 'キャンセル', style: 'cancel' },
+        { text: '開始する', onPress: startTrial },
+      ]);
+    }
+  };
+
   // Stripe CheckoutやBilling PortalのURLを開く。Webは同一タブで遷移し、
   // ネイティブはアプリ内ブラウザで開いて戻ってきたタイミングでプラン状況を再取得する
   const openBillingUrl = async (url: string) => {
@@ -302,7 +315,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               <View style={styles.trialCard}>
                 <Text style={styles.trialTitle}>1ヶ月無料トライアル</Text>
                 <Text style={styles.trialDescription}>共有化やアーカイブのグループ化など、プレミアム機能を1ヶ月間お試しいただけます。</Text>
-                <TouchableOpacity style={styles.trialButton} onPress={startTrial} disabled={trialStarting}>
+                <TouchableOpacity style={styles.trialButton} onPress={confirmStartTrial} disabled={trialStarting}>
                   {trialStarting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.trialButtonText}>無料トライアルを始める</Text>}
                 </TouchableOpacity>
               </View>
