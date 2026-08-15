@@ -9,18 +9,23 @@ import { SharedArchivePage } from "../../components/SharedArchivePage";
 export default function YearScreen() {
   const params = useLocalSearchParams<{ year: string }>();
   const router = useRouter();
-  const [canUseGrouping, setCanUseGrouping] = React.useState(true);
+  // 取得に失敗した場合も無料プラン扱いにするため、falseを初期値にする
+  const [canUseGrouping, setCanUseGrouping] = React.useState(false);
 
   React.useEffect(() => {
     let active = true;
     (async () => {
       try {
         const res = await authenticatedFetch(getApiUrl("/auth/plan-status"));
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (active) setCanUseGrouping(false);
+          return;
+        }
         const data = await res.json();
         if (active) setCanUseGrouping(!!data.is_paid_effective);
       } catch (e) {
         console.error("ERROR FETCHING PLAN STATUS:", e);
+        if (active) setCanUseGrouping(false);
       }
     })();
     return () => { active = false; };
