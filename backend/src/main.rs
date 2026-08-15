@@ -2585,13 +2585,32 @@ async fn create_checkout_session(
         ("managed_payments[enabled]".to_string(), "false".to_string()),
     ];
 
+    let used_stored_customer = existing_customer_id.is_some();
     if let Some((customer_id,)) = existing_customer_id {
         params.push(("customer".to_string(), customer_id));
     } else {
-        params.push(("customer_email".to_string(), email));
+        params.push(("customer_email".to_string(), email.clone()));
     }
 
-    let session = stripe_api_post("checkout/sessions", params).await.map_err(|e| {
+    let mut session_result = stripe_api_post("checkout/sessions", params.clone()).await;
+
+    // test/liveモード切り替え等で保存済みのcustomer_idが無効になっているケースへの対応。
+    // customer_emailを使った新規顧客作成にフォールバックして再試行する
+    if used_stored_customer {
+        if let Err(ref e) = session_result {
+            if e.contains("No such customer") {
+                eprintln!("[CreateCheckoutSession] Stored customer id is invalid, retrying with customer_email");
+                let retry_params: Vec<(String, String)> = params
+                    .into_iter()
+                    .filter(|(k, _)| k != "customer")
+                    .chain(std::iter::once(("customer_email".to_string(), email)))
+                    .collect();
+                session_result = stripe_api_post("checkout/sessions", retry_params).await;
+            }
+        }
+    }
+
+    let session = session_result.map_err(|e| {
         eprintln!("[CreateCheckoutSession] Stripe error: {}", e);
         (
             StatusCode::BAD_GATEWAY,
