@@ -543,9 +543,8 @@ const styles = StyleSheet.create({
   groupingButtonActive: { backgroundColor: brand.plum, borderColor: brand.plum },
   groupingButtonText: { color: brand.ink, fontSize: 13, fontWeight: "400" },
   groupingButtonTextActive: { color: "#FFFFFF", fontWeight: "600" },
-  // メイン/サブのプルダウン。幅は選択肢中で最も長い「ステータス」が収まる程度に留め、
-  // 右側の並び順プルダウン（sortControls）と重ならないようにする
-  groupingSelectWrap: { position: "relative", width: 116, zIndex: 5 },
+  // メイン/サブのプルダウン。幅はグループ順/並び順プルダウン（compactSelectWrap）と揃える
+  groupingSelectWrap: { position: "relative", width: 126, zIndex: 5 },
   groupingSelect: { minHeight: 36, paddingHorizontal: 11, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   groupingSelectText: { color: brand.ink, fontSize: 13, fontWeight: "500" },
   groupingSelectMenu: { position: "absolute", top: 40, left: 0, right: 0, padding: 4, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", ...shadow },
