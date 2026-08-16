@@ -110,7 +110,7 @@ export default function SharedStayDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <PublicHeader active="archive" homePath={`/share/${share_id}`} />
+      <PublicHeader active="archive" homePath={`/share/${share_id}`} archivePath={`/share/${share_id}/year/${new Date().getFullYear()}`} />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={

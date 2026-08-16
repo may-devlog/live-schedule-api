@@ -108,7 +108,7 @@ export function BrandWordmark({ light = false, compact = false }: { light?: bool
   );
 }
 
-export function PublicHeader({ active = 'archive', homePath = '/' }: { active?: 'home' | 'archive' | 'none'; homePath?: string }) {
+export function PublicHeader({ active = 'archive', homePath = '/', archivePath }: { active?: 'home' | 'archive' | 'none'; homePath?: string; archivePath?: string }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const narrow = width < 720;
@@ -124,7 +124,11 @@ export function PublicHeader({ active = 'archive', homePath = '/' }: { active?: 
         {!narrow && (
           <View style={styles.nav}>
             <TouchableOpacity onPress={() => router.push(homePath)}><Text style={[styles.navText, active === 'home' && styles.navActive]}>HOME</Text></TouchableOpacity>
-            <Text style={[styles.navText, active === 'archive' && styles.navActive]}>ARCHIVE</Text>
+            {archivePath ? (
+              <TouchableOpacity onPress={() => router.push(archivePath)}><Text style={[styles.navText, active === 'archive' && styles.navActive]}>ARCHIVE</Text></TouchableOpacity>
+            ) : (
+              <Text style={[styles.navText, active === 'archive' && styles.navActive]}>ARCHIVE</Text>
+            )}
           </View>
         )}
         <View style={styles.headerActions}>

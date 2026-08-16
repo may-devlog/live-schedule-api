@@ -127,7 +127,7 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
   if (loading) {
     return (
       <View style={styles.page}>
-        {authenticated ? <AppHeader active="home" /> : <PublicHeader active="home" homePath={`/share/${share_id}`} />}
+        {authenticated ? <AppHeader active="home" /> : <PublicHeader active="home" homePath={`/share/${share_id}`} archivePath={`/share/${share_id}/year/${availableYears[0] ?? new Date().getFullYear()}`} />}
         <View style={styles.statePage}>
           <ActivityIndicator size="large" color={brand.violet} />
           <Text style={styles.stateText}>読み込み中...</Text>
@@ -147,7 +147,7 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
 
   return (
     <View style={styles.page}>
-      {authenticated ? <AppHeader active="home" onDisplayNameChange={setDisplayName} /> : <PublicHeader active="home" homePath={`/share/${share_id}`} />}
+      {authenticated ? <AppHeader active="home" onDisplayNameChange={setDisplayName} /> : <PublicHeader active="home" homePath={`/share/${share_id}`} archivePath={`/share/${share_id}/year/${availableYears[0] ?? new Date().getFullYear()}`} />}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}

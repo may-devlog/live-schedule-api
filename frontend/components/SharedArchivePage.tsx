@@ -349,7 +349,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
 
   return (
     <View style={styles.page}>
-      {authenticated ? <AppHeader active="archive" /> : <PublicHeader active="archive" />}
+      {authenticated ? <AppHeader active="archive" /> : <PublicHeader active="archive" homePath={`/share/${shareId}`} archivePath={`/share/${shareId}/year/${year}`} />}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={[styles.main, mobile && styles.mainMobile]}>
           <Text style={[styles.title, mobile && styles.titleMobile]}>{year} ARCHIVE</Text>
