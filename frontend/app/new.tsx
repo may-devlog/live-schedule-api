@@ -358,9 +358,6 @@ export default function NewScheduleScreen() {
       <AppHeader active="archive" />
       <ScrollView contentContainerStyle={styles.pageContent}>
         <View style={styles.container}>
-          <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>
-            <Text style={styles.backLinkText}>← スケジュールに戻る</Text>
-          </TouchableOpacity>
           <Text style={styles.eyebrow}>EVENT</Text>
           <Text style={styles.title}>{copyFrom ? "イベントを複製" : "新規イベント"}</Text>
           <Text style={styles.lead}>ライブの基本情報や費用を登録します。</Text>
@@ -554,8 +551,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
   },
-  backLink: { alignSelf: "flex-start", paddingVertical: 8, marginBottom: 16 },
-  backLinkText: { color: brand.violetDark, fontSize: 14, fontWeight: "700" },
   eyebrow: { color: brand.violet, fontSize: 11, fontWeight: "800", letterSpacing: 1.8, marginBottom: 7 },
   title: {
     fontSize: 36,
