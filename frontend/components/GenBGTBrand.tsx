@@ -2,10 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { AccountMenu } from './AccountMenu';
 import { NotificationMenu } from './NotificationMenu';
 import { fetchProfile } from '../utils/profile-request';
+
+// Web版ヘッダーの代わりにネイティブで表示する、Safe Area分の余白のみのスペーサー
+function NativeTopSpacer() {
+  const insets = useSafeAreaInsets();
+  return <View style={{ height: insets.top, backgroundColor: brand.white }} />;
+}
 
 export const HEADER_CONTENT_MAX_WIDTH = 1320;
 
@@ -46,7 +53,7 @@ export function PublicHeader({ active = 'schedule', homePath = '/' }: { active?:
   const { width } = useWindowDimensions();
   const narrow = width < 720;
 
-  if (Platform.OS !== 'web') return null;
+  if (Platform.OS !== 'web') return <NativeTopSpacer />;
 
   return (
     <View style={styles.header}>
@@ -81,7 +88,7 @@ export function AuthHeader() {
   const { width } = useWindowDimensions();
   const narrow = width < 640;
 
-  if (Platform.OS !== 'web') return null;
+  if (Platform.OS !== 'web') return <NativeTopSpacer />;
 
   return (
     <View style={styles.header}>
@@ -122,7 +129,7 @@ export function AppHeader({ active = 'schedule', onDisplayNameChange }: { active
       .catch(() => { setAvatarDataUrl(null); setDisplayName(null); setProfileShareId(null); });
   }, []);
 
-  if (Platform.OS !== 'web') return null;
+  if (Platform.OS !== 'web') return <NativeTopSpacer />;
 
   return (
     <View style={styles.header}>
