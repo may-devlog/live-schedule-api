@@ -21,7 +21,6 @@ type Props = {
   fetchSchedules: (year: string) => Promise<Schedule[]>;
   fetchStays?: (year: string) => Promise<StaySummary[]>;
   fetchAvailableYears: () => Promise<number[]>;
-  onBack: () => void;
   onSelectYear: (year: string) => void;
   onSchedulePress: (id: number) => void;
   onStayPress?: (id: number) => void;
@@ -81,7 +80,7 @@ function dateParts(raw: string): ArchiveDateParts {
   return result;
 }
 
-export function SharedArchivePage({ shareId, authenticated = false, initialYear, fetchSchedules, fetchStays, fetchAvailableYears, onBack, onSelectYear, onSchedulePress, onStayPress, canUseGrouping = true }: Props) {
+export function SharedArchivePage({ shareId, authenticated = false, initialYear, fetchSchedules, fetchStays, fetchAvailableYears, onSelectYear, onSchedulePress, onStayPress, canUseGrouping = true }: Props) {
   const { width } = useWindowDimensions();
   const mobile = width < 720;
   const [year, setYear] = useState(initialYear);
@@ -335,10 +334,6 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
       {authenticated ? <AppHeader active="archive" /> : <PublicHeader active="archive" />}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={[styles.main, mobile && styles.mainMobile]}>
-          <TouchableOpacity style={styles.back} onPress={onBack}>
-            <Ionicons name="arrow-back" size={18} color={brand.violet} />
-            <Text style={styles.backText}>スケジュールに戻る</Text>
-          </TouchableOpacity>
           <Text style={[styles.title, mobile && styles.titleMobile]}>{year} ARCHIVE</Text>
           {!!fetchStays && <View style={styles.archiveTabs}>
             <TouchableOpacity style={[styles.archiveTab, archiveType === "event" && styles.archiveTabActive]} onPress={() => setArchiveType("event")}><Text style={[styles.archiveTabText, archiveType === "event" && styles.archiveTabTextActive]}>イベント</Text></TouchableOpacity>
@@ -499,12 +494,12 @@ const styles = StyleSheet.create({
   monthSection: { marginBottom: 28 },
   monthTitle: { color: brand.plum, fontSize: 25, lineHeight: 32, fontWeight: "800", marginBottom: 10 },
   groupSection: { marginBottom: 18, overflow: "hidden", borderRadius: 10, borderWidth: 1, borderColor: brand.border, backgroundColor: "#F9F7FC" },
-  groupHeader: { minHeight: 54, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: brand.border, backgroundColor: "#F9F7FC" },
+  groupHeader: { minHeight: 54, paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: brand.border, backgroundColor: "#F9F7FC" },
   subGroupHeader: { paddingLeft: 32, minHeight: 48, backgroundColor: "#FCFBFD" },
   groupChevron: { width: 26 },
-  groupTagWrap: { alignSelf: "center", justifyContent: "center" },
-  groupTitle: { color: brand.ink, fontSize: 16, fontWeight: "700" },
-  subGroupTitle: { color: brand.ink, fontSize: 14, fontWeight: "600" },
+  groupTagWrap: { flex: 1, minWidth: 0, alignSelf: "center", justifyContent: "center" },
+  groupTitle: { flexShrink: 1, color: brand.ink, fontSize: 16, fontWeight: "700" },
+  subGroupTitle: { flexShrink: 1, color: brand.ink, fontSize: 14, fontWeight: "600" },
   groupCount: { marginLeft: 8, color: brand.muted, fontSize: 12 },
   groupTotal: { paddingLeft: 42, paddingRight: 16, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: brand.border, backgroundColor: "#F9F7FC" },
   subGroupTotal: { paddingLeft: 58, backgroundColor: "#FCFBFD" },
