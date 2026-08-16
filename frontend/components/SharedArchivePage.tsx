@@ -11,6 +11,7 @@ import { isJapaneseHolidayDate } from "./ScheduleCalendar";
 import { groupSchedulesNested, type MainGroupingField, type SubGroupingField } from "../utils/group-schedules";
 import { loadSelectOptionsMap } from "../utils/load-select-options-map";
 import { loadSelectOptions, loadStaySelectOptions } from "../utils/select-options-storage";
+import { authenticatedFetch, getApiUrl } from "../utils/api";
 import { fetchTrafficBySchedule } from "../utils/fetch-traffic-by-schedule";
 import { calculateTotalCostWithReturnFlag, type TrafficBySchedule } from "../utils/calculate-total-cost";
 
@@ -124,6 +125,20 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
         setError(null);
         setLoading(false);
 
+        // [一時デバッグ] WEBSITEエンドポイントの生レスポンスを直接確認
+        (async () => {
+          try {
+            const url = optionOwner
+              ? getApiUrl(`/share/${optionOwner}/stay-select-options/WEBSITE`)
+              : getApiUrl(`/stay-select-options/WEBSITE`);
+            const res = optionOwner ? await fetch(url) : await authenticatedFetch(url);
+            const text = await res.text();
+            if (active) setDebugWebsiteRaw(`url=${url} status=${res.status} body=${text}`);
+          } catch (e: any) {
+            if (active) setDebugWebsiteRaw(`FETCH ERROR: ${e?.message ?? String(e)}`);
+          }
+        })();
+
         // Totals, option ordering and colors enrich the cards but are not
         // required to show the archive. Load them without blocking year changes.
         loadSelectOptionsMap(optionOwner).then((optionMaps) => {
@@ -143,7 +158,6 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                 const map = new Map<string, string>();
                 options.forEach((opt) => map.set(opt.label, getOptionColorSync(opt.label, "WEBSITE")));
                 setWebsiteColorMap(map);
-                setDebugWebsiteRaw(JSON.stringify(options));
               }
             }),
             loadStaySelectOptions("STATUS", optionOwner).then((options) => {
