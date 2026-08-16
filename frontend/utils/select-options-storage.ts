@@ -497,11 +497,14 @@ export async function loadStaySelectOptions(
       }
       if (res.ok) {
         const options: SelectOption[] = await res.json();
+        console.log(`[StaySelectOptions] Loaded ${options.length} options from ${shareId ? 'shared' : 'database'} for ${key}:`, options.map((opt) => ({ label: opt.label, color: opt.color })));
         if (options.length > 0) {
           // データベースに保存されている場合は、ローカルストレージにも保存（キャッシュ）
           await AsyncStorage.setItem(STAY_STORAGE_KEYS[key], JSON.stringify(options));
           return options;
         }
+      } else {
+        console.log(`[StaySelectOptions] Fetch for ${key} returned non-ok status: ${res.status}, falling back to local storage`);
       }
     } catch (error) {
       console.log(`[StaySelectOptions] Failed to load ${key} from database, falling back to local storage:`, error);
