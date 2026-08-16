@@ -58,9 +58,11 @@ const GROUPING_FIELD_OPTIONS: [GroupingField, string][] = [
 ];
 const GROUPING_FIELD_LABELS: Record<GroupingField, string> = Object.fromEntries(GROUPING_FIELD_OPTIONS) as Record<GroupingField, string>;
 
-// お目当てと出演者は、メイン/サブの一方で選択されたらもう一方では選べないようにする
-const conflictsWithGroupingField = (value: GroupingField, other: GroupingField) =>
-  (value === "target" && other === "lineup") || (value === "lineup" && other === "target");
+// メイン/サブの一方で選択されている項目は、もう一方では選べないようにする
+// （同じ項目の重複選択に加え、お目当て⇄出演者の組み合わせも禁止）
+const isGroupingOptionDisabled = (value: GroupingField, other: GroupingField) =>
+  value !== "none" &&
+  (value === other || (value === "target" && other === "lineup") || (value === "lineup" && other === "target"));
 
 function scheduleDate(schedule: Schedule) {
   return schedule.datetime || schedule.date || "";
@@ -396,7 +398,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                     <Ionicons name={mainGroupingMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
                   </TouchableOpacity>
                   {mainGroupingMenuOpen && <View style={styles.groupingSelectMenu}>
-                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => { const disabled = conflictsWithGroupingField(value, subGrouping); return <TouchableOpacity key={value} disabled={disabled} style={styles.compactSelectOption} onPress={() => { setMainGrouping(value); setMainGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, mainGrouping === value && styles.compactSelectOptionActive, disabled && styles.compactSelectOptionDisabled]}>{label}</Text></TouchableOpacity>; })}
+                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => { const disabled = isGroupingOptionDisabled(value, subGrouping); return <TouchableOpacity key={value} disabled={disabled} style={styles.compactSelectOption} onPress={() => { setMainGrouping(value); setMainGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, mainGrouping === value && styles.compactSelectOptionActive, disabled && styles.compactSelectOptionDisabled]}>{label}</Text></TouchableOpacity>; })}
                   </View>}
                 </View>
               </View>
@@ -408,7 +410,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                     <Ionicons name={subGroupingMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
                   </TouchableOpacity>
                   {subGroupingMenuOpen && <View style={styles.groupingSelectMenu}>
-                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => { const disabled = conflictsWithGroupingField(value, mainGrouping); return <TouchableOpacity key={value} disabled={disabled} style={styles.compactSelectOption} onPress={() => { setSubGrouping(value); setSubGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, subGrouping === value && styles.compactSelectOptionActive, disabled && styles.compactSelectOptionDisabled]}>{label}</Text></TouchableOpacity>; })}
+                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => { const disabled = isGroupingOptionDisabled(value, mainGrouping); return <TouchableOpacity key={value} disabled={disabled} style={styles.compactSelectOption} onPress={() => { setSubGrouping(value); setSubGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, subGrouping === value && styles.compactSelectOptionActive, disabled && styles.compactSelectOptionDisabled]}>{label}</Text></TouchableOpacity>; })}
                   </View>}
                 </View>
               </View>
