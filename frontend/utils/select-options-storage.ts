@@ -498,11 +498,11 @@ export async function loadStaySelectOptions(
       if (res.ok) {
         const options: SelectOption[] = await res.json();
         console.log(`[StaySelectOptions] Loaded ${options.length} options from ${shareId ? 'shared' : 'database'} for ${key}:`, options.map((opt) => ({ label: opt.label, color: opt.color })));
-        if (options.length > 0) {
-          // データベースに保存されている場合は、ローカルストレージにも保存（キャッシュ）
-          await AsyncStorage.setItem(STAY_STORAGE_KEYS[key], JSON.stringify(options));
-          return options;
-        }
+        // サーバーからの正常な応答は、中身が空であっても現在の正しい状態として信頼する。
+        // 古い端末キャッシュにフォールバックすると、サーバー側でデータが失われた場合に
+        // それに気づけないまま古い(誤った)色が表示され続けてしまう。
+        await AsyncStorage.setItem(STAY_STORAGE_KEYS[key], JSON.stringify(options));
+        return options;
       } else {
         console.log(`[StaySelectOptions] Fetch for ${key} returned non-ok status: ${res.status}, falling back to local storage`);
       }
