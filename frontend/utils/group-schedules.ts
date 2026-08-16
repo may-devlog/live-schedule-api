@@ -4,8 +4,9 @@ import type { Schedule } from "../app/HomeScreen";
 
 export type GroupingField = "group" | "category" | "area" | "target" | "lineup" | "seller" | "status" | "none";
 
-export type MainGroupingField = "target" | "lineup" | "none";
-export type SubGroupingField = "group" | "category" | "area" | "seller" | "status" | "none";
+// メイン・サブどちらも同じ選択肢（GroupingField）から自由に選べる
+export type MainGroupingField = GroupingField;
+export type SubGroupingField = GroupingField;
 
 export type GroupedSchedule = {
   title: string;

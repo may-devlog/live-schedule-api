@@ -8,7 +8,7 @@ import { NotionTag } from "./notion-tag";
 import { getOptionColorSync, preloadOptionColors } from "../utils/get-option-color";
 import { fetchAreaColors } from "../utils/fetch-area-colors";
 import { isJapaneseHolidayDate } from "./ScheduleCalendar";
-import { groupSchedulesNested, type MainGroupingField, type SubGroupingField } from "../utils/group-schedules";
+import { groupSchedulesNested, type GroupingField, type MainGroupingField, type SubGroupingField } from "../utils/group-schedules";
 import { loadSelectOptionsMap } from "../utils/load-select-options-map";
 import { loadSelectOptions, loadStaySelectOptions } from "../utils/select-options-storage";
 import { fetchTrafficBySchedule } from "../utils/fetch-traffic-by-schedule";
@@ -44,6 +44,19 @@ const shadow = Platform.OS === "web" ? ({ boxShadow: "0 8px 24px rgba(46,16,101,
 const deferredCardRendering = Platform.OS === "web" ? ({ contentVisibility: "auto", containIntrinsicSize: "108px" } as any) : {};
 type SortOrder = "asc" | "desc";
 type MainSortMode = "default" | "kana";
+
+// メイン・サブどちらのグルーピングでも同じ選択肢を使えるようにする
+const GROUPING_FIELD_OPTIONS: [GroupingField, string][] = [
+  ["none", "なし"],
+  ["group", "グループ"],
+  ["category", "カテゴリ"],
+  ["area", "エリア"],
+  ["target", "お目当て"],
+  ["lineup", "出演者"],
+  ["seller", "販売元"],
+  ["status", "ステータス"],
+];
+const GROUPING_FIELD_LABELS: Record<GroupingField, string> = Object.fromEntries(GROUPING_FIELD_OPTIONS) as Record<GroupingField, string>;
 
 function scheduleDate(schedule: Schedule) {
   return schedule.datetime || schedule.date || "";
@@ -99,6 +112,8 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [mainSortMenuOpen, setMainSortMenuOpen] = useState(false);
+  const [mainGroupingMenuOpen, setMainGroupingMenuOpen] = useState(false);
+  const [subGroupingMenuOpen, setSubGroupingMenuOpen] = useState(false);
   const [mainGrouping, setMainGrouping] = useState<MainGroupingField>("none");
   const [subGrouping, setSubGrouping] = useState<SubGroupingField>("none");
   const [archiveType, setArchiveType] = useState<"event" | "stay">("event");
@@ -369,15 +384,37 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
 
           <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
             {canUseGrouping && (archiveType === "event" ? <View style={styles.groupingPanel}>
-              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>メイン</Text>{([['none','なし'],['target','お目当て'],['lineup','出演者']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, mainGrouping === value && styles.groupingButtonActive]} onPress={() => setMainGrouping(value)}><Text style={[styles.groupingButtonText, mainGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View>
-              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>サブ</Text>{([['none','なし'],['group','グループ'],['category','カテゴリ'],['area','エリア'],['seller','販売元'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, subGrouping === value && styles.groupingButtonActive]} onPress={() => setSubGrouping(value)}><Text style={[styles.groupingButtonText, subGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View>
+              <View style={styles.groupingRow}>
+                <Text style={styles.groupingLabel}>メイン</Text>
+                <View style={styles.groupingSelectWrap}>
+                  <TouchableOpacity style={styles.groupingSelect} onPress={() => { const next = !mainGroupingMenuOpen; setMainGroupingMenuOpen(next); setSubGroupingMenuOpen(false); setMainSortMenuOpen(false); setSortMenuOpen(false); }}>
+                    <Text style={styles.groupingSelectText}>{GROUPING_FIELD_LABELS[mainGrouping]}</Text>
+                    <Ionicons name={mainGroupingMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
+                  </TouchableOpacity>
+                  {mainGroupingMenuOpen && <View style={styles.groupingSelectMenu}>
+                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => <TouchableOpacity key={value} style={styles.compactSelectOption} onPress={() => { setMainGrouping(value); setMainGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, mainGrouping === value && styles.compactSelectOptionActive]}>{label}</Text></TouchableOpacity>)}
+                  </View>}
+                </View>
+              </View>
+              <View style={styles.groupingRow}>
+                <Text style={styles.groupingLabel}>サブ</Text>
+                <View style={styles.groupingSelectWrap}>
+                  <TouchableOpacity style={styles.groupingSelect} onPress={() => { const next = !subGroupingMenuOpen; setSubGroupingMenuOpen(next); setMainGroupingMenuOpen(false); setMainSortMenuOpen(false); setSortMenuOpen(false); }}>
+                    <Text style={styles.groupingSelectText}>{GROUPING_FIELD_LABELS[subGrouping]}</Text>
+                    <Ionicons name={subGroupingMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
+                  </TouchableOpacity>
+                  {subGroupingMenuOpen && <View style={styles.groupingSelectMenu}>
+                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => <TouchableOpacity key={value} style={styles.compactSelectOption} onPress={() => { setSubGrouping(value); setSubGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, subGrouping === value && styles.compactSelectOptionActive]}>{label}</Text></TouchableOpacity>)}
+                  </View>}
+                </View>
+              </View>
             </View> : <View style={styles.groupingPanel}>
               <View style={styles.groupingRow}><Text style={styles.groupingLabel}>分類</Text>{([['none','なし'],['website','予約サイト'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, stayGrouping === value && styles.groupingButtonActive]} onPress={() => setStayGrouping(value)}><Text style={[styles.groupingButtonText, stayGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View>
             </View>)}
             <View style={[styles.sortControls, mobile && styles.sortControlsMobile, !canUseGrouping && !mobile && styles.sortControlsSolo]}>
               {(mainGrouping === "target" || mainGrouping === "lineup") && archiveType === "event" && <View style={styles.compactSelectWrap}>
                 <Text style={styles.compactSelectLabel}>グループ順</Text>
-                <TouchableOpacity style={styles.compactSelect} onPress={() => { setMainSortMenuOpen((open) => !open); setSortMenuOpen(false); }}>
+                <TouchableOpacity style={styles.compactSelect} onPress={() => { setMainSortMenuOpen((open) => !open); setSortMenuOpen(false); setMainGroupingMenuOpen(false); setSubGroupingMenuOpen(false); }}>
                   <Text style={styles.compactSelectText}>{mainSortMode === "default" ? "デフォルト" : "五十音順"}</Text>
                   <Ionicons name={mainSortMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
                 </TouchableOpacity>
@@ -387,7 +424,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
               </View>}
               <View style={styles.compactSelectWrap}>
                 <Text style={styles.compactSelectLabel}>並び順</Text>
-                <TouchableOpacity style={styles.compactSelect} onPress={() => { setSortMenuOpen((open) => !open); setMainSortMenuOpen(false); }}>
+                <TouchableOpacity style={styles.compactSelect} onPress={() => { setSortMenuOpen((open) => !open); setMainSortMenuOpen(false); setMainGroupingMenuOpen(false); setSubGroupingMenuOpen(false); }}>
                   <Text style={styles.compactSelectText}>{sortOrder === "asc" ? "昇順" : "降順"}</Text>
                   <Ionicons name={sortMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
                 </TouchableOpacity>
@@ -506,6 +543,12 @@ const styles = StyleSheet.create({
   groupingButtonActive: { backgroundColor: brand.plum, borderColor: brand.plum },
   groupingButtonText: { color: brand.ink, fontSize: 13, fontWeight: "400" },
   groupingButtonTextActive: { color: "#FFFFFF", fontWeight: "600" },
+  // メイン/サブのプルダウン。幅は選択肢中で最も長い「ステータス」が収まる程度に留め、
+  // 右側の並び順プルダウン（sortControls）と重ならないようにする
+  groupingSelectWrap: { position: "relative", width: 116, zIndex: 5 },
+  groupingSelect: { minHeight: 36, paddingHorizontal: 11, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  groupingSelectText: { color: brand.ink, fontSize: 13, fontWeight: "500" },
+  groupingSelectMenu: { position: "absolute", top: 40, left: 0, right: 0, padding: 4, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", ...shadow },
   loader: { marginVertical: 60 },
   error: { color: "#C2414B", marginVertical: 30 },
   monthSection: { marginBottom: 28 },
