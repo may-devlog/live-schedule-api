@@ -16,11 +16,10 @@ export function preloadOptionColors(
   
   options.forEach((option) => {
     const cacheKey = `${optionType}:${option.label}`;
-    if (!colorCache[cacheKey]) {
-      // 選択肢に色が設定されている場合はそれを使用、なければデフォルト色
-      const color = option.color || getDefaultColorForLabel(option.label, isPrefecture, isCategory);
-      colorCache[cacheKey] = color;
-    }
+    // 選択肢に色が設定されている場合はそれを使用、なければデフォルト色
+    // 常に上書きする（古い/デフォルト色が先にキャッシュされていても最新の取得結果を優先する）
+    const color = option.color || getDefaultColorForLabel(option.label, isPrefecture, isCategory);
+    colorCache[cacheKey] = color;
   });
 }
 

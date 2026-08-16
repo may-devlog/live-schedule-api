@@ -17,6 +17,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { isJapaneseHolidayDate, ScheduleCalendar } from '../../components/ScheduleCalendar';
 import { NotionTag } from '../../components/notion-tag';
 import { AppHeader, PublicFooter, PublicHeader, brand } from '../../components/GenBGTBrand';
+import { AppTabBar } from '../../components/AppTabBar';
 import { authenticatedFetch, getApiUrl } from '../../utils/api';
 import { fetchAreaColors } from '../../utils/fetch-area-colors';
 import { getOptionColorSync } from '../../utils/get-option-color';
@@ -126,7 +127,7 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
   if (loading) {
     return (
       <View style={styles.page}>
-        {authenticated ? <AppHeader active="schedule" /> : <PublicHeader />}
+        {authenticated ? <AppHeader active="home" /> : <PublicHeader active="home" homePath={`/share/${share_id}`} archivePath={`/share/${share_id}/year/${availableYears[0] ?? new Date().getFullYear()}`} />}
         <View style={styles.statePage}>
           <ActivityIndicator size="large" color={brand.violet} />
           <Text style={styles.stateText}>読み込み中...</Text>
@@ -146,7 +147,7 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
 
   return (
     <View style={styles.page}>
-      {authenticated ? <AppHeader active="schedule" onDisplayNameChange={setDisplayName} /> : <PublicHeader />}
+      {authenticated ? <AppHeader active="home" onDisplayNameChange={setDisplayName} /> : <PublicHeader active="home" homePath={`/share/${share_id}`} archivePath={`/share/${share_id}/year/${availableYears[0] ?? new Date().getFullYear()}`} />}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -219,6 +220,11 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
         </View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar
+        active="home"
+        homePath={authenticated ? '/' : `/share/${share_id}`}
+        archivePath={authenticated ? `/year/${availableYears[0] ?? new Date().getFullYear()}` : `/share/${share_id}/year/${availableYears[0] ?? new Date().getFullYear()}`}
+      />
     </View>
   );
 }

@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpa
 import { Ionicons } from "@expo/vector-icons";
 import type { Schedule } from "../app/HomeScreen";
 import { AppHeader, PublicFooter, PublicHeader, brand } from "./GenBGTBrand";
+import { AppTabBar } from "./AppTabBar";
 import { NotionTag } from "./notion-tag";
 import { getOptionColorSync, preloadOptionColors } from "../utils/get-option-color";
 import { fetchAreaColors } from "../utils/fetch-area-colors";
@@ -20,7 +21,6 @@ type Props = {
   fetchSchedules: (year: string) => Promise<Schedule[]>;
   fetchStays?: (year: string) => Promise<StaySummary[]>;
   fetchAvailableYears: () => Promise<number[]>;
-  onBack: () => void;
   onSelectYear: (year: string) => void;
   onSchedulePress: (id: number) => void;
   onStayPress?: (id: number) => void;
@@ -80,7 +80,7 @@ function dateParts(raw: string): ArchiveDateParts {
   return result;
 }
 
-export function SharedArchivePage({ shareId, authenticated = false, initialYear, fetchSchedules, fetchStays, fetchAvailableYears, onBack, onSelectYear, onSchedulePress, onStayPress, canUseGrouping = true }: Props) {
+export function SharedArchivePage({ shareId, authenticated = false, initialYear, fetchSchedules, fetchStays, fetchAvailableYears, onSelectYear, onSchedulePress, onStayPress, canUseGrouping = true }: Props) {
   const { width } = useWindowDimensions();
   const mobile = width < 720;
   const [year, setYear] = useState(initialYear);
@@ -93,6 +93,9 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [, setColorsVersion] = useState(0);
+  const [websiteColorMap, setWebsiteColorMap] = useState<Map<string, string>>(new Map());
+  const [stayStatusColorMap, setStayStatusColorMap] = useState<Map<string, string>>(new Map());
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [mainSortMenuOpen, setMainSortMenuOpen] = useState(false);
@@ -133,8 +136,22 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             loadSelectOptions("AREAS", optionOwner).then((options) => preloadOptionColors(options, "AREAS")),
             loadSelectOptions("SELLERS", optionOwner).then((options) => preloadOptionColors(options, "SELLERS")),
             loadSelectOptions("STATUSES", optionOwner).then((options) => preloadOptionColors(options, "STATUSES")),
-            loadStaySelectOptions("WEBSITE", optionOwner).then((options) => preloadOptionColors(options, "WEBSITE")),
-            loadStaySelectOptions("STATUS", optionOwner).then((options) => preloadOptionColors(options, "STAY_STATUS")),
+            loadStaySelectOptions("WEBSITE", optionOwner).then((options) => {
+              preloadOptionColors(options, "WEBSITE");
+              if (active) {
+                const map = new Map<string, string>();
+                options.forEach((opt) => map.set(opt.label, getOptionColorSync(opt.label, "WEBSITE")));
+                setWebsiteColorMap(map);
+              }
+            }),
+            loadStaySelectOptions("STATUS", optionOwner).then((options) => {
+              preloadOptionColors(options, "STAY_STATUS");
+              if (active) {
+                const map = new Map<string, string>();
+                options.forEach((opt) => map.set(opt.label, getOptionColorSync(opt.label, "STAY_STATUS")));
+                setStayStatusColorMap(map);
+              }
+            }),
           ]),
           fetchTrafficBySchedule(sorted, authenticated, shareId),
           fetchAreaColors(sorted),
@@ -142,6 +159,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           if (!active) return;
           setTrafficBySchedule(trafficMap);
           setAreaColors(colors);
+          setColorsVersion((v) => v + 1);
         }).catch(() => undefined);
       })
       .catch((e) => {
@@ -304,9 +322,11 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             {!mobile && <Text style={styles.cardCost}>¥{stay.fee.toLocaleString()}</Text>}
           </View>
           <View style={styles.archiveTags}>
-            {!!stay.website && stayGrouping !== "website" && <NotionTag label={stay.website} color={getOptionColorSync(stay.website, "WEBSITE")} />}
-            <Text style={[styles.breakfastLabel, !stay.breakfast_flag && styles.breakfastLabelOff]}>{stay.breakfast_flag ? "朝食あり" : "朝食なし"}</Text>
-            {!!stay.status && stayGrouping !== "status" && <NotionTag label={stay.status} color={getOptionColorSync(stay.status, "STAY_STATUS")} />}
+            {!!stay.website && stayGrouping !== "website" && <NotionTag label={stay.website} color={websiteColorMap.get(stay.website) ?? getOptionColorSync(stay.website, "WEBSITE")} />}
+            <View style={[styles.breakfastBadge, !stay.breakfast_flag && styles.breakfastBadgeOff]}>
+              <Text style={[styles.breakfastLabel, !stay.breakfast_flag && styles.breakfastLabelOff]}>{stay.breakfast_flag ? "朝食あり" : "朝食なし"}</Text>
+            </View>
+            {!!stay.status && stayGrouping !== "status" && <NotionTag label={stay.status} color={stayStatusColorMap.get(stay.status) ?? getOptionColorSync(stay.status, "STAY_STATUS")} />}
           </View>
           <Text style={styles.venue}>{stay.check_in.replace(/-/g, ".")} → {stay.check_out.replace(/-/g, ".")}</Text>
         </View>
@@ -329,13 +349,9 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
 
   return (
     <View style={styles.page}>
-      {authenticated ? <AppHeader active="archive" /> : <PublicHeader active="archive" />}
+      {authenticated ? <AppHeader active="archive" /> : <PublicHeader active="archive" homePath={`/share/${shareId}`} archivePath={`/share/${shareId}/year/${year}`} />}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={[styles.main, mobile && styles.mainMobile]}>
-          <TouchableOpacity style={styles.back} onPress={onBack}>
-            <Ionicons name="arrow-back" size={18} color={brand.violet} />
-            <Text style={styles.backText}>スケジュールに戻る</Text>
-          </TouchableOpacity>
           <Text style={[styles.title, mobile && styles.titleMobile]}>{year} ARCHIVE</Text>
           {!!fetchStays && <View style={styles.archiveTabs}>
             <TouchableOpacity style={[styles.archiveTab, archiveType === "event" && styles.archiveTabActive]} onPress={() => setArchiveType("event")}><Text style={[styles.archiveTabText, archiveType === "event" && styles.archiveTabTextActive]}>イベント</Text></TouchableOpacity>
@@ -353,10 +369,10 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
 
           <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
             {canUseGrouping && (archiveType === "event" ? <View style={styles.groupingPanel}>
-              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>メイン</Text><View style={styles.groupingButtons}>{([['none','なし'],['target','お目当て'],['lineup','出演者']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, mainGrouping === value && styles.groupingButtonActive]} onPress={() => setMainGrouping(value)}><Text style={[styles.groupingButtonText, mainGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
-              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>サブ</Text><View style={styles.groupingButtons}>{([['none','なし'],['group','グループ'],['category','カテゴリ'],['area','エリア'],['seller','販売元'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, subGrouping === value && styles.groupingButtonActive]} onPress={() => setSubGrouping(value)}><Text style={[styles.groupingButtonText, subGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
+              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>メイン</Text>{([['none','なし'],['target','お目当て'],['lineup','出演者']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, mainGrouping === value && styles.groupingButtonActive]} onPress={() => setMainGrouping(value)}><Text style={[styles.groupingButtonText, mainGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View>
+              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>サブ</Text>{([['none','なし'],['group','グループ'],['category','カテゴリ'],['area','エリア'],['seller','販売元'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, subGrouping === value && styles.groupingButtonActive]} onPress={() => setSubGrouping(value)}><Text style={[styles.groupingButtonText, subGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View>
             </View> : <View style={styles.groupingPanel}>
-              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>分類</Text><View style={styles.groupingButtons}>{([['none','なし'],['website','予約サイト'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, stayGrouping === value && styles.groupingButtonActive]} onPress={() => setStayGrouping(value)}><Text style={[styles.groupingButtonText, stayGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View></View>
+              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>分類</Text>{([['none','なし'],['website','予約サイト'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, stayGrouping === value && styles.groupingButtonActive]} onPress={() => setStayGrouping(value)}><Text style={[styles.groupingButtonText, stayGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View>
             </View>)}
             <View style={[styles.sortControls, mobile && styles.sortControlsMobile, !canUseGrouping && !mobile && styles.sortControlsSolo]}>
               {(mainGrouping === "target" || mainGrouping === "lineup") && archiveType === "event" && <View style={styles.compactSelectWrap}>
@@ -386,7 +402,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             stayGroups.map(([title, items]) => {
               const key = `stay-${title}`;
               const collapsed = collapsedSections.has(key);
-              const color = stayGrouping === "website" ? getOptionColorSync(title, "WEBSITE") : stayGrouping === "status" ? getOptionColorSync(title, "STAY_STATUS") : null;
+              const color = stayGrouping === "website" ? (websiteColorMap.get(title) ?? getOptionColorSync(title, "WEBSITE")) : stayGrouping === "status" ? (stayStatusColorMap.get(title) ?? getOptionColorSync(title, "STAY_STATUS")) : null;
               return <View key={key} style={styles.monthSection}>
                 {stayGrouping === "none" ? <Text style={styles.monthTitle}>{title}</Text> : <TouchableOpacity style={styles.groupHeader} onPress={() => toggleSection(key)}><Ionicons name={collapsed ? "chevron-forward" : "chevron-down"} size={18} color={brand.muted} style={styles.groupChevron} />{color ? <View style={styles.groupTagWrap}><NotionTag label={title} color={color} /></View> : <Text style={styles.groupTitle}>{title}</Text>}<Text style={styles.groupCount}>({items.length})</Text></TouchableOpacity>}
                 {(stayGrouping === "none" || !collapsed) && <View style={styles.cardList}>{items.map(renderStayCard)}</View>}
@@ -440,6 +456,11 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
         </View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar
+        active="archive"
+        homePath={authenticated ? '/' : `/share/${shareId}`}
+        archivePath={authenticated ? `/year/${year}` : `/share/${shareId}/year/${year}`}
+      />
     </View>
   );
 }
@@ -479,9 +500,8 @@ const styles = StyleSheet.create({
   compactSelectOption: { paddingHorizontal: 10, paddingVertical: 9, borderRadius: 4 },
   compactSelectOptionText: { color: brand.ink, fontSize: 13 },
   compactSelectOptionActive: { color: brand.violet, fontWeight: "700" },
-  groupingRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  groupingRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
   groupingLabel: { width: 48, color: brand.ink, fontSize: 13, lineHeight: 36, fontWeight: "700" },
-  groupingButtons: { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 8 },
   groupingButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   groupingButtonActive: { backgroundColor: brand.plum, borderColor: brand.plum },
   groupingButtonText: { color: brand.ink, fontSize: 13, fontWeight: "400" },
@@ -491,12 +511,12 @@ const styles = StyleSheet.create({
   monthSection: { marginBottom: 28 },
   monthTitle: { color: brand.plum, fontSize: 25, lineHeight: 32, fontWeight: "800", marginBottom: 10 },
   groupSection: { marginBottom: 18, overflow: "hidden", borderRadius: 10, borderWidth: 1, borderColor: brand.border, backgroundColor: "#F9F7FC" },
-  groupHeader: { minHeight: 54, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: brand.border, backgroundColor: "#F9F7FC" },
+  groupHeader: { minHeight: 54, paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: brand.border, backgroundColor: "#F9F7FC" },
   subGroupHeader: { paddingLeft: 32, minHeight: 48, backgroundColor: "#FCFBFD" },
   groupChevron: { width: 26 },
-  groupTagWrap: { alignSelf: "center", justifyContent: "center" },
-  groupTitle: { color: brand.ink, fontSize: 16, fontWeight: "700" },
-  subGroupTitle: { color: brand.ink, fontSize: 14, fontWeight: "600" },
+  groupTagWrap: { flex: 1, minWidth: 0, alignSelf: "center", justifyContent: "center" },
+  groupTitle: { flexShrink: 1, color: brand.ink, fontSize: 16, fontWeight: "700" },
+  subGroupTitle: { flexShrink: 1, color: brand.ink, fontSize: 14, fontWeight: "600" },
   groupCount: { marginLeft: 8, color: brand.muted, fontSize: 12 },
   groupTotal: { paddingLeft: 42, paddingRight: 16, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: brand.border, backgroundColor: "#F9F7FC" },
   subGroupTotal: { paddingLeft: 58, backgroundColor: "#FCFBFD" },
@@ -522,7 +542,9 @@ const styles = StyleSheet.create({
   mobileWeekday: { color: brand.ink, fontSize: 15, lineHeight: 20, fontWeight: "800", minWidth: 32, fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
   cardTitle: { flex: 1, color: brand.ink, fontSize: 16, lineHeight: 22, fontWeight: "800" },
   archiveTags: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 9 },
-  breakfastLabel: { color: brand.violetDark, backgroundColor: "#F5F3FF", borderRadius: 5, paddingHorizontal: 10, paddingVertical: 4, fontSize: 12 },
-  breakfastLabelOff: { color: brand.muted, backgroundColor: "#F0EEF2" },
+  breakfastBadge: { alignSelf: "flex-start", backgroundColor: "#F5F3FF", borderRadius: 5, paddingHorizontal: 10, paddingVertical: 4 },
+  breakfastBadgeOff: { backgroundColor: "#F0EEF2" },
+  breakfastLabel: { color: brand.violetDark, fontSize: 12 },
+  breakfastLabelOff: { color: brand.muted },
   venue: { color: brand.muted, fontSize: 13, marginTop: 8 },
 });

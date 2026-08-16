@@ -22,8 +22,8 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../components/notion-property";
 import { NotionTag } from "../../components/notion-tag";
 import { useAuth } from "@/contexts/AuthContext";
-import { PageHeader } from "../../components/PageHeader";
 import { AppHeader, PublicFooter } from "../../components/GenBGTBrand";
+import { AppTabBar } from "../../components/AppTabBar";
 import type { Schedule } from "../HomeScreen";
 import { BooleanSelectDisplay } from "../../components/boolean-select-display";
 import { maskHotelName } from "../../utils/mask-hotel-name";
@@ -245,12 +245,12 @@ export default function StayDetailScreen() {
 
   const renderStatePage = (content: React.ReactNode) => (
     <View style={styles.container}>
-      <AppHeader active="schedule" />
-      <PageHeader homePath="/" />
+      <AppHeader active="archive" />
       <ScrollView contentContainerStyle={styles.stateScroll}>
         <View style={styles.stateContent}>{content}</View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar active="archive" homePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
     </View>
   );
 
@@ -274,9 +274,8 @@ export default function StayDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <AppHeader active="schedule" />
-      <PageHeader homePath="/" />
-      <ScrollView 
+      <AppHeader active="archive" />
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl 
@@ -467,6 +466,7 @@ export default function StayDetailScreen() {
         </View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar active="archive" homePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
     </View>
   );
 }

@@ -21,8 +21,8 @@ import { getOptionColor } from "../../../../utils/get-option-color";
 import { loadSelectOptions } from "../../../../utils/select-options-storage";
 import type { Schedule } from "../../../HomeScreen";
 import { CollapsibleDetailSection } from "../../../../components/CollapsibleDetailSection";
-import { PageHeader } from "../../../../components/PageHeader";
 import { AppHeader, PublicFooter, PublicHeader, brand } from "../../../../components/GenBGTBrand";
+import { AppTabBar } from "../../../../components/AppTabBar";
 import { isJapaneseHolidayDate } from "../../../../components/ScheduleCalendar";
 
 // 本人認証時（内部数値id）と共有・公開時（推測困難なpublic_id文字列）の両方をこの画面で扱うため、
@@ -664,12 +664,8 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
 
   return (
     <View style={styles.container}>
-      {authenticated ? <AppHeader active="schedule" /> : <PublicHeader active="none" />}
-      <PageHeader
-        showBackButton={true}
-        homePath={authenticated ? "/" : `/share/${share_id}`}
-      />
-      <ScrollView 
+      {authenticated ? <AppHeader active="archive" /> : <PublicHeader active="archive" homePath={`/share/${share_id}`} archivePath={`/share/${share_id}/year/${new Date().getFullYear()}`} />}
+      <ScrollView
         contentContainerStyle={styles.scrollPage}
         refreshControl={
           Platform.OS !== 'web' ? (
@@ -750,8 +746,13 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                 </View>
               )}
             </View>
+            {authenticated && isMobile && <View style={styles.heroActions}>
+              <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={brand.violetDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={brand.white} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Ionicons name="trash-outline" size={17} color="#DC2626" /><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
+            </View>}
           </View>
-          {authenticated && <View style={[styles.heroActions, styles.heroActionsDesktop]}>
+          {authenticated && !isMobile && <View style={[styles.heroActions, styles.heroActionsVertical]}>
             <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={brand.violetDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
             <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={brand.white} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
             <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Ionicons name="trash-outline" size={17} color="#DC2626" /><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
@@ -782,6 +783,11 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         </View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar
+        active="archive"
+        homePath={authenticated ? "/" : `/share/${share_id}`}
+        archivePath={authenticated ? `/year/${new Date().getFullYear()}` : `/share/${share_id}/year/${new Date().getFullYear()}`}
+      />
     </View>
   );
 }
@@ -827,11 +833,11 @@ const styles = StyleSheet.create({
   },
   heroCardMobile: { padding: 18 },
   heroCopy: { flex: 1, minWidth: 0 },
-  heroActions: { flexDirection: "row", alignItems: "center", gap: 16 },
-  heroActionsDesktop: { flexDirection: "column", alignItems: "stretch", gap: 8 },
-  duplicateAction: { minHeight: 42, paddingHorizontal: 18, backgroundColor: brand.lavender, borderWidth: 1, borderColor: "#C4B5FD", borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  heroActions: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 16 },
+  heroActionsVertical: { flexDirection: "column", alignItems: "stretch", gap: 8, marginTop: 0 },
+  duplicateAction: { minHeight: 42, paddingHorizontal: 14, backgroundColor: brand.lavender, borderWidth: 1, borderColor: "#C4B5FD", borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   duplicateActionText: { color: brand.violetDark, fontSize: 14, fontWeight: "700" },
-  editAction: { minHeight: 42, paddingHorizontal: 20, backgroundColor: brand.violet, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  editAction: { minHeight: 42, paddingHorizontal: 14, backgroundColor: brand.violet, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   editActionText: { color: brand.white, fontSize: 14, fontWeight: "700" },
   deleteAction: { minHeight: 42, paddingHorizontal: 14, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: 7, borderWidth: 1, borderColor: "#FECACA", backgroundColor: "#FEF2F2", borderRadius: 9 },
   deleteActionText: { color: "#DC2626", fontSize: 14, fontWeight: "600" },

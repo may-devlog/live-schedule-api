@@ -16,6 +16,7 @@ import {
   Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { PersonIcon, NotificationIcon } from "@/components/CustomIcons";
 import {
@@ -1178,13 +1179,13 @@ export default function HomeScreen() {
                     <Text style={styles.sharingUrlText} numberOfLines={1}>{sharingUrl}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => {
+                    onPress={async () => {
                       if (Platform.OS === 'web' && typeof window !== 'undefined' && navigator.clipboard) {
                         navigator.clipboard.writeText(sharingUrl);
-                        Alert.alert("コピーしました", sharingUrl);
                       } else {
-                        Alert.alert("共有URL", sharingUrl);
+                        await Clipboard.setStringAsync(sharingUrl);
                       }
+                      Alert.alert("コピーしました", sharingUrl);
                     }}
                     style={styles.copyButton}
                   >

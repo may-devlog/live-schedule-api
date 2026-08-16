@@ -1,11 +1,78 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Image, Modal, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { AccountMenu } from './AccountMenu';
 import { NotificationMenu } from './NotificationMenu';
 import { fetchProfile } from '../utils/profile-request';
+
+// Web版ヘッダーの代わりにネイティブで表示する、Safe Area分の余白のみのスペーサー
+function NativeTopSpacer() {
+  const insets = useSafeAreaInsets();
+  return <View style={{ height: insets.top, backgroundColor: brand.white }} />;
+}
+
+// ログイン中のネイティブ画面向け: Safe Area余白+右上のハンバーガーメニュー（通知・アカウント）
+function NativeAppHeaderBar({ onDisplayNameChange }: { onDisplayNameChange?: (value: string | null) => void }) {
+  const insets = useSafeAreaInsets();
+  const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [notificationsVisible, setNotificationsVisible] = useState(false);
+  const [accountVisible, setAccountVisible] = useState(false);
+
+  useEffect(() => {
+    fetchProfile(true)
+      .then((profile) => {
+        setAvatarDataUrl(profile?.avatar_data_url ?? null);
+        setDisplayName(profile?.display_name ?? null);
+      })
+      .catch(() => { setAvatarDataUrl(null); setDisplayName(null); });
+  }, []);
+
+  return (
+    <View style={{ paddingTop: insets.top, backgroundColor: brand.white, borderBottomWidth: 1, borderBottomColor: brand.border }}>
+      <View style={styles.nativeHeaderBar}>
+        <TouchableOpacity style={styles.nativeMenuButton} onPress={() => setMenuOpen(true)} accessibilityLabel="メニューを開く">
+          <Ionicons name="menu" size={26} color={brand.ink} />
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+        <TouchableOpacity style={styles.nativeMenuOverlay} activeOpacity={1} onPress={() => setMenuOpen(false)}>
+          <View style={[styles.nativeMenuPanel, { top: insets.top + 52 }]}>
+            <TouchableOpacity
+              style={styles.nativeMenuItem}
+              onPress={() => { setMenuOpen(false); setNotificationsVisible(true); }}
+            >
+              <Ionicons name="notifications-outline" size={19} color={brand.violetDark} />
+              <Text style={styles.nativeMenuItemText}>通知</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.nativeMenuItem}
+              onPress={() => { setMenuOpen(false); setAccountVisible(true); }}
+            >
+              <Ionicons name="person-outline" size={19} color={brand.violetDark} />
+              <Text style={styles.nativeMenuItemText}>アカウント</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <NotificationMenu hideTrigger visible={notificationsVisible} onClose={() => setNotificationsVisible(false)} />
+      <AccountMenu
+        visible={accountVisible}
+        onClose={() => setAccountVisible(false)}
+        avatarDataUrl={avatarDataUrl}
+        onAvatarChange={setAvatarDataUrl}
+        displayName={displayName}
+        onDisplayNameChange={(value) => { setDisplayName(value); onDisplayNameChange?.(value); }}
+      />
+    </View>
+  );
+}
 
 export const HEADER_CONTENT_MAX_WIDTH = 1320;
 
@@ -41,21 +108,27 @@ export function BrandWordmark({ light = false, compact = false }: { light?: bool
   );
 }
 
-export function PublicHeader({ active = 'schedule' }: { active?: 'schedule' | 'archive' | 'none' }) {
+export function PublicHeader({ active = 'archive', homePath = '/', archivePath }: { active?: 'home' | 'archive' | 'none'; homePath?: string; archivePath?: string }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const narrow = width < 720;
 
+  if (Platform.OS !== 'web') return <NativeTopSpacer />;
+
   return (
     <View style={styles.header}>
       <View style={styles.headerInner}>
-        <TouchableOpacity onPress={() => router.push('/')} activeOpacity={0.8}>
+        <TouchableOpacity onPress={() => router.push(homePath)} activeOpacity={0.8}>
           <BrandWordmark compact={narrow} />
         </TouchableOpacity>
         {!narrow && (
           <View style={styles.nav}>
-            <Text style={[styles.navText, active === 'schedule' && styles.navActive]}>SCHEDULE</Text>
-            <Text style={[styles.navText, active === 'archive' && styles.navActive]}>ARCHIVE</Text>
+            <TouchableOpacity onPress={() => router.push(homePath)}><Text style={[styles.navText, active === 'home' && styles.navActive]}>HOME</Text></TouchableOpacity>
+            {archivePath ? (
+              <TouchableOpacity onPress={() => router.push(archivePath)}><Text style={[styles.navText, active === 'archive' && styles.navActive]}>ARCHIVE</Text></TouchableOpacity>
+            ) : (
+              <Text style={[styles.navText, active === 'archive' && styles.navActive]}>ARCHIVE</Text>
+            )}
           </View>
         )}
         <View style={styles.headerActions}>
@@ -77,6 +150,9 @@ export function AuthHeader() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const narrow = width < 640;
+
+  if (Platform.OS !== 'web') return <NativeTopSpacer />;
+
   return (
     <View style={styles.header}>
       <View style={styles.headerInner}>
@@ -96,7 +172,7 @@ export function AuthHeader() {
   );
 }
 
-export function AppHeader({ active = 'schedule', onDisplayNameChange }: { active?: 'schedule' | 'archive'; onDisplayNameChange?: (value: string | null) => void }) {
+export function AppHeader({ active = 'archive', onDisplayNameChange }: { active?: 'home' | 'archive'; onDisplayNameChange?: (value: string | null) => void }) {
   const router = useRouter();
   const { email } = useAuth();
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
@@ -115,12 +191,15 @@ export function AppHeader({ active = 'schedule', onDisplayNameChange }: { active
       })
       .catch(() => { setAvatarDataUrl(null); setDisplayName(null); setProfileShareId(null); });
   }, []);
+
+  if (Platform.OS !== 'web') return <NativeAppHeaderBar onDisplayNameChange={onDisplayNameChange} />;
+
   return (
     <View style={styles.header}>
       <View style={styles.headerInner}>
         <TouchableOpacity onPress={() => router.push('/')} activeOpacity={0.8}><BrandWordmark compact={narrow} /></TouchableOpacity>
         {!narrow && <View style={styles.nav}>
-          <TouchableOpacity onPress={() => router.push('/')}><Text style={[styles.navText, active === 'schedule' && styles.navActive]}>SCHEDULE</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/')}><Text style={[styles.navText, active === 'home' && styles.navActive]}>HOME</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => router.push(`/year/${new Date().getFullYear()}`)}><Text style={[styles.navText, active === 'archive' && styles.navActive]}>ARCHIVE</Text></TouchableOpacity>
         </View>}
         <View style={styles.appHeaderActions}>
@@ -141,6 +220,9 @@ export function PublicFooter({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const narrow = width < 720;
+
+  if (Platform.OS !== 'web') return null;
+
   return (
     <View style={[styles.footer, compact && styles.footerCompact]}>
       <View style={[styles.footerInner, narrow && styles.footerInnerNarrow]}>
@@ -161,6 +243,12 @@ export function PublicFooter({ compact = false }: { compact?: boolean }) {
 }
 
 const styles = StyleSheet.create({
+  nativeHeaderBar: { minHeight: 48, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
+  nativeMenuButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  nativeMenuOverlay: { flex: 1, backgroundColor: 'rgba(32,27,44,0.32)', alignItems: 'flex-end' },
+  nativeMenuPanel: { position: 'absolute', right: 16, width: 180, borderRadius: 12, backgroundColor: brand.white, paddingVertical: 6, shadowColor: '#1C1133', shadowOpacity: 0.2, shadowRadius: 16, elevation: 6 },
+  nativeMenuItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12 },
+  nativeMenuItemText: { color: brand.ink, fontSize: 14, fontWeight: '600' },
   mark: { alignItems: 'center', justifyContent: 'center', position: 'relative' },
   sparkle: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   sparkleGlyph: { fontWeight: '800', textAlign: 'center' },
