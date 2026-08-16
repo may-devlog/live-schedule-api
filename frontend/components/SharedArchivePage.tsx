@@ -94,6 +94,8 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [, setColorsVersion] = useState(0);
+  const [websiteColorMap, setWebsiteColorMap] = useState<Map<string, string>>(new Map());
+  const [stayStatusColorMap, setStayStatusColorMap] = useState<Map<string, string>>(new Map());
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [mainSortMenuOpen, setMainSortMenuOpen] = useState(false);
@@ -134,8 +136,22 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             loadSelectOptions("AREAS", optionOwner).then((options) => preloadOptionColors(options, "AREAS")),
             loadSelectOptions("SELLERS", optionOwner).then((options) => preloadOptionColors(options, "SELLERS")),
             loadSelectOptions("STATUSES", optionOwner).then((options) => preloadOptionColors(options, "STATUSES")),
-            loadStaySelectOptions("WEBSITE", optionOwner).then((options) => preloadOptionColors(options, "WEBSITE")),
-            loadStaySelectOptions("STATUS", optionOwner).then((options) => preloadOptionColors(options, "STAY_STATUS")),
+            loadStaySelectOptions("WEBSITE", optionOwner).then((options) => {
+              preloadOptionColors(options, "WEBSITE");
+              if (active) {
+                const map = new Map<string, string>();
+                options.forEach((opt) => map.set(opt.label, getOptionColorSync(opt.label, "WEBSITE")));
+                setWebsiteColorMap(map);
+              }
+            }),
+            loadStaySelectOptions("STATUS", optionOwner).then((options) => {
+              preloadOptionColors(options, "STAY_STATUS");
+              if (active) {
+                const map = new Map<string, string>();
+                options.forEach((opt) => map.set(opt.label, getOptionColorSync(opt.label, "STAY_STATUS")));
+                setStayStatusColorMap(map);
+              }
+            }),
           ]),
           fetchTrafficBySchedule(sorted, authenticated, shareId),
           fetchAreaColors(sorted),
@@ -306,9 +322,9 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             {!mobile && <Text style={styles.cardCost}>¥{stay.fee.toLocaleString()}</Text>}
           </View>
           <View style={styles.archiveTags}>
-            {!!stay.website && stayGrouping !== "website" && <NotionTag label={stay.website} color={getOptionColorSync(stay.website, "WEBSITE")} />}
+            {!!stay.website && stayGrouping !== "website" && <NotionTag label={stay.website} color={websiteColorMap.get(stay.website) ?? getOptionColorSync(stay.website, "WEBSITE")} />}
             <Text style={[styles.breakfastLabel, !stay.breakfast_flag && styles.breakfastLabelOff]}>{stay.breakfast_flag ? "朝食あり" : "朝食なし"}</Text>
-            {!!stay.status && stayGrouping !== "status" && <NotionTag label={stay.status} color={getOptionColorSync(stay.status, "STAY_STATUS")} />}
+            {!!stay.status && stayGrouping !== "status" && <NotionTag label={stay.status} color={stayStatusColorMap.get(stay.status) ?? getOptionColorSync(stay.status, "STAY_STATUS")} />}
           </View>
           <Text style={styles.venue}>{stay.check_in.replace(/-/g, ".")} → {stay.check_out.replace(/-/g, ".")}</Text>
         </View>
@@ -384,7 +400,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             stayGroups.map(([title, items]) => {
               const key = `stay-${title}`;
               const collapsed = collapsedSections.has(key);
-              const color = stayGrouping === "website" ? getOptionColorSync(title, "WEBSITE") : stayGrouping === "status" ? getOptionColorSync(title, "STAY_STATUS") : null;
+              const color = stayGrouping === "website" ? (websiteColorMap.get(title) ?? getOptionColorSync(title, "WEBSITE")) : stayGrouping === "status" ? (stayStatusColorMap.get(title) ?? getOptionColorSync(title, "STAY_STATUS")) : null;
               return <View key={key} style={styles.monthSection}>
                 {stayGrouping === "none" ? <Text style={styles.monthTitle}>{title}</Text> : <TouchableOpacity style={styles.groupHeader} onPress={() => toggleSection(key)}><Ionicons name={collapsed ? "chevron-forward" : "chevron-down"} size={18} color={brand.muted} style={styles.groupChevron} />{color ? <View style={styles.groupTagWrap}><NotionTag label={title} color={color} /></View> : <Text style={styles.groupTitle}>{title}</Text>}<Text style={styles.groupCount}>({items.length})</Text></TouchableOpacity>}
                 {(stayGrouping === "none" || !collapsed) && <View style={styles.cardList}>{items.map(renderStayCard)}</View>}
