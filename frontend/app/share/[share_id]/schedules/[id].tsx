@@ -21,8 +21,8 @@ import { getOptionColor } from "../../../../utils/get-option-color";
 import { loadSelectOptions } from "../../../../utils/select-options-storage";
 import type { Schedule } from "../../../HomeScreen";
 import { CollapsibleDetailSection } from "../../../../components/CollapsibleDetailSection";
-import { PageHeader } from "../../../../components/PageHeader";
 import { AppHeader, PublicFooter, PublicHeader, brand } from "../../../../components/GenBGTBrand";
+import { AppTabBar } from "../../../../components/AppTabBar";
 import { isJapaneseHolidayDate } from "../../../../components/ScheduleCalendar";
 
 // 本人認証時（内部数値id）と共有・公開時（推測困難なpublic_id文字列）の両方をこの画面で扱うため、
@@ -664,12 +664,8 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
 
   return (
     <View style={styles.container}>
-      {authenticated ? <AppHeader active="schedule" /> : <PublicHeader active="none" />}
-      <PageHeader
-        showBackButton={true}
-        homePath={authenticated ? "/" : `/share/${share_id}`}
-      />
-      <ScrollView 
+      {authenticated ? <AppHeader active="schedule" /> : <PublicHeader active="schedule" homePath={`/share/${share_id}`} />}
+      <ScrollView
         contentContainerStyle={styles.scrollPage}
         refreshControl={
           Platform.OS !== 'web' ? (
@@ -782,6 +778,12 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         </View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar
+        active="schedule"
+        homePath={authenticated ? "/" : `/share/${share_id}`}
+        schedulePath={authenticated ? "/" : `/share/${share_id}`}
+        archivePath={authenticated ? `/year/${new Date().getFullYear()}` : `/share/${share_id}/year/${new Date().getFullYear()}`}
+      />
     </View>
   );
 }

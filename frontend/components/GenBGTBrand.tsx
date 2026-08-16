@@ -41,7 +41,7 @@ export function BrandWordmark({ light = false, compact = false }: { light?: bool
   );
 }
 
-export function PublicHeader({ active = 'schedule' }: { active?: 'schedule' | 'archive' | 'none' }) {
+export function PublicHeader({ active = 'schedule', homePath = '/' }: { active?: 'home' | 'schedule' | 'archive' | 'none'; homePath?: string }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const narrow = width < 720;
@@ -51,11 +51,12 @@ export function PublicHeader({ active = 'schedule' }: { active?: 'schedule' | 'a
   return (
     <View style={styles.header}>
       <View style={styles.headerInner}>
-        <TouchableOpacity onPress={() => router.push('/')} activeOpacity={0.8}>
+        <TouchableOpacity onPress={() => router.push(homePath)} activeOpacity={0.8}>
           <BrandWordmark compact={narrow} />
         </TouchableOpacity>
         {!narrow && (
           <View style={styles.nav}>
+            <TouchableOpacity onPress={() => router.push(homePath)}><Text style={[styles.navText, active === 'home' && styles.navActive]}>HOME</Text></TouchableOpacity>
             <Text style={[styles.navText, active === 'schedule' && styles.navActive]}>SCHEDULE</Text>
             <Text style={[styles.navText, active === 'archive' && styles.navActive]}>ARCHIVE</Text>
           </View>
@@ -101,7 +102,7 @@ export function AuthHeader() {
   );
 }
 
-export function AppHeader({ active = 'schedule', onDisplayNameChange }: { active?: 'schedule' | 'archive'; onDisplayNameChange?: (value: string | null) => void }) {
+export function AppHeader({ active = 'schedule', onDisplayNameChange }: { active?: 'home' | 'schedule' | 'archive'; onDisplayNameChange?: (value: string | null) => void }) {
   const router = useRouter();
   const { email } = useAuth();
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
@@ -128,6 +129,7 @@ export function AppHeader({ active = 'schedule', onDisplayNameChange }: { active
       <View style={styles.headerInner}>
         <TouchableOpacity onPress={() => router.push('/')} activeOpacity={0.8}><BrandWordmark compact={narrow} /></TouchableOpacity>
         {!narrow && <View style={styles.nav}>
+          <TouchableOpacity onPress={() => router.push('/')}><Text style={[styles.navText, active === 'home' && styles.navActive]}>HOME</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/')}><Text style={[styles.navText, active === 'schedule' && styles.navActive]}>SCHEDULE</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => router.push(`/year/${new Date().getFullYear()}`)}><Text style={[styles.navText, active === 'archive' && styles.navActive]}>ARCHIVE</Text></TouchableOpacity>
         </View>}

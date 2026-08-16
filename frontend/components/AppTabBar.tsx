@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { brand } from '@/components/GenBGTBrand';
 
 type AppTabBarProps = {
-  active: 'schedule' | 'archive';
+  active: 'home' | 'schedule' | 'archive';
   homePath: string;
   schedulePath: string;
   archivePath: string;
@@ -22,8 +22,8 @@ export function AppTabBar({ active, homePath, schedulePath, archivePath }: AppTa
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       <TouchableOpacity style={styles.tab} onPress={() => router.push(homePath)}>
-        <Ionicons name="home-outline" size={22} color={brand.muted} />
-        <Text style={styles.label}>ホーム</Text>
+        <Ionicons name={active === 'home' ? 'home' : 'home-outline'} size={22} color={active === 'home' ? brand.violet : brand.muted} />
+        <Text style={[styles.label, active === 'home' && styles.labelActive]}>HOME</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.tab} onPress={() => router.push(schedulePath)}>
         <Ionicons name={active === 'schedule' ? 'calendar' : 'calendar-outline'} size={22} color={active === 'schedule' ? brand.violet : brand.muted} />

@@ -25,8 +25,8 @@ import { NotionTag } from "../../components/notion-tag";
 import { NotionProperty, NotionPropertyBlock } from "../../components/notion-property";
 import { getOptionColor } from "../../utils/get-option-color";
 import { useAuth } from "@/contexts/AuthContext";
-import { PageHeader } from "../../components/PageHeader";
 import { AppHeader, PublicFooter } from "../../components/GenBGTBrand";
+import { AppTabBar } from "../../components/AppTabBar";
 import type { Schedule } from "../HomeScreen";
 import { NotionRelation } from "../../components/notion-relation";
 import { BooleanSelectDisplay } from "../../components/boolean-select-display";
@@ -214,11 +214,11 @@ export default function TrafficDetailScreen() {
   const renderStatePage = (content: React.ReactNode) => (
     <View style={styles.container}>
       <AppHeader active="schedule" />
-      <PageHeader homePath="/" />
       <ScrollView contentContainerStyle={styles.stateScroll}>
         <View style={styles.stateContent}>{content}</View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar active="schedule" homePath="/" schedulePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
     </View>
   );
 
@@ -247,8 +247,7 @@ export default function TrafficDetailScreen() {
   return (
     <View style={styles.container}>
       <AppHeader active="schedule" />
-      <PageHeader homePath="/" />
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl 
@@ -426,6 +425,7 @@ export default function TrafficDetailScreen() {
         </View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar active="schedule" homePath="/" schedulePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
     </View>
   );
 }
