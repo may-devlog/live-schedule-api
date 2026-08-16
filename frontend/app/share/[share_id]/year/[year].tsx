@@ -89,7 +89,6 @@ export default function SharedYearScreen() {
       fetchAvailableYears={fetchAvailableYears}
       onSchedulePress={handleOpenDetail}
       initialYear={year ?? String(new Date().getFullYear())}
-      onBack={() => router.push(`/share/${share_id}`)}
       onSelectYear={(selectedYear) => router.replace(`/share/${share_id}/year/${selectedYear}`)}
     />
   );

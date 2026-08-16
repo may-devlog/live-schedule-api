@@ -129,7 +129,6 @@ export default function YearScreen() {
         onSchedulePress={handleOpenDetail}
         onStayPress={handleOpenStay}
         initialYear={params.year ?? String(new Date().getFullYear())}
-        onBack={() => router.push("/")}
         onSelectYear={(selectedYear) => router.replace(`/year/${selectedYear}`)}
         canUseGrouping={canUseGrouping}
       />
