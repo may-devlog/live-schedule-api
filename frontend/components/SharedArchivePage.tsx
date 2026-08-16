@@ -441,7 +441,6 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
       <AppTabBar
         active="archive"
         homePath={authenticated ? '/' : `/share/${shareId}`}
-        schedulePath={authenticated ? '/' : `/share/${shareId}`}
         archivePath={authenticated ? `/year/${year}` : `/share/${shareId}/year/${year}`}
       />
     </View>

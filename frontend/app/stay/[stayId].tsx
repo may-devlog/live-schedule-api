@@ -245,12 +245,12 @@ export default function StayDetailScreen() {
 
   const renderStatePage = (content: React.ReactNode) => (
     <View style={styles.container}>
-      <AppHeader active="schedule" />
+      <AppHeader active="archive" />
       <ScrollView contentContainerStyle={styles.stateScroll}>
         <View style={styles.stateContent}>{content}</View>
         <PublicFooter />
       </ScrollView>
-      <AppTabBar active="schedule" homePath="/" schedulePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
+      <AppTabBar active="archive" homePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
     </View>
   );
 
@@ -274,7 +274,7 @@ export default function StayDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <AppHeader active="schedule" />
+      <AppHeader active="archive" />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -466,7 +466,7 @@ export default function StayDetailScreen() {
         </View>
         <PublicFooter />
       </ScrollView>
-      <AppTabBar active="schedule" homePath="/" schedulePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
+      <AppTabBar active="archive" homePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
     </View>
   );
 }

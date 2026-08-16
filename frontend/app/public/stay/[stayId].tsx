@@ -99,7 +99,7 @@ export default function PublicStayDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <PublicHeader active="schedule" />
+      <PublicHeader active="archive" />
       <PageHeader showBackButton={true} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.detailContent}>

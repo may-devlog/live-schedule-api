@@ -6,14 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { brand } from '@/components/GenBGTBrand';
 
 type AppTabBarProps = {
-  active: 'home' | 'schedule' | 'archive';
+  active: 'home' | 'archive';
   homePath: string;
-  schedulePath: string;
   archivePath: string;
 };
 
 // Web版のヘッダー/フッターの代わりに、ネイティブアプリでのみ画面下部に表示するタブバー
-export function AppTabBar({ active, homePath, schedulePath, archivePath }: AppTabBarProps) {
+export function AppTabBar({ active, homePath, archivePath }: AppTabBarProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -24,10 +23,6 @@ export function AppTabBar({ active, homePath, schedulePath, archivePath }: AppTa
       <TouchableOpacity style={styles.tab} onPress={() => router.push(homePath)}>
         <Ionicons name={active === 'home' ? 'home' : 'home-outline'} size={22} color={active === 'home' ? brand.violet : brand.muted} />
         <Text style={[styles.label, active === 'home' && styles.labelActive]}>HOME</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.tab} onPress={() => router.push(schedulePath)}>
-        <Ionicons name={active === 'schedule' ? 'calendar' : 'calendar-outline'} size={22} color={active === 'schedule' ? brand.violet : brand.muted} />
-        <Text style={[styles.label, active === 'schedule' && styles.labelActive]}>SCHEDULE</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.tab} onPress={() => router.push(archivePath)}>
         <Ionicons name={active === 'archive' ? 'archive' : 'archive-outline'} size={22} color={active === 'archive' ? brand.violet : brand.muted} />

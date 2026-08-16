@@ -223,7 +223,6 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
       <AppTabBar
         active="home"
         homePath={authenticated ? '/' : `/share/${share_id}`}
-        schedulePath={authenticated ? '/' : `/share/${share_id}`}
         archivePath={authenticated ? `/year/${availableYears[0] ?? new Date().getFullYear()}` : `/share/${share_id}/year/${availableYears[0] ?? new Date().getFullYear()}`}
       />
     </View>

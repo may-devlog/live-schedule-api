@@ -355,7 +355,7 @@ export default function NewScheduleScreen() {
 
   return (
     <View style={styles.page}>
-      <AppHeader active="schedule" />
+      <AppHeader active="archive" />
       <ScrollView contentContainerStyle={styles.pageContent}>
         <View style={styles.container}>
           <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>

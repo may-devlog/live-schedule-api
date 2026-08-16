@@ -380,7 +380,7 @@ export default function EditStayScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-        <AppHeader active="schedule" />
+        <AppHeader active="archive" />
         <View style={styles.container}>
           <ActivityIndicator color="#37352f" size="large" />
         </View>
@@ -391,7 +391,7 @@ export default function EditStayScreen() {
   if (error) {
     return (
       <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-        <AppHeader active="schedule" />
+        <AppHeader active="archive" />
         <View style={styles.container}>
           <Text style={styles.title}>宿泊を編集</Text>
           <Text style={styles.errorText}>エラー: {error}</Text>
@@ -408,7 +408,7 @@ export default function EditStayScreen() {
 
   return (
     <View style={styles.page}>
-      <AppHeader active="schedule" />
+      <AppHeader active="archive" />
       <ScrollView contentContainerStyle={styles.pageContent}>
         <View style={styles.container}>
         <TouchableOpacity style={styles.backLink} onPress={() => router.back()}><Text style={styles.backLinkText}>← 宿泊詳細に戻る</Text></TouchableOpacity>

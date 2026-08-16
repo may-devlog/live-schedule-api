@@ -664,7 +664,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
 
   return (
     <View style={styles.container}>
-      {authenticated ? <AppHeader active="schedule" /> : <PublicHeader active="schedule" homePath={`/share/${share_id}`} />}
+      {authenticated ? <AppHeader active="archive" /> : <PublicHeader active="archive" homePath={`/share/${share_id}`} />}
       <ScrollView
         contentContainerStyle={styles.scrollPage}
         refreshControl={
@@ -784,9 +784,8 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         <PublicFooter />
       </ScrollView>
       <AppTabBar
-        active="schedule"
+        active="archive"
         homePath={authenticated ? "/" : `/share/${share_id}`}
-        schedulePath={authenticated ? "/" : `/share/${share_id}`}
         archivePath={authenticated ? `/year/${new Date().getFullYear()}` : `/share/${share_id}/year/${new Date().getFullYear()}`}
       />
     </View>
