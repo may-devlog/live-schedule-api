@@ -5,8 +5,8 @@ import { View, Text, StyleSheet, ActivityIndicator, ScrollView, RefreshControl, 
 import { getApiUrl } from "../../../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../../../components/notion-property";
 import { NotionTag } from "../../../../components/notion-tag";
-import { PageHeader } from "../../../../components/PageHeader";
 import { PublicFooter, PublicHeader } from "../../../../components/GenBGTBrand";
+import { AppTabBar } from "../../../../components/AppTabBar";
 import { ScheduleLinkCard } from "../../../../components/ScheduleLinkCard";
 import type { SelectOption } from "../../../../types/select-option";
 import { loadStaySelectOptions } from "../../../../utils/select-options-storage";
@@ -110,8 +110,7 @@ export default function SharedStayDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <PublicHeader active="archive" />
-      <PageHeader showBackButton={true} homePath={`/share/${share_id}`} />
+      <PublicHeader active="archive" homePath={`/share/${share_id}`} />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -239,6 +238,7 @@ export default function SharedStayDetailScreen() {
         </View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar active="archive" homePath={`/share/${share_id}`} archivePath={`/share/${share_id}/year/${new Date().getFullYear()}`} />
     </View>
   );
 }

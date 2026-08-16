@@ -6,8 +6,8 @@ import { getApiUrl } from "../../../utils/api";
 import { NotionTag } from "../../../components/notion-tag";
 import { NotionProperty, NotionPropertyBlock } from "../../../components/notion-property";
 import { getOptionColor } from "../../../utils/get-option-color";
-import { PageHeader } from "../../../components/PageHeader";
 import { PublicFooter, PublicHeader } from "../../../components/GenBGTBrand";
+import { AppTabBar } from "../../../components/AppTabBar";
 import { ScheduleLinkCard } from "../../../components/ScheduleLinkCard";
 import { BooleanSelectDisplay } from "../../../components/boolean-select-display";
 import { publicScheduleHref } from "../../../utils/public-schedule-links";
@@ -98,7 +98,6 @@ export default function PublicTrafficDetailScreen() {
   return (
     <View style={styles.container}>
       <PublicHeader active="archive" />
-      <PageHeader showBackButton={true} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.detailContent}>
         {/* タイトル */}
@@ -175,6 +174,7 @@ export default function PublicTrafficDetailScreen() {
         </View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar active="archive" homePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
     </View>
   );
 }

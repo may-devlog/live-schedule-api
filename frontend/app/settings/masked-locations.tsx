@@ -13,7 +13,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
-import { PageHeader } from "../../components/PageHeader";
+import { AppHeader } from "../../components/GenBGTBrand";
+import { AppTabBar } from "../../components/AppTabBar";
 
 type MaskedLocation = {
   id: number;
@@ -218,17 +219,18 @@ export default function MaskedLocationsScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <PageHeader showBackButton={true} homePath="/" />
+        <AppHeader active="archive" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator color="#333333" />
         </View>
+        <AppTabBar active="archive" homePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
       </View>
     );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <PageHeader showBackButton={true} homePath="/" />
+      <AppHeader active="archive" />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>出発地・到着地マスク設定</Text>
         <Text style={styles.description}>
@@ -313,6 +315,7 @@ export default function MaskedLocationsScreen() {
           )}
         </View>
       </ScrollView>
+      <AppTabBar active="archive" homePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
     </View>
   );
 }

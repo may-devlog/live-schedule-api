@@ -5,8 +5,8 @@ import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from "react-nat
 import { getApiUrl } from "../../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../../components/notion-property";
 import { NotionTag } from "../../../components/notion-tag";
-import { PageHeader } from "../../../components/PageHeader";
 import { PublicFooter, PublicHeader } from "../../../components/GenBGTBrand";
+import { AppTabBar } from "../../../components/AppTabBar";
 import { ScheduleLinkCard } from "../../../components/ScheduleLinkCard";
 import { maskHotelName } from "../../../utils/mask-hotel-name";
 import type { SelectOption } from "../../../types/select-option";
@@ -100,7 +100,6 @@ export default function PublicStayDetailScreen() {
   return (
     <View style={styles.container}>
       <PublicHeader active="archive" />
-      <PageHeader showBackButton={true} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.detailContent}>
         {/* タイトル */}
@@ -177,6 +176,7 @@ export default function PublicStayDetailScreen() {
         </View>
         <PublicFooter />
       </ScrollView>
+      <AppTabBar active="archive" homePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
     </View>
   );
 }
