@@ -509,7 +509,9 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: brand.lavender },
   scrollContent: { flexGrow: 1 },
-  main: { width: "100%", maxWidth: 1180, alignSelf: "center", paddingHorizontal: 48, paddingTop: 34, paddingBottom: 54 },
+  // flexGrowで残り余白を吸収し、絞り込み結果が0件など中身が短いときにフッターが
+  // 画面途中に浮き上がらず、常に最下部に収まるようにする
+  main: { width: "100%", maxWidth: 1180, alignSelf: "center", paddingHorizontal: 48, paddingTop: 34, paddingBottom: 54, flexGrow: 1 },
   mainMobile: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 36 },
   back: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start", marginBottom: 22 },
   backText: { color: brand.violet, fontSize: 14, fontWeight: "700" },
