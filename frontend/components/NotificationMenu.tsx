@@ -39,9 +39,20 @@ function formatDeadlineMessage(message: string): string {
     .join('\n');
 }
 
-export function NotificationMenu() {
+type NotificationMenuProps = {
+  hideTrigger?: boolean;
+  visible?: boolean;
+  onClose?: () => void;
+};
+
+export function NotificationMenu({ hideTrigger = false, visible: controlledVisible, onClose }: NotificationMenuProps = {}) {
   const router = useRouter();
-  const [visible, setVisible] = useState(false);
+  const [internalVisible, setInternalVisible] = useState(false);
+  const visible = controlledVisible ?? internalVisible;
+  const setVisible = (next: boolean) => {
+    setInternalVisible(next);
+    if (!next) onClose?.();
+  };
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +78,11 @@ export function NotificationMenu() {
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
+  useEffect(() => {
+    if (visible) fetchNotifications(true).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
   const open = () => {
     setVisible(true);
     fetchNotifications(true).catch(() => undefined);
@@ -83,14 +99,16 @@ export function NotificationMenu() {
 
   return (
     <>
-      <TouchableOpacity style={styles.bellButton} onPress={open} accessibilityLabel="通知を開く">
-        <Ionicons name="notifications-outline" size={23} color={brand.violetDark} />
-        {unreadCount > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-          </View>
-        )}
-      </TouchableOpacity>
+      {!hideTrigger && (
+        <TouchableOpacity style={styles.bellButton} onPress={open} accessibilityLabel="通知を開く">
+          <Ionicons name="notifications-outline" size={23} color={brand.violetDark} />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      )}
 
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <View style={styles.overlay}>
