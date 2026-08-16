@@ -323,7 +323,9 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           </View>
           <View style={styles.archiveTags}>
             {!!stay.website && stayGrouping !== "website" && <NotionTag label={stay.website} color={websiteColorMap.get(stay.website) ?? getOptionColorSync(stay.website, "WEBSITE")} />}
-            <Text style={[styles.breakfastLabel, !stay.breakfast_flag && styles.breakfastLabelOff]}>{stay.breakfast_flag ? "朝食あり" : "朝食なし"}</Text>
+            <View style={[styles.breakfastBadge, !stay.breakfast_flag && styles.breakfastBadgeOff]}>
+              <Text style={[styles.breakfastLabel, !stay.breakfast_flag && styles.breakfastLabelOff]}>{stay.breakfast_flag ? "朝食あり" : "朝食なし"}</Text>
+            </View>
             {!!stay.status && stayGrouping !== "status" && <NotionTag label={stay.status} color={stayStatusColorMap.get(stay.status) ?? getOptionColorSync(stay.status, "STAY_STATUS")} />}
           </View>
           <Text style={styles.venue}>{stay.check_in.replace(/-/g, ".")} → {stay.check_out.replace(/-/g, ".")}</Text>
@@ -540,7 +542,9 @@ const styles = StyleSheet.create({
   mobileWeekday: { color: brand.ink, fontSize: 15, lineHeight: 20, fontWeight: "800", minWidth: 32, fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
   cardTitle: { flex: 1, color: brand.ink, fontSize: 16, lineHeight: 22, fontWeight: "800" },
   archiveTags: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 9 },
-  breakfastLabel: { color: brand.violetDark, backgroundColor: "#F5F3FF", borderRadius: 5, paddingHorizontal: 10, paddingVertical: 4, fontSize: 12 },
-  breakfastLabelOff: { color: brand.muted, backgroundColor: "#F0EEF2" },
+  breakfastBadge: { alignSelf: "flex-start", backgroundColor: "#F5F3FF", borderRadius: 5, paddingHorizontal: 10, paddingVertical: 4 },
+  breakfastBadgeOff: { backgroundColor: "#F0EEF2" },
+  breakfastLabel: { color: brand.violetDark, fontSize: 12 },
+  breakfastLabelOff: { color: brand.muted },
   venue: { color: brand.muted, fontSize: 13, marginTop: 8 },
 });
