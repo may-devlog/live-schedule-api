@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { API_BASE } from '../constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -48,7 +49,7 @@ export function getApiUrl(path: string): string {
   // `npm run proxy:public` と 8084 番ポートで起動するローカル確認環境では、
   // 本番の公開データだけを読み取り専用プロキシ経由で取得する。
   // 通常のローカル開発（3000/8081 等）と本番環境の接続先は変更しない。
-  if (typeof window !== 'undefined') {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const isLocalPreview =
       (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
       window.location.port === '8084';
