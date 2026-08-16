@@ -750,12 +750,12 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                 </View>
               )}
             </View>
+            {authenticated && <View style={styles.heroActions}>
+              <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={brand.violetDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={brand.white} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Ionicons name="trash-outline" size={17} color="#DC2626" /><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
+            </View>}
           </View>
-          {authenticated && <View style={[styles.heroActions, styles.heroActionsDesktop]}>
-            <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={brand.violetDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={brand.white} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Ionicons name="trash-outline" size={17} color="#DC2626" /><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
-          </View>}
         </View>
 
         {isDesktop ? (
@@ -827,8 +827,7 @@ const styles = StyleSheet.create({
   },
   heroCardMobile: { padding: 18 },
   heroCopy: { flex: 1, minWidth: 0 },
-  heroActions: { flexDirection: "row", alignItems: "center", gap: 16 },
-  heroActionsDesktop: { flexDirection: "column", alignItems: "stretch", gap: 8 },
+  heroActions: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 16 },
   duplicateAction: { minHeight: 42, paddingHorizontal: 18, backgroundColor: brand.lavender, borderWidth: 1, borderColor: "#C4B5FD", borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   duplicateActionText: { color: brand.violetDark, fontSize: 14, fontWeight: "700" },
   editAction: { minHeight: 42, paddingHorizontal: 20, backgroundColor: brand.violet, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
