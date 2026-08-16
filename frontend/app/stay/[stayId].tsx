@@ -315,12 +315,12 @@ export default function StayDetailScreen() {
       >
         <View style={styles.detailContent}>
         {/* タイトル */}
-        <View style={styles.titleHeader}>
+        <View style={[styles.titleHeader, isMobile && styles.titleHeaderMobile]}>
           <Text style={styles.mainTitle}>
             {maskHotelName(stay.hotel_name, isAuthenticated)}
           </Text>
           {isAuthenticated && (
-            <View style={[styles.actionButtons, { flexDirection: isMobile ? "column" : "row" }]}>
+            <View style={[styles.actionButtons, isMobile && styles.actionButtonsMobile]}>
               <TouchableOpacity
                 style={styles.duplicateButton}
                 onPress={handleDuplicate}
@@ -503,6 +503,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 16,
   },
+  titleHeaderMobile: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
   mainTitle: {
     fontSize: 40,
     fontWeight: "700",
@@ -511,7 +515,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionButtons: {
+    flexDirection: "row",
     gap: 8,
+  },
+  actionButtonsMobile: {
+    flexWrap: "wrap",
+    marginTop: 16,
   },
   duplicateButton: {
     backgroundColor: "#F5F3FF",
