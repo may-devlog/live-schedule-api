@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 
 const brand = {
@@ -47,6 +48,7 @@ type NotificationMenuProps = {
 
 export function NotificationMenu({ hideTrigger = false, visible: controlledVisible, onClose }: NotificationMenuProps = {}) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [internalVisible, setInternalVisible] = useState(false);
   const visible = controlledVisible ?? internalVisible;
   const setVisible = (next: boolean) => {
@@ -113,7 +115,7 @@ export function NotificationMenu({ hideTrigger = false, visible: controlledVisib
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <View style={styles.overlay}>
           <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setVisible(false)} activeOpacity={1} />
-          <View style={styles.panel}>
+          <View style={[styles.panel, { paddingTop: styles.panel.paddingTop + insets.top }]}>
             <View style={styles.panelHeader}>
               <View>
                 <Text style={styles.eyebrow}>NOTIFICATIONS</Text>

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
 import * as Clipboard from 'expo-clipboard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 
@@ -20,6 +21,7 @@ type AccountMenuProps = {
 
 export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, displayName, onDisplayNameChange }: AccountMenuProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { email, logout, changeEmail } = useAuth();
   const [sharingEnabled, setSharingEnabled] = useState(false);
   const [shareId, setShareId] = useState<string | null>(null);
@@ -265,7 +267,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
-        <View style={styles.panel}>
+        <View style={[styles.panel, { paddingTop: styles.panel.paddingTop + insets.top }]}>
           <View style={styles.panelHeader}>
             <View><Text style={styles.eyebrow}>ACCOUNT</Text><Text style={styles.title}>アカウントメニュー</Text></View>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}><Ionicons name="close" size={23} color={brand.ink} /></TouchableOpacity>
