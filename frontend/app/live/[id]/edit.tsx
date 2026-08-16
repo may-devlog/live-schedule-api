@@ -407,6 +407,7 @@ export default function EditScheduleScreen() {
         onValueChange={setDate}
         mode="date"
         placeholder="YYYY-MM-DD"
+        required={true}
       />
 
       <NotionDatePicker

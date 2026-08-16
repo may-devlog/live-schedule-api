@@ -4,8 +4,9 @@ import type { Schedule } from "../app/HomeScreen";
 
 export type GroupingField = "group" | "category" | "area" | "target" | "lineup" | "seller" | "status" | "none";
 
-export type MainGroupingField = "target" | "lineup" | "none";
-export type SubGroupingField = "group" | "category" | "area" | "seller" | "status" | "none";
+// メイン・サブどちらも同じ選択肢（GroupingField）から自由に選べる
+export type MainGroupingField = GroupingField;
+export type SubGroupingField = GroupingField;
 
 export type GroupedSchedule = {
   title: string;
@@ -46,25 +47,20 @@ export function groupSchedules(
       case "target":
         groupKey = schedule.target || "未設定";
         break;
-      case "lineup":
-        // Lineupはカンマ区切りで複数値がある場合は双方に表示
-        if (schedule.lineup) {
-          const lineupValues = schedule.lineup.split(",").map(v => v.trim()).filter(v => v);
-          if (lineupValues.length > 0) {
-            // 各値に対してスケジュールを追加
-            lineupValues.forEach((value) => {
-              if (!grouped.has(value)) {
-                grouped.set(value, []);
-              }
-              grouped.get(value)!.push(schedule);
-            });
-          } else {
-            groupKey = "未設定";
+      case "lineup": {
+        // Lineupはカンマ区切りで複数値がある場合は双方に表示。値が未登録の場合は「未設定」グループにする
+        const lineupValues = schedule.lineup
+          ? schedule.lineup.split(",").map(v => v.trim()).filter(v => v)
+          : [];
+        const lineupKeys = lineupValues.length > 0 ? lineupValues : ["未設定"];
+        lineupKeys.forEach((value) => {
+          if (!grouped.has(value)) {
+            grouped.set(value, []);
           }
-        } else {
-          groupKey = "未設定";
-        }
+          grouped.get(value)!.push(schedule);
+        });
         break;
+      }
       case "seller":
         groupKey = schedule.seller || "未設定";
         break;
