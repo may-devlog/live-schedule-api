@@ -94,6 +94,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [, setColorsVersion] = useState(0);
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [mainSortMenuOpen, setMainSortMenuOpen] = useState(false);
@@ -143,6 +144,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           if (!active) return;
           setTrafficBySchedule(trafficMap);
           setAreaColors(colors);
+          setColorsVersion((v) => v + 1);
         }).catch(() => undefined);
       })
       .catch((e) => {
