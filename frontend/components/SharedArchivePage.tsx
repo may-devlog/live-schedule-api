@@ -58,6 +58,10 @@ const GROUPING_FIELD_OPTIONS: [GroupingField, string][] = [
 ];
 const GROUPING_FIELD_LABELS: Record<GroupingField, string> = Object.fromEntries(GROUPING_FIELD_OPTIONS) as Record<GroupingField, string>;
 
+// お目当てと出演者は、メイン/サブの一方で選択されたらもう一方では選べないようにする
+const conflictsWithGroupingField = (value: GroupingField, other: GroupingField) =>
+  (value === "target" && other === "lineup") || (value === "lineup" && other === "target");
+
 function scheduleDate(schedule: Schedule) {
   return schedule.datetime || schedule.date || "";
 }
@@ -384,7 +388,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
 
           <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
             {canUseGrouping && (archiveType === "event" ? <View style={styles.groupingPanel}>
-              <View style={styles.groupingRow}>
+              <View style={[styles.groupingRow, mainGroupingMenuOpen && styles.groupingRowOpen]}>
                 <Text style={styles.groupingLabel}>メイン</Text>
                 <View style={styles.groupingSelectWrap}>
                   <TouchableOpacity style={styles.groupingSelect} onPress={() => { const next = !mainGroupingMenuOpen; setMainGroupingMenuOpen(next); setSubGroupingMenuOpen(false); setMainSortMenuOpen(false); setSortMenuOpen(false); }}>
@@ -392,11 +396,11 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                     <Ionicons name={mainGroupingMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
                   </TouchableOpacity>
                   {mainGroupingMenuOpen && <View style={styles.groupingSelectMenu}>
-                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => <TouchableOpacity key={value} style={styles.compactSelectOption} onPress={() => { setMainGrouping(value); setMainGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, mainGrouping === value && styles.compactSelectOptionActive]}>{label}</Text></TouchableOpacity>)}
+                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => { const disabled = conflictsWithGroupingField(value, subGrouping); return <TouchableOpacity key={value} disabled={disabled} style={styles.compactSelectOption} onPress={() => { setMainGrouping(value); setMainGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, mainGrouping === value && styles.compactSelectOptionActive, disabled && styles.compactSelectOptionDisabled]}>{label}</Text></TouchableOpacity>; })}
                   </View>}
                 </View>
               </View>
-              <View style={styles.groupingRow}>
+              <View style={[styles.groupingRow, subGroupingMenuOpen && styles.groupingRowOpen]}>
                 <Text style={styles.groupingLabel}>サブ</Text>
                 <View style={styles.groupingSelectWrap}>
                   <TouchableOpacity style={styles.groupingSelect} onPress={() => { const next = !subGroupingMenuOpen; setSubGroupingMenuOpen(next); setMainGroupingMenuOpen(false); setMainSortMenuOpen(false); setSortMenuOpen(false); }}>
@@ -404,7 +408,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                     <Ionicons name={subGroupingMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
                   </TouchableOpacity>
                   {subGroupingMenuOpen && <View style={styles.groupingSelectMenu}>
-                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => <TouchableOpacity key={value} style={styles.compactSelectOption} onPress={() => { setSubGrouping(value); setSubGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, subGrouping === value && styles.compactSelectOptionActive]}>{label}</Text></TouchableOpacity>)}
+                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => { const disabled = conflictsWithGroupingField(value, mainGrouping); return <TouchableOpacity key={value} disabled={disabled} style={styles.compactSelectOption} onPress={() => { setSubGrouping(value); setSubGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, subGrouping === value && styles.compactSelectOptionActive, disabled && styles.compactSelectOptionDisabled]}>{label}</Text></TouchableOpacity>; })}
                   </View>}
                 </View>
               </View>
@@ -537,7 +541,12 @@ const styles = StyleSheet.create({
   compactSelectOption: { paddingHorizontal: 10, paddingVertical: 9, borderRadius: 4 },
   compactSelectOptionText: { color: brand.ink, fontSize: 13 },
   compactSelectOptionActive: { color: brand.violet, fontWeight: "700" },
+  compactSelectOptionDisabled: { color: "#C7C2D1" },
   groupingRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  // メインの下にサブが縦に並ぶため、開いている方の行を手前に出して下の行に隠れないようにする
+  // (React Native Webは各Viewにposition:relative+zIndexを付与し独立した重なりコンテキストを
+  // 作るため、内側のプルダウンだけでなく行自体のzIndexを上げる必要がある)
+  groupingRowOpen: { zIndex: 20 },
   groupingLabel: { width: 48, color: brand.ink, fontSize: 13, lineHeight: 36, fontWeight: "700" },
   groupingButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   groupingButtonActive: { backgroundColor: brand.plum, borderColor: brand.plum },
