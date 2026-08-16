@@ -11,7 +11,6 @@ import { isJapaneseHolidayDate } from "./ScheduleCalendar";
 import { groupSchedulesNested, type MainGroupingField, type SubGroupingField } from "../utils/group-schedules";
 import { loadSelectOptionsMap } from "../utils/load-select-options-map";
 import { loadSelectOptions, loadStaySelectOptions } from "../utils/select-options-storage";
-import { authenticatedFetch, getApiUrl } from "../utils/api";
 import { fetchTrafficBySchedule } from "../utils/fetch-traffic-by-schedule";
 import { calculateTotalCostWithReturnFlag, type TrafficBySchedule } from "../utils/calculate-total-cost";
 
@@ -97,7 +96,6 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const [, setColorsVersion] = useState(0);
   const [websiteColorMap, setWebsiteColorMap] = useState<Map<string, string>>(new Map());
   const [stayStatusColorMap, setStayStatusColorMap] = useState<Map<string, string>>(new Map());
-  const [debugWebsiteRaw, setDebugWebsiteRaw] = useState<string>("(未取得)");
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [mainSortMenuOpen, setMainSortMenuOpen] = useState(false);
@@ -124,20 +122,6 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
         setAreaColors(new Map());
         setError(null);
         setLoading(false);
-
-        // [一時デバッグ] WEBSITEエンドポイントの生レスポンスを直接確認
-        (async () => {
-          try {
-            const url = optionOwner
-              ? getApiUrl(`/share/${optionOwner}/stay-select-options/WEBSITE`)
-              : getApiUrl(`/stay-select-options/WEBSITE`);
-            const res = optionOwner ? await fetch(url) : await authenticatedFetch(url);
-            const text = await res.text();
-            if (active) setDebugWebsiteRaw(`url=${url} status=${res.status} body=${text}`);
-          } catch (e: any) {
-            if (active) setDebugWebsiteRaw(`FETCH ERROR: ${e?.message ?? String(e)}`);
-          }
-        })();
 
         // Totals, option ordering and colors enrich the cards but are not
         // required to show the archive. Load them without blocking year changes.
@@ -383,11 +367,6 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             </View>}
           </View>
 
-          {archiveType === "stay" && Platform.OS !== "web" && (
-            <View style={{ backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#F59E0B", borderRadius: 8, padding: 10, marginBottom: 12 }}>
-              <Text style={{ fontSize: 11, color: "#78350F" }} selectable>DEBUG WEBSITE options: {debugWebsiteRaw}</Text>
-            </View>
-          )}
           <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
             {canUseGrouping && (archiveType === "event" ? <View style={styles.groupingPanel}>
               <View style={styles.groupingRow}><Text style={styles.groupingLabel}>メイン</Text>{([['none','なし'],['target','お目当て'],['lineup','出演者']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, mainGrouping === value && styles.groupingButtonActive]} onPress={() => setMainGrouping(value)}><Text style={[styles.groupingButtonText, mainGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View>
