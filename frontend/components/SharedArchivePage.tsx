@@ -96,6 +96,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const [, setColorsVersion] = useState(0);
   const [websiteColorMap, setWebsiteColorMap] = useState<Map<string, string>>(new Map());
   const [stayStatusColorMap, setStayStatusColorMap] = useState<Map<string, string>>(new Map());
+  const [debugWebsiteRaw, setDebugWebsiteRaw] = useState<string>("(未取得)");
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [mainSortMenuOpen, setMainSortMenuOpen] = useState(false);
@@ -142,6 +143,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                 const map = new Map<string, string>();
                 options.forEach((opt) => map.set(opt.label, getOptionColorSync(opt.label, "WEBSITE")));
                 setWebsiteColorMap(map);
+                setDebugWebsiteRaw(JSON.stringify(options));
               }
             }),
             loadStaySelectOptions("STATUS", optionOwner).then((options) => {
@@ -367,6 +369,11 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             </View>}
           </View>
 
+          {archiveType === "stay" && Platform.OS !== "web" && (
+            <View style={{ backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#F59E0B", borderRadius: 8, padding: 10, marginBottom: 12 }}>
+              <Text style={{ fontSize: 11, color: "#78350F" }} selectable>DEBUG WEBSITE options: {debugWebsiteRaw}</Text>
+            </View>
+          )}
           <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
             {canUseGrouping && (archiveType === "event" ? <View style={styles.groupingPanel}>
               <View style={styles.groupingRow}><Text style={styles.groupingLabel}>メイン</Text>{([['none','なし'],['target','お目当て'],['lineup','出演者']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, mainGrouping === value && styles.groupingButtonActive]} onPress={() => setMainGrouping(value)}><Text style={[styles.groupingButtonText, mainGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View>
