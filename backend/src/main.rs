@@ -89,6 +89,11 @@ struct UpdateProfileRequest {
 }
 
 #[derive(Debug, Deserialize)]
+struct DeleteAccountRequest {
+    password: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct SearchSharedUserQuery {
     user_id: String,
 }
@@ -2526,6 +2531,35 @@ async fn stripe_api_post(path: &str, params: Vec<(String, String)>) -> Result<se
     Ok(body)
 }
 
+// StripeへDELETEリクエストを送るヘルパー（Basic認証）。サブスクリプションの即時解約に使用する
+async fn stripe_api_delete(path: &str) -> Result<serde_json::Value, String> {
+    let secret_key = get_stripe_secret_key();
+    if secret_key.is_empty() {
+        return Err("STRIPE_SECRET_KEY is not set".to_string());
+    }
+
+    let client = reqwest::Client::new();
+    let response = client
+        .delete(format!("https://api.stripe.com/v1/{}", path))
+        .basic_auth(secret_key, Option::<String>::None)
+        .send()
+        .await
+        .map_err(|e| format!("Stripe request failed: {}", e))?;
+
+    let status = response.status();
+    let body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse Stripe response: {}", e))?;
+
+    if !status.is_success() {
+        let message = body["error"]["message"].as_str().unwrap_or("Unknown Stripe error");
+        return Err(format!("Stripe API error ({}): {}", status, message));
+    }
+
+    Ok(body)
+}
+
 // POST /billing/create-checkout-session - プレミアムプラン購読用のStripe Checkoutセッションを作成
 async fn create_checkout_session(
     user: AuthenticatedUser,
@@ -3077,6 +3111,74 @@ async fn update_profile_avatar(
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "プロフィール画像の更新に失敗しました".to_string() })))?;
 
     Ok(Json(serde_json::json!({ "success": true, "avatar_data_url": payload.avatar_data_url })))
+}
+
+// DELETE /auth/account - 退会（アカウント削除）。パスワード確認必須。
+// ユーザーに紐づく全データ（スケジュール・交通・宿泊・通知・マスク設定・選択肢・購読情報）を削除し、
+// 残っているStripeサブスクリプションがあれば即時解約する（解約失敗はログのみで退会処理自体は継続する）
+async fn delete_account(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<DeleteAccountRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let row: Option<(String,)> = sqlx::query_as("SELECT password_hash FROM users WHERE id = ?")
+        .bind(user.user_id as i64)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "アカウント情報の取得に失敗しました".to_string() })))?;
+
+    let Some((password_hash,)) = row else {
+        return Err((StatusCode::NOT_FOUND, Json(ErrorResponse { error: "ユーザーが見つかりません".to_string() })));
+    };
+
+    let valid = bcrypt::verify(&payload.password, &password_hash)
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "パスワードの確認に失敗しました".to_string() })))?;
+    if !valid {
+        // authenticatedFetch側は401でセッションを自動ログアウトさせる仕様のため、
+        // トークン自体は有効なパスワード確認失敗はここでは400を返す
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "パスワードが正しくありません".to_string() })));
+    }
+
+    let active_subscriptions: Vec<(String,)> = sqlx::query_as(
+        "SELECT provider_subscription_id FROM subscriptions WHERE user_id = ? AND provider = 'stripe' AND status NOT IN ('canceled', 'incomplete_expired')"
+    )
+    .bind(user.user_id as i64)
+    .fetch_all(&pool)
+    .await
+    .unwrap_or_default();
+
+    for (subscription_id,) in active_subscriptions {
+        if let Err(e) = stripe_api_delete(&format!("subscriptions/{}", subscription_id)).await {
+            eprintln!("[DeleteAccount] Failed to cancel Stripe subscription {}: {}", subscription_id, e);
+        }
+    }
+
+    let delete_failed = || (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "退会処理に失敗しました".to_string() }));
+
+    let mut tx = pool.begin().await.map_err(|_| delete_failed())?;
+
+    sqlx::query("DELETE FROM traffics WHERE schedule_id IN (SELECT id FROM schedules WHERE user_id = ?)")
+        .bind(user.user_id as i64).execute(&mut *tx).await.map_err(|_| delete_failed())?;
+    sqlx::query("DELETE FROM stays WHERE schedule_id IN (SELECT id FROM schedules WHERE user_id = ?)")
+        .bind(user.user_id as i64).execute(&mut *tx).await.map_err(|_| delete_failed())?;
+    sqlx::query("DELETE FROM notifications WHERE user_id = ?")
+        .bind(user.user_id as i64).execute(&mut *tx).await.map_err(|_| delete_failed())?;
+    sqlx::query("DELETE FROM masked_locations WHERE user_id = ?")
+        .bind(user.user_id as i64).execute(&mut *tx).await.map_err(|_| delete_failed())?;
+    sqlx::query("DELETE FROM select_options WHERE user_id = ?")
+        .bind(user.user_id as i64).execute(&mut *tx).await.map_err(|_| delete_failed())?;
+    sqlx::query("DELETE FROM stay_select_options WHERE user_id = ?")
+        .bind(user.user_id as i64).execute(&mut *tx).await.map_err(|_| delete_failed())?;
+    sqlx::query("DELETE FROM subscriptions WHERE user_id = ?")
+        .bind(user.user_id as i64).execute(&mut *tx).await.map_err(|_| delete_failed())?;
+    sqlx::query("DELETE FROM schedules WHERE user_id = ?")
+        .bind(user.user_id as i64).execute(&mut *tx).await.map_err(|_| delete_failed())?;
+    sqlx::query("DELETE FROM users WHERE id = ?")
+        .bind(user.user_id as i64).execute(&mut *tx).await.map_err(|_| delete_failed())?;
+
+    tx.commit().await.map_err(|_| delete_failed())?;
+
+    Ok(Json(serde_json::json!({ "success": true })))
 }
 
 // GET /share/:share_id/profile - 共有ページ用公開プロフィール
@@ -7161,6 +7263,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/billing/webhook", post(stripe_webhook))
         .route("/auth/profile", get(get_profile).put(update_profile))
         .route("/auth/profile-avatar", put(update_profile_avatar))
+        .route("/auth/account", delete(delete_account))
         .route("/masked-locations", get(list_masked_locations).post(create_masked_location))
         .route("/masked-locations/:id", put(update_masked_location).delete(delete_masked_location))
         .route("/share/:share_id", get(get_shared_schedules))
