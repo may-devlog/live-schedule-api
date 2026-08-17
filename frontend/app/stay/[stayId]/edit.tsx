@@ -37,8 +37,6 @@ type Stay = {
   status: string;
 };
 
-const STAY_STATUSES_KEY = "@select_options:stay_statuses" as const;
-
 // 宿泊ステータス用の固定カラー
 const STAY_STATUS_COLORS: Record<string, string> = {
   Canceled: "#E5E7EB", // gray
@@ -58,33 +56,13 @@ export default function EditStayScreen() {
   useEffect(() => {
     const loadOptions = async () => {
 
-      // loadStayStatusesをコンポーネント内で定義して循環依存を回避
+      // 宿泊ステータスの選択肢はDB（stay_select_options）と同期する。
+      // 未保存の場合のみ、初期表示用のデフォルトを返す（保存はしない）
       const loadStayStatuses = async (): Promise<SelectOption[]> => {
-        try {
-          const AsyncStorage = require("@react-native-async-storage/async-storage")
-            .default;
-          const stored = await AsyncStorage.getItem(STAY_STATUSES_KEY);
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              if (typeof parsed[0] === "string") {
-                // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
-                return (parsed as string[]).map((str) => ({
-                  label: str,
-                  color: STAY_STATUS_COLORS[str] ?? undefined,
-                }));
-              }
-              // 既存データにも固定カラーを適用
-              return (parsed as SelectOption[]).map((opt) => ({
-                ...opt,
-                color: STAY_STATUS_COLORS[opt.label] ?? opt.color,
-              }));
-            }
-          }
-        } catch (error) {
-          console.error("Error loading stay statuses:", error);
+        const statusesData = await loadStaySelectOptions("STATUS");
+        if (statusesData.length > 0) {
+          return statusesData;
         }
-        // デフォルトのステータスにも固定カラーを適用
         return ["Canceled", "Keep", "Done"].map((str) => ({
           label: str,
           color: STAY_STATUS_COLORS[str] ?? undefined,
@@ -107,11 +85,8 @@ export default function EditStayScreen() {
 
   const handleStatusesChange = async (newStatuses: SelectOption[]) => {
     setStatuses(newStatuses);
-    // saveStayStatusesをコンポーネント内で定義して循環依存を回避
     try {
-      const AsyncStorage = require("@react-native-async-storage/async-storage")
-        .default;
-      await AsyncStorage.setItem(STAY_STATUSES_KEY, JSON.stringify(newStatuses));
+      await saveStaySelectOptions("STATUS", newStatuses);
     } catch (error) {
       console.error("Error saving stay statuses:", error);
     }
