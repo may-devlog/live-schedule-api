@@ -334,6 +334,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               </TouchableOpacity>
             )}
             <TouchableOpacity style={styles.logoutButton} onPress={confirmLogout}><Ionicons name="log-out-outline" size={19} color="#DC2626" /><Text style={styles.logoutText}>ログアウト</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.deleteAccountLink} onPress={() => { onClose(); router.push('/settings/delete-account'); }}><Text style={styles.deleteAccountLinkText}>退会をご希望の方はこちら</Text></TouchableOpacity>
           </ScrollView>
         </View>
       </View>
@@ -361,6 +362,7 @@ const styles = StyleSheet.create({
   avatarButton: { minHeight: 38, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }, avatarButtonText: { color: brand.violetDark, fontSize: 12, fontWeight: '700' }, removeAvatar: { color: brand.muted, textAlign: 'right', fontSize: 12, marginTop: 8 },
   menuGroup: { marginTop: 22, borderWidth: 1, borderColor: brand.border, borderRadius: 14, overflow: 'hidden' }, menuItem: { minHeight: 64, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: brand.border }, iconBox: { width: 34, height: 34, borderRadius: 9, backgroundColor: brand.lavender, alignItems: 'center', justifyContent: 'center' }, menuLabel: { color: brand.ink, fontSize: 14, fontWeight: '600' }, premiumBadge: { fontSize: 12 }, shareCopy: { flex: 1 }, shareUrlRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }, shareUrl: { color: brand.muted, fontSize: 10, flexShrink: 1 },
   logoutButton: { marginTop: 18, minHeight: 52, borderRadius: 11, backgroundColor: '#FEF2F2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, logoutText: { color: '#DC2626', fontWeight: '700' },
+  deleteAccountLink: { marginTop: 14, alignItems: 'center', paddingVertical: 6 }, deleteAccountLinkText: { color: brand.muted, fontSize: 12, textDecorationLine: 'underline' },
   planCard: { marginTop: 18, minHeight: 44, borderRadius: 11, backgroundColor: brand.lavender, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14 }, planCardText: { color: brand.ink, fontSize: 13, fontWeight: '600', flex: 1 },
   trialCard: { marginTop: 18, borderRadius: 14, borderWidth: 1, borderColor: '#DDD6FE', backgroundColor: brand.lavender, padding: 16 }, trialTitle: { color: brand.violetDark, fontSize: 15, fontWeight: '800' }, trialDescription: { color: brand.muted, fontSize: 12, marginTop: 6, lineHeight: 18 },
   trialButton: { marginTop: 14, minHeight: 44, borderRadius: 10, backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center' }, trialButtonText: { color: brand.white, fontWeight: '800', fontSize: 13 },
