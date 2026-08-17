@@ -6120,7 +6120,7 @@ async fn get_select_options(
     user: AuthenticatedUser,
     Path(option_type): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
     // DISABLE_AUTHが有効な場合、データベースから実際のユーザーIDを取得
     let actual_user_id = if std::env::var("DISABLE_AUTH").is_ok() {
         // 環境変数DEFAULT_USER_IDが設定されている場合はそれを使用
@@ -6145,8 +6145,8 @@ async fn get_select_options(
     eprintln!("[GetSelectOptions] User ID (i32): {}, Actual User ID: {}, Option Type: {}", 
         user.user_id, actual_user_id, option_type);
     
-    let row: Option<(String,)> = sqlx::query_as::<_, (String,)>(
-        "SELECT options_json FROM select_options WHERE user_id = ? AND option_type = ?"
+    let row: Option<(String, Option<String>)> = sqlx::query_as::<_, (String, Option<String>)>(
+        "SELECT options_json, sort_order FROM select_options WHERE user_id = ? AND option_type = ?"
     )
     .bind(actual_user_id as i64)
     .bind(&option_type)
@@ -6162,7 +6162,7 @@ async fn get_select_options(
         )
     })?;
 
-    if let Some((options_json,)) = row {
+    if let Some((options_json, sort_order)) = row {
         let options: Vec<serde_json::Value> = serde_json::from_str(&options_json)
             .map_err(|_| {
                 (
@@ -6172,10 +6172,16 @@ async fn get_select_options(
                     }),
                 )
             })?;
-        Ok(Json(options))
+        Ok(Json(serde_json::json!({
+            "options": options,
+            "sort_order": sort_order.unwrap_or_else(|| "custom".to_string()),
+        })))
     } else {
         // データベースに保存されていない場合は空配列を返す
-        Ok(Json(vec![]))
+        Ok(Json(serde_json::json!({
+            "options": [],
+            "sort_order": "custom",
+        })))
     }
 }
 

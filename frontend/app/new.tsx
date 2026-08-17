@@ -54,7 +54,9 @@ export default function NewScheduleScreen() {
         try {
           const res = await authenticatedFetch(getApiUrl(`/select-options/${optionType.toLowerCase()}`));
           if (res.ok) {
-            const options: SelectOption[] = await res.json();
+            const data = await res.json();
+            // 新しい形式（{ options, sort_order }）と古い形式（配列）の両方に対応
+            const options: SelectOption[] = Array.isArray(data) ? data : (data.options || []);
             if (options.length > 0) {
               return options;
             }
