@@ -3139,17 +3139,24 @@ async fn delete_account(
         return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "パスワードが正しくありません".to_string() })));
     }
 
+    // 解約に失敗した場合は退会処理自体を中断し、ここでは何も削除しない。
+    // 課金が残ったままアカウントとprovider_subscription_idの追跡手段を失うと、
+    // 恒久的な過課金につながり得るため、退会は再試行可能な状態を保つ
     let active_subscriptions: Vec<(String,)> = sqlx::query_as(
         "SELECT provider_subscription_id FROM subscriptions WHERE user_id = ? AND provider = 'stripe' AND status NOT IN ('canceled', 'incomplete_expired')"
     )
     .bind(user.user_id as i64)
     .fetch_all(&pool)
     .await
-    .unwrap_or_default();
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "退会処理に失敗しました".to_string() })))?;
 
-    for (subscription_id,) in active_subscriptions {
+    for (subscription_id,) in &active_subscriptions {
         if let Err(e) = stripe_api_delete(&format!("subscriptions/{}", subscription_id)).await {
             eprintln!("[DeleteAccount] Failed to cancel Stripe subscription {}: {}", subscription_id, e);
+            return Err((
+                StatusCode::BAD_GATEWAY,
+                Json(ErrorResponse { error: "サブスクリプションの解約に失敗しました。時間をおいて再度お試しください".to_string() }),
+            ));
         }
     }
 
