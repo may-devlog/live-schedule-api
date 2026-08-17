@@ -389,7 +389,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           </View>
 
           <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
-            {canUseGrouping && (archiveType === "event" ? <View style={styles.groupingPanel}>
+            {canUseGrouping && (archiveType === "event" ? <View style={[styles.groupingPanel, (mainGroupingMenuOpen || subGroupingMenuOpen) && styles.groupingPanelOpen]}>
               <View style={[styles.groupingRow, mainGroupingMenuOpen && styles.groupingRowOpen]}>
                 <Text style={styles.groupingLabel}>メイン</Text>
                 <View style={styles.groupingSelectWrap}>
@@ -534,6 +534,9 @@ const styles = StyleSheet.create({
   archiveControls: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 20, marginBottom: 28, zIndex: 4 },
   archiveControlsMobile: { flexDirection: "column", gap: 12 },
   groupingPanel: { flex: 1, gap: 10 },
+  // メイン/サブのドロップダウンを開いたとき、隣のグループ順/並び順（zIndex:5固定）より
+  // 手前に描画されるようにする。開いていないときはsortControls側を優先させたいのでここでのみ引き上げる
+  groupingPanelOpen: { zIndex: 30 },
   sortControls: { flexDirection: "row", alignItems: "flex-start", justifyContent: "flex-end", gap: 10 },
   sortControlsMobile: { alignSelf: "flex-end" },
   sortControlsSolo: { marginLeft: "auto" },
