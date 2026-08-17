@@ -77,6 +77,16 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
     }
   }, [visible, fetchSharing, fetchPlanStatus]);
 
+  // Alert.alertはWeb版react-native-webでは何も表示しないため、ボタン無しの通知は
+  // Web/ネイティブで出し分ける（確認ダイアログ側は既にwindow.confirmで個別対応済み）
+  const showAlert = (title: string, message?: string) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert(message ? `${title}\n\n${message}` : title);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const startTrial = async () => {
     try {
       setTrialStarting(true);
@@ -84,9 +94,9 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       const data = await response.json();
       if (!response.ok) throw new Error(data.error === 'trial_already_used' ? 'お試し期間は既にご利用済みです' : '無料トライアルの開始に失敗しました');
       await fetchPlanStatus();
-      Alert.alert('無料トライアルを開始しました', '1ヶ月間、プレミアム機能をお使いいただけます。');
+      showAlert('無料トライアルを開始しました', '1ヶ月間、プレミアム機能をお使いいただけます。');
     } catch (error: any) {
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     } finally {
       setTrialStarting(false);
     }
@@ -124,7 +134,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       if (!response.ok) throw new Error(data.error === 'already_premium' ? '既にプレミアムプランをご利用中です' : '決済ページの作成に失敗しました');
       await openBillingUrl(data.url);
     } catch (error: any) {
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     } finally {
       setCheckoutLoading(false);
     }
@@ -138,7 +148,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       if (!response.ok) throw new Error(data.error === 'no_stripe_customer' ? 'お支払い履歴が見つかりませんでした' : 'お支払い設定ページの作成に失敗しました');
       await openBillingUrl(data.url);
     } catch (error: any) {
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     } finally {
       setPortalLoading(false);
     }
@@ -175,7 +185,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       if (value.length > 2_100_000) throw new Error('画像サイズは1.5MB以下にしてください');
       await saveAvatar(value);
     } catch (error: any) {
-      Alert.alert('エラー', error.message || 'プロフィール画像の更新に失敗しました');
+      showAlert('エラー', error.message || 'プロフィール画像の更新に失敗しました');
     } finally {
       setAvatarLoading(false);
     }
@@ -194,26 +204,26 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       await fetchSharing();
     } catch (error: any) {
       setSharingEnabled(!enabled);
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     }
   };
 
   const submitEmail = async () => {
-    if (!newEmail.includes('@')) return Alert.alert('エラー', '有効なメールアドレスを入力してください');
+    if (!newEmail.includes('@')) return showAlert('エラー', '有効なメールアドレスを入力してください');
     try {
       setSaving(true);
       await changeEmail(newEmail.trim());
       setDialog(null);
       setNewEmail('');
-      Alert.alert('確認メールを送信しました', 'メール内のリンクから変更を完了してください。');
+      showAlert('確認メールを送信しました', 'メール内のリンクから変更を完了してください。');
     } catch (error: any) {
-      Alert.alert('エラー', error.message || 'メールアドレスの変更に失敗しました');
+      showAlert('エラー', error.message || 'メールアドレスの変更に失敗しました');
     } finally { setSaving(false); }
   };
 
   const submitDisplayName = async () => {
     const value = newDisplayName.trim();
-    if ([...value].length > 50) return Alert.alert('エラー', '名前は50文字以内で入力してください');
+    if ([...value].length > 50) return showAlert('エラー', '名前は50文字以内で入力してください');
     try {
       setSaving(true);
       const response = await authenticatedFetch(getApiUrl('/auth/profile'), {
@@ -225,13 +235,13 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       setDialog(null);
       setNewDisplayName('');
     } catch (error: any) {
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     } finally { setSaving(false); }
   };
 
   const submitShareId = async () => {
     const value = newShareId.trim();
-    if (!/^[a-zA-Z0-9_-]{3,20}$/.test(value)) return Alert.alert('エラー', '3〜20文字の英数字・ハイフン・アンダースコアで入力してください');
+    if (!/^[a-zA-Z0-9_-]{3,20}$/.test(value)) return showAlert('エラー', '3〜20文字の英数字・ハイフン・アンダースコアで入力してください');
     try {
       setSaving(true);
       const response = await authenticatedFetch(getApiUrl('/auth/change-share-id'), {
@@ -244,7 +254,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       setNewShareId('');
       await fetchSharing();
     } catch (error: any) {
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     } finally { setSaving(false); }
   };
 
