@@ -6175,12 +6175,16 @@ async fn get_select_options(
         Ok(Json(serde_json::json!({
             "options": options,
             "sort_order": sort_order.unwrap_or_else(|| "custom".to_string()),
+            "exists": true,
         })))
     } else {
         // データベースに保存されていない場合は空配列を返す
+        // existsをfalseにすることで、フロントは「未保存（初回）」と
+        // 「保存済みだが全件削除されて0件」を区別できる
         Ok(Json(serde_json::json!({
             "options": [],
             "sort_order": "custom",
+            "exists": false,
         })))
     }
 }
@@ -6345,7 +6349,7 @@ async fn save_select_options(
 async fn get_shared_select_options(
     Path((share_id, option_type)): Path<(String, String)>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
     eprintln!("[GetSharedSelectOptions] Called with share_id: {}, option_type: {}", share_id, option_type);
     
     // share_idからユーザーIDを取得
@@ -6368,8 +6372,8 @@ async fn get_shared_select_options(
     eprintln!("[GetSharedSelectOptions] User ID found: {:?}", user_id);
     
     if let Some(user_id) = user_id {
-        let row: Option<(String,)> = sqlx::query_as::<_, (String,)>(
-            "SELECT options_json FROM select_options WHERE user_id = ? AND option_type = ?"
+        let row: Option<(String, Option<String>)> = sqlx::query_as::<_, (String, Option<String>)>(
+            "SELECT options_json, sort_order FROM select_options WHERE user_id = ? AND option_type = ?"
         )
         .bind(user_id)
         .bind(&option_type)
@@ -6385,7 +6389,7 @@ async fn get_shared_select_options(
             )
         })?;
 
-        if let Some((options_json,)) = row {
+        if let Some((options_json, sort_order)) = row {
             let options: Vec<serde_json::Value> = serde_json::from_str(&options_json)
                 .map_err(|_| {
                     (
@@ -6396,10 +6400,18 @@ async fn get_shared_select_options(
                     )
                 })?;
             eprintln!("[GetSharedSelectOptions] Returning {} options", options.len());
-            Ok(Json(options))
+            Ok(Json(serde_json::json!({
+                "options": options,
+                "sort_order": sort_order.unwrap_or_else(|| "custom".to_string()),
+                "exists": true,
+            })))
         } else {
             eprintln!("[GetSharedSelectOptions] No options found, returning empty array");
-            Ok(Json(vec![]))
+            Ok(Json(serde_json::json!({
+                "options": [],
+                "sort_order": "custom",
+                "exists": false,
+            })))
         }
     } else {
         Err((

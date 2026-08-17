@@ -228,13 +228,16 @@ export async function loadSelectOptions(
       }
       if (res.ok) {
         const data = await res.json();
-        // 新しい形式（{ options, sort_order }）と古い形式（配列）の両方に対応
+        // 新しい形式（{ options, sort_order, exists }）と古い形式（配列）の両方に対応
         const options: SelectOption[] = Array.isArray(data) ? data : (data.options || []);
         const sortOrder = Array.isArray(data) ? 'custom' : (data.sort_order || 'custom');
-        
-        if (options.length > 0) {
+        // existsは「一度でも保存されたレコードが存在するか」を表す。
+        // 古い形式（配列のみ）を返すサーバーとの互換のため、その場合は配列の中身で代用する
+        const existsOnServer = Array.isArray(data) ? options.length > 0 : data.exists === true;
+
+        if (existsOnServer) {
           console.log(`[SelectOptions] Loaded ${options.length} options from ${shareId ? 'shared' : 'database'} for ${key}:`, options.map(opt => ({ label: opt.label, order: opt.order })));
-          // データベースの選択肢とデフォルト選択肢をマージ
+          // データベースの選択肢に色情報のみ補完する（項目の有無・並び順はDBの内容を正とする）
           const merged = mergeOptionsWithDefaults(options, defaultOptions);
           console.log(`[SelectOptions] Merged ${merged.length} options for ${key}:`, merged.map(opt => ({ label: opt.label, order: opt.order })));
           // データベースに保存されている場合は、ローカルストレージにも保存（キャッシュ）
