@@ -77,6 +77,16 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
     }
   }, [visible, fetchSharing, fetchPlanStatus]);
 
+  // Alert.alertはWeb版react-native-webでは何も表示しないため、ボタン無しの通知は
+  // Web/ネイティブで出し分ける（確認ダイアログ側は既にwindow.confirmで個別対応済み）
+  const showAlert = (title: string, message?: string) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert(message ? `${title}\n\n${message}` : title);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const startTrial = async () => {
     try {
       setTrialStarting(true);
@@ -84,9 +94,9 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       const data = await response.json();
       if (!response.ok) throw new Error(data.error === 'trial_already_used' ? 'お試し期間は既にご利用済みです' : '無料トライアルの開始に失敗しました');
       await fetchPlanStatus();
-      Alert.alert('無料トライアルを開始しました', '1ヶ月間、プレミアム機能をお使いいただけます。');
+      showAlert('無料トライアルを開始しました', '1ヶ月間、プレミアム機能をお使いいただけます。');
     } catch (error: any) {
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     } finally {
       setTrialStarting(false);
     }
@@ -124,7 +134,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       if (!response.ok) throw new Error(data.error === 'already_premium' ? '既にプレミアムプランをご利用中です' : '決済ページの作成に失敗しました');
       await openBillingUrl(data.url);
     } catch (error: any) {
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     } finally {
       setCheckoutLoading(false);
     }
@@ -138,7 +148,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       if (!response.ok) throw new Error(data.error === 'no_stripe_customer' ? 'お支払い履歴が見つかりませんでした' : 'お支払い設定ページの作成に失敗しました');
       await openBillingUrl(data.url);
     } catch (error: any) {
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     } finally {
       setPortalLoading(false);
     }
@@ -175,7 +185,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       if (value.length > 2_100_000) throw new Error('画像サイズは1.5MB以下にしてください');
       await saveAvatar(value);
     } catch (error: any) {
-      Alert.alert('エラー', error.message || 'プロフィール画像の更新に失敗しました');
+      showAlert('エラー', error.message || 'プロフィール画像の更新に失敗しました');
     } finally {
       setAvatarLoading(false);
     }
@@ -194,26 +204,26 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       await fetchSharing();
     } catch (error: any) {
       setSharingEnabled(!enabled);
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     }
   };
 
   const submitEmail = async () => {
-    if (!newEmail.includes('@')) return Alert.alert('エラー', '有効なメールアドレスを入力してください');
+    if (!newEmail.includes('@')) return showAlert('エラー', '有効なメールアドレスを入力してください');
     try {
       setSaving(true);
       await changeEmail(newEmail.trim());
       setDialog(null);
       setNewEmail('');
-      Alert.alert('確認メールを送信しました', 'メール内のリンクから変更を完了してください。');
+      showAlert('確認メールを送信しました', 'メール内のリンクから変更を完了してください。');
     } catch (error: any) {
-      Alert.alert('エラー', error.message || 'メールアドレスの変更に失敗しました');
+      showAlert('エラー', error.message || 'メールアドレスの変更に失敗しました');
     } finally { setSaving(false); }
   };
 
   const submitDisplayName = async () => {
     const value = newDisplayName.trim();
-    if ([...value].length > 50) return Alert.alert('エラー', '名前は50文字以内で入力してください');
+    if ([...value].length > 50) return showAlert('エラー', '名前は50文字以内で入力してください');
     try {
       setSaving(true);
       const response = await authenticatedFetch(getApiUrl('/auth/profile'), {
@@ -225,13 +235,13 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       setDialog(null);
       setNewDisplayName('');
     } catch (error: any) {
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     } finally { setSaving(false); }
   };
 
   const submitShareId = async () => {
     const value = newShareId.trim();
-    if (!/^[a-zA-Z0-9_-]{3,20}$/.test(value)) return Alert.alert('エラー', '3〜20文字の英数字・ハイフン・アンダースコアで入力してください');
+    if (!/^[a-zA-Z0-9_-]{3,20}$/.test(value)) return showAlert('エラー', '3〜20文字の英数字・ハイフン・アンダースコアで入力してください');
     try {
       setSaving(true);
       const response = await authenticatedFetch(getApiUrl('/auth/change-share-id'), {
@@ -244,7 +254,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       setNewShareId('');
       await fetchSharing();
     } catch (error: any) {
-      Alert.alert('エラー', error.message);
+      showAlert('エラー', error.message);
     } finally { setSaving(false); }
   };
 
@@ -334,6 +344,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               </TouchableOpacity>
             )}
             <TouchableOpacity style={styles.logoutButton} onPress={confirmLogout}><Ionicons name="log-out-outline" size={19} color="#DC2626" /><Text style={styles.logoutText}>ログアウト</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.deleteAccountLink} onPress={() => { onClose(); router.push('/settings/delete-account'); }}><Text style={styles.deleteAccountLinkText}>退会をご希望の方はこちら</Text></TouchableOpacity>
           </ScrollView>
         </View>
       </View>
@@ -361,6 +372,7 @@ const styles = StyleSheet.create({
   avatarButton: { minHeight: 38, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }, avatarButtonText: { color: brand.violetDark, fontSize: 12, fontWeight: '700' }, removeAvatar: { color: brand.muted, textAlign: 'right', fontSize: 12, marginTop: 8 },
   menuGroup: { marginTop: 22, borderWidth: 1, borderColor: brand.border, borderRadius: 14, overflow: 'hidden' }, menuItem: { minHeight: 64, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: brand.border }, iconBox: { width: 34, height: 34, borderRadius: 9, backgroundColor: brand.lavender, alignItems: 'center', justifyContent: 'center' }, menuLabel: { color: brand.ink, fontSize: 14, fontWeight: '600' }, premiumBadge: { fontSize: 12 }, shareCopy: { flex: 1 }, shareUrlRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }, shareUrl: { color: brand.muted, fontSize: 10, flexShrink: 1 },
   logoutButton: { marginTop: 18, minHeight: 52, borderRadius: 11, backgroundColor: '#FEF2F2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, logoutText: { color: '#DC2626', fontWeight: '700' },
+  deleteAccountLink: { marginTop: 14, alignItems: 'center', paddingVertical: 6 }, deleteAccountLinkText: { color: brand.muted, fontSize: 12, textDecorationLine: 'underline' },
   planCard: { marginTop: 18, minHeight: 44, borderRadius: 11, backgroundColor: brand.lavender, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14 }, planCardText: { color: brand.ink, fontSize: 13, fontWeight: '600', flex: 1 },
   trialCard: { marginTop: 18, borderRadius: 14, borderWidth: 1, borderColor: '#DDD6FE', backgroundColor: brand.lavender, padding: 16 }, trialTitle: { color: brand.violetDark, fontSize: 15, fontWeight: '800' }, trialDescription: { color: brand.muted, fontSize: 12, marginTop: 6, lineHeight: 18 },
   trialButton: { marginTop: 14, minHeight: 44, borderRadius: 10, backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center' }, trialButtonText: { color: brand.white, fontWeight: '800', fontSize: 13 },

@@ -196,6 +196,21 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
     return [...visible].sort((a, b) => compareSchedules(a, b, sortOrder));
   }, [schedules, subGrouping, sortOrder]);
 
+  // 年チップの直接表示分（本年+前年の2年分と未来分）と、「…」の中に隠す過去分に分ける
+  const { visibleYears, olderYears, selectedIsOlder } = useMemo(() => {
+    const currentCalendarYear = new Date().getFullYear();
+    const recentThreshold = currentCalendarYear - 1;
+    const sorted = [...years].sort((a, b) => b - a);
+    const future = sorted.filter((y) => y > currentCalendarYear);
+    const recent = sorted.filter((y) => y <= currentCalendarYear && y >= recentThreshold);
+    const older = sorted.filter((y) => y < recentThreshold);
+    return {
+      visibleYears: [...future, ...recent],
+      olderYears: older,
+      selectedIsOlder: year !== "ALL" && older.includes(Number(year)),
+    };
+  }, [years, year]);
+
   const monthGroups = useMemo(() => {
     const map = new Map<string, { label: string; data: Schedule[] }>();
     visibleSchedules.forEach((item) => {
@@ -378,18 +393,29 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             <TouchableOpacity style={[styles.archiveTab, archiveType === "event" && styles.archiveTabActive]} onPress={() => setArchiveType("event")}><Text style={[styles.archiveTabText, archiveType === "event" && styles.archiveTabTextActive]}>イベント</Text></TouchableOpacity>
             <TouchableOpacity style={[styles.archiveTab, archiveType === "stay" && styles.archiveTabActive]} onPress={() => setArchiveType("stay")}><Text style={[styles.archiveTabText, archiveType === "stay" && styles.archiveTabTextActive]}>宿泊</Text></TouchableOpacity>
           </View>}
-          <View style={styles.yearSelectorWrap}>
-            <TouchableOpacity style={styles.yearSelector} onPress={() => setYearMenuOpen((open) => !open)}>
-              <Text style={styles.yearSelectorText}>{year}</Text>
-              <Ionicons name={yearMenuOpen ? "chevron-up" : "chevron-down"} size={18} color={brand.muted} />
+          <View style={styles.yearChipsRow}>
+            <TouchableOpacity style={[styles.yearChip, year === "ALL" && styles.yearChipActive]} onPress={() => selectYear("ALL")}>
+              <Text style={[styles.yearChipText, year === "ALL" && styles.yearChipTextActive]}>ALL</Text>
             </TouchableOpacity>
-            {yearMenuOpen && <View style={styles.yearMenu}>
-              {["ALL", ...years.map(String)].map((item) => <TouchableOpacity key={item} style={styles.yearOption} onPress={() => { setYearMenuOpen(false); selectYear(item); }}><Text style={[styles.yearOptionText, item === year && styles.yearOptionTextActive]}>{item}</Text></TouchableOpacity>)}
-            </View>}
+            {visibleYears.map((y) => (
+              <TouchableOpacity key={y} style={[styles.yearChip, String(y) === year && styles.yearChipActive]} onPress={() => selectYear(String(y))}>
+                <Text style={[styles.yearChipText, String(y) === year && styles.yearChipTextActive]}>{y}</Text>
+              </TouchableOpacity>
+            ))}
+            {olderYears.length > 0 && (
+              <View style={styles.yearMoreWrap}>
+                <TouchableOpacity style={[styles.yearChip, selectedIsOlder && styles.yearChipActive]} onPress={() => setYearMenuOpen((open) => !open)}>
+                  <Text style={[styles.yearChipText, selectedIsOlder && styles.yearChipTextActive]}>{selectedIsOlder ? year : "…"}</Text>
+                </TouchableOpacity>
+                {yearMenuOpen && <View style={styles.yearMenu}>
+                  {olderYears.map((y) => <TouchableOpacity key={y} style={styles.yearOption} onPress={() => { setYearMenuOpen(false); selectYear(String(y)); }}><Text style={[styles.yearOptionText, String(y) === year && styles.yearOptionTextActive]}>{y}</Text></TouchableOpacity>)}
+                </View>}
+              </View>
+            )}
           </View>
 
           <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
-            {canUseGrouping && (archiveType === "event" ? <View style={styles.groupingPanel}>
+            {canUseGrouping && (archiveType === "event" ? <View style={[styles.groupingPanel, (mainGroupingMenuOpen || subGroupingMenuOpen) && styles.groupingPanelOpen]}>
               <View style={[styles.groupingRow, mainGroupingMenuOpen && styles.groupingRowOpen]}>
                 <Text style={styles.groupingLabel}>メイン</Text>
                 <View style={styles.groupingSelectWrap}>
@@ -524,16 +550,23 @@ const styles = StyleSheet.create({
   archiveTabActive: { backgroundColor: brand.plum },
   archiveTabText: { color: brand.ink, fontSize: 14, fontWeight: "500" },
   archiveTabTextActive: { color: "#FFFFFF", fontWeight: "700" },
-  yearSelectorWrap: { position: "relative", marginTop: 22, marginBottom: 16, zIndex: 5 },
-  yearSelector: { minHeight: 46, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  yearSelectorText: { color: brand.ink, fontSize: 14, fontWeight: "500" },
-  yearMenu: { position: "absolute", top: 50, left: 0, right: 0, borderWidth: 1, borderColor: brand.border, borderRadius: 8, backgroundColor: "#FFFFFF", padding: 5, ...shadow },
+  yearChipsRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 22, marginBottom: 16, zIndex: 5 },
+  yearChip: { minHeight: 40, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: "transparent", backgroundColor: brand.lavender, alignItems: "center", justifyContent: "center" },
+  yearChipActive: { backgroundColor: "#FFFFFF", borderColor: brand.violet },
+  yearChipText: { color: brand.ink, fontSize: 14, fontWeight: "600" },
+  yearChipTextActive: { color: brand.violet, fontWeight: "800" },
+  yearMoreWrap: { position: "relative" },
+  // 他のプルダウン（白背景+枠線）とは違い、薄い背景・枠線なしの見た目にする
+  yearMenu: { position: "absolute", top: 46, left: 0, minWidth: 110, borderRadius: 10, backgroundColor: "#FFFFFF", padding: 5, ...shadow },
   yearOption: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 5 },
   yearOptionText: { color: brand.ink, fontSize: 14 },
   yearOptionTextActive: { color: brand.violet, fontWeight: "700" },
   archiveControls: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 20, marginBottom: 28, zIndex: 4 },
   archiveControlsMobile: { flexDirection: "column", gap: 12 },
   groupingPanel: { flex: 1, gap: 10 },
+  // メイン/サブのドロップダウンを開いたとき、隣のグループ順/並び順（zIndex:5固定）より
+  // 手前に描画されるようにする。開いていないときはsortControls側を優先させたいのでここでのみ引き上げる
+  groupingPanelOpen: { zIndex: 30 },
   sortControls: { flexDirection: "row", alignItems: "flex-start", justifyContent: "flex-end", gap: 10 },
   sortControlsMobile: { alignSelf: "flex-end" },
   sortControlsSolo: { marginLeft: "auto" },

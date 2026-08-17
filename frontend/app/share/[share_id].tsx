@@ -210,11 +210,14 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
           <View style={styles.sectionCard}>
             <Text style={styles.eyebrow}>ARCHIVE</Text>
             <View style={styles.yearList}>
-              {availableYears.map((year, index) => (
-                <TouchableOpacity key={year} style={[styles.yearPill, index === 0 && styles.yearPillActive]} onPress={() => router.push(authenticated ? `/year/${year}` : `/share/${share_id}/year/${year}`)}>
-                  <Text style={[styles.yearText, index === 0 && styles.yearTextActive]}>{year}</Text>
-                </TouchableOpacity>
-              ))}
+              {availableYears.map((year) => {
+                const isCurrentYear = year === new Date().getFullYear();
+                return (
+                  <TouchableOpacity key={year} style={[styles.yearPill, isCurrentYear && styles.yearPillActive]} onPress={() => router.push(authenticated ? `/year/${year}` : `/share/${share_id}/year/${year}`)}>
+                    <Text style={[styles.yearText, isCurrentYear && styles.yearTextActive]}>{year}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         </View>
