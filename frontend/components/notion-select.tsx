@@ -22,25 +22,31 @@ let saveSelectOptions: SaveFunction | null = null;
 let saveStaySelectOptions: SaveFunction | null = null;
 let loadSelectOptionsSortOrder: LoadSortOrderFunction | null = null;
 let saveSelectOptionsSortOrder: SaveSortOrderFunction | null = null;
+let loadStaySelectOptionsSortOrder: LoadSortOrderFunction | null = null;
+let saveStaySelectOptionsSortOrder: SaveSortOrderFunction | null = null;
 
-const loadSaveFunctions = async (): Promise<{ 
-  saveSelectOptions: SaveFunction | null; 
+const loadSaveFunctions = async (): Promise<{
+  saveSelectOptions: SaveFunction | null;
   saveStaySelectOptions: SaveFunction | null;
   loadSelectOptionsSortOrder: LoadSortOrderFunction | null;
   saveSelectOptionsSortOrder: SaveSortOrderFunction | null;
+  loadStaySelectOptionsSortOrder: LoadSortOrderFunction | null;
+  saveStaySelectOptionsSortOrder: SaveSortOrderFunction | null;
 }> => {
-  if (!saveSelectOptions || !saveStaySelectOptions || !loadSelectOptionsSortOrder || !saveSelectOptionsSortOrder) {
+  if (!saveSelectOptions || !saveStaySelectOptions || !loadSelectOptionsSortOrder || !saveSelectOptionsSortOrder || !loadStaySelectOptionsSortOrder || !saveStaySelectOptionsSortOrder) {
     try {
       const module = await import("../utils/select-options-storage");
       saveSelectOptions = module.saveSelectOptions;
       saveStaySelectOptions = module.saveStaySelectOptions;
       loadSelectOptionsSortOrder = module.loadSelectOptionsSortOrder;
       saveSelectOptionsSortOrder = module.saveSelectOptionsSortOrder;
+      loadStaySelectOptionsSortOrder = module.loadStaySelectOptionsSortOrder;
+      saveStaySelectOptionsSortOrder = module.saveStaySelectOptionsSortOrder;
     } catch (e) {
       console.error("[NotionSelect] Error loading save functions:", e);
     }
   }
-  return { saveSelectOptions, saveStaySelectOptions, loadSelectOptionsSortOrder, saveSelectOptionsSortOrder };
+  return { saveSelectOptions, saveStaySelectOptions, loadSelectOptionsSortOrder, saveSelectOptionsSortOrder, loadStaySelectOptionsSortOrder, saveStaySelectOptionsSortOrder };
 };
 
 // ソート関数をコンポーネント内に直接実装して循環依存を回避
@@ -210,12 +216,27 @@ export function NotionSelect({
   }, [isKanaOrder, options]);
 
   // 並び順の設定を読み込む
+  // optionType（ライブ予定側）とstayOptionType（宿泊側）はストレージキーの体系が異なるため、
+  // 対応する読み込み関数を別々に呼び出す（宿泊側をライブ予定側のエンドポイントに誤送信しないため）
   useEffect(() => {
-    if (optionType || stayOptionType) {
-      const key = (optionType || stayOptionType) as string;
+    if (optionType) {
       loadSaveFunctions().then(({ loadSelectOptionsSortOrder }) => {
         if (loadSelectOptionsSortOrder) {
-          loadSelectOptionsSortOrder(key.toUpperCase() as any).then((sortOrder) => {
+          loadSelectOptionsSortOrder(optionType).then((sortOrder) => {
+            setIsKanaOrder(sortOrder === 'kana');
+            setIsLoadingSortOrder(false);
+          }).catch(() => {
+            setIsKanaOrder(false);
+            setIsLoadingSortOrder(false);
+          });
+        } else {
+          setIsLoadingSortOrder(false);
+        }
+      });
+    } else if (stayOptionType) {
+      loadSaveFunctions().then(({ loadStaySelectOptionsSortOrder }) => {
+        if (loadStaySelectOptionsSortOrder) {
+          loadStaySelectOptionsSortOrder(stayOptionType).then((sortOrder) => {
             setIsKanaOrder(sortOrder === 'kana');
             setIsLoadingSortOrder(false);
           }).catch(() => {
@@ -385,17 +406,21 @@ export function NotionSelect({
   };
 
   // 五十音順の切り替えハンドラー
+  // optionType（ライブ予定側）とstayOptionType（宿泊側）はストレージキーの体系が異なるため、
+  // 対応する保存関数を別々に呼び出す（宿泊側をライブ予定側のエンドポイントに誤送信しないため）
   const handleToggleKanaOrder = async () => {
     const newKanaOrder = !isKanaOrder;
     setIsKanaOrder(newKanaOrder);
-    const { saveSelectOptionsSortOrder } = await loadSaveFunctions();
-    if ((optionType || stayOptionType) && saveSelectOptionsSortOrder) {
-      const key = (optionType || stayOptionType) as string;
-      try {
-        await saveSelectOptionsSortOrder(key.toUpperCase() as any, newKanaOrder ? 'kana' : 'custom');
-      } catch (error) {
-        console.error("Failed to save sort order:", error);
+    const { saveSelectOptionsSortOrder, saveStaySelectOptionsSortOrder } = await loadSaveFunctions();
+    const sortOrderValue = newKanaOrder ? 'kana' : 'custom';
+    try {
+      if (optionType && saveSelectOptionsSortOrder) {
+        await saveSelectOptionsSortOrder(optionType, sortOrderValue);
+      } else if (stayOptionType && saveStaySelectOptionsSortOrder) {
+        await saveStaySelectOptionsSortOrder(stayOptionType, sortOrderValue);
       }
+    } catch (error) {
+      console.error("Failed to save sort order:", error);
     }
   };
 
