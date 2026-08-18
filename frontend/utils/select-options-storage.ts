@@ -178,48 +178,25 @@ function getDefaultOptions(
   return optionsWithOrder;
 }
 
-// データベースの選択肢とデフォルト選択肢をマージする関数
+// データベースの選択肢にデフォルト選択肢の色情報のみを補完する関数
+// 一度でも保存されたDBの内容（項目の有無・並び順）を正として扱い、
+// ユーザーが削除・並び替えたデフォルト項目を復元したり上書きしたりしない
 function mergeOptionsWithDefaults(
   dbOptions: SelectOption[],
-  defaultOptions: SelectOption[],
-  key: keyof typeof STORAGE_KEYS
+  defaultOptions: SelectOption[]
 ): SelectOption[] {
-  // データベースの選択肢をラベルでマップ
-  const dbOptionsMap = new Map<string, SelectOption>();
-  dbOptions.forEach((opt) => {
-    dbOptionsMap.set(opt.label, opt);
+  const defaultColorMap = new Map<string, string | undefined>();
+  defaultOptions.forEach((opt) => {
+    defaultColorMap.set(opt.label, opt.color);
   });
 
-  // デフォルト選択肢とマージ（デフォルト選択肢の色をデータベースの値で上書き）
-  // デフォルト選択肢の順序を保持するため、デフォルトのorderを優先
-  const merged: SelectOption[] = defaultOptions.map((defaultOpt, index) => {
-    const dbOpt = dbOptionsMap.get(defaultOpt.label);
-    if (dbOpt) {
-      // データベースに存在する場合は、デフォルトのorderを優先（色はデータベースの値を優先）
-      return {
-        ...defaultOpt,
-        color: dbOpt.color || defaultOpt.color,
-        order: index, // デフォルトの順序を優先
-      };
-    }
-    // データベースに存在しない場合は、デフォルト値を使用
-    return {
-      ...defaultOpt,
-      order: index,
-    };
-  });
+  // 色が未設定の項目にのみ、デフォルトの色を補完する
+  const merged = dbOptions.map((opt) => ({
+    ...opt,
+    color: opt.color || defaultColorMap.get(opt.label),
+  }));
 
-  // データベースにあってデフォルトにない選択肢を追加
-  dbOptions.forEach((dbOpt) => {
-    if (!defaultOptions.some((d) => d.label === dbOpt.label)) {
-      merged.push({
-        ...dbOpt,
-        order: dbOpt.order !== undefined ? dbOpt.order : merged.length,
-      });
-    }
-  });
-
-  // orderでソートして返す（デフォルト選択肢の順序を保証）
+  // orderでソートして返す（DBに保存された並び順をそのまま尊重する）
   return merged.sort((a, b) => {
     const orderA = a.order !== undefined ? a.order : Infinity;
     const orderB = b.order !== undefined ? b.order : Infinity;
@@ -251,14 +228,17 @@ export async function loadSelectOptions(
       }
       if (res.ok) {
         const data = await res.json();
-        // 新しい形式（{ options, sort_order }）と古い形式（配列）の両方に対応
+        // 新しい形式（{ options, sort_order, exists }）と古い形式（配列）の両方に対応
         const options: SelectOption[] = Array.isArray(data) ? data : (data.options || []);
         const sortOrder = Array.isArray(data) ? 'custom' : (data.sort_order || 'custom');
-        
-        if (options.length > 0) {
+        // existsは「一度でも保存されたレコードが存在するか」を表す。
+        // 古い形式（配列のみ）を返すサーバーとの互換のため、その場合は配列の中身で代用する
+        const existsOnServer = Array.isArray(data) ? options.length > 0 : data.exists === true;
+
+        if (existsOnServer) {
           console.log(`[SelectOptions] Loaded ${options.length} options from ${shareId ? 'shared' : 'database'} for ${key}:`, options.map(opt => ({ label: opt.label, order: opt.order })));
-          // データベースの選択肢とデフォルト選択肢をマージ
-          const merged = mergeOptionsWithDefaults(options, defaultOptions, key);
+          // データベースの選択肢に色情報のみ補完する（項目の有無・並び順はDBの内容を正とする）
+          const merged = mergeOptionsWithDefaults(options, defaultOptions);
           console.log(`[SelectOptions] Merged ${merged.length} options for ${key}:`, merged.map(opt => ({ label: opt.label, order: opt.order })));
           // データベースに保存されている場合は、ローカルストレージにも保存（キャッシュ）
           await AsyncStorage.setItem(STORAGE_KEYS[key], JSON.stringify(merged));
@@ -496,7 +476,9 @@ export async function loadStaySelectOptions(
         res = await authenticatedFetch(getApiUrl(`/stay-select-options/${key}`));
       }
       if (res.ok) {
-        const options: SelectOption[] = await res.json();
+        const data = await res.json();
+        // 新しい形式（{ options, exists }）と古い形式（配列）の両方に対応
+        const options: SelectOption[] = Array.isArray(data) ? data : (data.options || []);
         console.log(`[StaySelectOptions] Loaded ${options.length} options from ${shareId ? 'shared' : 'database'} for ${key}:`, options.map((opt) => ({ label: opt.label, color: opt.color })));
         // サーバーからの正常な応答は、中身が空であっても現在の正しい状態として信頼する。
         // 古い端末キャッシュにフォールバックすると、サーバー側でデータが失われた場合に

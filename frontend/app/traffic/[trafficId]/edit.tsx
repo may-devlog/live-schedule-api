@@ -252,6 +252,7 @@ export default function EditTrafficScreen() {
         onOptionsChange={handleTransportationsChange}
         placeholder="選択してください"
         isTransportation={true}
+        optionType="TRANSPORTATIONS"
       />
 
       <Text style={styles.label}>

@@ -37,8 +37,6 @@ type Stay = {
   status: string;
 };
 
-const STAY_STATUSES_KEY = "@select_options:stay_statuses" as const;
-
 // 宿泊ステータス用の固定カラー
 const STAY_STATUS_COLORS: Record<string, string> = {
   Canceled: "#E5E7EB", // gray
@@ -58,33 +56,26 @@ export default function EditStayScreen() {
   useEffect(() => {
     const loadOptions = async () => {
 
-      // loadStayStatusesをコンポーネント内で定義して循環依存を回避
+      // 宿泊ステータスの選択肢はDB（stay_select_options）と同期する。
+      // 未保存の場合のみ、初期表示用のデフォルトを返す（保存はしない）。
+      // 0件はDB未保存(初回)と全件削除済みの両方であり得るため、レコードの
+      // 存在有無(exists)を見て区別する
       const loadStayStatuses = async (): Promise<SelectOption[]> => {
+        const statusesData = await loadStaySelectOptions("STATUS");
+        if (statusesData.length > 0) {
+          return statusesData;
+        }
         try {
-          const AsyncStorage = require("@react-native-async-storage/async-storage")
-            .default;
-          const stored = await AsyncStorage.getItem(STAY_STATUSES_KEY);
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              if (typeof parsed[0] === "string") {
-                // stringArrayToOptionsを使用せず、直接SelectOption[]を作成して循環依存を回避
-                return (parsed as string[]).map((str) => ({
-                  label: str,
-                  color: STAY_STATUS_COLORS[str] ?? undefined,
-                }));
-              }
-              // 既存データにも固定カラーを適用
-              return (parsed as SelectOption[]).map((opt) => ({
-                ...opt,
-                color: STAY_STATUS_COLORS[opt.label] ?? opt.color,
-              }));
+          const res = await authenticatedFetch(getApiUrl("/stay-select-options/STATUS"));
+          if (res.ok) {
+            const data = await res.json();
+            if (!Array.isArray(data) && data.exists) {
+              return [];
             }
           }
         } catch (error) {
-          console.error("Error loading stay statuses:", error);
+          console.error("Error checking stay status existence:", error);
         }
-        // デフォルトのステータスにも固定カラーを適用
         return ["Canceled", "Keep", "Done"].map((str) => ({
           label: str,
           color: STAY_STATUS_COLORS[str] ?? undefined,
@@ -107,11 +98,8 @@ export default function EditStayScreen() {
 
   const handleStatusesChange = async (newStatuses: SelectOption[]) => {
     setStatuses(newStatuses);
-    // saveStayStatusesをコンポーネント内で定義して循環依存を回避
     try {
-      const AsyncStorage = require("@react-native-async-storage/async-storage")
-        .default;
-      await AsyncStorage.setItem(STAY_STATUSES_KEY, JSON.stringify(newStatuses));
+      await saveStaySelectOptions("STATUS", newStatuses);
     } catch (error) {
       console.error("Error saving stay statuses:", error);
     }
@@ -444,22 +432,15 @@ export default function EditStayScreen() {
         onChangeText={setHotelName}
       />
 
-      {websiteOptions.length > 0 ? (
-        <NotionSelect
-          label="予約サイト"
-          value={website}
-          options={websiteOptions}
-          onValueChange={setWebsite}
-          onOptionsChange={handleWebsiteOptionsChange}
-          placeholder="選択してください"
-          stayOptionType="WEBSITE"
-        />
-      ) : (
-        <View>
-          <Text style={styles.label}>予約サイト</Text>
-          <Text style={styles.emptyValue}>読み込み中...</Text>
-        </View>
-      )}
+      <NotionSelect
+        label="予約サイト"
+        value={website}
+        options={websiteOptions}
+        onValueChange={setWebsite}
+        onOptionsChange={handleWebsiteOptionsChange}
+        placeholder="選択してください"
+        stayOptionType="WEBSITE"
+      />
 
       <Text style={styles.label}>
         宿泊費 <Text style={styles.required}>*</Text>
@@ -496,22 +477,15 @@ export default function EditStayScreen() {
         keyboardType="numeric"
       />
 
-      {statuses.length > 0 ? (
-        <NotionSelect
-          label="ステータス"
-          value={status}
-          options={statuses}
-          onValueChange={setStatus}
-          onOptionsChange={handleStatusesChange}
-          placeholder="選択してください"
-          stayOptionType="STATUS"
-        />
-      ) : (
-        <View>
-          <Text style={styles.label}>ステータス</Text>
-          <Text style={styles.emptyValue}>読み込み中...</Text>
-        </View>
-      )}
+      <NotionSelect
+        label="ステータス"
+        value={status}
+        options={statuses}
+        onValueChange={setStatus}
+        onOptionsChange={handleStatusesChange}
+        placeholder="選択してください"
+        stayOptionType="STATUS"
+      />
 
       <TouchableOpacity
         style={[styles.button, submitting && styles.buttonDisabled]}

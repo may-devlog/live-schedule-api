@@ -22,16 +22,13 @@ export async function loadSelectOptionsMap(
     loadStaySelectOptions("STATUS", shareId),
   ]);
 
-  // 並び順の設定を取得（五十音順/カスタム順）
+  // 並び順の設定を取得（五十音順/カスタム順）。お目当て（target）は常にカスタム順
+  // で表示するため、出演者（lineup）用の設定のみ取得する
   const sortOrderMap = new Map<string, string>();
   if (!shareId) {
     // 共有ページの場合は並び順の設定を取得しない（デフォルトでカスタム順）
     try {
-      const [targetSortOrder, lineupSortOrder] = await Promise.all([
-        loadSelectOptionsSortOrder("TARGETS"),
-        loadSelectOptionsSortOrder("TARGETS"), // LINEUPSはTARGETSと同じ選択肢を使用
-      ]);
-      sortOrderMap.set("target", targetSortOrder);
+      const lineupSortOrder = await loadSelectOptionsSortOrder("TARGETS");
       sortOrderMap.set("lineup", lineupSortOrder);
     } catch (error) {
       console.error("Error loading sort order:", error);
@@ -62,17 +59,18 @@ export async function loadSelectOptionsMap(
   });
   orderMap.set("area", areaOrder);
 
-  // targetとlineupは並び順の設定に基づいてソート
-  const targetSortOrder = sortOrderMap.get("target") || 'custom';
-  const sortedTargets = getSortedOptions(targets, targetSortOrder);
+  // お目当て（target）の選択肢自体には五十音順の切り替えUIがなく、常にカスタム順
+  // (DBのorder順)で表示される。グルーピング順もそれに合わせて常にカスタム順にする
+  // （出演者側で五十音順に切り替えても、お目当てのグルーピング順には影響させない）
+  const sortedTargets = sortByOrder(targets);
   const targetOrder = new Map<string, number>();
   sortedTargets.forEach((opt, idx) => {
     targetOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);
   });
   orderMap.set("target", targetOrder);
-  
-  // lineupもtargetと同じ選択肢を使用し、同じ並び順設定を適用
-  const lineupSortOrder = sortOrderMap.get("lineup") || targetSortOrder;
+
+  // lineup（出演者）は編集画面の五十音順トグルに従う
+  const lineupSortOrder = sortOrderMap.get("lineup") || 'custom';
   const sortedLineups = getSortedOptions(targets, lineupSortOrder);
   const lineupOrder = new Map<string, number>();
   sortedLineups.forEach((opt, idx) => {
