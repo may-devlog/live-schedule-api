@@ -419,22 +419,15 @@ export default function EditStayScreen() {
         onChangeText={setHotelName}
       />
 
-      {websiteOptions.length > 0 ? (
-        <NotionSelect
-          label="予約サイト"
-          value={website}
-          options={websiteOptions}
-          onValueChange={setWebsite}
-          onOptionsChange={handleWebsiteOptionsChange}
-          placeholder="選択してください"
-          stayOptionType="WEBSITE"
-        />
-      ) : (
-        <View>
-          <Text style={styles.label}>予約サイト</Text>
-          <Text style={styles.emptyValue}>読み込み中...</Text>
-        </View>
-      )}
+      <NotionSelect
+        label="予約サイト"
+        value={website}
+        options={websiteOptions}
+        onValueChange={setWebsite}
+        onOptionsChange={handleWebsiteOptionsChange}
+        placeholder="選択してください"
+        stayOptionType="WEBSITE"
+      />
 
       <Text style={styles.label}>
         宿泊費 <Text style={styles.required}>*</Text>
@@ -471,22 +464,15 @@ export default function EditStayScreen() {
         keyboardType="numeric"
       />
 
-      {statuses.length > 0 ? (
-        <NotionSelect
-          label="ステータス"
-          value={status}
-          options={statuses}
-          onValueChange={setStatus}
-          onOptionsChange={handleStatusesChange}
-          placeholder="選択してください"
-          stayOptionType="STATUS"
-        />
-      ) : (
-        <View>
-          <Text style={styles.label}>ステータス</Text>
-          <Text style={styles.emptyValue}>読み込み中...</Text>
-        </View>
-      )}
+      <NotionSelect
+        label="ステータス"
+        value={status}
+        options={statuses}
+        onValueChange={setStatus}
+        onOptionsChange={handleStatusesChange}
+        placeholder="選択してください"
+        stayOptionType="STATUS"
+      />
 
       <TouchableOpacity
         style={[styles.button, submitting && styles.buttonDisabled]}
