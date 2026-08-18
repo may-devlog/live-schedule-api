@@ -476,7 +476,9 @@ export async function loadStaySelectOptions(
         res = await authenticatedFetch(getApiUrl(`/stay-select-options/${key}`));
       }
       if (res.ok) {
-        const options: SelectOption[] = await res.json();
+        const data = await res.json();
+        // 新しい形式（{ options, exists }）と古い形式（配列）の両方に対応
+        const options: SelectOption[] = Array.isArray(data) ? data : (data.options || []);
         console.log(`[StaySelectOptions] Loaded ${options.length} options from ${shareId ? 'shared' : 'database'} for ${key}:`, options.map((opt) => ({ label: opt.label, color: opt.color })));
         // サーバーからの正常な応答は、中身が空であっても現在の正しい状態として信頼する。
         // 古い端末キャッシュにフォールバックすると、サーバー側でデータが失われた場合に

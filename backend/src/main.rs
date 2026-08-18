@@ -6535,7 +6535,7 @@ async fn get_stay_select_options(
     user: AuthenticatedUser,
     Path(option_type): Path<String>,
     Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<ErrorResponse>)> {
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
     let option_type = normalize_stay_option_type(&option_type)
         .ok_or_else(invalid_stay_option_type)?;
     // DISABLE_AUTHが有効な場合、データベースから実際のユーザーIDを取得
@@ -6582,9 +6582,17 @@ async fn get_stay_select_options(
                     }),
                 )
             })?;
-        Ok(Json(options))
+        Ok(Json(serde_json::json!({
+            "options": options,
+            "exists": true,
+        })))
     } else {
-        Ok(Json(vec![]))
+        // existsをfalseにすることで、フロントは「未保存（初回）」と
+        // 「保存済みだが全件削除されて0件」を区別できる
+        Ok(Json(serde_json::json!({
+            "options": [],
+            "exists": false,
+        })))
     }
 }
 

@@ -62,11 +62,24 @@ export default function NewStayScreen() {
     const loadOptions = async () => {
 
       // 宿泊ステータスの選択肢はDB（stay_select_options）と同期する。
-      // 未保存の場合のみ、初期表示用のデフォルトを返す（保存はしない）
+      // 未保存の場合のみ、初期表示用のデフォルトを返す（保存はしない）。
+      // 0件はDB未保存(初回)と全件削除済みの両方であり得るため、レコードの
+      // 存在有無(exists)を見て区別する
       const loadStayStatuses = async (): Promise<SelectOption[]> => {
         const statusesData = await loadStaySelectOptions("STATUS");
         if (statusesData.length > 0) {
           return statusesData;
+        }
+        try {
+          const res = await authenticatedFetch(getApiUrl("/stay-select-options/STATUS"));
+          if (res.ok) {
+            const data = await res.json();
+            if (!Array.isArray(data) && data.exists) {
+              return [];
+            }
+          }
+        } catch (error) {
+          console.error("Error checking stay status existence:", error);
         }
         return ["Canceled", "Keep", "Done"].map((str) => ({
           label: str,
