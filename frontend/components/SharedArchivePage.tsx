@@ -56,13 +56,44 @@ const GROUPING_FIELD_OPTIONS: [GroupingField, string][] = [
   ["seller", "販売元"],
   ["status", "ステータス"],
 ];
-const GROUPING_FIELD_LABELS: Record<GroupingField, string> = Object.fromEntries(GROUPING_FIELD_OPTIONS) as Record<GroupingField, string>;
+const STAY_GROUPING_OPTIONS: [string, string][] = [["none", "なし"], ["website", "予約サイト"], ["status", "ステータス"]];
 
 // メイン/サブの一方で選択されている項目は、もう一方では選べないようにする
 // （同じ項目の重複選択に加え、お目当て⇄出演者の組み合わせも禁止）
 const isGroupingOptionDisabled = (value: GroupingField, other: GroupingField) =>
   value !== "none" &&
   (value === other || (value === "target" && other === "lineup") || (value === "lineup" && other === "target"));
+
+// グループ化のチップ行。選択肢が幅に収まらない場合は折り返さず横スクロールで1行に収める
+function GroupingChipsRow({ label, options, selected, onSelect, isDisabled }: {
+  label?: string;
+  options: [string, string][];
+  selected: string;
+  onSelect: (value: string) => void;
+  isDisabled?: (value: string) => boolean;
+}) {
+  const chips = options.map(([value, text]) => {
+    const disabled = isDisabled?.(value) ?? false;
+    return (
+      <TouchableOpacity
+        key={value}
+        disabled={disabled}
+        style={[styles.groupingButton, selected === value && styles.groupingButtonActive, disabled && styles.groupingButtonDisabled]}
+        onPress={() => onSelect(value)}
+      >
+        <Text style={[styles.groupingButtonText, selected === value && styles.groupingButtonTextActive, disabled && styles.groupingButtonTextDisabled]}>{text}</Text>
+      </TouchableOpacity>
+    );
+  });
+  return (
+    <View style={styles.groupingRow}>
+      {label && <Text style={styles.groupingLabel}>{label}</Text>}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupingChipsScroll} contentContainerStyle={styles.groupingChipsScrollContent}>
+        {chips}
+      </ScrollView>
+    </View>
+  );
+}
 
 function scheduleDate(schedule: Schedule) {
   return schedule.datetime || schedule.date || "";
@@ -102,6 +133,9 @@ function dateParts(raw: string): ArchiveDateParts {
 export function SharedArchivePage({ shareId, authenticated = false, initialYear, fetchSchedules, fetchStays, fetchAvailableYears, onSelectYear, onSchedulePress, onStayPress, canUseGrouping = true }: Props) {
   const { width } = useWindowDimensions();
   const mobile = width < 720;
+  // グループ化チップ行と並び順コントロールを横並びにすると、この間の幅では
+  // チップ側が窮屈になり並び順と衝突して見えるため、その帯ではモバイルと同じ縦積みにする
+  const stackedControls = width < 1180;
   const [year, setYear] = useState(initialYear);
   const [years, setYears] = useState<number[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -118,8 +152,6 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const [yearMenuOpen, setYearMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [mainSortMenuOpen, setMainSortMenuOpen] = useState(false);
-  const [mainGroupingMenuOpen, setMainGroupingMenuOpen] = useState(false);
-  const [subGroupingMenuOpen, setSubGroupingMenuOpen] = useState(false);
   const [mainGrouping, setMainGrouping] = useState<MainGroupingField>("none");
   const [subGrouping, setSubGrouping] = useState<SubGroupingField>("none");
   const [archiveType, setArchiveType] = useState<"event" | "stay">("event");
@@ -414,39 +446,17 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             )}
           </View>
 
-          <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
-            {canUseGrouping && (archiveType === "event" ? <View style={[styles.groupingPanel, (mainGroupingMenuOpen || subGroupingMenuOpen) && styles.groupingPanelOpen]}>
-              <View style={[styles.groupingRow, mainGroupingMenuOpen && styles.groupingRowOpen]}>
-                <Text style={styles.groupingLabel}>メイン</Text>
-                <View style={styles.groupingSelectWrap}>
-                  <TouchableOpacity style={styles.groupingSelect} onPress={() => { const next = !mainGroupingMenuOpen; setMainGroupingMenuOpen(next); setSubGroupingMenuOpen(false); setMainSortMenuOpen(false); setSortMenuOpen(false); }}>
-                    <Text style={styles.groupingSelectText}>{GROUPING_FIELD_LABELS[mainGrouping]}</Text>
-                    <Ionicons name={mainGroupingMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
-                  </TouchableOpacity>
-                  {mainGroupingMenuOpen && <View style={styles.groupingSelectMenu}>
-                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => { const disabled = isGroupingOptionDisabled(value, subGrouping); return <TouchableOpacity key={value} disabled={disabled} style={styles.compactSelectOption} onPress={() => { setMainGrouping(value); setMainGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, mainGrouping === value && styles.compactSelectOptionActive, disabled && styles.compactSelectOptionDisabled]}>{label}</Text></TouchableOpacity>; })}
-                  </View>}
-                </View>
-              </View>
-              <View style={[styles.groupingRow, subGroupingMenuOpen && styles.groupingRowOpen]}>
-                <Text style={styles.groupingLabel}>サブ</Text>
-                <View style={styles.groupingSelectWrap}>
-                  <TouchableOpacity style={styles.groupingSelect} onPress={() => { const next = !subGroupingMenuOpen; setSubGroupingMenuOpen(next); setMainGroupingMenuOpen(false); setMainSortMenuOpen(false); setSortMenuOpen(false); }}>
-                    <Text style={styles.groupingSelectText}>{GROUPING_FIELD_LABELS[subGrouping]}</Text>
-                    <Ionicons name={subGroupingMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
-                  </TouchableOpacity>
-                  {subGroupingMenuOpen && <View style={styles.groupingSelectMenu}>
-                    {GROUPING_FIELD_OPTIONS.map(([value, label]) => { const disabled = isGroupingOptionDisabled(value, mainGrouping); return <TouchableOpacity key={value} disabled={disabled} style={styles.compactSelectOption} onPress={() => { setSubGrouping(value); setSubGroupingMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, subGrouping === value && styles.compactSelectOptionActive, disabled && styles.compactSelectOptionDisabled]}>{label}</Text></TouchableOpacity>; })}
-                  </View>}
-                </View>
-              </View>
+          <View style={[styles.archiveControls, stackedControls && styles.archiveControlsMobile]}>
+            {canUseGrouping && (archiveType === "event" ? <View style={styles.groupingPanel}>
+              <GroupingChipsRow label="メイン" options={GROUPING_FIELD_OPTIONS} selected={mainGrouping} onSelect={(value) => setMainGrouping(value as MainGroupingField)} isDisabled={(value) => isGroupingOptionDisabled(value as GroupingField, subGrouping)} />
+              <GroupingChipsRow label="サブ" options={GROUPING_FIELD_OPTIONS} selected={subGrouping} onSelect={(value) => setSubGrouping(value as SubGroupingField)} isDisabled={(value) => isGroupingOptionDisabled(value as GroupingField, mainGrouping)} />
             </View> : <View style={styles.groupingPanel}>
-              <View style={styles.groupingRow}><Text style={styles.groupingLabel}>分類</Text>{([['none','なし'],['website','予約サイト'],['status','ステータス']] as const).map(([value,label]) => <TouchableOpacity key={value} style={[styles.groupingButton, stayGrouping === value && styles.groupingButtonActive]} onPress={() => setStayGrouping(value)}><Text style={[styles.groupingButtonText, stayGrouping === value && styles.groupingButtonTextActive]}>{label}</Text></TouchableOpacity>)}</View>
+              <GroupingChipsRow options={STAY_GROUPING_OPTIONS} selected={stayGrouping} onSelect={(value) => setStayGrouping(value as "none" | "website" | "status")} />
             </View>)}
-            <View style={[styles.sortControls, mobile && styles.sortControlsMobile, !canUseGrouping && !mobile && styles.sortControlsSolo]}>
+            <View style={[styles.sortControls, stackedControls && styles.sortControlsMobile, !canUseGrouping && !stackedControls && styles.sortControlsSolo]}>
               {(mainGrouping === "target" || mainGrouping === "lineup") && archiveType === "event" && <View style={styles.compactSelectWrap}>
                 <Text style={styles.compactSelectLabel}>グループ順</Text>
-                <TouchableOpacity style={styles.compactSelect} onPress={() => { setMainSortMenuOpen((open) => !open); setSortMenuOpen(false); setMainGroupingMenuOpen(false); setSubGroupingMenuOpen(false); }}>
+                <TouchableOpacity style={styles.compactSelect} onPress={() => { setMainSortMenuOpen((open) => !open); setSortMenuOpen(false); }}>
                   <Text style={styles.compactSelectText}>{mainSortMode === "default" ? "デフォルト" : "五十音順"}</Text>
                   <Ionicons name={mainSortMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
                 </TouchableOpacity>
@@ -456,7 +466,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
               </View>}
               <View style={styles.compactSelectWrap}>
                 <Text style={styles.compactSelectLabel}>並び順</Text>
-                <TouchableOpacity style={styles.compactSelect} onPress={() => { setSortMenuOpen((open) => !open); setMainSortMenuOpen(false); setMainGroupingMenuOpen(false); setSubGroupingMenuOpen(false); }}>
+                <TouchableOpacity style={styles.compactSelect} onPress={() => { setSortMenuOpen((open) => !open); setMainSortMenuOpen(false); }}>
                   <Text style={styles.compactSelectText}>{sortOrder === "asc" ? "昇順" : "降順"}</Text>
                   <Ionicons name={sortMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
                 </TouchableOpacity>
@@ -562,11 +572,10 @@ const styles = StyleSheet.create({
   yearOptionText: { color: brand.ink, fontSize: 14 },
   yearOptionTextActive: { color: brand.violet, fontWeight: "700" },
   archiveControls: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 20, marginBottom: 28, zIndex: 4 },
-  archiveControlsMobile: { flexDirection: "column", gap: 12 },
+  // alignItems: flex-start のままだとgroupingPanelが中身の幅に合わせて広がり、
+  // チップの横スクロール行が画面幅を超えてしまうため、モバイルでは幅いっぱいに揃える
+  archiveControlsMobile: { flexDirection: "column", alignItems: "stretch", gap: 12 },
   groupingPanel: { flex: 1, gap: 10 },
-  // メイン/サブのドロップダウンを開いたとき、隣のグループ順/並び順（zIndex:5固定）より
-  // 手前に描画されるようにする。開いていないときはsortControls側を優先させたいのでここでのみ引き上げる
-  groupingPanelOpen: { zIndex: 30 },
   sortControls: { flexDirection: "row", alignItems: "flex-start", justifyContent: "flex-end", gap: 10 },
   sortControlsMobile: { alignSelf: "flex-end" },
   sortControlsSolo: { marginLeft: "auto" },
@@ -579,21 +588,19 @@ const styles = StyleSheet.create({
   compactSelectOptionText: { color: brand.ink, fontSize: 13 },
   compactSelectOptionActive: { color: brand.violet, fontWeight: "700" },
   compactSelectOptionDisabled: { color: "#C7C2D1" },
-  groupingRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
-  // メインの下にサブが縦に並ぶため、開いている方の行を手前に出して下の行に隠れないようにする
-  // (React Native Webは各Viewにposition:relative+zIndexを付与し独立した重なりコンテキストを
-  // 作るため、内側のプルダウンだけでなく行自体のzIndexを上げる必要がある)
-  groupingRowOpen: { zIndex: 20 },
+  // flexWrapだと選択肢が幅に収まらないときに2行になってしまうため、折り返さず横スクロールに任せる
+  groupingRow: { flexDirection: "row", flexWrap: "nowrap", alignItems: "center", gap: 8 },
   groupingLabel: { width: 48, color: brand.ink, fontSize: 13, lineHeight: 36, fontWeight: "700" },
   groupingButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   groupingButtonActive: { backgroundColor: brand.plum, borderColor: brand.plum },
   groupingButtonText: { color: brand.ink, fontSize: 13, fontWeight: "400" },
   groupingButtonTextActive: { color: "#FFFFFF", fontWeight: "600" },
-  // メイン/サブのプルダウン。幅はグループ順/並び順プルダウン（compactSelectWrap）と揃える
-  groupingSelectWrap: { position: "relative", width: 126, zIndex: 5 },
-  groupingSelect: { minHeight: 36, paddingHorizontal: 11, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  groupingSelectText: { color: brand.ink, fontSize: 13, fontWeight: "500" },
-  groupingSelectMenu: { position: "absolute", top: 40, left: 0, right: 0, padding: 4, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", ...shadow },
+  // メイン/サブで自身・お目当て⇄出演者と重複するため選べない選択肢。トップページARCHIVEの非当年チップと同系色でグレーアウト
+  groupingButtonDisabled: { backgroundColor: "#F5F3F7", borderColor: "#F5F3F7" },
+  groupingButtonTextDisabled: { color: brand.muted },
+  // モバイルではチップが折り返さず横スクロールで1行に収まるようにする
+  groupingChipsScroll: { flex: 1, minWidth: 0 },
+  groupingChipsScrollContent: { flexDirection: "row", gap: 8, paddingRight: 48 },
   loader: { marginVertical: 60 },
   error: { color: "#C2414B", marginVertical: 30 },
   monthSection: { marginBottom: 28 },
