@@ -133,6 +133,9 @@ function dateParts(raw: string): ArchiveDateParts {
 export function SharedArchivePage({ shareId, authenticated = false, initialYear, fetchSchedules, fetchStays, fetchAvailableYears, onSelectYear, onSchedulePress, onStayPress, canUseGrouping = true }: Props) {
   const { width } = useWindowDimensions();
   const mobile = width < 720;
+  // グループ化チップ行と並び順コントロールを横並びにすると、この間の幅では
+  // チップ側が窮屈になり並び順と衝突して見えるため、その帯ではモバイルと同じ縦積みにする
+  const stackedControls = width < 1180;
   const [year, setYear] = useState(initialYear);
   const [years, setYears] = useState<number[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -443,14 +446,14 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             )}
           </View>
 
-          <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
+          <View style={[styles.archiveControls, stackedControls && styles.archiveControlsMobile]}>
             {canUseGrouping && (archiveType === "event" ? <View style={styles.groupingPanel}>
               <GroupingChipsRow label="メイン" options={GROUPING_FIELD_OPTIONS} selected={mainGrouping} onSelect={(value) => setMainGrouping(value as MainGroupingField)} isDisabled={(value) => isGroupingOptionDisabled(value as GroupingField, subGrouping)} />
               <GroupingChipsRow label="サブ" options={GROUPING_FIELD_OPTIONS} selected={subGrouping} onSelect={(value) => setSubGrouping(value as SubGroupingField)} isDisabled={(value) => isGroupingOptionDisabled(value as GroupingField, mainGrouping)} />
             </View> : <View style={styles.groupingPanel}>
               <GroupingChipsRow options={STAY_GROUPING_OPTIONS} selected={stayGrouping} onSelect={(value) => setStayGrouping(value as "none" | "website" | "status")} />
             </View>)}
-            <View style={[styles.sortControls, mobile && styles.sortControlsMobile, !canUseGrouping && !mobile && styles.sortControlsSolo]}>
+            <View style={[styles.sortControls, stackedControls && styles.sortControlsMobile, !canUseGrouping && !stackedControls && styles.sortControlsSolo]}>
               {(mainGrouping === "target" || mainGrouping === "lineup") && archiveType === "event" && <View style={styles.compactSelectWrap}>
                 <Text style={styles.compactSelectLabel}>グループ順</Text>
                 <TouchableOpacity style={styles.compactSelect} onPress={() => { setMainSortMenuOpen((open) => !open); setSortMenuOpen(false); }}>
