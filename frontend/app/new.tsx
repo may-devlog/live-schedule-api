@@ -28,14 +28,16 @@ import { AppHeader, PublicFooter, brand } from "../components/GenBGTBrand";
 export default function NewScheduleScreen() {
   const router = useRouter();
   const { copyFrom, date: initialDate } = useLocalSearchParams<{ copyFrom?: string; date?: string }>();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   // 未ログインの場合はログイン画面にリダイレクト
+  // 認証状態の読み込みが完了する前にリダイレクトすると、保存済みトークンが
+  // あるユーザーまで一瞬ログイン画面に飛ばされてしまうため、isLoading完了を待つ
   React.useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthLoading && !isAuthenticated) {
       router.replace("/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthLoading, isAuthenticated, router]);
 
   // 選択肢の状態管理（SelectOption型）
   const [categories, setCategories] = useState<SelectOption[]>([]);
@@ -354,6 +356,11 @@ export default function NewScheduleScreen() {
       setSubmitting(false);
     }
   };
+
+  // 認証状態の読み込み中、および未認証時（リダイレクト中）は何も表示しない
+  if (isAuthLoading || !isAuthenticated) {
+    return null;
+  }
 
   return (
     <View style={styles.page}>
