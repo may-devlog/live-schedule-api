@@ -695,3 +695,30 @@ export async function saveStaySelectOptions(
   await AsyncStorage.setItem(STAY_STORAGE_KEYS[key], JSON.stringify(options));
   console.log(`[StaySelectOptions] Saved ${key} to local storage`);
 }
+
+// ホテル用選択肢の並び順を取得する
+// 注意: stay_select_optionsテーブルにはsort_orderカラムが存在せず、
+// バックエンドは並び順をまだ永続化しないため、端末ローカルのキャッシュのみを参照する
+export async function loadStaySelectOptionsSortOrder(
+  key: keyof typeof STAY_STORAGE_KEYS
+): Promise<string> {
+  const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+  try {
+    const stored = await AsyncStorage.getItem(`${STAY_STORAGE_KEYS[key]}_sort_order`);
+    return stored || 'custom';
+  } catch {
+    return 'custom';
+  }
+}
+
+// ホテル用選択肢の並び順を保存する
+// 注意: バックエンドのstay_select_optionsテーブルにsort_orderカラムがまだ無いため、
+// 現時点では端末ローカルのキャッシュにのみ保存する（スケジュール側のエンドポイントやデータには一切触れない）
+export async function saveStaySelectOptionsSortOrder(
+  key: keyof typeof STAY_STORAGE_KEYS,
+  sortOrder: string
+): Promise<void> {
+  const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+  await AsyncStorage.setItem(`${STAY_STORAGE_KEYS[key]}_sort_order`, sortOrder);
+  console.log(`[StaySelectOptions] Saved sort order for ${key} to local storage`);
+}
