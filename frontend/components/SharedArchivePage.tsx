@@ -64,9 +64,8 @@ const isGroupingOptionDisabled = (value: GroupingField, other: GroupingField) =>
   value !== "none" &&
   (value === other || (value === "target" && other === "lineup") || (value === "lineup" && other === "target"));
 
-// グループ化のチップ行。モバイルでは折り返さず横スクロールで1行に収める
-function GroupingChipsRow({ mobile, label, options, selected, onSelect, isDisabled }: {
-  mobile: boolean;
+// グループ化のチップ行。選択肢が幅に収まらない場合は折り返さず横スクロールで1行に収める
+function GroupingChipsRow({ label, options, selected, onSelect, isDisabled }: {
   label?: string;
   options: [string, string][];
   selected: string;
@@ -87,13 +86,11 @@ function GroupingChipsRow({ mobile, label, options, selected, onSelect, isDisabl
     );
   });
   return (
-    <View style={[styles.groupingRow, mobile && styles.groupingRowScroll]}>
+    <View style={styles.groupingRow}>
       {label && <Text style={styles.groupingLabel}>{label}</Text>}
-      {mobile ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupingChipsScroll} contentContainerStyle={styles.groupingChipsScrollContent}>
-          {chips}
-        </ScrollView>
-      ) : chips}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupingChipsScroll} contentContainerStyle={styles.groupingChipsScrollContent}>
+        {chips}
+      </ScrollView>
     </View>
   );
 }
@@ -448,10 +445,10 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
 
           <View style={[styles.archiveControls, mobile && styles.archiveControlsMobile]}>
             {canUseGrouping && (archiveType === "event" ? <View style={styles.groupingPanel}>
-              <GroupingChipsRow mobile={mobile} label="メイン" options={GROUPING_FIELD_OPTIONS} selected={mainGrouping} onSelect={(value) => setMainGrouping(value as MainGroupingField)} isDisabled={(value) => isGroupingOptionDisabled(value as GroupingField, subGrouping)} />
-              <GroupingChipsRow mobile={mobile} label="サブ" options={GROUPING_FIELD_OPTIONS} selected={subGrouping} onSelect={(value) => setSubGrouping(value as SubGroupingField)} isDisabled={(value) => isGroupingOptionDisabled(value as GroupingField, mainGrouping)} />
+              <GroupingChipsRow label="メイン" options={GROUPING_FIELD_OPTIONS} selected={mainGrouping} onSelect={(value) => setMainGrouping(value as MainGroupingField)} isDisabled={(value) => isGroupingOptionDisabled(value as GroupingField, subGrouping)} />
+              <GroupingChipsRow label="サブ" options={GROUPING_FIELD_OPTIONS} selected={subGrouping} onSelect={(value) => setSubGrouping(value as SubGroupingField)} isDisabled={(value) => isGroupingOptionDisabled(value as GroupingField, mainGrouping)} />
             </View> : <View style={styles.groupingPanel}>
-              <GroupingChipsRow mobile={mobile} options={STAY_GROUPING_OPTIONS} selected={stayGrouping} onSelect={(value) => setStayGrouping(value as "none" | "website" | "status")} />
+              <GroupingChipsRow options={STAY_GROUPING_OPTIONS} selected={stayGrouping} onSelect={(value) => setStayGrouping(value as "none" | "website" | "status")} />
             </View>)}
             <View style={[styles.sortControls, mobile && styles.sortControlsMobile, !canUseGrouping && !mobile && styles.sortControlsSolo]}>
               {(mainGrouping === "target" || mainGrouping === "lineup") && archiveType === "event" && <View style={styles.compactSelectWrap}>
@@ -588,9 +585,8 @@ const styles = StyleSheet.create({
   compactSelectOptionText: { color: brand.ink, fontSize: 13 },
   compactSelectOptionActive: { color: brand.violet, fontWeight: "700" },
   compactSelectOptionDisabled: { color: "#C7C2D1" },
-  groupingRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
-  // flexWrapのままだと横スクロール用の子要素が縮まず幅からはみ出すため、スクロール行では折り返しをオフにする
-  groupingRowScroll: { flexWrap: "nowrap" },
+  // flexWrapだと選択肢が幅に収まらないときに2行になってしまうため、折り返さず横スクロールに任せる
+  groupingRow: { flexDirection: "row", flexWrap: "nowrap", alignItems: "center", gap: 8 },
   groupingLabel: { width: 48, color: brand.ink, fontSize: 13, lineHeight: 36, fontWeight: "700" },
   groupingButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   groupingButtonActive: { backgroundColor: brand.plum, borderColor: brand.plum },
