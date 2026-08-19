@@ -527,15 +527,19 @@ async fn send_deadline_notification_email(
 
 // Expo Push APIを使ってアプリへプッシュ通知を送信する。
 // 無効化されたトークン（DeviceNotRegistered）はpush_tokensテーブルから削除する。
+// Expo APIへの通信・レスポンス解析に失敗した場合はErrを返す（一時的な障害で
+// 呼び出し元がpush_sent_atを更新し、再送されなくなるのを防ぐため）。
+// 個々のトークンへの配送失敗（DeviceNotRegisteredなど）はAPIへの受付自体は
+// 成功しているため、Errにはしない。
 async fn send_expo_push_notifications(
     pool: &Pool<Sqlite>,
     tokens: &[String],
     title: &str,
     body: &str,
     schedule_id: i64,
-) {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if tokens.is_empty() {
-        return;
+        return Ok(());
     }
 
     let client = reqwest::Client::new();
@@ -563,7 +567,7 @@ async fn send_expo_push_notifications(
         Ok(res) => res,
         Err(e) => {
             eprintln!("[PUSH_NOTIFICATION] Failed to reach Expo push API: {:?}", e);
-            return;
+            return Err(e.into());
         }
     };
 
@@ -571,7 +575,7 @@ async fn send_expo_push_notifications(
         Ok(json) => json,
         Err(e) => {
             eprintln!("[PUSH_NOTIFICATION] Failed to parse Expo push API response: {:?}", e);
-            return;
+            return Err(e.into());
         }
     };
 
@@ -590,6 +594,8 @@ async fn send_expo_push_notifications(
             }
         }
     }
+
+    Ok(())
 }
 
 async fn send_email_change_verification_email(new_email: &str, token: &str) {
@@ -7104,19 +7110,25 @@ async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn
             }
 
             if should_send_push {
-                send_expo_push_notifications(
+                // Expo APIへの送信に失敗した場合はpush_sent_atを残さず、次回チェックで再試行する
+                match send_expo_push_notifications(
                     pool,
                     &push_tokens,
                     &notification_title,
                     &format!("期限日時: {}", formatted_deadline),
                     schedule_id,
-                ).await;
-
-                sqlx::query("UPDATE notifications SET push_sent_at = ? WHERE id = ?")
-                    .bind(Utc::now().to_rfc3339())
-                    .bind(notification_id)
-                    .execute(pool)
-                    .await?;
+                ).await {
+                    Ok(()) => {
+                        sqlx::query("UPDATE notifications SET push_sent_at = ? WHERE id = ?")
+                            .bind(Utc::now().to_rfc3339())
+                            .bind(notification_id)
+                            .execute(pool)
+                            .await?;
+                    }
+                    Err(e) => {
+                        eprintln!("[DEADLINE_CHECK] Failed to send push notification; it will be retried: {:?}", e);
+                    }
+                }
             }
         }
     }
