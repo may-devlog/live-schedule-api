@@ -2,62 +2,112 @@
 
 ライブ予定を整理し、共有ページで公開できるアプリです。
 
-## 画面の役割
-- トップ: カレンダーと「NEXT」で直近の予定を確認
-- 年別: 1年分の予定を一覧・グルーピングで確認
-- 共有: ログイン不要の閲覧ページ
+- 使い方（画面の操作方法）は本番の使い方ページを参照してください: https://www.genbgt.com/guide
+- このREADMEでは開発者向けに技術スタックと構成を説明します。
 
-![トップ・年別・共有の画面イメージ](docs/images/app-screens-mockup.svg)
+## アーキテクチャ概要
 
-> 上図はUIの構成を示すモックアップです（実データではありません）。実際の共有ページの例は https://www.genbgt.com/share/may04 で確認できます。
+モノレポ構成で、フロントエンドとバックエンドを1つのリポジトリで管理しています。
 
-## 使い方（基本の流れ）
+```
+frontend (Expo / React Native)  --->  backend (Rust / Axum API)  --->  SQLite
+     Web / iOS / Android                  JWT認証・REST API
+```
 
-### 1) ログイン
-- 通常はログインして利用します
-- 共有ページはログイン不要で閲覧できます
+- `frontend/`: Expo Router製のアプリ本体（Web / iOS / Android）
+- `backend/`: Rust製のAPIサーバー
+- 共有ページ（ログイン不要の閲覧ページ）もこのAPIから配信されます
 
-### 2) 予定を追加する
-- タイトル、日付、会場、エリアを入力
-- 必要に応じて「お目当て」「出演者」「カテゴリ」「ステータス」を設定
-- 「Select」「Multi-select」フィールドは、ユーザーごとに選択肢を追加できます  
-  （対象フィールドは `DATABASE_SCHEMA.md` を参照）
+## フロントエンド（`frontend/`）
 
-### 3) 交通・宿泊・費用を管理する
-- 交通情報を追加すると合計費用が自動計算されます
-- 宿泊情報でチェックイン/アウトや費用を管理できます
+- **Expo** (~54) + **Expo Router** (~6) — ファイルベースルーティング
+- **React Native** 0.81 / **React** 19、**TypeScript**
+- 対応プラットフォーム: iOS / Android / Web（`react-native-web`）
+- 主なライブラリ
+  - React Navigation（bottom-tabs / native）
+  - React Native Reanimated / Gesture Handler
+  - react-native-svg（アイコン・グラフィック）
+  - AsyncStorage（ローカル永続化）
+  - expo-notifications（プッシュ通知）
+  - expo-image / expo-image-picker
+- ビルド
+  - Web: `expo export --platform web` で静的出力し、Cloudflare Pagesにデプロイ
+  - モバイル: EAS Build（Android app bundle / APK）
 
-### 4) 年別ページで整理する
-- メイン/サブを選んでグルーピング表示
-- メインが「お目当て」「出演者」のときは並び替え可能  
-  （デフォルト / 開演日順 / 五十音順）
+## バックエンド（`backend/`）
 
-### 5) 共有ページを使う
-- 共有リンクを発行するとログイン不要で閲覧できます
-- 共有ページは閲覧専用です（編集はログインが必要）
+- **Rust** + **Axum**（Webフレームワーク）
+- **Tokio**（非同期ランタイム）
+- **SQLx** + **SQLite**（データベース）
+- 認証: **JWT**（jsonwebtoken）+ **bcrypt**（パスワードハッシュ）
+- メール送信: **Resend**
+- その他: tower-http（CORS）、chrono（日時）、hmac / sha2（署名検証）
+- `src/bin/` 配下に運用用CLIツール群（`create_user` / `seed_data` / `fix_bidirectional_relations` / `calculate_all_rollups`）
 
-### 6) 出発地・到着地をマスクする
-- アカウントメニューの「出発地・到着地マスク設定」から、共有ページで隠したい駅名を登録できます
-- 登録した駅名は、交通情報の出発地・到着地として一致した箇所が共有ページ上で「***」と表示されます
-- マスクはログイン中の自分の画面には影響しません（閲覧者にのみ非公開になります）
+## インフラ・デプロイ
 
-![出発地・到着地マスク設定の画面イメージ](docs/images/masked-locations-mockup.svg)
+- **バックエンド**: AWS EC2上でsystemdサービスとして常駐（nginxでリバースプロキシ）
+  - `master` へのpushで GitHub Actions（OIDC + AWS SSM）が自動デプロイ
+  - デプロイ前にDBの自動バックアップを実行
+- **フロントエンド（Web）**: Cloudflare Pages
+- **フロントエンド（モバイル）**: EAS Build → Google Play（内部テスト運用）
 
-## 表示ルール（ステータス）
-- トップのカレンダーとNEXTには「Canceled」を表示しません
-- 年別ページはサブを「ステータス」にした場合のみ「Canceled」を表示します
+## CI/CD（`.github/workflows/`）
 
-## グルーピングの選択肢
-- メイン: なし / お目当て / 出演者
-- サブ: グループ / カテゴリ / エリア / 販売元 / ステータス
+| ワークフロー | 役割 |
+| --- | --- |
+| `test.yml` | push / PR時にRustのテストを実行 |
+| `deploy-backend.yml` | `master` push時にバックエンドをAWS EC2へ自動デプロイ |
+| `backup-db.yml` | DBの自動バックアップ（毎日定時実行、デプロイ前にも実行） |
+| `repair-shishamo-order.yml` | 表示順データの手動メンテナンス用（手動実行） |
 
-## 有料・無料プランの機能差異
+## ディレクトリ構成（抜粋）
 
-登録・記録まわりの基本機能は無料プランでも無期限で使えます。共有ページの公開と、年別ページのアーカイブ閲覧・グルーピングの一部がプレミアムプラン（または1ヶ月無料トライアル）限定です。
+```
+frontend/
+  app/            画面（Expo Router）
+  components/     UIコンポーネント
+  contexts/       AuthContextなど
+  utils/          API呼び出し・データ加工などのユーティリティ
+  constants/      API設定・テーマ
 
-![有料・無料プランの機能差異](docs/images/plan-comparison-mockup.svg)
+backend/
+  src/            APIサーバー本体
+  src/bin/        運用用CLIツール
+  tests/          統合テスト（api_test.rs / auth_test.rs）
+  deploy/         nginx / systemd設定
+```
 
-- プランはアカウントメニューから確認でき、無料プランの場合はここから1ヶ月無料トライアルを開始できます（1アカウント1回のみ）
-- 共有ページの公開はプレミアム中・トライアル中のみ有効です。期限が切れると、既存の共有URLも自動的に非公開になります（再度プレミアムになれば同じURLで再開できます）
-- 年別ページの閲覧範囲・グルーピング制限は画面表示のみの制限です。無料プランでも登録データ自体が削除されることはありません
+## ローカル開発
 
+### フロントエンド
+```bash
+cd frontend
+npm install
+npm run web     # Web版を起動
+npm run start   # Expo開発サーバーを起動（iOS/Android）
+```
+
+`frontend/.env.local` はローカル開発用のAPI接続先（`EXPO_PUBLIC_API_BASE`）を上書きします。本番ビルド（`eas build --local`など）を行う際は、このファイルが本番用の設定より優先されてしまうため、ビルド前に一時的に退避してください。
+
+### バックエンド
+```bash
+cd backend
+cargo run
+```
+
+## テスト
+
+```bash
+cd backend
+cargo test
+```
+
+より詳しいテスト手順は `TESTING_GUIDE.md` を参照してください。
+
+## その他のドキュメント
+
+- `DATABASE_SCHEMA.md` — DBスキーマ
+- `デプロイ完全ガイド.md` — デプロイ手順の詳細
+- `認証とアクセス制御の説明.md` — 認証・権限まわりの詳細
+- `backend/aws-migration/` — AWS移行の背景・手順
