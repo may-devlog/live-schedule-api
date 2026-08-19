@@ -56,7 +56,6 @@ frontend (Expo / React Native)  --->  backend (Rust / Axum API)  --->  SQLite
 
 | ワークフロー | 役割 |
 | --- | --- |
-| `test.yml` | push / PR時にRustのテストを実行 |
 | `deploy-backend.yml` | `master` push時にバックエンドをAWS EC2へ自動デプロイ |
 | `backup-db.yml` | DBの自動バックアップ（毎日定時実行、デプロイ前にも実行） |
 | `repair-shishamo-order.yml` | 表示順データの手動メンテナンス用（手動実行） |
