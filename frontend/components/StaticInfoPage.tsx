@@ -1,9 +1,10 @@
 import React from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PublicFooter, PublicHeader, brand } from './GenBGTBrand';
 
-export type InfoSection = { heading: string; body: string };
+export type InfoImage = { source: number; caption?: string; aspectRatio?: number };
+export type InfoSection = { heading: string; body: string; images?: InfoImage[] };
 
 export function StaticInfoPage({ title, lead, sections, notice }: { title: string; lead: string; sections: InfoSection[]; notice?: string }) {
   const router = useRouter();
@@ -23,6 +24,18 @@ export function StaticInfoPage({ title, lead, sections, notice }: { title: strin
               <View key={section.heading} style={styles.section}>
                 <Text style={styles.heading}>{section.heading}</Text>
                 <Text style={styles.body}>{section.body}</Text>
+                {!!section.images?.length && (
+                  <View style={styles.imageRow}>
+                    {section.images.map((image, index) => (
+                      <View key={index} style={styles.imageBlock}>
+                        <View style={[styles.imageFrame, { aspectRatio: image.aspectRatio ?? 16 / 9 }]}>
+                          <Image source={image.source} style={styles.image} resizeMode="cover" />
+                        </View>
+                        {!!image.caption && <Text style={styles.imageCaption}>{image.caption}</Text>}
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             ))}
           </View>
@@ -47,5 +60,10 @@ const styles = StyleSheet.create({
   noticeText: { color: brand.violetDark, fontSize: 14, lineHeight: 22, fontWeight: '600' },
   section: { paddingVertical: 20, borderTopWidth: 1, borderTopColor: brand.border },
   heading: { color: brand.ink, fontSize: 17, fontWeight: '800', marginBottom: 10 },
+  imageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 18 },
+  imageBlock: { width: '100%', maxWidth: 420 },
+  imageFrame: { width: '100%', borderRadius: 12, borderWidth: 1, borderColor: brand.border, backgroundColor: brand.lavender, overflow: 'hidden' },
+  image: { width: '100%', height: '100%' },
+  imageCaption: { color: brand.muted, fontSize: 12, lineHeight: 18, marginTop: 8 },
   body: { color: brand.muted, fontSize: 14, lineHeight: 24 },
 });
