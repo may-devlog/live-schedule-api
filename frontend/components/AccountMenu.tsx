@@ -294,6 +294,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               {menuItem('mail-outline', 'メールアドレス変更', () => setDialog('email'))}
               {menuItem('at-outline', 'ユーザーID変更', () => setDialog('shareId'))}
               {menuItem('shield-checkmark-outline', '出発地・到着地マスク設定', () => { onClose(); router.push('/settings/masked-locations'); })}
+              {menuItem('notifications-outline', '通知設定', () => { onClose(); router.push('/settings/notifications'); })}
               <View style={styles.menuItem}>
                 <View style={styles.iconBox}><Ionicons name="share-social-outline" size={19} color={brand.violetDark} /></View>
                 <View style={styles.shareCopy}>

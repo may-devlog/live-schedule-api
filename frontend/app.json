@@ -58,6 +58,12 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#7C3AED"
+        }
       ]
     ],
     "experiments": {

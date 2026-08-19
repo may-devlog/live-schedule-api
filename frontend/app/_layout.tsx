@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, usePathname } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Notifications from 'expo-notifications';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -22,7 +23,20 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const pathname = usePathname();
-  
+  const router = useRouter();
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    // プッシュ通知をタップして開いた場合、関連するライブの詳細画面へ遷移する
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const scheduleId = response.notification.request.content.data?.schedule_id;
+      if (scheduleId) {
+        router.push(`/live/${scheduleId}`);
+      }
+    });
+    return () => subscription.remove();
+  }, [router]);
+
   // @expo/vector-icons のフォントを起動時に確実に読み込む（Web/ネイティブ両方）
   const [fontsLoaded] = useFonts({
     ...Ionicons.font,

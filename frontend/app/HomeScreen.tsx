@@ -20,6 +20,7 @@ import * as Clipboard from "expo-clipboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { PersonIcon, NotificationIcon } from "@/components/CustomIcons";
 import {
+  IconBell,
   IconCopy,
   IconEye,
   IconEyeOff,
@@ -1143,6 +1144,19 @@ export default function HomeScreen() {
               <View style={styles.menuButtonContent}>
                 <IconLock size={18} color="#37352f" />
                 <Text style={styles.menuButtonText}>出発地・到着地マスク設定</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuButton, { marginBottom: 12 }]}
+              onPress={() => {
+                setShowUserMenuModal(false);
+                router.push("/settings/notifications");
+              }}
+            >
+              <View style={styles.menuButtonContent}>
+                <IconBell size={18} color="#37352f" />
+                <Text style={styles.menuButtonText}>通知設定</Text>
               </View>
             </TouchableOpacity>
 
