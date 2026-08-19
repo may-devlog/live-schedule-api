@@ -2,7 +2,7 @@ import React from 'react';
 import { StaticInfoPage } from '@/components/StaticInfoPage';
 
 export default function GuideScreen() {
-  return <StaticInfoPage title="GenBGTの使い方" lead="ライブの予定から当日の移動・宿泊・費用までをひとつの場所で管理できます。" sections={[
+  return <StaticInfoPage title="GenBGTの使い方" lead="ライブの予定はもちろん、当日の移動や宿泊、費用まで、まとめてひとつの場所で管理できます。" sections={[
     {
       heading: '1. ライブの予定を登録する',
       body: '公演名・日時・会場・出演者・グループなどを登録します。グループ・カテゴリ・エリア・お目当てなどの選択肢は自分で自由に作成でき、色や並び順（五十音順・カスタム順）も自由にカスタマイズできます。登録した予定はカレンダーとNEXT LIVEに反映されます。',
