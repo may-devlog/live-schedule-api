@@ -43,9 +43,10 @@ export default function GuideScreen() {
     },
     {
       heading: '6. カレンダー・アーカイブで振り返る',
-      body: 'カレンダー表示で日程を一目で確認できるほか、終了したライブは年別アーカイブからいつでも振り返れます。',
+      body: 'カレンダー表示で日程を一目で確認できるほか、終了したライブは年別アーカイブからいつでも振り返れます。アーカイブの「宿泊」タブはログイン中のみ表示され、共有ページでは表示されません。',
       images: [
         { source: require('@/assets/images/guide/calendar.png'), caption: '登録した予定はカレンダーに反映されます', aspectRatio: 16 / 9 },
+        { source: require('@/assets/images/guide/archive-stay-tab.png'), caption: 'アーカイブの「宿泊」タブ。ログイン中のみ表示されます', aspectRatio: 16 / 9 },
       ],
     },
     {
