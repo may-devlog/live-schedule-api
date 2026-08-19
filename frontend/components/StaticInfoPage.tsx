@@ -28,7 +28,7 @@ export function StaticInfoPage({ title, lead, sections, notice }: { title: strin
                   <View style={styles.imageRow}>
                     {section.images.map((image, index) => (
                       <View key={index} style={styles.imageBlock}>
-                        <View style={[styles.imageFrame, { aspectRatio: image.aspectRatio ?? 16 / 10 }]}>
+                        <View style={[styles.imageFrame, { aspectRatio: image.aspectRatio ?? 16 / 9 }]}>
                           <Image source={image.source} style={styles.image} resizeMode="cover" />
                         </View>
                         {!!image.caption && <Text style={styles.imageCaption}>{image.caption}</Text>}
