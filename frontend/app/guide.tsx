@@ -43,9 +43,10 @@ export default function GuideScreen() {
     },
     {
       heading: '6. カレンダー・アーカイブで振り返る',
-      body: 'カレンダー表示で日程を一目で確認できるほか、終了したライブは年別アーカイブからいつでも振り返れます。',
+      body: 'カレンダー表示で日程を一目で確認できるほか、終了したライブは年別アーカイブからいつでも振り返れます。アーカイブの「宿泊」タブはログイン中のみ表示され、共有ページでは表示されません。',
       images: [
         { source: require('@/assets/images/guide/calendar.png'), caption: '登録した予定はカレンダーに反映されます', aspectRatio: 16 / 9 },
+        { source: require('@/assets/images/guide/archive-stay-tab.png'), caption: 'アーカイブの「宿泊」タブ。ログイン中のみ表示されます', aspectRatio: 16 / 9 },
       ],
     },
     {
@@ -57,9 +58,10 @@ export default function GuideScreen() {
     },
     {
       heading: '8. プレミアムプランでできること',
-      body: 'プレミアムプラン（月額400円、初回1ヶ月の無料トライアルあり）に登録すると、共有ページの公開と、アーカイブの無制限閲覧（無料プランは直近2年分まで）が可能になります。設定はアカウントメニューからいつでも変更できます。',
+      body: 'プレミアムプラン（月額400円、初回1ヶ月の無料トライアルあり）に登録すると、共有ページの公開と、アーカイブの無制限閲覧（無料プランは直近2年分まで）が可能になります。さらにアーカイブ画面では、メイン・サブの2軸でグループ・カテゴリ・エリア・お目当てなどを組み合わせてグループ化でき、過去のライブを自分の見たい切り口で振り返れます。設定はアカウントメニューからいつでも変更できます。',
       images: [
         { source: require('@/assets/images/guide/account-menu-premium.png'), caption: '共有化やプレミアムプランの設定はアカウントメニューから', aspectRatio: 977 / 1600 },
+        { source: require('@/assets/images/guide/archive-grouping.png'), caption: 'アーカイブ画面。メインを「お目当て」、サブを「グループ」にしてまとめて表示' },
       ],
     },
   ]} />;
