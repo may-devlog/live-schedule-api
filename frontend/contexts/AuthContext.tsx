@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE } from '../constants/api';
 import { setUnauthorizedHandler } from '../utils/api';
+import { getExpoPushTokenSilently, registerPushTokenWithServer, unregisterPushTokenFromServer } from '../utils/pushNotifications';
 
 interface AuthResponse {
   token: string | null;
@@ -76,8 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ]);
         setToken(data.token);
         setEmail(data.email);
+
+        // 通知の許可が既におりている端末では、サイレントにプッシュトークンを再登録する
+        // （初回の許可リクエストは通知設定画面から行う）
+        getExpoPushTokenSilently()
+          .then((pushToken) => (pushToken ? registerPushTokenWithServer(pushToken) : undefined))
+          .catch(() => undefined);
       }
-      
+
       return data;
     } catch (error: any) {
       throw error;
@@ -138,6 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      // 認証トークンを消す前に、この端末のプッシュ通知登録を解除する
+      await unregisterPushTokenFromServer().catch(() => undefined);
       await Promise.all([
         AsyncStorage.removeItem(TOKEN_KEY),
         AsyncStorage.removeItem(EMAIL_KEY),

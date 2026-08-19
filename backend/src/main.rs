@@ -525,6 +525,79 @@ async fn send_deadline_notification_email(
     }
 }
 
+// Expo Push APIを使ってアプリへプッシュ通知を送信する。
+// 無効化されたトークン（DeviceNotRegistered）はpush_tokensテーブルから削除する。
+// Expo APIへの通信・レスポンス解析に失敗した場合はErrを返す（一時的な障害で
+// 呼び出し元がpush_sent_atを更新し、再送されなくなるのを防ぐため）。
+// 個々のトークンへの配送失敗（DeviceNotRegisteredなど）はAPIへの受付自体は
+// 成功しているため、Errにはしない。
+async fn send_expo_push_notifications(
+    pool: &Pool<Sqlite>,
+    tokens: &[String],
+    title: &str,
+    body: &str,
+    schedule_id: i64,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    if tokens.is_empty() {
+        return Ok(());
+    }
+
+    let client = reqwest::Client::new();
+    let messages: Vec<serde_json::Value> = tokens
+        .iter()
+        .map(|token| {
+            serde_json::json!({
+                "to": token,
+                "title": title,
+                "body": body,
+                "data": { "schedule_id": schedule_id },
+                "sound": "default",
+            })
+        })
+        .collect();
+
+    let response = match client
+        .post("https://exp.host/--/api/v2/push/send")
+        .header("Accept", "application/json")
+        .header("Content-Type", "application/json")
+        .json(&messages)
+        .send()
+        .await
+    {
+        Ok(res) => res,
+        Err(e) => {
+            eprintln!("[PUSH_NOTIFICATION] Failed to reach Expo push API: {:?}", e);
+            return Err(e.into());
+        }
+    };
+
+    let body_json: serde_json::Value = match response.json().await {
+        Ok(json) => json,
+        Err(e) => {
+            eprintln!("[PUSH_NOTIFICATION] Failed to parse Expo push API response: {:?}", e);
+            return Err(e.into());
+        }
+    };
+
+    println!("[PUSH_NOTIFICATION] Expo push API response: {:?}", body_json);
+
+    // レスポンスのdata配列はリクエストしたtokensと同じ並び順で返る
+    if let Some(tickets) = body_json.get("data").and_then(|d| d.as_array()) {
+        for (token, ticket) in tokens.iter().zip(tickets.iter()) {
+            let error = ticket.get("details").and_then(|d| d.get("error")).and_then(|e| e.as_str());
+            if error == Some("DeviceNotRegistered") {
+                eprintln!("[PUSH_NOTIFICATION] Removing unregistered token: {}", token);
+                let _ = sqlx::query("DELETE FROM push_tokens WHERE token = ?")
+                    .bind(token)
+                    .execute(pool)
+                    .await;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 async fn send_email_change_verification_email(new_email: &str, token: &str) {
     let base_url = get_base_url();
     let verification_url = format!("{}/verify-email-change?token={}", base_url, urlencoding::encode(token));
@@ -6780,6 +6853,121 @@ async fn mark_notification_read(
     Ok(Json(serde_json::json!({ "success": true })))
 }
 
+#[derive(Serialize)]
+struct NotificationSettings {
+    email_enabled: bool,
+    push_enabled: bool,
+}
+
+#[derive(Deserialize)]
+struct UpdateNotificationSettingsRequest {
+    email_enabled: bool,
+    push_enabled: bool,
+}
+
+// 通知設定（メール／アプリのプッシュ通知）を取得
+async fn get_notification_settings(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<NotificationSettings>, StatusCode> {
+    let row: (i32, i32) = sqlx::query_as(
+        "SELECT notify_email_enabled, notify_push_enabled FROM users WHERE id = ?"
+    )
+    .bind(user.user_id as i64)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("Error fetching notification settings: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(NotificationSettings {
+        email_enabled: row.0 != 0,
+        push_enabled: row.1 != 0,
+    }))
+}
+
+// 通知設定（メール／アプリのプッシュ通知）を更新
+async fn update_notification_settings(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<UpdateNotificationSettingsRequest>,
+) -> Result<Json<NotificationSettings>, StatusCode> {
+    sqlx::query(
+        "UPDATE users SET notify_email_enabled = ?, notify_push_enabled = ? WHERE id = ?"
+    )
+    .bind(payload.email_enabled as i32)
+    .bind(payload.push_enabled as i32)
+    .bind(user.user_id as i64)
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("Error updating notification settings: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(NotificationSettings {
+        email_enabled: payload.email_enabled,
+        push_enabled: payload.push_enabled,
+    }))
+}
+
+#[derive(Deserialize)]
+struct PushTokenRequest {
+    token: String,
+}
+
+// 端末のExpoプッシュ通知トークンを登録する。既に別ユーザーに紐づくトークンだった場合は付け替える
+async fn register_push_token(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<PushTokenRequest>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    if payload.token.trim().is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let now = Utc::now().to_rfc3339();
+    sqlx::query(
+        r#"
+        INSERT INTO push_tokens (user_id, token, created_at, updated_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(token) DO UPDATE SET user_id = excluded.user_id, updated_at = excluded.updated_at
+        "#
+    )
+    .bind(user.user_id as i64)
+    .bind(&payload.token)
+    .bind(&now)
+    .bind(&now)
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("Error registering push token: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(serde_json::json!({ "success": true })))
+}
+
+// ログアウト時などに端末のプッシュ通知トークン登録を解除する
+async fn delete_push_token(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<PushTokenRequest>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    sqlx::query("DELETE FROM push_tokens WHERE token = ? AND user_id = ?")
+        .bind(&payload.token)
+        .bind(user.user_id as i64)
+        .execute(&pool)
+        .await
+        .map_err(|e| {
+            eprintln!("Error deleting push token: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(serde_json::json!({ "success": true })))
+}
+
 // キャンセル期限が24時間以内の宿泊情報をチェックし、通知を作成・送信
 async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn std::error::Error>> {
     let now = Utc::now();
@@ -6828,59 +7016,79 @@ async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn
         
         // 期限が24時間以内かチェック
         if deadline > now && deadline <= one_day_later {
-            // 通知とメール送信状態を取得（通知の重複とメールの重複を防止）
-            let existing_notification: Option<(i64, Option<String>)> = sqlx::query_as(
-                "SELECT id, email_sent_at FROM notifications WHERE stay_id = ? AND user_id = ? AND created_at > datetime('now', '-1 day') ORDER BY id DESC LIMIT 1"
+            // 通知・メール・プッシュそれぞれの送信状態を取得（重複送信を防止）
+            let existing_notification: Option<(i64, Option<String>, Option<String>)> = sqlx::query_as(
+                "SELECT id, email_sent_at, push_sent_at FROM notifications WHERE stay_id = ? AND user_id = ? AND created_at > datetime('now', '-1 day') ORDER BY id DESC LIMIT 1"
             )
             .bind(stay_id)
             .bind(user_id)
             .fetch_optional(pool)
             .await?;
-            
-            if matches!(existing_notification.as_ref(), Some((_, Some(_)))) {
-                // アプリ内通知とメール送信が完了している場合はスキップ
-                continue;
-            }
-            
-            // ユーザーのメールアドレスを取得
-            let user_email: Option<(String,)> = sqlx::query_as(
-                "SELECT email FROM users WHERE id = ? AND email_verified = 1"
+
+            // ユーザーの通知設定・メールアドレス・登録済みプッシュトークンを取得
+            let user_row: Option<(String, i32, i32, i32)> = sqlx::query_as(
+                "SELECT email, email_verified, notify_email_enabled, notify_push_enabled FROM users WHERE id = ?"
             )
             .bind(user_id)
             .fetch_optional(pool)
             .await?;
-            
-            if let Some((email,)) = user_email {
-                let formatted_deadline = deadline
-                    .with_timezone(&chrono::FixedOffset::east_opt(9 * 60 * 60).expect("valid JST offset"))
-                    .format("%Y.%m.%d %H:%M")
-                    .to_string();
 
-                // 未作成の場合のみアプリ内通知を作成する
-                let notification_title = format!("キャンセル期限が近づいています: {}", hotel_name);
-                let notification_message = format!("期限日時: {}\n関連イベント: {}", formatted_deadline, schedule_title);
-                let created_at = Utc::now().to_rfc3339();
+            let Some((email, email_verified, notify_email_enabled, notify_push_enabled)) = user_row else {
+                continue;
+            };
+            let notify_email_enabled = notify_email_enabled != 0;
+            let notify_push_enabled = notify_push_enabled != 0;
 
-                let notification_id = if let Some((notification_id, None)) = existing_notification {
-                    notification_id
-                } else {
-                    sqlx::query_scalar::<_, i64>(
-                        r#"
-                        INSERT INTO notifications (user_id, stay_id, schedule_id, title, message, is_read, created_at, email_sent_at)
-                        VALUES (?, ?, ?, ?, ?, 0, ?, NULL)
-                        RETURNING id
-                        "#
-                    )
+            let push_tokens: Vec<String> = if notify_push_enabled {
+                sqlx::query_scalar("SELECT token FROM push_tokens WHERE user_id = ?")
                     .bind(user_id)
-                    .bind(stay_id)
-                    .bind(schedule_id)
-                    .bind(&notification_title)
-                    .bind(&notification_message)
-                    .bind(&created_at)
-                    .fetch_one(pool)
+                    .fetch_all(pool)
                     .await?
-                };
+            } else {
+                Vec::new()
+            };
 
+            let email_already_sent = matches!(existing_notification.as_ref(), Some((_, Some(_), _)));
+            let push_already_sent = matches!(existing_notification.as_ref(), Some((_, _, Some(_))));
+            let should_send_email = email_verified != 0 && notify_email_enabled && !email_already_sent;
+            let should_send_push = notify_push_enabled && !push_tokens.is_empty() && !push_already_sent;
+
+            if !should_send_email && !should_send_push && existing_notification.is_some() {
+                // 両チャネルとも送信済み（または設定でOFF）で、アプリ内通知も作成済みの場合はスキップ
+                continue;
+            }
+
+            let formatted_deadline = deadline
+                .with_timezone(&chrono::FixedOffset::east_opt(9 * 60 * 60).expect("valid JST offset"))
+                .format("%Y.%m.%d %H:%M")
+                .to_string();
+
+            // 未作成の場合のみアプリ内通知を作成する
+            let notification_title = format!("キャンセル期限が近づいています: {}", hotel_name);
+            let notification_message = format!("期限日時: {}\n関連イベント: {}", formatted_deadline, schedule_title);
+            let created_at = Utc::now().to_rfc3339();
+
+            let notification_id = if let Some((notification_id, _, _)) = existing_notification {
+                notification_id
+            } else {
+                sqlx::query_scalar::<_, i64>(
+                    r#"
+                    INSERT INTO notifications (user_id, stay_id, schedule_id, title, message, is_read, created_at, email_sent_at, push_sent_at)
+                    VALUES (?, ?, ?, ?, ?, 0, ?, NULL, NULL)
+                    RETURNING id
+                    "#
+                )
+                .bind(user_id)
+                .bind(stay_id)
+                .bind(schedule_id)
+                .bind(&notification_title)
+                .bind(&notification_message)
+                .bind(&created_at)
+                .fetch_one(pool)
+                .await?
+            };
+
+            if should_send_email {
                 // メール送信に失敗した場合はemail_sent_atを残さず、次回チェックで再試行する
                 match send_deadline_notification_email(
                     &email,
@@ -6900,9 +7108,31 @@ async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn
                     }
                 }
             }
+
+            if should_send_push {
+                // Expo APIへの送信に失敗した場合はpush_sent_atを残さず、次回チェックで再試行する
+                match send_expo_push_notifications(
+                    pool,
+                    &push_tokens,
+                    &notification_title,
+                    &format!("期限日時: {}", formatted_deadline),
+                    schedule_id,
+                ).await {
+                    Ok(()) => {
+                        sqlx::query("UPDATE notifications SET push_sent_at = ? WHERE id = ?")
+                            .bind(Utc::now().to_rfc3339())
+                            .bind(notification_id)
+                            .execute(pool)
+                            .await?;
+                    }
+                    Err(e) => {
+                        eprintln!("[DEADLINE_CHECK] Failed to send push notification; it will be retried: {:?}", e);
+                    }
+                }
+            }
         }
     }
-    
+
     Ok(())
 }
 
@@ -7329,6 +7559,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/stay-select-options/:type", get(get_stay_select_options).post(save_stay_select_options))
         .route("/notifications", get(list_notifications))
         .route("/notifications/:id/read", put(mark_notification_read))
+        .route("/notification-settings", get(get_notification_settings).put(update_notification_settings))
+        .route("/push-tokens", post(register_push_token).delete(delete_push_token))
         .layer(cors)
         .layer(Extension(pool.clone()));
 
@@ -7571,9 +7803,23 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       is_read       INTEGER NOT NULL DEFAULT 0,
       created_at    TEXT,
       email_sent_at TEXT,
+      push_sent_at  TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (stay_id) REFERENCES stays(id),
       FOREIGN KEY (schedule_id) REFERENCES schedules(id)
+    );
+    "#;
+
+    // Expoのプッシュ通知トークンを保持する。1台の端末（トークン）につき1行。
+    // 同じ端末で別ユーザーとしてログインし直した場合は、後勝ちでuser_idを付け替える（UNIQUE(token)）。
+    let create_push_tokens = r#"
+    CREATE TABLE IF NOT EXISTS push_tokens (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id      INTEGER NOT NULL,
+      token        TEXT NOT NULL UNIQUE,
+      created_at   TEXT,
+      updated_at   TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
     );
     "#;
 
@@ -7615,6 +7861,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     sqlx::query(create_select_options).execute(pool).await?;
     sqlx::query(create_stay_select_options).execute(pool).await?;
     sqlx::query(create_notifications).execute(pool).await?;
+    sqlx::query(create_push_tokens).execute(pool).await?;
     sqlx::query(create_masked_locations).execute(pool).await?;
     sqlx::query(create_subscriptions).execute(pool).await?;
     
@@ -7697,6 +7944,17 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
             .execute(pool)
             .await?;
         eprintln!("[Migration] Added notifications.email_sent_at column");
+    }
+
+    if !column_exists(pool, "notifications", "push_sent_at").await? {
+        sqlx::query("ALTER TABLE notifications ADD COLUMN push_sent_at TEXT")
+            .execute(pool)
+            .await?;
+        // 旧実装で作成済みの通知はプッシュ通知機能が存在しなかったため再送不要
+        sqlx::query("UPDATE notifications SET push_sent_at = created_at WHERE push_sent_at IS NULL")
+            .execute(pool)
+            .await?;
+        eprintln!("[Migration] Added notifications.push_sent_at column");
     }
 
     // targetカラムがNULL許可であることを確認（既存のデータベース用マイグレーション）
@@ -8117,6 +8375,18 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     }
     if !column_exists(pool, "users", "trial_started_at").await? {
         sqlx::query("ALTER TABLE users ADD COLUMN trial_started_at TEXT")
+            .execute(pool)
+            .await?;
+    }
+
+    // 通知設定（メール／アプリのプッシュ通知）。デフォルトは両方ON（従来のメール通知のみの挙動を維持しつつ拡張）
+    if !column_exists(pool, "users", "notify_email_enabled").await? {
+        sqlx::query("ALTER TABLE users ADD COLUMN notify_email_enabled INTEGER NOT NULL DEFAULT 1")
+            .execute(pool)
+            .await?;
+    }
+    if !column_exists(pool, "users", "notify_push_enabled").await? {
+        sqlx::query("ALTER TABLE users ADD COLUMN notify_push_enabled INTEGER NOT NULL DEFAULT 1")
             .execute(pool)
             .await?;
     }
