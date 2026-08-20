@@ -198,6 +198,7 @@ export function NotionSelect({
     try {
       if (!Array.isArray(options) || options.length === 0) {
         setDisplayedOptions([]);
+        setIsSortingKana(false);
         return;
       }
       if (isKanaOrder) {
@@ -209,11 +210,16 @@ export function NotionSelect({
           }
         });
       } else {
+        // 通信中に五十音順→カスタム順へ切り替えられた場合、進行中のPromiseは
+        // cancelledとなりその.then()内のsetIsSortingKana(false)は実行されない
+        // ため、ここで確実に解除しておく（スピナーが残り続けるのを防ぐ）
+        setIsSortingKana(false);
         setDisplayedOptions(sortByOrder(options));
       }
     } catch (e) {
       console.error("[NotionSelect] Error sorting options:", e);
       setDisplayedOptions(Array.isArray(options) ? options : []);
+      setIsSortingKana(false);
     }
     return () => {
       cancelled = true;

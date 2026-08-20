@@ -96,6 +96,10 @@ export function NotionMultiSelect({
         }
       });
     } else {
+      // 通信中に五十音順→カスタム順へ切り替えられた場合、進行中のPromiseは
+      // cancelledとなりその.then()内のsetIsSortingKana(false)は実行されない
+      // ため、ここで確実に解除しておく（スピナーが残り続けるのを防ぐ）
+      setIsSortingKana(false);
       setDisplayedOptions(sortByOrder(tempOptions));
     }
     return () => {

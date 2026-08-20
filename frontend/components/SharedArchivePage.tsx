@@ -294,7 +294,13 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
 
   // 五十音順表示のときだけ、グループ名（出演者名）の読み仮名をバックエンドから解決する
   useEffect(() => {
-    if (mainSortMode !== "kana" || (mainGrouping !== "target" && mainGrouping !== "lineup")) return;
+    // 通信中に五十音順から外れた場合、進行中のPromiseはcancelledとなり
+    // その.then()内のsetIsSortingKana(false)は実行されないため、ここで
+    // 確実に解除しておく（スピナーが残り続けるのを防ぐ）
+    if (mainSortMode !== "kana" || (mainGrouping !== "target" && mainGrouping !== "lineup")) {
+      setIsSortingKana(false);
+      return;
+    }
     const titles = Array.from(
       new Set(
         groupSchedulesNested(visibleSchedules, mainGrouping, subGrouping, selectOptionsMap)
@@ -302,7 +308,10 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           .filter((title) => title !== "未設定")
       )
     );
-    if (titles.length === 0) return;
+    if (titles.length === 0) {
+      setIsSortingKana(false);
+      return;
+    }
     let cancelled = false;
     setIsSortingKana(true);
     fetchReadings(titles).then((readings) => {
