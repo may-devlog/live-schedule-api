@@ -690,6 +690,39 @@ fn check_contact_rate_limit(client_ip: &str) -> bool {
     }
 }
 
+// ログイン・新規登録用の簡易レートリミット（総当たり攻撃対策）。
+// bucket名とIPの組み合わせごとに、一定時間あたりの試行回数を制限する
+const AUTH_RATE_LIMIT_MAX: usize = 10;
+const AUTH_RATE_LIMIT_WINDOW: std::time::Duration = std::time::Duration::from_secs(15 * 60);
+
+fn auth_rate_limiter() -> &'static std::sync::Mutex<std::collections::HashMap<String, Vec<std::time::Instant>>> {
+    static LIMITER: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, Vec<std::time::Instant>>>> = std::sync::OnceLock::new();
+    LIMITER.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+fn check_auth_rate_limit(bucket: &str, client_ip: &str) -> bool {
+    let mut map = auth_rate_limiter().lock().unwrap();
+    let now = std::time::Instant::now();
+    let key = format!("{}:{}", bucket, client_ip);
+    let timestamps = map.entry(key).or_insert_with(Vec::new);
+    timestamps.retain(|&t| now.duration_since(t) < AUTH_RATE_LIMIT_WINDOW);
+    if timestamps.len() >= AUTH_RATE_LIMIT_MAX {
+        false
+    } else {
+        timestamps.push(now);
+        true
+    }
+}
+
+fn client_ip_from_headers(addr: &SocketAddr, headers: &HeaderMap) -> String {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| addr.ip().to_string())
+}
+
 fn get_contact_to_email() -> String {
     std::env::var("CONTACT_TO_EMAIL").unwrap_or_else(|_| "contact@genbgt.com".to_string())
 }
@@ -1645,11 +1678,22 @@ async fn submit_contact(
 }
 
 async fn register(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<AuthResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let client_ip = client_ip_from_headers(&addr, &headers);
+    if !check_auth_rate_limit("register", &client_ip) {
+        println!("[REGISTER] Rate limit exceeded for {}", client_ip);
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ErrorResponse { error: "試行回数が多すぎます。しばらく時間をおいて再度お試しください".to_string() }),
+        ));
+    }
+
     println!("[REGISTER] Received registration request for email: {}", payload.email);
-    
+
     // 環境変数で新規ユーザー登録を制御
     let allow_registration = std::env::var("ALLOW_USER_REGISTRATION")
         .unwrap_or_else(|_| "0".to_string())
@@ -1851,9 +1895,20 @@ async fn register(
 
 // POST /auth/login
 async fn login(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let client_ip = client_ip_from_headers(&addr, &headers);
+    if !check_auth_rate_limit("login", &client_ip) {
+        eprintln!("[LOGIN] Rate limit exceeded for {}", client_ip);
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ErrorResponse { error: "試行回数が多すぎます。しばらく時間をおいて再度お試しください".to_string() }),
+        ));
+    }
+
     // ユーザーを検索
     eprintln!("[LOGIN] Attempting to login with email: {}", payload.email);
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
