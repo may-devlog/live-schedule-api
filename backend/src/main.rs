@@ -7079,6 +7079,180 @@ async fn save_stay_select_options(
     Ok(Json(serde_json::json!({ "success": true })))
 }
 
+// ====== 読み仮名解決（五十音順ソート用） ======
+//
+// 出演者名の五十音順ソートのため、AIで読み仮名（ひらがな）を推定する。
+// 解決優先順位: ①手動修正ファイル(reading_overrides.json) → ②キャッシュファイル(data/reading_cache.json)
+// → ③Claude APIに問い合わせて解決し、キャッシュに保存。
+// DBスキーマは増やさず、ファイルベースで完結させている。
+
+const READING_OVERRIDES_PATH: &str = "reading_overrides.json";
+const READING_CACHE_PATH: &str = "data/reading_cache.json";
+
+#[derive(Debug, Deserialize)]
+struct ReadingRequest {
+    names: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ReadingEntry {
+    name: String,
+    reading: String,
+}
+
+// キャッシュファイルへの書き込みが同時リクエストで競合しないようにするロック。
+fn reading_cache_lock() -> &'static tokio::sync::Mutex<()> {
+    static LOCK: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
+    LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
+}
+
+async fn load_reading_map(path: &str) -> std::collections::HashMap<String, String> {
+    match tokio::fs::read_to_string(path).await {
+        Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+        Err(_) => std::collections::HashMap::new(),
+    }
+}
+
+// 未解決の名前について、Claude APIにひらがな読みを問い合わせる。
+async fn fetch_readings_from_claude(
+    names: &[String],
+) -> Result<std::collections::HashMap<String, String>, String> {
+    let api_key = std::env::var("ANTHROPIC_API_KEY")
+        .map_err(|_| "ANTHROPIC_API_KEY is not set".to_string())?;
+
+    let schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "readings": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" },
+                        "reading": { "type": "string" }
+                    },
+                    "required": ["name", "reading"],
+                    "additionalProperties": false
+                }
+            }
+        },
+        "required": ["readings"],
+        "additionalProperties": false
+    });
+
+    let names_json = serde_json::to_string(names).map_err(|e| e.to_string())?;
+
+    let body = serde_json::json!({
+        "model": "claude-haiku-4-5",
+        "max_tokens": 4096,
+        "system": "あなたは日本のライブ・イベント出演者名の読み仮名を推定するアシスタントです。渡された名前（人名・芸名・グループ名など）それぞれについて、最も一般的で自然な読み方をひらがなのみで返してください。読みが一意に定まらない場合でも、最も妥当と考えられる読みを1つ推測して返してください。nameは渡された文字列と完全に一致させてください。",
+        "messages": [{
+            "role": "user",
+            "content": format!("次の名前それぞれの読み仮名（ひらがな）を返してください:\n{}", names_json)
+        }],
+        "output_config": {
+            "format": {
+                "type": "json_schema",
+                "schema": schema
+            }
+        }
+    });
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post("https://api.anthropic.com/v1/messages")
+        .header("x-api-key", api_key)
+        .header("anthropic-version", "2023-06-01")
+        .header("content-type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Anthropic API request failed: {}", e))?;
+
+    let response_json: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse Anthropic API response: {}", e))?;
+
+    let text = response_json
+        .get("content")
+        .and_then(|c| c.get(0))
+        .and_then(|b| b.get("text"))
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| format!("Unexpected Anthropic API response shape: {:?}", response_json))?;
+
+    #[derive(Deserialize)]
+    struct ReadingsWrapper {
+        readings: Vec<ReadingEntry>,
+    }
+
+    let parsed: ReadingsWrapper = serde_json::from_str(text)
+        .map_err(|e| format!("Failed to parse readings JSON: {} (body={})", e, text))?;
+
+    Ok(parsed
+        .readings
+        .into_iter()
+        .map(|r| (r.name, r.reading))
+        .collect())
+}
+
+// 名前のリストを受け取り、読み仮名を解決して返す。
+// overrides → cache → Claude APIの順で解決し、新規に解決した分だけキャッシュに書き込む。
+async fn resolve_readings(names: &[String]) -> std::collections::HashMap<String, String> {
+    let overrides = load_reading_map(READING_OVERRIDES_PATH).await;
+
+    let _guard = reading_cache_lock().lock().await;
+    let mut cache = load_reading_map(READING_CACHE_PATH).await;
+
+    let mut result = std::collections::HashMap::new();
+    let mut unresolved: Vec<String> = Vec::new();
+
+    for name in names {
+        if let Some(reading) = overrides.get(name) {
+            result.insert(name.clone(), reading.clone());
+        } else if let Some(reading) = cache.get(name) {
+            result.insert(name.clone(), reading.clone());
+        } else {
+            unresolved.push(name.clone());
+        }
+    }
+
+    if !unresolved.is_empty() {
+        match fetch_readings_from_claude(&unresolved).await {
+            Ok(resolved) => {
+                for (name, reading) in resolved {
+                    cache.insert(name.clone(), reading.clone());
+                    result.insert(name, reading);
+                }
+                if let Ok(json) = serde_json::to_string_pretty(&cache) {
+                    if let Err(e) = tokio::fs::write(READING_CACHE_PATH, json).await {
+                        eprintln!("[ResolveReadings] Failed to write cache file: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("[ResolveReadings] Claude API call failed: {}", e);
+                // フォールバック: 解決できなかった名前はそのまま文字列を読みとして扱う
+                // （文字コード順にフォールバックするだけで、エラーにはしない）
+                for name in &unresolved {
+                    result.insert(name.clone(), name.clone());
+                }
+            }
+        }
+    }
+
+    result
+}
+
+// POST /reading - 出演者名リストの読み仮名を解決して返す
+async fn get_readings(
+    _user: AuthenticatedUser,
+    Json(payload): Json<ReadingRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    let readings = resolve_readings(&payload.names).await;
+    Ok(Json(serde_json::json!({ "readings": readings })))
+}
+
 // ====== 通知機能 ======
 
 // 通知の型定義（API用）
@@ -7744,6 +7918,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/stay/:id", get(get_stay).put(update_stay))
         .route("/select-options/:type", get(get_select_options).post(save_select_options))
         .route("/stay-select-options/:type", get(get_stay_select_options).post(save_stay_select_options))
+        .route("/reading", post(get_readings))
         .route("/notifications", get(list_notifications))
         .route("/notifications/:id/read", put(mark_notification_read))
         .route("/notification-settings", get(get_notification_settings).put(update_notification_settings))
