@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { NotionTag } from "./notion-tag";
 import { ColorPicker } from "./color-picker";
@@ -180,6 +181,7 @@ export function NotionSelect({
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingSortOrder, setIsLoadingSortOrder] = useState(true);
+  const [isSortingKana, setIsSortingKana] = useState(false);
   // カテゴリの場合はデフォルト色を取得、それ以外は空文字列から取得
   // Transportationの場合はデフォルトで薄いグレー
   // 初期化エラーを避けるため、初期色は常にデフォルト値を使用
@@ -199,8 +201,12 @@ export function NotionSelect({
         return;
       }
       if (isKanaOrder) {
+        setIsSortingKana(true);
         sortByKanaOrder(options).then((sorted) => {
-          if (!cancelled) setDisplayedOptions(sorted);
+          if (!cancelled) {
+            setDisplayedOptions(sorted);
+            setIsSortingKana(false);
+          }
         });
       } else {
         setDisplayedOptions(sortByOrder(options));
@@ -588,6 +594,12 @@ export function NotionSelect({
               </View>
             )}
             
+            {isSortingKana && (
+              <View style={styles.kanaSortingRow}>
+                <ActivityIndicator size="small" color="#37352f" />
+                <Text style={styles.kanaSortingText}>並び替え中...</Text>
+              </View>
+            )}
             <ScrollView style={styles.optionsList}>
               {displayedOptions.map((option, index) => (
                 <View key={index} style={styles.optionRow}>
@@ -907,6 +919,16 @@ const styles = StyleSheet.create({
   },
   optionsList: {
     maxHeight: 300,
+  },
+  kanaSortingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  kanaSortingText: {
+    fontSize: 12,
+    color: "#787774",
   },
   optionRow: {
     flexDirection: "row",

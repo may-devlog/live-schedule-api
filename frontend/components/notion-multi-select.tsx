@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import type { SelectOption } from "../types/select-option";
 import { getDefaultColorForLabel, sortByOrder } from "../types/select-option";
@@ -51,6 +52,7 @@ export function NotionMultiSelect({
   const [displayedOptions, setDisplayedOptions] = useState<SelectOption[]>(options);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingSortOrder, setIsLoadingSortOrder] = useState(true);
+  const [isSortingKana, setIsSortingKana] = useState(false);
 
   // 選択された値を配列に変換（選択順を保持）
   const selectedValues = value
@@ -86,8 +88,12 @@ export function NotionMultiSelect({
   useEffect(() => {
     let cancelled = false;
     if (isKanaOrder) {
+      setIsSortingKana(true);
       sortByKanaOrder(tempOptions).then((sorted) => {
-        if (!cancelled) setDisplayedOptions(sorted);
+        if (!cancelled) {
+          setDisplayedOptions(sorted);
+          setIsSortingKana(false);
+        }
       });
     } else {
       setDisplayedOptions(sortByOrder(tempOptions));
@@ -537,6 +543,12 @@ export function NotionMultiSelect({
             )}
 
             {/* オプション一覧 */}
+            {isSortingKana && (
+              <View style={styles.kanaSortingRow}>
+                <ActivityIndicator size="small" color="#37352f" />
+                <Text style={styles.kanaSortingText}>並び替え中...</Text>
+              </View>
+            )}
             <ScrollView style={styles.optionsList}>
               {displayedOptions.map((option, index) => {
                 const isSelected = selectedValues.includes(option.label);
@@ -714,6 +726,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#37352f",
     marginBottom: 16,
+  },
+  kanaSortingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  kanaSortingText: {
+    fontSize: 12,
+    color: "#787774",
   },
   optionsList: {
     maxHeight: 300,
