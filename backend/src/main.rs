@@ -7089,6 +7089,36 @@ async fn save_stay_select_options(
 const READING_OVERRIDES_PATH: &str = "reading_overrides.json";
 const READING_CACHE_PATH: &str = "data/reading_cache.json";
 
+// 1リクエストあたりの上限。アプリ内から通常送られる件数（出演者選択肢の総数）に対して
+// 十分な余裕を持たせつつ、意図的に大量のユニークな名前を送ってAnthropic APIの利用量を
+// 膨らませる悪用を防ぐための上限。
+const READING_MAX_NAMES_PER_REQUEST: usize = 100;
+const READING_MAX_NAME_LENGTH: usize = 100;
+
+// ユーザーごとに一定時間あたりのリクエスト回数を制限する簡易レートリミット
+// （認証済みユーザーが大量のリクエストを送り続けてAPI費用を意図的に増やすのを防ぐ）
+const READING_RATE_LIMIT_MAX: usize = 30;
+const READING_RATE_LIMIT_WINDOW: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+
+fn reading_rate_limiter() -> &'static std::sync::Mutex<std::collections::HashMap<String, Vec<std::time::Instant>>> {
+    static LIMITER: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, Vec<std::time::Instant>>>> = std::sync::OnceLock::new();
+    LIMITER.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+fn check_reading_rate_limit(user_id: i32) -> bool {
+    let mut map = reading_rate_limiter().lock().unwrap();
+    let now = std::time::Instant::now();
+    let key = user_id.to_string();
+    let timestamps = map.entry(key).or_insert_with(Vec::new);
+    timestamps.retain(|&t| now.duration_since(t) < READING_RATE_LIMIT_WINDOW);
+    if timestamps.len() >= READING_RATE_LIMIT_MAX {
+        false
+    } else {
+        timestamps.push(now);
+        true
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct ReadingRequest {
     names: Vec<String>,
@@ -7246,9 +7276,35 @@ async fn resolve_readings(names: &[String]) -> std::collections::HashMap<String,
 
 // POST /reading - 出演者名リストの読み仮名を解決して返す
 async fn get_readings(
-    _user: AuthenticatedUser,
+    user: AuthenticatedUser,
     Json(payload): Json<ReadingRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    if !check_reading_rate_limit(user.user_id) {
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ErrorResponse {
+                error: "リクエストが多すぎます。しばらく時間をおいて再度お試しください".to_string(),
+            }),
+        ));
+    }
+
+    if payload.names.len() > READING_MAX_NAMES_PER_REQUEST {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: format!("一度に指定できる名前は{}件までです", READING_MAX_NAMES_PER_REQUEST),
+            }),
+        ));
+    }
+    if payload.names.iter().any(|n| n.chars().count() > READING_MAX_NAME_LENGTH) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: format!("名前は{}文字以内で指定してください", READING_MAX_NAME_LENGTH),
+            }),
+        ));
+    }
+
     let readings = resolve_readings(&payload.names).await;
     Ok(Json(serde_json::json!({ "readings": readings })))
 }
