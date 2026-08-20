@@ -5765,31 +5765,34 @@ async fn get_shared_stay(
 
 // GET /traffic?schedule_id=...
 async fn list_traffics(
+    user: AuthenticatedUser,
     Query(params): Query<TrafficQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Json<Vec<Traffic>> {
     let rows: Vec<TrafficRow> = sqlx::query_as::<_, TrafficRow>(
         r#"
         SELECT
-          id,
-          schedule_id,
-          date,
-          "order",
-          transportation,
-          from_place,
-          to_place,
-          notes,
-          fare,
-          miles,
-          return_flag,
-          total_fare,
-          total_miles
-        FROM traffics
-        WHERE schedule_id = ?
-        ORDER BY "order" ASC
+          t.id,
+          t.schedule_id,
+          t.date,
+          t."order",
+          t.transportation,
+          t.from_place,
+          t.to_place,
+          t.notes,
+          t.fare,
+          t.miles,
+          t.return_flag,
+          t.total_fare,
+          t.total_miles
+        FROM traffics t
+        INNER JOIN schedules s ON t.schedule_id = s.id
+        WHERE t.schedule_id = ? AND s.user_id = ?
+        ORDER BY t."order" ASC
         "#,
     )
     .bind(params.schedule_id)
+    .bind(user.user_id as i64)
     .fetch_all(&pool)
     .await
     .expect("failed to fetch traffics");
@@ -5851,9 +5854,28 @@ async fn get_traffic(
 
 // POST /traffic
 async fn create_traffic(
+    user: AuthenticatedUser,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<NewTraffic>,
 ) -> Result<(StatusCode, Json<Traffic>), StatusCode> {
+    // スケジュールの所有者を確認
+    let schedule_user_id: Option<i64> = sqlx::query_scalar(
+        "SELECT user_id FROM schedules WHERE id = ?",
+    )
+    .bind(payload.schedule_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if let Some(schedule_user_id) = schedule_user_id {
+        if schedule_user_id != user.user_id as i64 {
+            return Err(StatusCode::FORBIDDEN);
+        }
+    } else {
+        // スケジュールが存在しない場合
+        return Err(StatusCode::NOT_FOUND);
+    }
+
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
         r#"
@@ -5931,9 +5953,37 @@ async fn create_traffic(
 // PUT /traffic/:id
 async fn update_traffic(
     Path(id): Path<i32>,
+    user: AuthenticatedUser,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<NewTraffic>,
 ) -> Result<Json<Traffic>, StatusCode> {
+    // 更新対象のtrafficが現在所属しているスケジュールの所有者を確認
+    let current_schedule_id: Option<i64> = sqlx::query_scalar(
+        "SELECT schedule_id FROM traffics WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let current_schedule_id = current_schedule_id.ok_or(StatusCode::NOT_FOUND)?;
+
+    // 付け替え先（またはそのまま）のスケジュールの所有者も併せて確認し、
+    // 他人のスケジュールへ再割り当てできないようにする
+    for schedule_id in [current_schedule_id, payload.schedule_id as i64] {
+        let schedule_user_id: Option<i64> = sqlx::query_scalar(
+            "SELECT user_id FROM schedules WHERE id = ?",
+        )
+        .bind(schedule_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        match schedule_user_id {
+            Some(schedule_user_id) if schedule_user_id == user.user_id as i64 => {}
+            _ => return Err(StatusCode::FORBIDDEN),
+        }
+    }
+
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
         r#"
@@ -6100,28 +6150,31 @@ async fn list_all_stays(
 
 // GET /stay?schedule_id=...
 async fn list_stays(
+    user: AuthenticatedUser,
     Query(params): Query<StayQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Json<Vec<Stay>> {
     let rows: Vec<StayRow> = sqlx::query_as::<_, StayRow>(
         r#"
         SELECT
-          id,
-          schedule_id,
-          check_in,
-          check_out,
-          hotel_name,
-          website,
-          fee,
-          breakfast_flag,
-          deadline,
-          penalty,
-          status
-        FROM stays
-        WHERE schedule_id = ?
+          st.id,
+          st.schedule_id,
+          st.check_in,
+          st.check_out,
+          st.hotel_name,
+          st.website,
+          st.fee,
+          st.breakfast_flag,
+          st.deadline,
+          st.penalty,
+          st.status
+        FROM stays st
+        INNER JOIN schedules s ON st.schedule_id = s.id
+        WHERE st.schedule_id = ? AND s.user_id = ?
         "#,
     )
     .bind(params.schedule_id)
+    .bind(user.user_id as i64)
     .fetch_all(&pool)
     .await
     .expect("failed to fetch stays");
@@ -6276,9 +6329,37 @@ async fn create_stay(
 // PUT /stay/:id
 async fn update_stay(
     Path(id): Path<i32>,
+    user: AuthenticatedUser,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<NewStay>,
 ) -> Result<Json<Stay>, StatusCode> {
+    // 更新対象のstayが現在所属しているスケジュールの所有者を確認
+    let current_schedule_id: Option<i64> = sqlx::query_scalar(
+        "SELECT schedule_id FROM stays WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let current_schedule_id = current_schedule_id.ok_or(StatusCode::NOT_FOUND)?;
+
+    // 付け替え先（またはそのまま）のスケジュールの所有者も併せて確認し、
+    // 他人のスケジュールへ再割り当てできないようにする
+    for schedule_id in [current_schedule_id, payload.schedule_id as i64] {
+        let schedule_user_id: Option<i64> = sqlx::query_scalar(
+            "SELECT user_id FROM schedules WHERE id = ?",
+        )
+        .bind(schedule_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        match schedule_user_id {
+            Some(schedule_user_id) if schedule_user_id == user.user_id as i64 => {}
+            _ => return Err(StatusCode::FORBIDDEN),
+        }
+    }
+
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
         r#"
