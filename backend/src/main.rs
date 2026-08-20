@@ -98,6 +98,15 @@ struct SearchSharedUserQuery {
     user_id: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct ContactRequest {
+    name: Option<String>,
+    email: String,
+    subject: Option<String>,
+    message: String,
+    website: Option<String>, // ハニーポット: 人間の利用者には見せない隠しフィールド
+}
+
 #[derive(Debug, Serialize)]
 struct AuthResponse {
     token: Option<String>, // メール未確認の場合はNone
@@ -120,6 +129,12 @@ struct VerifyEmailChangeResponse {
 
 #[derive(Debug, Serialize)]
 struct PasswordResetResponse {
+    success: bool,
+    message: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ContactResponse {
     success: bool,
     message: String,
 }
@@ -649,6 +664,72 @@ async fn send_email_change_verification_email(new_email: &str, token: &str) {
         println!("{}", verification_url);
         println!("このリンクは24時間有効です。");
         println!("===========================");
+    }
+}
+
+fn get_contact_to_email() -> String {
+    std::env::var("CONTACT_TO_EMAIL").unwrap_or_else(|_| "contact@genbgt.com".to_string())
+}
+
+fn html_escape(input: &str) -> String {
+    input
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
+fn html_paragraph(input: &str) -> String {
+    html_escape(input).replace('\n', "<br>")
+}
+
+// お問い合わせフォームの送信内容を運営宛てに転送し、送信者にも確認メールを送る
+async fn send_contact_emails(name: &str, email: &str, subject: &str, message: &str) -> std::result::Result<(), String> {
+    let display_name = if name.is_empty() { "（未入力）".to_string() } else { name.to_string() };
+
+    if let Ok(api_key) = std::env::var("RESEND_API_KEY") {
+        let resend = Resend::new(&api_key);
+        let from = get_email_from();
+        let contact_to = get_contact_to_email();
+
+        // 運営宛て通知メール（返信すると送信者に直接届くようreply_toを設定）
+        let notify_body = format!(
+            r#"<p>お問い合わせフォームから新しいメッセージが届きました。</p><p>お名前: {}<br>メールアドレス: {}<br>件名: {}</p><p>{}</p>"#,
+            html_escape(&display_name), html_escape(email), html_escape(subject), html_paragraph(message)
+        );
+        let notify_to = [contact_to.as_str()];
+        let notify_options = CreateEmailBaseOptions::new(&from, notify_to, format!("[お問い合わせ] {}", subject))
+            .with_html(&notify_body)
+            .with_reply(email);
+
+        resend.emails.send(notify_options).await.map_err(|e| {
+            eprintln!("[CONTACT] Failed to send notification email: {:?}", e);
+            format!("{:?}", e)
+        })?;
+
+        // 送信者への確認メール
+        let confirm_body = format!(
+            r#"<p>{}様</p><p>以下の内容でお問い合わせを受け付けました。内容を確認のうえ、担当より返信いたします。</p><p>件名: {}</p><p>{}</p><p>---<br>このメールは送信内容の確認のため自動送信されています。</p>"#,
+            html_escape(&display_name), html_escape(subject), html_paragraph(message)
+        );
+        let confirm_to = [email];
+        let confirm_options = CreateEmailBaseOptions::new(&from, confirm_to, "【GenBGT】お問い合わせを受け付けました")
+            .with_html(&confirm_body);
+
+        if let Err(e) = resend.emails.send(confirm_options).await {
+            eprintln!("[CONTACT] Failed to send confirmation email to {}: {:?}", email, e);
+        }
+
+        Ok(())
+    } else {
+        println!("[CONTACT] RESEND_API_KEY not found, using development mode (console output)");
+        println!("=== お問い合わせ（開発環境） ===");
+        println!("お名前: {}", display_name);
+        println!("メールアドレス: {}", email);
+        println!("件名: {}", subject);
+        println!("本文:\n{}", message);
+        println!("===========================");
+        Ok(())
     }
 }
 
@@ -1476,6 +1557,52 @@ mod password_policy_tests {
 }
 
 // POST /auth/register
+async fn submit_contact(
+    Json(payload): Json<ContactRequest>,
+) -> Result<Json<ContactResponse>, (StatusCode, Json<ErrorResponse>)> {
+    // ハニーポット: ボットは隠しフィールドまで埋めてくるため、送信済みのふりをして何もしない
+    if payload.website.as_ref().is_some_and(|v| !v.trim().is_empty()) {
+        println!("[CONTACT] Honeypot triggered, ignoring submission");
+        return Ok(Json(ContactResponse { success: true, message: "送信しました".to_string() }));
+    }
+
+    let email = payload.email.trim().to_string();
+    let name = payload.name.unwrap_or_default().trim().to_string();
+    let subject = payload.subject.unwrap_or_default().trim().to_string();
+    let subject = if subject.is_empty() { "お問い合わせ".to_string() } else { subject };
+    let message = payload.message.trim().to_string();
+
+    if email.is_empty() || !is_valid_email(&email) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse { error: "有効なメールアドレスを入力してください".to_string() }),
+        ));
+    }
+    if message.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse { error: "お問い合わせ内容を入力してください".to_string() }),
+        ));
+    }
+    if message.chars().count() > 5000 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse { error: "お問い合わせ内容が長すぎます".to_string() }),
+        ));
+    }
+
+    send_contact_emails(&name, &email, &subject, &message)
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse { error: "送信に失敗しました。時間をおいて再度お試しください".to_string() }),
+            )
+        })?;
+
+    Ok(Json(ContactResponse { success: true, message: "送信しました".to_string() }))
+}
+
 async fn register(
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<RegisterRequest>,
@@ -7509,6 +7636,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let app = Router::new()
         .route("/health", get(health_check))
+        .route("/contact", post(submit_contact))
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
         .route("/auth/verify-email", post(verify_email))
