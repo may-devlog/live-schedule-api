@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { NotionTag } from "./notion-tag";
 import { ColorPicker } from "./color-picker";
@@ -180,6 +181,7 @@ export function NotionSelect({
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingSortOrder, setIsLoadingSortOrder] = useState(true);
+  const [isSortingKana, setIsSortingKana] = useState(false);
   // カテゴリの場合はデフォルト色を取得、それ以外は空文字列から取得
   // Transportationの場合はデフォルトで薄いグレー
   // 初期化エラーを避けるため、初期色は常にデフォルト値を使用
@@ -196,18 +198,28 @@ export function NotionSelect({
     try {
       if (!Array.isArray(options) || options.length === 0) {
         setDisplayedOptions([]);
+        setIsSortingKana(false);
         return;
       }
       if (isKanaOrder) {
+        setIsSortingKana(true);
         sortByKanaOrder(options).then((sorted) => {
-          if (!cancelled) setDisplayedOptions(sorted);
+          if (!cancelled) {
+            setDisplayedOptions(sorted);
+            setIsSortingKana(false);
+          }
         });
       } else {
+        // 通信中に五十音順→カスタム順へ切り替えられた場合、進行中のPromiseは
+        // cancelledとなりその.then()内のsetIsSortingKana(false)は実行されない
+        // ため、ここで確実に解除しておく（スピナーが残り続けるのを防ぐ）
+        setIsSortingKana(false);
         setDisplayedOptions(sortByOrder(options));
       }
     } catch (e) {
       console.error("[NotionSelect] Error sorting options:", e);
       setDisplayedOptions(Array.isArray(options) ? options : []);
+      setIsSortingKana(false);
     }
     return () => {
       cancelled = true;
@@ -588,6 +600,12 @@ export function NotionSelect({
               </View>
             )}
             
+            {isSortingKana && (
+              <View style={styles.kanaSortingRow}>
+                <ActivityIndicator size="small" color="#37352f" />
+                <Text style={styles.kanaSortingText}>並び替え中...</Text>
+              </View>
+            )}
             <ScrollView style={styles.optionsList}>
               {displayedOptions.map((option, index) => (
                 <View key={index} style={styles.optionRow}>
@@ -907,6 +925,16 @@ const styles = StyleSheet.create({
   },
   optionsList: {
     maxHeight: 300,
+  },
+  kanaSortingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  kanaSortingText: {
+    fontSize: 12,
+    color: "#787774",
   },
   optionRow: {
     flexDirection: "row",

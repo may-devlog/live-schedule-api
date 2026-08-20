@@ -160,6 +160,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [mainSortMode, setMainSortMode] = useState<MainSortMode>("default");
   const [kanaReadings, setKanaReadings] = useState<Map<string, string>>(new Map());
+  const [isSortingKana, setIsSortingKana] = useState(false);
 
   useEffect(() => { setYear(initialYear); }, [initialYear]);
 
@@ -293,7 +294,13 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
 
   // 五十音順表示のときだけ、グループ名（出演者名）の読み仮名をバックエンドから解決する
   useEffect(() => {
-    if (mainSortMode !== "kana" || (mainGrouping !== "target" && mainGrouping !== "lineup")) return;
+    // 通信中に五十音順から外れた場合、進行中のPromiseはcancelledとなり
+    // その.then()内のsetIsSortingKana(false)は実行されないため、ここで
+    // 確実に解除しておく（スピナーが残り続けるのを防ぐ）
+    if (mainSortMode !== "kana" || (mainGrouping !== "target" && mainGrouping !== "lineup")) {
+      setIsSortingKana(false);
+      return;
+    }
     const titles = Array.from(
       new Set(
         groupSchedulesNested(visibleSchedules, mainGrouping, subGrouping, selectOptionsMap)
@@ -301,10 +308,17 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           .filter((title) => title !== "未設定")
       )
     );
-    if (titles.length === 0) return;
+    if (titles.length === 0) {
+      setIsSortingKana(false);
+      return;
+    }
     let cancelled = false;
+    setIsSortingKana(true);
     fetchReadings(titles).then((readings) => {
-      if (!cancelled) setKanaReadings(new Map(readings));
+      if (!cancelled) {
+        setKanaReadings(new Map(readings));
+        setIsSortingKana(false);
+      }
     });
     return () => {
       cancelled = true;
@@ -485,6 +499,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                 {mainSortMenuOpen && <View style={styles.compactSelectMenu}>
                   {([['default', 'デフォルト'], ['kana', '五十音順']] as const).map(([value, label]) => <TouchableOpacity key={value} style={styles.compactSelectOption} onPress={() => { setMainSortMode(value); setMainSortMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, mainSortMode === value && styles.compactSelectOptionActive]}>{label}</Text></TouchableOpacity>)}
                 </View>}
+                {isSortingKana && <ActivityIndicator size="small" color={brand.violet} style={styles.kanaSortingIndicator} />}
               </View>}
               <View style={styles.compactSelectWrap}>
                 <Text style={styles.compactSelectLabel}>並び順</Text>
@@ -606,6 +621,7 @@ const styles = StyleSheet.create({
   compactSelect: { minHeight: 36, paddingHorizontal: 11, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   compactSelectText: { color: brand.ink, fontSize: 13, fontWeight: "500" },
   compactSelectMenu: { position: "absolute", top: 59, left: 0, right: 0, padding: 4, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", ...shadow },
+  kanaSortingIndicator: { position: "absolute", right: -24, top: 8 },
   compactSelectOption: { paddingHorizontal: 10, paddingVertical: 9, borderRadius: 4 },
   compactSelectOptionText: { color: brand.ink, fontSize: 13 },
   compactSelectOptionActive: { color: brand.violet, fontWeight: "700" },
