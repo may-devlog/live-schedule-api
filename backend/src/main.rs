@@ -714,12 +714,18 @@ fn check_auth_rate_limit(bucket: &str, client_ip: &str) -> bool {
     }
 }
 
+// X-Forwarded-Forは`proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`により
+// クライアントが送った値の末尾にNginxが実際の接続元IPを追記する形式のため、先頭値を
+// そのまま信頼するとクライアントが任意のIPを詐称してレートリミットを回避できてしまう。
+// 一方X-Real-IPは`proxy_set_header X-Real-IP $remote_addr;`によりNginxが常に上書きする
+// ため、クライアントからは偽装できない。そのためX-Real-IPを優先し、リバースプロキシを
+// 経由しない場合（ローカル開発など）はConnectInfoの接続元にフォールバックする。
 fn client_ip_from_headers(addr: &SocketAddr, headers: &HeaderMap) -> String {
     headers
-        .get("x-forwarded-for")
+        .get("x-real-ip")
         .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.split(',').next())
         .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
         .unwrap_or_else(|| addr.ip().to_string())
 }
 
@@ -1618,13 +1624,7 @@ async fn submit_contact(
     headers: HeaderMap,
     Json(payload): Json<ContactRequest>,
 ) -> Result<Json<ContactResponse>, (StatusCode, Json<ErrorResponse>)> {
-    // Nginxなどのリバースプロキシ経由の場合はX-Forwarded-Forの最初のIPを、なければ直接の接続元を使う
-    let client_ip = headers
-        .get("x-forwarded-for")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.split(',').next())
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| addr.ip().to_string());
+    let client_ip = client_ip_from_headers(&addr, &headers);
 
     if !check_contact_rate_limit(&client_ip) {
         println!("[CONTACT] Rate limit exceeded for {}", client_ip);
