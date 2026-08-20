@@ -12,7 +12,16 @@ const getDefaultApiBase = (): string => {
   if (process.env.EXPO_PUBLIC_API_BASE) {
     return process.env.EXPO_PUBLIC_API_BASE;
   }
-  
+
+  // 本番ビルドでEXPO_PUBLIC_API_BASEが未設定のまま出荷されると、
+  // 認証トークンを含む通信が誤ってhttp://のローカル用フォールバック先に
+  // 送られてしまう。気づかずリリースされないよう、ここで確実に失敗させる
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "EXPO_PUBLIC_API_BASE is not set for a production build. Set it in eas.json before building."
+    );
+  }
+
   // Web または iOS シミュレータ
   if (Platform.OS === "web" || Platform.OS === "ios") {
     return "http://localhost:3000";
