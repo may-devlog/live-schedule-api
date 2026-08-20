@@ -3,12 +3,17 @@
 // リリース後に初めて五十音順表示を開いたユーザーが、まとめてAI解決のレイテンシ・課金を
 // 負担しないようにするための事前ウォームアップ。
 //
+// このスクリプトはsystemd経由ではなく手動実行するため、メインサーバーのように
+// systemdのEnvironmentFileによる環境変数注入は行われない。dotenv::dotenv()で
+// カレントディレクトリまたはその親から.envを見つけて読み込むが、そこに書かれた
+// 相対パス（DATABASE_URL等）は「.envの場所」ではなく「実行時のカレントディレクトリ」
+// を基準に解決される。そのため、本番でメインサーバーと同じDB・ファイルを参照するには
+// 必ずリポジトリ直下（systemdのWorkingDirectoryと同じ場所）で実行すること。
+// 起動時にcwd・DATABASE_URL・各パスをログ出力するので、実行前に必ず確認すること。
+//
 // 実行方法（ローカル）: cd backend && cargo run --bin warmup_readings
-// 実行方法（本番）: リポジトリ直下(systemdのWorkingDirectoryと同じ)で
+// 実行方法（本番）: cd /var/www/live-schedule-api （リポジトリ直下）で
 //   cargo run --manifest-path backend/Cargo.toml --bin warmup_readings --release
-//   を実行する。DATABASE_URL・READING_OVERRIDES_PATH・READING_CACHE_PATHは
-//   実行中のサーバーと同じ.envから読み込まれるため、カレントディレクトリを
-//   サーバーと揃えることで接続先DB・ファイルパスの食い違いを防いでいる。
 
 use serde::Deserialize;
 use sqlx::sqlite::SqlitePool;
@@ -126,12 +131,25 @@ async fn fetch_readings_from_claude(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // カレントディレクトリまたはその親から.envを探して読み込む（本番はsystemdが
-    // EnvironmentFileで環境変数を注入するためこの呼び出しは基本的に無害なno-op、
-    // ローカル開発ではbackend/.envを読み込むために必要）
+    // このスクリプトはsystemd経由ではなく手動実行するため、メインサーバーのように
+    // systemdのEnvironmentFileによる環境変数注入は行われない。dotenv::dotenv()で
+    // カレントディレクトリまたはその親から.envを探して読み込む。
+    // 注意: .env自体は親ディレクトリを遡って見つかっても、そこに書かれた相対パス
+    // （DATABASE_URL等）は「.envの場所」ではなく「このプロセスの実際のカレント
+    // ディレクトリ」を基準に解決される。本番でメインサーバーと同じDB・ファイルを
+    // 参照するには、必ずリポジトリ直下（systemdのWorkingDirectoryと同じ場所）で
+    // 実行すること。
     dotenv::dotenv().ok();
 
-    let pool = SqlitePool::connect(&database_url()).await?;
+    let db_url = database_url();
+    let overrides_path = reading_overrides_path();
+    let cache_path = reading_cache_path();
+    println!("[warmup_readings] cwd: {:?}", std::env::current_dir());
+    println!("[warmup_readings] DATABASE_URL: {}", db_url);
+    println!("[warmup_readings] READING_OVERRIDES_PATH: {}", overrides_path);
+    println!("[warmup_readings] READING_CACHE_PATH: {}", cache_path);
+
+    let pool = SqlitePool::connect(&db_url).await?;
 
     // 全ユーザー分の出演者名(option_type='targets')から重複を除いた名前一覧を作る
     let rows: Vec<(String,)> =
@@ -153,8 +171,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let total_names = all_names.len();
     println!("Found {} distinct performer names across all users", total_names);
 
-    let overrides = load_json_map(&reading_overrides_path());
-    let cache_path = reading_cache_path();
+    let overrides = load_json_map(&overrides_path);
     let mut cache = load_json_map(&cache_path);
 
     let unresolved: Vec<String> = all_names
