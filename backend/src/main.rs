@@ -2005,21 +2005,17 @@ async fn request_password_reset(
         )
     })?;
 
-    // ユーザーが存在しない場合はエラーを返す
-    if user.is_none() {
-        eprintln!("[PASSWORD_RESET] User not found for email: {}", payload.email);
-        eprintln!("[PASSWORD_RESET] Returning 404 NOT_FOUND for unregistered email: {}", payload.email);
-        eprintln!("[PASSWORD_RESET] ===== Request END (404) =====");
-        // 明示的にContent-Typeヘッダーを設定してJSONレスポンスを返す
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ErrorResponse {
-                error: "このメールアドレスは登録されていません".to_string(),
-            }),
-        ));
-    }
-
-    let user = user.unwrap();
+    // ユーザーが存在しない場合も、登録済みメールアドレスの場合と同じ成功レスポンスを返す。
+    // ステータスコードやメッセージを変えると、第三者がメールアドレスの登録有無を
+    // 総当たりで判別できてしまう（ユーザー列挙）ため、ここでは常に成功を装う。
+    let Some(user) = user else {
+        eprintln!("[PASSWORD_RESET] No account for requested email (responding with generic success)");
+        eprintln!("[PASSWORD_RESET] ===== Request END (200, no account) =====");
+        return Ok(Json(PasswordResetResponse {
+            success: true,
+            message: "パスワードリセット用のメールを送信しました".to_string(),
+        }));
+    };
     eprintln!("[PASSWORD_RESET] User found: id={}, email={}", user.id, user.email);
     
     // データベースに保存されているメールアドレスを確認
