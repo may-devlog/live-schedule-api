@@ -2036,9 +2036,23 @@ async fn verify_email(
 
 // POST /auth/request-password-reset - パスワードリセット要求
 async fn request_password_reset(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<RequestPasswordResetRequest>,
 ) -> Result<Json<PasswordResetResponse>, (StatusCode, Json<ErrorResponse>)> {
+    // レートリミットを設けないと、登録済みメールアドレスを狙って大量にリセット要求を
+    // 送りつけることで対象ユーザーへのメール大量送信やResendの送信枠消費につながるため、
+    // ログイン・新規登録と同様にIPベースで制限する
+    let client_ip = client_ip_from_headers(&addr, &headers);
+    if !check_auth_rate_limit("password_reset", &client_ip) {
+        eprintln!("[PASSWORD_RESET] Rate limit exceeded for {}", client_ip);
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ErrorResponse { error: "試行回数が多すぎます。しばらく時間をおいて再度お試しください".to_string() }),
+        ));
+    }
+
     eprintln!("[PASSWORD_RESET] ===== Request received =====");
     eprintln!("[PASSWORD_RESET] Request received for email: {}", payload.email);
     
