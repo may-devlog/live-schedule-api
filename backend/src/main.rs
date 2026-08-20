@@ -5834,7 +5834,8 @@ async fn get_traffic(
 
     let row = row.ok_or(StatusCode::NOT_FOUND)?;
 
-    // スケジュールの所有者を確認
+    // スケジュールの所有者を確認（スケジュールが存在しない場合も含め、
+    // 所有者が確認できなければアクセスを拒否する）
     let schedule_user_id: Option<i64> = sqlx::query_scalar(
         "SELECT user_id FROM schedules WHERE id = ?",
     )
@@ -5843,10 +5844,9 @@ async fn get_traffic(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if let Some(schedule_user_id) = schedule_user_id {
-        if schedule_user_id != user.user_id as i64 {
-            return Err(StatusCode::FORBIDDEN);
-        }
+    match schedule_user_id {
+        Some(schedule_user_id) if schedule_user_id == user.user_id as i64 => {}
+        _ => return Err(StatusCode::FORBIDDEN),
     }
 
     Ok(Json(row_to_traffic(row)))
@@ -6214,7 +6214,8 @@ async fn get_stay(
 
     let row = row.ok_or(StatusCode::NOT_FOUND)?;
 
-    // スケジュールの所有者を確認
+    // スケジュールの所有者を確認（スケジュールが存在しない場合も含め、
+    // 所有者が確認できなければアクセスを拒否する）
     let schedule_user_id: Option<i64> = sqlx::query_scalar(
         "SELECT user_id FROM schedules WHERE id = ?",
     )
@@ -6223,10 +6224,9 @@ async fn get_stay(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if let Some(schedule_user_id) = schedule_user_id {
-        if schedule_user_id != user.user_id as i64 {
-            return Err(StatusCode::FORBIDDEN);
-        }
+    match schedule_user_id {
+        Some(schedule_user_id) if schedule_user_id == user.user_id as i64 => {}
+        _ => return Err(StatusCode::FORBIDDEN),
     }
 
     Ok(Json(row_to_stay(row)))
