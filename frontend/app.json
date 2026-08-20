@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "genbgt",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -64,7 +64,8 @@
         {
           "color": "#7C3AED"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

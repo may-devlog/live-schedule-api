@@ -163,10 +163,11 @@ struct UserRow {
     updated_at: Option<String>,
 }
 
-// JWT秘密鍵（環境変数から読み込む、未設定の場合はデフォルト値）
+// JWT秘密鍵（環境変数から読み込む）
+// 起動時のチェック（main関数内）で未設定・脆弱な値は弾いているため、
+// ここでは安全に読み込めることを前提とする
 fn get_jwt_secret() -> String {
-    std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "your-secret-key-change-in-production".to_string())
+    std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set")
 }
 
 // メール確認URLのベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
@@ -687,6 +688,45 @@ fn check_contact_rate_limit(client_ip: &str) -> bool {
         timestamps.push(now);
         true
     }
+}
+
+// ログイン・新規登録用の簡易レートリミット（総当たり攻撃対策）。
+// bucket名とIPの組み合わせごとに、一定時間あたりの試行回数を制限する
+const AUTH_RATE_LIMIT_MAX: usize = 10;
+const AUTH_RATE_LIMIT_WINDOW: std::time::Duration = std::time::Duration::from_secs(15 * 60);
+
+fn auth_rate_limiter() -> &'static std::sync::Mutex<std::collections::HashMap<String, Vec<std::time::Instant>>> {
+    static LIMITER: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, Vec<std::time::Instant>>>> = std::sync::OnceLock::new();
+    LIMITER.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+fn check_auth_rate_limit(bucket: &str, client_ip: &str) -> bool {
+    let mut map = auth_rate_limiter().lock().unwrap();
+    let now = std::time::Instant::now();
+    let key = format!("{}:{}", bucket, client_ip);
+    let timestamps = map.entry(key).or_insert_with(Vec::new);
+    timestamps.retain(|&t| now.duration_since(t) < AUTH_RATE_LIMIT_WINDOW);
+    if timestamps.len() >= AUTH_RATE_LIMIT_MAX {
+        false
+    } else {
+        timestamps.push(now);
+        true
+    }
+}
+
+// X-Forwarded-Forは`proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`により
+// クライアントが送った値の末尾にNginxが実際の接続元IPを追記する形式のため、先頭値を
+// そのまま信頼するとクライアントが任意のIPを詐称してレートリミットを回避できてしまう。
+// 一方X-Real-IPは`proxy_set_header X-Real-IP $remote_addr;`によりNginxが常に上書きする
+// ため、クライアントからは偽装できない。そのためX-Real-IPを優先し、リバースプロキシを
+// 経由しない場合（ローカル開発など）はConnectInfoの接続元にフォールバックする。
+fn client_ip_from_headers(addr: &SocketAddr, headers: &HeaderMap) -> String {
+    headers
+        .get("x-real-ip")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| addr.ip().to_string())
 }
 
 fn get_contact_to_email() -> String {
@@ -1584,13 +1624,7 @@ async fn submit_contact(
     headers: HeaderMap,
     Json(payload): Json<ContactRequest>,
 ) -> Result<Json<ContactResponse>, (StatusCode, Json<ErrorResponse>)> {
-    // Nginxなどのリバースプロキシ経由の場合はX-Forwarded-Forの最初のIPを、なければ直接の接続元を使う
-    let client_ip = headers
-        .get("x-forwarded-for")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.split(',').next())
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| addr.ip().to_string());
+    let client_ip = client_ip_from_headers(&addr, &headers);
 
     if !check_contact_rate_limit(&client_ip) {
         println!("[CONTACT] Rate limit exceeded for {}", client_ip);
@@ -1644,11 +1678,22 @@ async fn submit_contact(
 }
 
 async fn register(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<AuthResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let client_ip = client_ip_from_headers(&addr, &headers);
+    if !check_auth_rate_limit("register", &client_ip) {
+        println!("[REGISTER] Rate limit exceeded for {}", client_ip);
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ErrorResponse { error: "試行回数が多すぎます。しばらく時間をおいて再度お試しください".to_string() }),
+        ));
+    }
+
     println!("[REGISTER] Received registration request for email: {}", payload.email);
-    
+
     // 環境変数で新規ユーザー登録を制御
     let allow_registration = std::env::var("ALLOW_USER_REGISTRATION")
         .unwrap_or_else(|_| "0".to_string())
@@ -1808,7 +1853,6 @@ async fn register(
 
     // 確認トークンを生成
     let verification_token = generate_token();
-    println!("[REGISTER] Generated verification token: {}", verification_token);
     let now = Utc::now().to_rfc3339();
 
     // ユーザーを作成（メール未確認状態）
@@ -1851,9 +1895,20 @@ async fn register(
 
 // POST /auth/login
 async fn login(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let client_ip = client_ip_from_headers(&addr, &headers);
+    if !check_auth_rate_limit("login", &client_ip) {
+        eprintln!("[LOGIN] Rate limit exceeded for {}", client_ip);
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ErrorResponse { error: "試行回数が多すぎます。しばらく時間をおいて再度お試しください".to_string() }),
+        ));
+    }
+
     // ユーザーを検索
     eprintln!("[LOGIN] Attempting to login with email: {}", payload.email);
     let user: Option<UserRow> = sqlx::query_as::<_, UserRow>(
@@ -1981,9 +2036,23 @@ async fn verify_email(
 
 // POST /auth/request-password-reset - パスワードリセット要求
 async fn request_password_reset(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<RequestPasswordResetRequest>,
 ) -> Result<Json<PasswordResetResponse>, (StatusCode, Json<ErrorResponse>)> {
+    // レートリミットを設けないと、登録済みメールアドレスを狙って大量にリセット要求を
+    // 送りつけることで対象ユーザーへのメール大量送信やResendの送信枠消費につながるため、
+    // ログイン・新規登録と同様にIPベースで制限する
+    let client_ip = client_ip_from_headers(&addr, &headers);
+    if !check_auth_rate_limit("password_reset", &client_ip) {
+        eprintln!("[PASSWORD_RESET] Rate limit exceeded for {}", client_ip);
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ErrorResponse { error: "試行回数が多すぎます。しばらく時間をおいて再度お試しください".to_string() }),
+        ));
+    }
+
     eprintln!("[PASSWORD_RESET] ===== Request received =====");
     eprintln!("[PASSWORD_RESET] Request received for email: {}", payload.email);
     
@@ -2005,21 +2074,17 @@ async fn request_password_reset(
         )
     })?;
 
-    // ユーザーが存在しない場合はエラーを返す
-    if user.is_none() {
-        eprintln!("[PASSWORD_RESET] User not found for email: {}", payload.email);
-        eprintln!("[PASSWORD_RESET] Returning 404 NOT_FOUND for unregistered email: {}", payload.email);
-        eprintln!("[PASSWORD_RESET] ===== Request END (404) =====");
-        // 明示的にContent-Typeヘッダーを設定してJSONレスポンスを返す
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ErrorResponse {
-                error: "このメールアドレスは登録されていません".to_string(),
-            }),
-        ));
-    }
-
-    let user = user.unwrap();
+    // ユーザーが存在しない場合も、登録済みメールアドレスの場合と同じ成功レスポンスを返す。
+    // ステータスコードやメッセージを変えると、第三者がメールアドレスの登録有無を
+    // 総当たりで判別できてしまう（ユーザー列挙）ため、ここでは常に成功を装う。
+    let Some(user) = user else {
+        eprintln!("[PASSWORD_RESET] No account for requested email (responding with generic success)");
+        eprintln!("[PASSWORD_RESET] ===== Request END (200, no account) =====");
+        return Ok(Json(PasswordResetResponse {
+            success: true,
+            message: "パスワードリセット用のメールを送信しました".to_string(),
+        }));
+    };
     eprintln!("[PASSWORD_RESET] User found: id={}, email={}", user.id, user.email);
     
     // データベースに保存されているメールアドレスを確認
@@ -2055,7 +2120,6 @@ async fn request_password_reset(
 
     // メール送信をバックグラウンドで実行（レスポンスを先に返す）
     println!("[PASSWORD_RESET] Sending password reset email to: {}", user.email);
-    println!("[PASSWORD_RESET] Reset token generated: {}", reset_token);
     eprintln!("[PASSWORD_RESET] About to call send_password_reset_email in background");
     
     // APIキーを取得（エラー時は早期リターン）
@@ -5766,31 +5830,34 @@ async fn get_shared_stay(
 
 // GET /traffic?schedule_id=...
 async fn list_traffics(
+    user: AuthenticatedUser,
     Query(params): Query<TrafficQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Json<Vec<Traffic>> {
     let rows: Vec<TrafficRow> = sqlx::query_as::<_, TrafficRow>(
         r#"
         SELECT
-          id,
-          schedule_id,
-          date,
-          "order",
-          transportation,
-          from_place,
-          to_place,
-          notes,
-          fare,
-          miles,
-          return_flag,
-          total_fare,
-          total_miles
-        FROM traffics
-        WHERE schedule_id = ?
-        ORDER BY "order" ASC
+          t.id,
+          t.schedule_id,
+          t.date,
+          t."order",
+          t.transportation,
+          t.from_place,
+          t.to_place,
+          t.notes,
+          t.fare,
+          t.miles,
+          t.return_flag,
+          t.total_fare,
+          t.total_miles
+        FROM traffics t
+        INNER JOIN schedules s ON t.schedule_id = s.id
+        WHERE t.schedule_id = ? AND s.user_id = ?
+        ORDER BY t."order" ASC
         "#,
     )
     .bind(params.schedule_id)
+    .bind(user.user_id as i64)
     .fetch_all(&pool)
     .await
     .expect("failed to fetch traffics");
@@ -5832,7 +5899,8 @@ async fn get_traffic(
 
     let row = row.ok_or(StatusCode::NOT_FOUND)?;
 
-    // スケジュールの所有者を確認
+    // スケジュールの所有者を確認（スケジュールが存在しない場合も含め、
+    // 所有者が確認できなければアクセスを拒否する）
     let schedule_user_id: Option<i64> = sqlx::query_scalar(
         "SELECT user_id FROM schedules WHERE id = ?",
     )
@@ -5841,10 +5909,9 @@ async fn get_traffic(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if let Some(schedule_user_id) = schedule_user_id {
-        if schedule_user_id != user.user_id as i64 {
-            return Err(StatusCode::FORBIDDEN);
-        }
+    match schedule_user_id {
+        Some(schedule_user_id) if schedule_user_id == user.user_id as i64 => {}
+        _ => return Err(StatusCode::FORBIDDEN),
     }
 
     Ok(Json(row_to_traffic(row)))
@@ -5852,9 +5919,28 @@ async fn get_traffic(
 
 // POST /traffic
 async fn create_traffic(
+    user: AuthenticatedUser,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<NewTraffic>,
 ) -> Result<(StatusCode, Json<Traffic>), StatusCode> {
+    // スケジュールの所有者を確認
+    let schedule_user_id: Option<i64> = sqlx::query_scalar(
+        "SELECT user_id FROM schedules WHERE id = ?",
+    )
+    .bind(payload.schedule_id as i64)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if let Some(schedule_user_id) = schedule_user_id {
+        if schedule_user_id != user.user_id as i64 {
+            return Err(StatusCode::FORBIDDEN);
+        }
+    } else {
+        // スケジュールが存在しない場合
+        return Err(StatusCode::NOT_FOUND);
+    }
+
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
         r#"
@@ -5932,9 +6018,37 @@ async fn create_traffic(
 // PUT /traffic/:id
 async fn update_traffic(
     Path(id): Path<i32>,
+    user: AuthenticatedUser,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<NewTraffic>,
 ) -> Result<Json<Traffic>, StatusCode> {
+    // 更新対象のtrafficが現在所属しているスケジュールの所有者を確認
+    let current_schedule_id: Option<i64> = sqlx::query_scalar(
+        "SELECT schedule_id FROM traffics WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let current_schedule_id = current_schedule_id.ok_or(StatusCode::NOT_FOUND)?;
+
+    // 付け替え先（またはそのまま）のスケジュールの所有者も併せて確認し、
+    // 他人のスケジュールへ再割り当てできないようにする
+    for schedule_id in [current_schedule_id, payload.schedule_id as i64] {
+        let schedule_user_id: Option<i64> = sqlx::query_scalar(
+            "SELECT user_id FROM schedules WHERE id = ?",
+        )
+        .bind(schedule_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        match schedule_user_id {
+            Some(schedule_user_id) if schedule_user_id == user.user_id as i64 => {}
+            _ => return Err(StatusCode::FORBIDDEN),
+        }
+    }
+
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
         r#"
@@ -6101,28 +6215,31 @@ async fn list_all_stays(
 
 // GET /stay?schedule_id=...
 async fn list_stays(
+    user: AuthenticatedUser,
     Query(params): Query<StayQuery>,
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Json<Vec<Stay>> {
     let rows: Vec<StayRow> = sqlx::query_as::<_, StayRow>(
         r#"
         SELECT
-          id,
-          schedule_id,
-          check_in,
-          check_out,
-          hotel_name,
-          website,
-          fee,
-          breakfast_flag,
-          deadline,
-          penalty,
-          status
-        FROM stays
-        WHERE schedule_id = ?
+          st.id,
+          st.schedule_id,
+          st.check_in,
+          st.check_out,
+          st.hotel_name,
+          st.website,
+          st.fee,
+          st.breakfast_flag,
+          st.deadline,
+          st.penalty,
+          st.status
+        FROM stays st
+        INNER JOIN schedules s ON st.schedule_id = s.id
+        WHERE st.schedule_id = ? AND s.user_id = ?
         "#,
     )
     .bind(params.schedule_id)
+    .bind(user.user_id as i64)
     .fetch_all(&pool)
     .await
     .expect("failed to fetch stays");
@@ -6162,7 +6279,8 @@ async fn get_stay(
 
     let row = row.ok_or(StatusCode::NOT_FOUND)?;
 
-    // スケジュールの所有者を確認
+    // スケジュールの所有者を確認（スケジュールが存在しない場合も含め、
+    // 所有者が確認できなければアクセスを拒否する）
     let schedule_user_id: Option<i64> = sqlx::query_scalar(
         "SELECT user_id FROM schedules WHERE id = ?",
     )
@@ -6171,10 +6289,9 @@ async fn get_stay(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if let Some(schedule_user_id) = schedule_user_id {
-        if schedule_user_id != user.user_id as i64 {
-            return Err(StatusCode::FORBIDDEN);
-        }
+    match schedule_user_id {
+        Some(schedule_user_id) if schedule_user_id == user.user_id as i64 => {}
+        _ => return Err(StatusCode::FORBIDDEN),
     }
 
     Ok(Json(row_to_stay(row)))
@@ -6277,9 +6394,37 @@ async fn create_stay(
 // PUT /stay/:id
 async fn update_stay(
     Path(id): Path<i32>,
+    user: AuthenticatedUser,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<NewStay>,
 ) -> Result<Json<Stay>, StatusCode> {
+    // 更新対象のstayが現在所属しているスケジュールの所有者を確認
+    let current_schedule_id: Option<i64> = sqlx::query_scalar(
+        "SELECT schedule_id FROM stays WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let current_schedule_id = current_schedule_id.ok_or(StatusCode::NOT_FOUND)?;
+
+    // 付け替え先（またはそのまま）のスケジュールの所有者も併せて確認し、
+    // 他人のスケジュールへ再割り当てできないようにする
+    for schedule_id in [current_schedule_id, payload.schedule_id as i64] {
+        let schedule_user_id: Option<i64> = sqlx::query_scalar(
+            "SELECT user_id FROM schedules WHERE id = ?",
+        )
+        .bind(schedule_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        match schedule_user_id {
+            Some(schedule_user_id) if schedule_user_id == user.user_id as i64 => {}
+            _ => return Err(StatusCode::FORBIDDEN),
+        }
+    }
+
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
         r#"
@@ -7336,7 +7481,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Starting application ===");
     println!("RUST_LOG: {:?}", std::env::var("RUST_LOG").ok());
     println!("DISABLE_AUTH: {:?}", std::env::var("DISABLE_AUTH").ok());
-    
+
+    // JWT_SECRETは認証トークンの署名鍵。未設定や既知の弱い値のまま起動すると
+    // 誰でも有効なトークンを偽造できてしまうため、起動時に必ず検証する
+    match std::env::var("JWT_SECRET") {
+        Ok(secret) if secret.len() >= 32 && secret != "your-secret-key-change-in-production" => {}
+        Ok(_) => {
+            eprintln!("FATAL: JWT_SECRET is set but too short or is the known insecure default. Generate one with `openssl rand -hex 32` and set it to at least 32 characters.");
+            std::process::exit(1);
+        }
+        Err(_) => {
+            eprintln!("FATAL: JWT_SECRET environment variable is not set. Generate one with `openssl rand -hex 32` before starting the server.");
+            std::process::exit(1);
+        }
+    }
+
     // データベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
     // ローカル環境: sqlite://data/app.db（相対パス）
     // Fly.io環境: sqlite:///app/data/app.db（絶対パス、3つのスラッシュ）またはsqlite:/app/data/app.db（1つのコロン）
@@ -7497,7 +7656,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 複数のオリジンをカンマ区切りで指定可能
     let allowed_origin = std::env::var("ALLOWED_ORIGIN")
         .unwrap_or_else(|_| "*".to_string());
-    
+    if allowed_origin == "*" {
+        eprintln!("WARNING: ALLOWED_ORIGIN is not set (or is \"*\"), so CORS allows requests from any origin. Set ALLOWED_ORIGIN to the frontend's origin(s) in production.");
+    }
+
     let cors = if allowed_origin == "*" {
         CorsLayer::new()
             .allow_origin(Any)
@@ -7533,147 +7695,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    // 一時的なエンドポイント：SQLダンプを実行（データベースのコピー用）
-    // 注意: 本番環境では削除すること
-    async fn import_database_dump(
-        Extension(pool): Extension<Pool<Sqlite>>,
-        Json(payload): Json<serde_json::Value>,
-    ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
-        // DISABLE_AUTHが設定されている場合のみ実行可能
-        if std::env::var("DISABLE_AUTH").is_err() {
-            return Err((
-                StatusCode::FORBIDDEN,
-                Json(ErrorResponse {
-                    error: "This endpoint is only available when DISABLE_AUTH is set".to_string(),
-                }),
-            ));
-        }
-        
-        let sql_dump = payload.get("sql").and_then(|v| v.as_str()).ok_or((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-                error: "Missing 'sql' field in request body".to_string(),
-            }),
-        ))?;
-        
-        // SQLダンプを実行（複数のステートメントを分割）
-        // 各行を処理し、空行やコメントをスキップ
-        let statements: Vec<String> = sql_dump
-            .lines()
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty() && !s.starts_with("--") && !s.starts_with("PRAGMA"))
-            .collect::<Vec<_>>()
-            .join("\n")
-            .split(';')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty() && !s.starts_with("BEGIN") && !s.starts_with("COMMIT"))
-            .collect();
-        
-        println!("[IMPORT DB] Found {} SQL statements to execute", statements.len());
-        let mut executed = 0;
-        let mut errors = 0;
-        for (i, statement) in statements.iter().enumerate() {
-            if statement.is_empty() {
-                continue;
-            }
-            // 最初の100文字だけをログに出力
-            let preview = if statement.len() > 100 {
-                format!("{}...", &statement[..100])
-            } else {
-                statement.clone()
-            };
-            match sqlx::query(statement).execute(&pool).await {
-                Ok(_) => {
-                    executed += 1;
-                    if executed <= 5 || executed % 10 == 0 {
-                        println!("[IMPORT DB] Executed statement {}/{}: {}", executed, statements.len(), preview);
-                    }
-                }
-                Err(e) => {
-                    errors += 1;
-                    eprintln!("[IMPORT DB] Error executing statement {}: {} - Error: {}", i + 1, preview, e);
-                }
-            }
-        }
-        
-        println!("[IMPORT DB] Import completed: {} executed, {} errors", executed, errors);
-        
-        Ok(Json(serde_json::json!({
-            "success": true,
-            "executed": executed
-        })))
-    }
-    
-    // 一時的なエンドポイント：ID 14より前のスケジュールを削除
-    // 注意: 本番環境では削除すること
-    async fn delete_old_schedules(
-        Extension(pool): Extension<Pool<Sqlite>>,
-    ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
-        // DISABLE_AUTHが設定されている場合のみ実行可能
-        if std::env::var("DISABLE_AUTH").is_err() {
-            return Err((
-                StatusCode::FORBIDDEN,
-                Json(ErrorResponse {
-                    error: "This endpoint is only available when DISABLE_AUTH is set".to_string(),
-                }),
-            ));
-        }
-        
-        println!("[DELETE OLD] Deleting schedules with id < 15");
-        
-        // 関連するtrafficsを削除
-        let traffics_deleted = sqlx::query("DELETE FROM traffics WHERE schedule_id < 15")
-            .execute(&pool)
-            .await
-            .map_err(|e| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ErrorResponse {
-                        error: format!("Failed to delete traffics: {}", e),
-                    }),
-                )
-            })?;
-        
-        // 関連するstaysを削除
-        let stays_deleted = sqlx::query("DELETE FROM stays WHERE schedule_id < 15")
-            .execute(&pool)
-            .await
-            .map_err(|e| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ErrorResponse {
-                        error: format!("Failed to delete stays: {}", e),
-                    }),
-                )
-            })?;
-        
-        // スケジュールを削除
-        let schedules_deleted = sqlx::query("DELETE FROM schedules WHERE id < 15")
-            .execute(&pool)
-            .await
-            .map_err(|e| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ErrorResponse {
-                        error: format!("Failed to delete schedules: {}", e),
-                    }),
-                )
-            })?;
-        
-        println!("[DELETE OLD] Deleted: {} schedules, {} traffics, {} stays", 
-            schedules_deleted.rows_affected(),
-            traffics_deleted.rows_affected(),
-            stays_deleted.rows_affected()
-        );
-        
-        Ok(Json(serde_json::json!({
-            "success": true,
-            "schedules_deleted": schedules_deleted.rows_affected(),
-            "traffics_deleted": traffics_deleted.rows_affected(),
-            "stays_deleted": stays_deleted.rows_affected()
-        })))
-    }
-    
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/contact", post(submit_contact))
@@ -7721,8 +7742,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/stay", get(list_stays).post(create_stay))
         .route("/stay/all", get(list_all_stays))
         .route("/stay/:id", get(get_stay).put(update_stay))
-        .route("/admin/import-db", post(import_database_dump)) // 一時的なエンドポイント
-        .route("/admin/delete-old-schedules", post(delete_old_schedules)) // 一時的なエンドポイント
         .route("/select-options/:type", get(get_select_options).post(save_select_options))
         .route("/stay-select-options/:type", get(get_stay_select_options).post(save_stay_select_options))
         .route("/notifications", get(list_notifications))

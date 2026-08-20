@@ -1,5 +1,14 @@
 # APIサーバー デプロイメントガイド
 
+> **注意**: このガイドは元々ConoHa WING向けに書かれたものです。
+> 現在の本番環境はAWS EC2上で稼働しており、実際のドメインは
+> `api.genbgt.com`、`.env`の配置パスは`/opt/live-schedule-api/backend/.env`、
+> Nginx設定は`/etc/nginx/conf.d/live-schedule-api.conf`であることを
+> 本番サーバー上で直接確認済みです（2026年時点）。ConoHa WING固有の
+> 手順（1〜2）は現在のAWS環境には当てはまりません。それ以外の手順
+> （systemdサービス名、デプロイ方法の詳細など）は未検証のため、
+> 実施前に必ず本番サーバー上の実際の状態を確認してください。
+
 ## 手動で対応すべき項目
 
 ### 1. ConoHa WINGでAPI用サブドメインを作成
@@ -88,8 +97,8 @@ sudo nano /var/www/live-schedule-api/.env
 ```
 DATABASE_URL=sqlite:///var/www/live-schedule-api/data/app.db
 JWT_SECRET=ランダムな長い文字列（32文字以上推奨）
-BASE_URL=https://schedule.null-relife.com
-ALLOWED_ORIGIN=https://schedule.null-relife.com
+BASE_URL=https://www.genbgt.com
+ALLOWED_ORIGIN=https://www.genbgt.com
 RESEND_API_KEY=Resendで発行したAPIキー
 EMAIL_FROM=GenBGT <noreply@genbgt.com>
 CONTACT_TO_EMAIL=contact@genbgt.com
@@ -117,18 +126,20 @@ sudo systemctl start live-schedule-api
 
 ### 11. Nginx設定ファイルの配置
 
+現在の本番環境（AWS EC2 / Amazon Linux系）では`conf.d`配下に直接配置している
+（Debian/Ubuntu系の`sites-available`/`sites-enabled`方式ではない）：
+
 ```bash
-sudo cp deploy/nginx/api.null-relife.com.conf /etc/nginx/sites-available/
-sudo ln -s /etc/nginx/sites-available/api.null-relife.com.conf /etc/nginx/sites-enabled/
+sudo cp deploy/nginx/api.genbgt.com.conf /etc/nginx/conf.d/live-schedule-api.conf
 sudo nginx -t
-sudo systemctl restart nginx
+sudo systemctl reload nginx
 ```
 
 ### 12. SSL証明書の取得（Let's Encrypt）
 
 ```bash
 sudo apt install certbot python3-certbot-nginx -y
-sudo certbot --nginx -d api.null-relife.com
+sudo certbot --nginx -d api.genbgt.com
 ```
 
 ### 13. ファイアウォール設定（必要に応じて）
@@ -151,7 +162,7 @@ sudo journalctl -u live-schedule-api -f
 
 # API動作確認
 curl http://localhost:3000/health
-curl https://api.null-relife.com/health
+curl https://api.genbgt.com/health
 ```
 
 ## トラブルシューティング
