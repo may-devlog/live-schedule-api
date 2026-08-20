@@ -7642,7 +7642,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 複数のオリジンをカンマ区切りで指定可能
     let allowed_origin = std::env::var("ALLOWED_ORIGIN")
         .unwrap_or_else(|_| "*".to_string());
-    
+    if allowed_origin == "*" {
+        eprintln!("WARNING: ALLOWED_ORIGIN is not set (or is \"*\"), so CORS allows requests from any origin. Set ALLOWED_ORIGIN to the frontend's origin(s) in production.");
+    }
+
     let cors = if allowed_origin == "*" {
         CorsLayer::new()
             .allow_origin(Any)
