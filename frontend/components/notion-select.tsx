@@ -14,6 +14,7 @@ import {
 import { NotionTag } from "./notion-tag";
 import { ColorPicker } from "./color-picker";
 import type { SelectOption } from "../types/select-option";
+import { sortByKanaOrder } from "../utils/kana-reading";
 // 動的インポートで循環依存を回避
 type SaveFunction = (key: string, options: SelectOption[], sortOrder?: string) => Promise<void>;
 type LoadSortOrderFunction = (key: string) => Promise<string>;
@@ -47,14 +48,6 @@ const loadSaveFunctions = async (): Promise<{
     }
   }
   return { saveSelectOptions, saveStaySelectOptions, loadSelectOptionsSortOrder, saveSelectOptionsSortOrder, loadStaySelectOptionsSortOrder, saveStaySelectOptionsSortOrder };
-};
-
-// ソート関数をコンポーネント内に直接実装して循環依存を回避
-const sortByKanaOrder = (options: SelectOption[]): SelectOption[] => {
-  return [...options].sort((a, b) => {
-    // 日本語の五十音順でソート（localeCompareを使用）
-    return a.label.localeCompare(b.label, "ja");
-  });
 };
 
 const sortByOrder = (options: SelectOption[]): SelectOption[] => {
@@ -199,13 +192,16 @@ export function NotionSelect({
 
   // optionsが変更されたとき、または五十音順/カスタム順が切り替わったときにdisplayedOptionsを更新
   useEffect(() => {
+    let cancelled = false;
     try {
       if (!Array.isArray(options) || options.length === 0) {
         setDisplayedOptions([]);
         return;
       }
       if (isKanaOrder) {
-        setDisplayedOptions(sortByKanaOrder(options));
+        sortByKanaOrder(options).then((sorted) => {
+          if (!cancelled) setDisplayedOptions(sorted);
+        });
       } else {
         setDisplayedOptions(sortByOrder(options));
       }
@@ -213,6 +209,9 @@ export function NotionSelect({
       console.error("[NotionSelect] Error sorting options:", e);
       setDisplayedOptions(Array.isArray(options) ? options : []);
     }
+    return () => {
+      cancelled = true;
+    };
   }, [isKanaOrder, options]);
 
   // 並び順の設定を読み込む

@@ -1,7 +1,8 @@
 // 選択肢の順序情報を取得する共通ロジック
 
 import { loadSelectOptions, loadStaySelectOptions, loadSelectOptionsSortOrder } from "./select-options-storage";
-import { sortByKanaOrder, sortByOrder } from "../types/select-option";
+import { sortByOrder } from "../types/select-option";
+import { sortByKanaOrder } from "./kana-reading";
 
 export type SelectOptionsMap = {
   orderMap: Map<string, Map<string, number>>;
@@ -39,9 +40,9 @@ export async function loadSelectOptionsMap(
   
   // 各選択肢タイプのorder情報をマップに保存
   // 五十音順の場合は五十音順でソート、カスタム順の場合はorderでソート
-  const getSortedOptions = (options: typeof categories, sortOrder: string) => {
+  const getSortedOptions = async (options: typeof categories, sortOrder: string) => {
     if (sortOrder === 'kana') {
-      return sortByKanaOrder(options);
+      return await sortByKanaOrder(options);
     } else {
       return sortByOrder(options);
     }
@@ -71,7 +72,7 @@ export async function loadSelectOptionsMap(
 
   // lineup（出演者）は編集画面の五十音順トグルに従う
   const lineupSortOrder = sortOrderMap.get("lineup") || 'custom';
-  const sortedLineups = getSortedOptions(targets, lineupSortOrder);
+  const sortedLineups = await getSortedOptions(targets, lineupSortOrder);
   const lineupOrder = new Map<string, number>();
   sortedLineups.forEach((opt, idx) => {
     lineupOrder.set(opt.label, opt.order !== undefined ? opt.order : idx);

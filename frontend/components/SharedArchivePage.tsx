@@ -13,6 +13,7 @@ import { loadSelectOptionsMap } from "../utils/load-select-options-map";
 import { loadSelectOptions, loadStaySelectOptions } from "../utils/select-options-storage";
 import { fetchTrafficBySchedule } from "../utils/fetch-traffic-by-schedule";
 import { calculateTotalCostWithReturnFlag, type TrafficBySchedule } from "../utils/calculate-total-cost";
+import { fetchReadings, compareByReading } from "../utils/kana-reading";
 
 type Props = {
   shareId?: string;
@@ -158,6 +159,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const [stayGrouping, setStayGrouping] = useState<"none" | "website" | "status">("none");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [mainSortMode, setMainSortMode] = useState<MainSortMode>("default");
+  const [kanaReadings, setKanaReadings] = useState<Map<string, string>>(new Map());
 
   useEffect(() => { setYear(initialYear); }, [initialYear]);
 
@@ -278,7 +280,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
       return sorted.sort((a, b) => {
         if (a.title === "未設定") return 1;
         if (b.title === "未設定") return -1;
-        if (mainSortMode === "kana") return a.title.localeCompare(b.title, "ja");
+        if (mainSortMode === "kana") return compareByReading(a.title, b.title, kanaReadings);
 
         const schedulesA = a.subGroups.flatMap((group) => group.data);
         const schedulesB = b.subGroups.flatMap((group) => group.data);
@@ -287,7 +289,27 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
       });
     }
     return sorted;
-  }, [visibleSchedules, mainGrouping, subGrouping, selectOptionsMap, sortOrder, mainSortMode]);
+  }, [visibleSchedules, mainGrouping, subGrouping, selectOptionsMap, sortOrder, mainSortMode, kanaReadings]);
+
+  // 五十音順表示のときだけ、グループ名（出演者名）の読み仮名をバックエンドから解決する
+  useEffect(() => {
+    if (mainSortMode !== "kana" || (mainGrouping !== "target" && mainGrouping !== "lineup")) return;
+    const titles = Array.from(
+      new Set(
+        groupSchedulesNested(visibleSchedules, mainGrouping, subGrouping, selectOptionsMap)
+          .map((group) => group.title)
+          .filter((title) => title !== "未設定")
+      )
+    );
+    if (titles.length === 0) return;
+    let cancelled = false;
+    fetchReadings(titles).then((readings) => {
+      if (!cancelled) setKanaReadings(new Map(readings));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mainSortMode, mainGrouping, subGrouping, visibleSchedules, selectOptionsMap]);
 
   const sortedStays = useMemo(
     () => [...stays].sort((a, b) => sortOrder === "asc" ? a.check_in.localeCompare(b.check_in) : b.check_in.localeCompare(a.check_in)),

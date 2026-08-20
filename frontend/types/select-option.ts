@@ -179,13 +179,7 @@ export function optionsToStringArray(options: SelectOption[]): string[] {
   return options.map((opt) => opt.label);
 }
 
-// 五十音順でソートする関数
-export function sortByKanaOrder(options: SelectOption[]): SelectOption[] {
-  return [...options].sort((a, b) => {
-    // 日本語の五十音順でソート（localeCompareを使用）
-    return a.label.localeCompare(b.label, "ja");
-  });
-}
+// 五十音順ソートは真の読み仮名を使う utils/kana-reading.ts の sortByKanaOrder（非同期）に統一
 
 // orderフィールドでソートする関数（カスタム順）
 export function sortByOrder(options: SelectOption[]): SelectOption[] {

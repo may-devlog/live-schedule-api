@@ -47,6 +47,9 @@ data/*.db
 backend/data/*.db
 backend/data/*.db.backup.*
 
+# 出演者名読み仮名のAI解決キャッシュ（環境ごとに自動生成されるランタイム成果物）
+backend/data/reading_cache.json
+
 # Build artifacts
 *.log
 *.tmp
