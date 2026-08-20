@@ -12,10 +12,11 @@ import {
   Platform,
 } from "react-native";
 import type { SelectOption } from "../types/select-option";
-import { getDefaultColorForLabel, sortByKanaOrder, sortByOrder } from "../types/select-option";
+import { getDefaultColorForLabel, sortByOrder } from "../types/select-option";
 import { NotionTag } from "./notion-tag";
 import { ColorPicker } from "./color-picker";
 import { saveSelectOptions, loadSelectOptionsSortOrder, saveSelectOptionsSortOrder } from "../utils/select-options-storage";
+import { sortByKanaOrder } from "../utils/kana-reading";
 
 type NotionMultiSelectProps = {
   label: string;
@@ -83,11 +84,17 @@ export function NotionMultiSelect({
 
   // 五十音順/カスタム順の切り替え
   useEffect(() => {
+    let cancelled = false;
     if (isKanaOrder) {
-      setDisplayedOptions(sortByKanaOrder(tempOptions));
+      sortByKanaOrder(tempOptions).then((sorted) => {
+        if (!cancelled) setDisplayedOptions(sorted);
+      });
     } else {
       setDisplayedOptions(sortByOrder(tempOptions));
     }
+    return () => {
+      cancelled = true;
+    };
   }, [isKanaOrder, tempOptions]);
 
   const handleToggleOption = (option: SelectOption) => {
