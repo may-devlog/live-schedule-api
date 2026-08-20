@@ -163,10 +163,11 @@ struct UserRow {
     updated_at: Option<String>,
 }
 
-// JWT秘密鍵（環境変数から読み込む、未設定の場合はデフォルト値）
+// JWT秘密鍵（環境変数から読み込む）
+// 起動時のチェック（main関数内）で未設定・脆弱な値は弾いているため、
+// ここでは安全に読み込めることを前提とする
 fn get_jwt_secret() -> String {
-    std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "your-secret-key-change-in-production".to_string())
+    std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set")
 }
 
 // メール確認URLのベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
@@ -7336,7 +7337,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Starting application ===");
     println!("RUST_LOG: {:?}", std::env::var("RUST_LOG").ok());
     println!("DISABLE_AUTH: {:?}", std::env::var("DISABLE_AUTH").ok());
-    
+
+    // JWT_SECRETは認証トークンの署名鍵。未設定や既知の弱い値のまま起動すると
+    // 誰でも有効なトークンを偽造できてしまうため、起動時に必ず検証する
+    match std::env::var("JWT_SECRET") {
+        Ok(secret) if secret.len() >= 32 && secret != "your-secret-key-change-in-production" => {}
+        Ok(_) => {
+            eprintln!("FATAL: JWT_SECRET is set but too short or is the known insecure default. Generate one with `openssl rand -hex 32` and set it to at least 32 characters.");
+            std::process::exit(1);
+        }
+        Err(_) => {
+            eprintln!("FATAL: JWT_SECRET environment variable is not set. Generate one with `openssl rand -hex 32` before starting the server.");
+            std::process::exit(1);
+        }
+    }
+
     // データベースURL（環境変数から読み込む、未設定の場合はデフォルト値）
     // ローカル環境: sqlite://data/app.db（相対パス）
     // Fly.io環境: sqlite:///app/data/app.db（絶対パス、3つのスラッシュ）またはsqlite:/app/data/app.db（1つのコロン）
