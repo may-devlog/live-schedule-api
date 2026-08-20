@@ -1809,7 +1809,6 @@ async fn register(
 
     // 確認トークンを生成
     let verification_token = generate_token();
-    println!("[REGISTER] Generated verification token: {}", verification_token);
     let now = Utc::now().to_rfc3339();
 
     // ユーザーを作成（メール未確認状態）
@@ -2056,7 +2055,6 @@ async fn request_password_reset(
 
     // メール送信をバックグラウンドで実行（レスポンスを先に返す）
     println!("[PASSWORD_RESET] Sending password reset email to: {}", user.email);
-    println!("[PASSWORD_RESET] Reset token generated: {}", reset_token);
     eprintln!("[PASSWORD_RESET] About to call send_password_reset_email in background");
     
     // APIキーを取得（エラー時は早期リターン）
