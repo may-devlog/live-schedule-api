@@ -96,10 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('[AuthContext] Registering user with email:', email, 'shareId:', shareId);
       console.log('[AuthContext] API_BASE:', API_BASE);
-      
+
       const requestBody = JSON.stringify({ email, password, share_id: shareId });
-      console.log('[AuthContext] Request body:', requestBody);
-      
+
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
