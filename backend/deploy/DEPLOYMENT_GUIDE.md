@@ -92,10 +92,14 @@ BASE_URL=https://schedule.null-relife.com
 ALLOWED_ORIGIN=https://schedule.null-relife.com
 RESEND_API_KEY=Resendで発行したAPIキー
 EMAIL_FROM=GenBGT <noreply@genbgt.com>
+CONTACT_TO_EMAIL=contact@genbgt.com
 ```
 
 `EMAIL_FROM`に使用するドメインは、事前にResendで所有確認を完了してください。
 未確認ドメインやResendのテスト用送信元では、任意のユーザー宛てに送信できません。
+
+`CONTACT_TO_EMAIL`はお問い合わせフォームの送信先で、未設定時は`contact@genbgt.com`宛てに送信されます。
+genbgt.comは既存のメール転送設定（forwardemail.net）で運営者のGmailに転送されるため、追加設定は不要です。
 
 JWT_SECRETの生成：
 ```bash
