@@ -2,7 +2,7 @@ import React from 'react';
 import { StaticInfoPage } from '@/components/StaticInfoPage';
 
 export default function PrivacyScreen() {
-  return <StaticInfoPage title="プライバシーポリシー" lead="GenBGTにおける利用者情報の基本的な取り扱い方針です。" notice="これはサービス準備中の暫定版です。正式公開前に運営情報と保存期間を確定し、内容を更新します。" sections={[
+  return <StaticInfoPage title="プライバシーポリシー" lead="GenBGTにおける利用者情報の基本的な取り扱い方針です。" sections={[
     { heading: '取得する情報', body: 'アカウント情報、ライブ・交通・宿泊の登録内容、共有設定、プロフィール画像、およびサービスの利用に必要な技術情報を取り扱います。' },
     { heading: '利用目的', body: '本人認証、登録内容の保存・表示、共有ページの提供、サービス改善、不具合対応および安全性確保のために使用します。' },
     { heading: '公開範囲', body: '共有機能を有効にした場合、共有ページに設定された情報とプロフィール画像が公開されます。ホテル名など、画面上でマスク対象としている情報は非公開表示になります。' },
