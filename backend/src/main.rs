@@ -7279,15 +7279,8 @@ async fn get_readings(
     user: AuthenticatedUser,
     Json(payload): Json<ReadingRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
-    if !check_reading_rate_limit(user.user_id) {
-        return Err((
-            StatusCode::TOO_MANY_REQUESTS,
-            Json(ErrorResponse {
-                error: "リクエストが多すぎます。しばらく時間をおいて再度お試しください".to_string(),
-            }),
-        ));
-    }
-
+    // 不正なリクエスト（件数・文字数超過で必ず400になるもの）でレートリミットの
+    // カウントを消費しないよう、入力バリデーションをレートリミット判定より先に行う
     if payload.names.len() > READING_MAX_NAMES_PER_REQUEST {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -7301,6 +7294,15 @@ async fn get_readings(
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse {
                 error: format!("名前は{}文字以内で指定してください", READING_MAX_NAME_LENGTH),
+            }),
+        ));
+    }
+
+    if !check_reading_rate_limit(user.user_id) {
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ErrorResponse {
+                error: "リクエストが多すぎます。しばらく時間をおいて再度お試しください".to_string(),
             }),
         ));
     }
