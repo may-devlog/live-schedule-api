@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE } from '../constants/api';
 import { setUnauthorizedHandler } from '../utils/api';
 import { getExpoPushTokenSilently, registerPushTokenWithServer, unregisterPushTokenFromServer } from '../utils/pushNotifications';
+import { getSecureItemWithMigration, setSecureItem, removeSecureItem } from '../utils/secure-token-storage';
 
 interface AuthResponse {
   token: string | null;
@@ -41,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadAuth = async () => {
     try {
       const [savedToken, savedEmail] = await Promise.all([
-        AsyncStorage.getItem(TOKEN_KEY),
+        getSecureItemWithMigration(TOKEN_KEY),
         AsyncStorage.getItem(EMAIL_KEY),
       ]);
       if (savedToken && savedEmail) {
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (data.token) {
         await Promise.all([
-          AsyncStorage.setItem(TOKEN_KEY, data.token),
+          setSecureItem(TOKEN_KEY, data.token),
           AsyncStorage.setItem(EMAIL_KEY, data.email),
         ]);
         setToken(data.token);
@@ -148,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 認証トークンを消す前に、この端末のプッシュ通知登録を解除する
       await unregisterPushTokenFromServer().catch(() => undefined);
       await Promise.all([
-        AsyncStorage.removeItem(TOKEN_KEY),
+        removeSecureItem(TOKEN_KEY),
         AsyncStorage.removeItem(EMAIL_KEY),
       ]);
       setToken(null);

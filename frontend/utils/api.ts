@@ -1,12 +1,12 @@
 import { Platform } from 'react-native';
 import { API_BASE } from '../constants/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getSecureItemWithMigration } from './secure-token-storage';
 
 const TOKEN_KEY = '@auth_token';
 
 async function getToken(): Promise<string | null> {
   try {
-    return await AsyncStorage.getItem(TOKEN_KEY);
+    return await getSecureItemWithMigration(TOKEN_KEY);
   } catch (error) {
     console.error('Failed to get token:', error);
     return null;
