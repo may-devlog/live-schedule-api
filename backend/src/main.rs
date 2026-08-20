@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use axum::{
     body::Bytes,
-    extract::{Extension, Path, Query},
+    extract::{ConnectInfo, Extension, Path, Query},
     http::{header::AUTHORIZATION, HeaderValue, StatusCode, HeaderMap, request::Parts},
     response::Json,
     routing::{get, post, put, delete}, // delete is used in route definitions (line 5269)
@@ -664,6 +664,28 @@ async fn send_email_change_verification_email(new_email: &str, token: &str) {
         println!("{}", verification_url);
         println!("このリンクは24時間有効です。");
         println!("===========================");
+    }
+}
+
+const CONTACT_RATE_LIMIT_MAX: usize = 5;
+const CONTACT_RATE_LIMIT_WINDOW: std::time::Duration = std::time::Duration::from_secs(60 * 60);
+
+fn contact_rate_limiter() -> &'static std::sync::Mutex<std::collections::HashMap<String, Vec<std::time::Instant>>> {
+    static LIMITER: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, Vec<std::time::Instant>>>> = std::sync::OnceLock::new();
+    LIMITER.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+// IPごとに一定時間あたりの送信回数を制限する簡易レートリミット
+fn check_contact_rate_limit(client_ip: &str) -> bool {
+    let mut map = contact_rate_limiter().lock().unwrap();
+    let now = std::time::Instant::now();
+    let timestamps = map.entry(client_ip.to_string()).or_insert_with(Vec::new);
+    timestamps.retain(|&t| now.duration_since(t) < CONTACT_RATE_LIMIT_WINDOW);
+    if timestamps.len() >= CONTACT_RATE_LIMIT_MAX {
+        false
+    } else {
+        timestamps.push(now);
+        true
     }
 }
 
@@ -1558,8 +1580,26 @@ mod password_policy_tests {
 
 // POST /auth/register
 async fn submit_contact(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(payload): Json<ContactRequest>,
 ) -> Result<Json<ContactResponse>, (StatusCode, Json<ErrorResponse>)> {
+    // Nginxなどのリバースプロキシ経由の場合はX-Forwarded-Forの最初のIPを、なければ直接の接続元を使う
+    let client_ip = headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| addr.ip().to_string());
+
+    if !check_contact_rate_limit(&client_ip) {
+        println!("[CONTACT] Rate limit exceeded for {}", client_ip);
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ErrorResponse { error: "送信回数が多すぎます。しばらく時間をおいて再度お試しください".to_string() }),
+        ));
+    }
+
     // ハニーポット: ボットは隠しフィールドまで埋めてくるため、送信済みのふりをして何もしない
     if payload.website.as_ref().is_some_and(|v| !v.trim().is_empty()) {
         println!("[CONTACT] Honeypot triggered, ignoring submission");
@@ -7725,7 +7765,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     })?;
     println!("Server listening on {}", addr);
     
-    axum::serve(listener, app).await.map_err(|e| {
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await.map_err(|e| {
         let error_msg = format!("Server error: {}", e);
         println!("{}", error_msg);
         eprintln!("{}", error_msg);
