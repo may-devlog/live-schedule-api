@@ -1,13 +1,18 @@
 # APIサーバー設定 チェックリスト
 
+> **注意**: 現在の本番環境はAWS EC2上で稼働しており、ConoHa WING固有の
+> 項目（サブドメイン作成等）や`sites-available`/`sites-enabled`方式の
+> Nginx配置は実際の構成と異なります（実際は`/etc/nginx/conf.d/`配下）。
+> 別サーバーを新規構築する場合の参考手順として残しています。
+
 ## ConoHa WINGでの設定
 
-- [ ] API用サブドメイン `api.null-relife.com` を作成
+- [ ] API用サブドメイン `api.genbgt.com` を作成
 - [ ] サーバーのIPアドレスを確認
 
 ## DNS設定（ドメイン管理画面）
 
-- [ ] `api.null-relife.com` のAレコードを追加
+- [ ] `api.genbgt.com` のAレコードを追加
   - ホスト名: `api`
   - タイプ: `A`
   - 値: ConoHa WINGサーバーのIPアドレス
@@ -52,7 +57,7 @@
 
 ### 6. Nginx設定
 
-- [ ] `api.null-relife.com.conf` を `/etc/nginx/sites-available/` に配置
+- [ ] `api.genbgt.com.conf` を `/etc/nginx/sites-available/` に配置
 - [ ] シンボリックリンクを `/etc/nginx/sites-enabled/` に作成
 - [ ] `sudo nginx -t` で設定をテスト
 - [ ] `sudo systemctl restart nginx` でNginxを再起動
@@ -60,14 +65,14 @@
 ### 7. SSL証明書
 
 - [ ] Certbotをインストール
-- [ ] `sudo certbot --nginx -d api.null-relife.com` で証明書を取得
+- [ ] `sudo certbot --nginx -d api.genbgt.com` で証明書を取得
 - [ ] 自動更新が設定されていることを確認
 
 ### 8. 動作確認
 
 - [ ] `curl http://localhost:3000/health` でローカルアクセス確認
-- [ ] `curl https://api.null-relife.com/health` で外部アクセス確認
-- [ ] ブラウザで `https://api.null-relife.com/health` にアクセス
+- [ ] `curl https://api.genbgt.com/health` で外部アクセス確認
+- [ ] ブラウザで `https://api.genbgt.com/health` にアクセス
 
 ## トラブルシューティング
 
