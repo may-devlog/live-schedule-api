@@ -1,16 +1,28 @@
 // 既存の出演者名（select_options の option_type='targets'）について、
-// 五十音順ソート用の読み仮名をあらかじめ解決し、data/reading_cache.json に書き込むスクリプト。
+// 五十音順ソート用の読み仮名をあらかじめ解決し、キャッシュファイルに書き込むスクリプト。
 // リリース後に初めて五十音順表示を開いたユーザーが、まとめてAI解決のレイテンシ・課金を
 // 負担しないようにするための事前ウォームアップ。
 //
-// 実行方法: cargo run --bin warmup_readings
+// 実行方法（ローカル）: cd backend && cargo run --bin warmup_readings
+// 実行方法（本番）: リポジトリ直下(systemdのWorkingDirectoryと同じ)で
+//   cargo run --manifest-path backend/Cargo.toml --bin warmup_readings --release
+//   を実行する。DATABASE_URL・READING_OVERRIDES_PATH・READING_CACHE_PATHは
+//   実行中のサーバーと同じ.envから読み込まれるため、カレントディレクトリを
+//   サーバーと揃えることで接続先DB・ファイルパスの食い違いを防いでいる。
 
 use serde::Deserialize;
 use sqlx::sqlite::SqlitePool;
 use std::collections::{HashMap, HashSet};
 
-const READING_OVERRIDES_PATH: &str = "reading_overrides.json";
-const READING_CACHE_PATH: &str = "data/reading_cache.json";
+fn database_url() -> String {
+    std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:data/app.db".to_string())
+}
+fn reading_overrides_path() -> String {
+    std::env::var("READING_OVERRIDES_PATH").unwrap_or_else(|_| "reading_overrides.json".to_string())
+}
+fn reading_cache_path() -> String {
+    std::env::var("READING_CACHE_PATH").unwrap_or_else(|_| "data/reading_cache.json".to_string())
+}
 
 #[derive(Deserialize)]
 struct SelectOptionLabel {
@@ -114,7 +126,12 @@ async fn fetch_readings_from_claude(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let pool = SqlitePool::connect("sqlite:data/app.db").await?;
+    // カレントディレクトリまたはその親から.envを探して読み込む（本番はsystemdが
+    // EnvironmentFileで環境変数を注入するためこの呼び出しは基本的に無害なno-op、
+    // ローカル開発ではbackend/.envを読み込むために必要）
+    dotenv::dotenv().ok();
+
+    let pool = SqlitePool::connect(&database_url()).await?;
 
     // 全ユーザー分の出演者名(option_type='targets')から重複を除いた名前一覧を作る
     let rows: Vec<(String,)> =
@@ -136,8 +153,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let total_names = all_names.len();
     println!("Found {} distinct performer names across all users", total_names);
 
-    let overrides = load_json_map(READING_OVERRIDES_PATH);
-    let mut cache = load_json_map(READING_CACHE_PATH);
+    let overrides = load_json_map(&reading_overrides_path());
+    let cache_path = reading_cache_path();
+    let mut cache = load_json_map(&cache_path);
 
     let unresolved: Vec<String> = all_names
         .into_iter()
@@ -170,7 +188,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 // バッチごとに保存しておくことで、途中で失敗しても解決済み分は失われない
                 let json = serde_json::to_string_pretty(&cache)?;
-                std::fs::write(READING_CACHE_PATH, json)?;
+                std::fs::write(&cache_path, json)?;
             }
             Err(e) => {
                 eprintln!("Batch {} failed: {}", batch_index + 1, e);

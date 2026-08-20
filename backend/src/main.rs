@@ -7086,8 +7086,16 @@ async fn save_stay_select_options(
 // → ③Claude APIに問い合わせて解決し、キャッシュに保存。
 // DBスキーマは増やさず、ファイルベースで完結させている。
 
-const READING_OVERRIDES_PATH: &str = "reading_overrides.json";
-const READING_CACHE_PATH: &str = "data/reading_cache.json";
+// 本番環境(systemd, WorkingDirectory=リポジトリ直下)とローカル開発(backend/配下で
+// 実行)ではカレントディレクトリの前提が異なり、単純な相対パスだと本番でgit pull後の
+// 実ファイル位置と食い違う。DATABASE_URLと同じく環境変数で上書きできるようにし、
+// デフォルト値はローカル開発（backend/配下で実行する場合）に合わせている。
+fn reading_overrides_path() -> String {
+    std::env::var("READING_OVERRIDES_PATH").unwrap_or_else(|_| "reading_overrides.json".to_string())
+}
+fn reading_cache_path() -> String {
+    std::env::var("READING_CACHE_PATH").unwrap_or_else(|_| "data/reading_cache.json".to_string())
+}
 
 // 1リクエストあたりの上限。アプリ内から通常送られる件数（出演者選択肢の総数）に対して
 // 十分な余裕を持たせつつ、意図的に大量のユニークな名前を送ってAnthropic APIの利用量を
@@ -7229,10 +7237,11 @@ async fn fetch_readings_from_claude(
 // 名前のリストを受け取り、読み仮名を解決して返す。
 // overrides → cache → Claude APIの順で解決し、新規に解決した分だけキャッシュに書き込む。
 async fn resolve_readings(names: &[String]) -> std::collections::HashMap<String, String> {
-    let overrides = load_reading_map(READING_OVERRIDES_PATH).await;
+    let overrides = load_reading_map(&reading_overrides_path()).await;
 
     let _guard = reading_cache_lock().lock().await;
-    let mut cache = load_reading_map(READING_CACHE_PATH).await;
+    let cache_path = reading_cache_path();
+    let mut cache = load_reading_map(&cache_path).await;
 
     let mut result = std::collections::HashMap::new();
     let mut unresolved: Vec<String> = Vec::new();
@@ -7255,7 +7264,7 @@ async fn resolve_readings(names: &[String]) -> std::collections::HashMap<String,
                     result.insert(name, reading);
                 }
                 if let Ok(json) = serde_json::to_string_pretty(&cache) {
-                    if let Err(e) = tokio::fs::write(READING_CACHE_PATH, json).await {
+                    if let Err(e) = tokio::fs::write(&cache_path, json).await {
                         eprintln!("[ResolveReadings] Failed to write cache file: {}", e);
                     }
                 }
