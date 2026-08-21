@@ -24,7 +24,6 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-title" content="GenBGT" />
         <meta name="theme-color" content="#5B21B6" />
         <link rel="icon" type="image/png" href="/favicon.png" />
-        <link rel="shortcut icon" href="/favicon.png" />
         <link rel="dns-prefetch" href="https://api.genbgt.com" />
         <link rel="preconnect" href="https://api.genbgt.com" crossOrigin="anonymous" />
         <script dangerouslySetInnerHTML={{ __html: 'window.__genbgtReplaceState = window.history.replaceState.bind(window.history);' }} />
