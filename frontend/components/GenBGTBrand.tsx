@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Modal, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,63 +16,41 @@ function NativeTopSpacer() {
   return <View style={{ height: insets.top, backgroundColor: colors.chrome }} />;
 }
 
-// ログイン中のネイティブ画面向け: Safe Area余白+右上のハンバーガーメニュー（検索・通知・アカウント）
+// ログイン中のネイティブ画面向け: Safe Area余白+検索・通知・アカウントの3アイコン（Web版のスマホ表示と同じ構成）
 function NativeAppHeaderBar({ onDisplayNameChange }: { onDisplayNameChange?: (value: string | null) => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { email } = useAuth();
   const { colors } = useTheme();
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [notificationsVisible, setNotificationsVisible] = useState(false);
+  const [profileShareId, setProfileShareId] = useState<string | null>(null);
   const [accountVisible, setAccountVisible] = useState(false);
+  const accountLabel = displayName || profileShareId || email?.split('@')[0] || 'ユーザー';
 
   useEffect(() => {
     fetchProfile(true)
       .then((profile) => {
         setAvatarDataUrl(profile?.avatar_data_url ?? null);
         setDisplayName(profile?.display_name ?? null);
+        setProfileShareId(profile?.share_id ?? null);
       })
-      .catch(() => { setAvatarDataUrl(null); setDisplayName(null); });
+      .catch(() => { setAvatarDataUrl(null); setDisplayName(null); setProfileShareId(null); });
   }, []);
 
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: colors.chrome, borderBottomWidth: 1, borderBottomColor: colors.chromeBorder }}>
       <View style={styles.nativeHeaderBar}>
-        <TouchableOpacity style={styles.nativeMenuButton} onPress={() => setMenuOpen(true)} accessibilityLabel="メニューを開く">
-          <Ionicons name="menu" size={26} color={colors.chromeText} />
+        <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.accentSoft }]} onPress={() => router.push('/find-user')} accessibilityLabel="共有ページを検索">
+          <Ionicons name="search-outline" size={20} color={colors.accentDark} />
+        </TouchableOpacity>
+        <NotificationMenu />
+        <TouchableOpacity style={styles.accountButton} onPress={() => setAccountVisible(true)} accessibilityLabel="アカウントメニューを開く">
+          <View style={[styles.accountAvatar, { backgroundColor: colors.accentSoft }]}>{avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.accountAvatarImage} /> : <Text style={[styles.accountAvatarText, { color: colors.accentDark }]}>{accountLabel.slice(0, 1).toUpperCase()}</Text>}</View>
+          <Ionicons name="chevron-down" size={16} color={colors.chromeMuted} />
         </TouchableOpacity>
       </View>
 
-      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-        <TouchableOpacity style={styles.nativeMenuOverlay} activeOpacity={1} onPress={() => setMenuOpen(false)}>
-          <View style={[styles.nativeMenuPanel, { top: insets.top + 52, backgroundColor: colors.surface }]}>
-            <TouchableOpacity
-              style={styles.nativeMenuItem}
-              onPress={() => { setMenuOpen(false); router.push('/find-user'); }}
-            >
-              <Ionicons name="search-outline" size={19} color={colors.accentDark} />
-              <Text style={[styles.nativeMenuItemText, { color: colors.ink }]}>共有ページを検索</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.nativeMenuItem}
-              onPress={() => { setMenuOpen(false); setNotificationsVisible(true); }}
-            >
-              <Ionicons name="notifications-outline" size={19} color={colors.accentDark} />
-              <Text style={[styles.nativeMenuItemText, { color: colors.ink }]}>通知</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.nativeMenuItem}
-              onPress={() => { setMenuOpen(false); setAccountVisible(true); }}
-            >
-              <Ionicons name="person-outline" size={19} color={colors.accentDark} />
-              <Text style={[styles.nativeMenuItemText, { color: colors.ink }]}>アカウント</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      <NotificationMenu hideTrigger visible={notificationsVisible} onClose={() => setNotificationsVisible(false)} />
       <AccountMenu
         visible={accountVisible}
         onClose={() => setAccountVisible(false)}
@@ -269,12 +247,7 @@ export function PublicFooter({ compact = false }: { compact?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  nativeHeaderBar: { minHeight: 48, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
-  nativeMenuButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  nativeMenuOverlay: { flex: 1, backgroundColor: 'rgba(32,27,44,0.32)', alignItems: 'flex-end' },
-  nativeMenuPanel: { position: 'absolute', right: 16, width: 180, borderRadius: 12, paddingVertical: 6, shadowColor: '#1C1133', shadowOpacity: 0.2, shadowRadius: 16, elevation: 6 },
-  nativeMenuItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12 },
-  nativeMenuItemText: { fontSize: 14, fontWeight: '600' },
+  nativeHeaderBar: { minHeight: 52, paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
   mark: { alignItems: 'center', justifyContent: 'center', position: 'relative' },
   wordmarkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   wordmark: { fontSize: 27, fontWeight: '800', letterSpacing: -0.8 },
