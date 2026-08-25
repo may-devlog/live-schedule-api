@@ -1,8 +1,14 @@
 // contexts/ThemeContext.tsx - 外観設定（Scheme: Light/Dark、Accent Color）
 import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
+
+// アカウントごとに最後に取得したテーマ設定を端末側にもキャッシュしておき、
+// 次回起動時はAPI応答を待たずにこのキャッシュ値で即描画する（サーバー取得完了までの
+// デフォルト配色（Light/Black）へのちらつきを防ぐため）
+const THEME_CACHE_KEY_PREFIX = '@theme_settings_cache:';
 
 export type SchemeKey = 'light' | 'dark';
 export type AccentKey = 'black' | 'blue' | 'green' | 'orange' | 'pink' | 'purple';
@@ -172,12 +178,25 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, email } = useAuth();
   // 未ログイン（共有ページ・ログイン前ページ）は、閲覧者の端末側の外観設定に追従する
   const systemScheme = useColorScheme();
   const [scheme, setSchemeState] = useState<SchemeKey>(DEFAULT_SCHEME);
   const [accent, setAccentState] = useState<AccentKey>(DEFAULT_ACCENT);
   const [loading, setLoading] = useState(false);
+
+  // サーバーへの問い合わせが完了する前に、端末に保存済みの前回値があれば先に反映する
+  useEffect(() => {
+    if (!isAuthenticated || !email) return;
+    AsyncStorage.getItem(`${THEME_CACHE_KEY_PREFIX}${email}`)
+      .then((cached) => {
+        if (!cached) return;
+        const parsed = JSON.parse(cached) as { scheme?: SchemeKey; accent?: AccentKey };
+        if (parsed.scheme) setSchemeState(parsed.scheme);
+        if (parsed.accent) setAccentState(parsed.accent);
+      })
+      .catch(() => undefined);
+  }, [isAuthenticated, email]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -191,10 +210,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       .then((data) => {
         if (data?.scheme) setSchemeState(data.scheme);
         if (data?.accent) setAccentState(data.accent);
+        if (email && data && (data.scheme || data.accent)) {
+          AsyncStorage.setItem(
+            `${THEME_CACHE_KEY_PREFIX}${email}`,
+            JSON.stringify({ scheme: data.scheme, accent: data.accent })
+          ).catch(() => undefined);
+        }
       })
       .catch(() => undefined)
       .finally(() => setLoading(false));
-  }, [isAuthenticated, systemScheme]);
+  }, [isAuthenticated, systemScheme, email]);
 
   const persist = useCallback(async (next: { scheme: SchemeKey; accent: AccentKey }) => {
     const res = await authenticatedFetch(getApiUrl('/theme-settings'), {
@@ -203,7 +228,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify(next),
     });
     if (!res.ok) throw new Error('外観設定の更新に失敗しました');
-  }, []);
+    if (email) {
+      AsyncStorage.setItem(`${THEME_CACHE_KEY_PREFIX}${email}`, JSON.stringify(next)).catch(() => undefined);
+    }
+  }, [email]);
 
   const setScheme = useCallback(
     async (next: SchemeKey) => {
