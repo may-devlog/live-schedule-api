@@ -17,6 +17,7 @@ import type { Schedule } from "../app/HomeScreen";
 import { authenticatedFetch, getApiUrl } from "../utils/api";
 import { getOptionColorSync } from "../utils/get-option-color";
 import { fetchAreaColors } from "../utils/fetch-area-colors";
+import { useTheme, type ThemeColors } from "../contexts/ThemeContext";
 
 type NotionRelationProps = {
   label: string;
@@ -41,6 +42,8 @@ export function NotionRelation({
   confirmChangeMessage,
   changeButtonLabel,
 }: NotionRelationProps) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [modalVisible, setModalVisible] = useState(false);
   const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [areaColors, setAreaColors] = useState<Map<number, string>>(new Map());
@@ -212,7 +215,7 @@ export function NotionRelation({
               value={searchText}
               onChangeText={setSearchText}
               placeholder="検索..."
-              placeholderTextColor="#9b9a97"
+              placeholderTextColor={colors.muted}
               onPressIn={(e) => e.stopPropagation()}
               onPressOut={(e) => e.stopPropagation()}
             />
@@ -284,14 +287,14 @@ export function NotionRelation({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: 16,
   },
   label: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#37352f",
+    color: colors.ink,
     marginBottom: 6,
   },
   selectedContainer: {
@@ -303,9 +306,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "flex-start",
-    backgroundColor: "#F5F3FF",
+    backgroundColor: colors.accentSoft,
     borderWidth: 1,
-    borderColor: "#C4B5FD",
+    borderColor: colors.border,
     borderRadius: 9,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -314,7 +317,7 @@ const styles = StyleSheet.create({
   selectText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#5B21B6",
+    color: colors.accentDark,
   },
   modalOverlay: {
     flex: 1,
@@ -323,7 +326,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContent: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderRadius: 8,
     width: "90%",
     maxWidth: 600,
@@ -333,23 +336,23 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#37352f",
+    color: colors.ink,
     marginBottom: 16,
   },
   searchInput: {
-    backgroundColor: "#f7f6f3",
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: "#e9e9e7",
+    borderColor: colors.border,
     borderRadius: 3,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: "#37352f",
+    color: colors.ink,
     marginBottom: 16,
   },
   loadingText: {
     textAlign: "center",
-    color: "#9b9a97",
+    color: colors.muted,
     padding: 20,
   },
   optionsList: {
@@ -357,7 +360,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: "center",
-    color: "#9b9a97",
+    color: colors.muted,
     padding: 20,
   },
   optionItem: {
@@ -367,10 +370,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#e9e9e7",
+    borderBottomColor: colors.border,
   },
   optionItemSelected: {
-    backgroundColor: "#f7f6f3",
+    backgroundColor: colors.accentSoft,
   },
   optionContent: {
     flex: 1,
@@ -378,27 +381,27 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#37352f",
+    color: colors.ink,
     marginBottom: 4,
   },
   optionDate: {
     fontSize: 11,
-    color: "#9b9a97",
+    color: colors.muted,
   },
   checkmark: {
     fontSize: 18,
-    color: "#37352f",
+    color: colors.accent,
     marginLeft: 12,
   },
   closeButton: {
     marginTop: 16,
     paddingVertical: 12,
-    backgroundColor: "#37352f",
+    backgroundColor: colors.accent,
     borderRadius: 3,
     alignItems: "center",
   },
   closeButtonText: {
-    color: "#ffffff",
+    color: colors.accentContrastText,
     fontSize: 14,
     fontWeight: "600",
   },

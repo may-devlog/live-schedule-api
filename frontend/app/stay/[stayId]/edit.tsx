@@ -21,7 +21,8 @@ import {
   loadStaySelectOptions,
   saveStaySelectOptions,
 } from "../../../utils/select-options-storage";
-import { AppHeader, PublicFooter, brand } from "../../../components/GenBGTBrand";
+import { AppHeader, PublicFooter } from "../../../components/GenBGTBrand";
+import { useTheme, type ThemeColors } from "../../../contexts/ThemeContext";
 
 type Stay = {
   id: number;
@@ -45,6 +46,8 @@ const STAY_STATUS_COLORS: Record<string, string> = {
 };
 
 export default function EditStayScreen() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { stayId } = useLocalSearchParams<{ stayId: string }>();
   const router = useRouter();
 
@@ -370,7 +373,7 @@ export default function EditStayScreen() {
       <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
         <AppHeader active="archive" />
         <View style={styles.container}>
-          <ActivityIndicator color="#37352f" size="large" />
+          <ActivityIndicator color={colors.muted} size="large" />
         </View>
       </View>
     );
@@ -504,8 +507,8 @@ export default function EditStayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: brand.lavender },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.surfaceAlt },
   pageContent: { flexGrow: 1 },
   header: {
     paddingHorizontal: 24,
@@ -524,16 +527,16 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   backLink: { alignSelf: "flex-start", paddingVertical: 8, marginBottom: 16 },
-  backLinkText: { color: brand.violetDark, fontSize: 14, fontWeight: "700" },
-  eyebrow: { color: brand.violet, fontSize: 11, fontWeight: "800", letterSpacing: 1.8, marginBottom: 7 },
+  backLinkText: { color: colors.accentDark, fontSize: 14, fontWeight: "700" },
+  eyebrow: { color: colors.accent, fontSize: 11, fontWeight: "800", letterSpacing: 1.8, marginBottom: 7 },
   title: {
     fontSize: 36,
     fontWeight: "800",
-    color: brand.ink,
+    color: colors.ink,
     marginBottom: 8,
   },
-  lead: { color: brand.muted, fontSize: 14, marginBottom: 24 },
-  formCard: { backgroundColor: brand.white, borderWidth: 1, borderColor: brand.border, borderRadius: 16, padding: 28, shadowColor: '#2E1065', shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
+  lead: { color: colors.muted, fontSize: 14, marginBottom: 24 },
+  formCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 28, shadowColor: '#2E1065', shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
   label: {
     fontSize: 12,
     fontWeight: "600",
@@ -547,7 +550,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: brand.border,
+    borderColor: colors.border,
     borderRadius: 9,
     paddingHorizontal: 14,
     paddingVertical: 11,
@@ -565,7 +568,7 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 32,
-    backgroundColor: brand.violet,
+    backgroundColor: colors.accent,
     minHeight: 50,
     paddingVertical: 14,
     borderRadius: 10,
@@ -575,7 +578,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: "#ffffff",
+    color: colors.accentContrastText,
     fontSize: 14,
     fontWeight: "600",
   },

@@ -4,17 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
-
-const brand = {
-  violet: '#7C3AED',
-  violetDark: '#5B21B6',
-  plum: '#2E1065',
-  lavender: '#F5F3FF',
-  ink: '#201B2C',
-  muted: '#6B6675',
-  border: '#E8E3F1',
-  white: '#FFFFFF',
-};
+import { useTheme, type ThemeColors } from '../contexts/ThemeContext';
 
 type Notification = {
   id: number;
@@ -49,6 +39,8 @@ type NotificationMenuProps = {
 export function NotificationMenu({ hideTrigger = false, visible: controlledVisible, onClose }: NotificationMenuProps = {}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [internalVisible, setInternalVisible] = useState(false);
   const visible = controlledVisible ?? internalVisible;
   const setVisible = (next: boolean) => {
@@ -103,7 +95,7 @@ export function NotificationMenu({ hideTrigger = false, visible: controlledVisib
     <>
       {!hideTrigger && (
         <TouchableOpacity style={styles.bellButton} onPress={open} accessibilityLabel="通知を開く">
-          <Ionicons name="notifications-outline" size={23} color={brand.violetDark} />
+          <Ionicons name="notifications-outline" size={23} color={colors.accentDark} />
           {unreadCount > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
@@ -122,11 +114,11 @@ export function NotificationMenu({ hideTrigger = false, visible: controlledVisib
                 <Text style={styles.title}>通知</Text>
               </View>
               <TouchableOpacity style={styles.closeButton} onPress={() => setVisible(false)} accessibilityLabel="通知を閉じる">
-                <Ionicons name="close" size={23} color={brand.ink} />
+                <Ionicons name="close" size={23} color={colors.ink} />
               </TouchableOpacity>
             </View>
 
-            {loading && <View style={styles.center}><ActivityIndicator color={brand.violet} /></View>}
+            {loading && <View style={styles.center}><ActivityIndicator color={colors.accent} /></View>}
             {!loading && error && (
               <View style={styles.center}>
                 <Ionicons name="alert-circle-outline" size={30} color="#DC2626" />
@@ -136,7 +128,7 @@ export function NotificationMenu({ hideTrigger = false, visible: controlledVisib
             )}
             {!loading && !error && notifications.length === 0 && (
               <View style={styles.center}>
-                <View style={styles.emptyIcon}><Ionicons name="notifications-outline" size={30} color={brand.violet} /></View>
+                <View style={styles.emptyIcon}><Ionicons name="notifications-outline" size={30} color={colors.accent} /></View>
                 <Text style={styles.emptyTitle}>新しい通知はありません</Text>
                 <Text style={styles.emptyHelp}>宿泊の取消料発生日時が近づくと、ここにお知らせします。</Text>
               </View>
@@ -150,7 +142,7 @@ export function NotificationMenu({ hideTrigger = false, visible: controlledVisib
                     onPress={() => selectNotification(notification)}
                   >
                     <View style={[styles.itemIcon, !notification.is_read && styles.unreadIcon]}>
-                      <Ionicons name="bed-outline" size={19} color={brand.violetDark} />
+                      <Ionicons name="bed-outline" size={19} color={colors.accentDark} />
                     </View>
                     <View style={styles.itemCopy}>
                       <View style={styles.itemTitleRow}>
@@ -172,33 +164,33 @@ export function NotificationMenu({ hideTrigger = false, visible: controlledVisib
   );
 }
 
-const styles = StyleSheet.create({
-  bellButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: brand.lavender, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  badge: { position: 'absolute', top: -3, right: -3, minWidth: 19, height: 19, paddingHorizontal: 5, borderRadius: 10, backgroundColor: '#DC2626', borderWidth: 2, borderColor: brand.white, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { color: brand.white, fontSize: 10, lineHeight: 12, fontWeight: '800' },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  bellButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  badge: { position: 'absolute', top: -3, right: -3, minWidth: 19, height: 19, paddingHorizontal: 5, borderRadius: 10, backgroundColor: '#DC2626', borderWidth: 2, borderColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: '#FFFFFF', fontSize: 10, lineHeight: 12, fontWeight: '800' },
   overlay: { flex: 1, backgroundColor: 'rgba(32,27,44,0.48)', alignItems: 'flex-end' },
-  panel: { width: '100%', maxWidth: 440, height: '100%', backgroundColor: brand.white, paddingHorizontal: 26, paddingTop: 28, paddingBottom: 24, shadowColor: '#1C1133', shadowOpacity: 0.2, shadowRadius: 28 },
-  panelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 22, borderBottomWidth: 1, borderBottomColor: brand.border },
-  eyebrow: { color: brand.violet, fontWeight: '800', fontSize: 11, letterSpacing: 1.5, marginBottom: 4 },
-  title: { color: brand.ink, fontSize: 24, fontWeight: '800' },
-  closeButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: brand.lavender, alignItems: 'center', justifyContent: 'center' },
+  panel: { width: '100%', maxWidth: 440, height: '100%', backgroundColor: colors.surface, paddingHorizontal: 26, paddingTop: 28, paddingBottom: 24, shadowColor: '#1C1133', shadowOpacity: 0.2, shadowRadius: 28 },
+  panelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 22, borderBottomWidth: 1, borderBottomColor: colors.border },
+  eyebrow: { color: colors.accent, fontWeight: '800', fontSize: 11, letterSpacing: 1.5, marginBottom: 4 },
+  title: { color: colors.ink, fontSize: 24, fontWeight: '800' },
+  closeButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
   center: { flex: 1, minHeight: 260, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  emptyIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: brand.lavender, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyTitle: { color: brand.ink, fontSize: 16, fontWeight: '800', marginBottom: 8 },
-  emptyHelp: { color: brand.muted, fontSize: 13, lineHeight: 20, textAlign: 'center' },
+  emptyIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyTitle: { color: colors.ink, fontSize: 16, fontWeight: '800', marginBottom: 8 },
+  emptyHelp: { color: colors.muted, fontSize: 13, lineHeight: 20, textAlign: 'center' },
   errorText: { color: '#B91C1C', fontSize: 13, marginTop: 10 },
-  retryButton: { marginTop: 16, minHeight: 40, paddingHorizontal: 18, borderRadius: 9, backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center' },
-  retryText: { color: brand.white, fontWeight: '700', fontSize: 13 },
+  retryButton: { marginTop: 16, minHeight: 40, paddingHorizontal: 18, borderRadius: 9, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  retryText: { color: colors.accentContrastText, fontWeight: '700', fontSize: 13 },
   list: { flex: 1 },
   listContent: { paddingVertical: 16, gap: 10 },
-  item: { minHeight: 108, borderWidth: 1, borderColor: brand.border, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: brand.white },
-  unreadItem: { backgroundColor: brand.lavender, borderColor: '#DDD6FE' },
+  item: { minHeight: 108, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface },
+  unreadItem: { backgroundColor: colors.accentSoft, borderColor: '#DDD6FE' },
   itemIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: '#F3F0F7', alignItems: 'center', justifyContent: 'center' },
-  unreadIcon: { backgroundColor: '#EDE9FE' },
+  unreadIcon: { backgroundColor: colors.accentSoft },
   itemCopy: { flex: 1, minWidth: 0 },
   itemTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  itemTitle: { flex: 1, color: brand.ink, fontSize: 14, lineHeight: 20, fontWeight: '800' },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, marginTop: 5, backgroundColor: brand.violet },
-  itemMessage: { color: brand.muted, fontSize: 12, lineHeight: 18, marginTop: 5 },
+  itemTitle: { flex: 1, color: colors.ink, fontSize: 14, lineHeight: 20, fontWeight: '800' },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, marginTop: 5, backgroundColor: colors.accent },
+  itemMessage: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 5 },
   itemDate: { color: '#928B9E', fontSize: 11, marginTop: 7 },
 });

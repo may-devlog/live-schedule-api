@@ -17,12 +17,13 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { AppHeader } from "../../components/GenBGTBrand";
 import { AppTabBar } from "../../components/AppTabBar";
-
-const brand = { violet: "#7C3AED", violetDark: "#5B21B6", ink: "#201B2C", muted: "#6B6675", border: "#E8E3F1" };
+import { useTheme, type ThemeColors } from "../../contexts/ThemeContext";
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
   const { logout } = useAuth();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -75,11 +76,11 @@ export default function DeleteAccountScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader active="archive" />
       <ScrollView contentContainerStyle={styles.container}>
         <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={18} color={brand.violet} />
+          <Ionicons name="chevron-back" size={18} color={colors.accent} />
           <Text style={styles.backLinkText}>戻る</Text>
         </TouchableOpacity>
 
@@ -122,17 +123,17 @@ export default function DeleteAccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { padding: 16, maxWidth: 560, width: "100%", alignSelf: "center" },
   backLink: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12, alignSelf: "flex-start" },
-  backLinkText: { color: brand.violet, fontSize: 14, fontWeight: "700" },
-  title: { fontSize: 24, fontWeight: "800", marginBottom: 16, color: brand.ink },
+  backLinkText: { color: colors.accent, fontSize: 14, fontWeight: "700" },
+  title: { fontSize: 24, fontWeight: "800", marginBottom: 16, color: colors.ink },
   warningBox: { backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FCA5A5", borderRadius: 12, padding: 16, marginBottom: 24, gap: 8 },
   warningHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
   warningTitle: { color: "#DC2626", fontSize: 15, fontWeight: "800" },
   warningText: { color: "#7F1D1D", fontSize: 13, lineHeight: 20 },
-  label: { fontSize: 14, fontWeight: "700", color: brand.ink, marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: brand.border, borderRadius: 10, padding: 14, fontSize: 16, backgroundColor: "#FFFFFF", marginBottom: 24 },
+  label: { fontSize: 14, fontWeight: "700", color: colors.ink, marginBottom: 8 },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14, fontSize: 16, backgroundColor: colors.surface, marginBottom: 24 },
   deleteButton: { backgroundColor: "#DC2626", borderRadius: 10, minHeight: 52, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 },
   deleteButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
   buttonDisabled: { opacity: 0.5 },

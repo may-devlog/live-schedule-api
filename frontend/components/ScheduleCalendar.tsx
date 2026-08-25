@@ -13,6 +13,7 @@ import { IconX } from "@/components/FeatherSvgIcons";
 import type { Schedule } from "../app/HomeScreen";
 import { NotionTag } from "./notion-tag";
 import { getOptionColor } from "../utils/get-option-color";
+import { useTheme, type ThemeColors } from "../contexts/ThemeContext";
 
 // カレンダーの幅計算はスタイル内で行う
 
@@ -180,6 +181,8 @@ export function isJapaneseHolidayDate(dateString: string): boolean {
 }
 
 export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress }: ScheduleCalendarProps) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -393,8 +396,6 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
                 styles.dayCell,
                 isToday && styles.todayCell,
                 hasSchedule && styles.hasScheduleCell,
-                // 今日かつ予定ありの場合は「青ベース＋緑の縁取り」にする
-                isToday && hasSchedule && styles.todayWithScheduleCell,
               ]}
               onPress={() => handleDatePress(day)}
               activeOpacity={0.7}
@@ -438,7 +439,7 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
                 onPress={() => setShowScheduleModal(false)}
                 style={styles.modalCloseButton}
               >
-                <IconX size={20} color="#37352f" />
+                <IconX size={20} color={colors.ink} />
               </TouchableOpacity>
             </View>
 
@@ -489,9 +490,9 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderRadius: 14,
     paddingTop: 10,
     marginVertical: 0,
@@ -509,17 +510,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 20,
-    backgroundColor: "#F5F3FF",
+    backgroundColor: colors.accentSoft,
   },
   navButtonText: {
     fontSize: 24,
-    color: "#7C3AED",
+    color: colors.accent,
     fontWeight: "bold",
   },
   monthYear: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#201B2C",
+    color: colors.ink,
   },
   weekdayHeader: {
     flexDirection: "row",
@@ -534,7 +535,7 @@ const styles = StyleSheet.create({
   weekdayText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#6B6675",
+    color: colors.muted,
     minWidth: 30,
     textAlign: "center",
     fontVariant: ["tabular-nums"],
@@ -561,34 +562,29 @@ const styles = StyleSheet.create({
     minHeight: 62,
   },
   todayCell: {
-    backgroundColor: "#EDE9FE",
-    borderRadius: 18,
-  },
-  todayWithScheduleCell: {
-    backgroundColor: "#EDE9FE",
     borderRadius: 18,
     borderWidth: 2,
-    borderColor: "#7C3AED",
+    borderColor: colors.accent,
   },
   hasScheduleCell: {
-    backgroundColor: "#F5F3FF",
+    backgroundColor: colors.accentSoft,
     borderRadius: 18,
   },
   dayText: {
     fontSize: 14,
-    color: "#201B2C",
+    color: colors.ink,
     fontWeight: "500",
     fontVariant: ["tabular-nums"],
   },
   hasScheduleText: {
     fontWeight: "600",
-    color: "#6D28D9",
+    color: colors.accentDark,
   },
   scheduleBadge: {
     position: "absolute",
     top: 2,
     right: 2,
-    backgroundColor: "#7C3AED",
+    backgroundColor: colors.accent,
     borderRadius: 10,
     minWidth: 18,
     height: 18,
@@ -596,11 +592,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 4,
     borderWidth: 1,
-    borderColor: "#ffffff",
+    borderColor: colors.surface,
   },
   scheduleBadgeText: {
     fontSize: 10,
-    color: "#ffffff",
+    color: colors.accentContrastText,
     fontWeight: "bold",
     lineHeight: 12,
   },
@@ -610,7 +606,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: "80%",
@@ -624,12 +620,12 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#e9e9e7",
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#37352f",
+    color: colors.ink,
   },
   modalCloseButton: {
     width: 32,
@@ -637,28 +633,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 16,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.accentSoft,
   },
   modalCloseButtonText: {
     fontSize: 20,
-    color: "#666",
+    color: colors.ink,
     fontWeight: "bold",
   },
   scheduleItem: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
   },
   scheduleItemTime: {
     fontSize: 12,
-    color: "#787774",
+    color: colors.muted,
     marginBottom: 4,
     fontWeight: "500",
   },
   scheduleItemTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#37352f",
+    color: colors.ink,
     marginBottom: 4,
   },
   scheduleItemVenueContainer: {
@@ -670,11 +666,11 @@ const styles = StyleSheet.create({
   },
   scheduleItemVenue: {
     fontSize: 12,
-    color: "#787774",
+    color: colors.muted,
   },
   scheduleItemSeparator: {
     height: 1,
-    backgroundColor: "#e9e9e7",
+    backgroundColor: colors.border,
     marginHorizontal: 20,
   },
   newScheduleButton: {
@@ -682,19 +678,19 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    backgroundColor: "#7C3AED",
+    backgroundColor: colors.accent,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
   newScheduleButtonText: {
-    color: "#ffffff",
+    color: colors.accentContrastText,
     fontSize: 16,
     fontWeight: "600",
   },
   scheduleListSeparator: {
     height: 1,
-    backgroundColor: "#e9e9e7",
+    backgroundColor: colors.border,
     marginHorizontal: 20,
     marginVertical: 8,
   },

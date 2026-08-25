@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Platform, View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme, type ThemeColors } from "../contexts/ThemeContext";
 
 type PropertyProps = {
   label: string;
@@ -13,6 +14,8 @@ type PropertyProps = {
 };
 
 export function NotionProperty({ label, value, children, onPress, isLast, alignValue = "left" }: PropertyProps) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const content = children || (
     <Text style={[styles.value, alignValue === "right" && styles.valueRight]}>{value ?? "-"}</Text>
   );
@@ -43,6 +46,8 @@ type PropertyBlockProps = {
 };
 
 export function NotionPropertyBlock({ children, title, iconName, collapsibleOnMobile = true }: PropertyBlockProps) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const isCollapsible = isMobile && collapsibleOnMobile;
@@ -56,10 +61,10 @@ export function NotionPropertyBlock({ children, title, iconName, collapsibleOnMo
   const validChildren = React.Children.toArray(children).filter(
     (child) => React.isValidElement(child)
   );
-  
+
   // 有効な子要素の数をカウント
   let validChildIndex = 0;
-  
+
   return (
     <View style={styles.block}>
       {title && (
@@ -70,9 +75,9 @@ export function NotionPropertyBlock({ children, title, iconName, collapsibleOnMo
           accessibilityRole={isCollapsible ? "button" : undefined}
           accessibilityState={isCollapsible ? { expanded } : undefined}
         >
-          {!!iconName && <Ionicons name={iconName} size={22} color="#5B21B6" style={styles.blockIcon} />}
+          {!!iconName && <Ionicons name={iconName} size={22} color={colors.accentDark} style={styles.blockIcon} />}
           <Text style={styles.blockTitle}>{title}</Text>
-          {isCollapsible && <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color="#7C3AED" />}
+          {isCollapsible && <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color={colors.accent} />}
         </TouchableOpacity>
       )}
       {expanded && <View style={styles.properties}>
@@ -93,14 +98,14 @@ export function NotionPropertyBlock({ children, title, iconName, collapsibleOnMo
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   block: {
     marginBottom: 24,
     padding: 20,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#E8E3F1",
-    backgroundColor: "#FFFFFF",
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     ...(Platform.OS === "web" ? ({ boxShadow: "0 10px 30px rgba(46,16,101,0.06)" } as any) : {}),
   },
   blockTitleContainer: {
@@ -120,18 +125,18 @@ const styles = StyleSheet.create({
   blockTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#201B2C",
+    color: colors.ink,
     width: "100%",
     flex: 1,
   },
   properties: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
   propertyRow: {
     flexDirection: "row",
     minHeight: 46,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0ECF5",
+    borderBottomColor: colors.border,
     paddingHorizontal: 0,
     paddingVertical: 0,
   },
@@ -147,7 +152,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: "#3F3948",
+    color: colors.muted,
     fontWeight: "400",
     letterSpacing: 0.2,
   },
@@ -161,7 +166,7 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: 14,
-    color: "#201B2C",
+    color: colors.ink,
     lineHeight: 21,
     fontWeight: "400",
   },

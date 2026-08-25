@@ -20,6 +20,7 @@ type Stay = {
 
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { NotionProperty, NotionPropertyBlock } from "../../components/notion-property";
+import { useTheme, type SchemeKey, type ThemeColors } from "../../contexts/ThemeContext";
 import { NotionTag } from "../../components/notion-tag";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppHeader, PublicFooter } from "../../components/GenBGTBrand";
@@ -34,6 +35,8 @@ export default function StayDetailScreen() {
   const { stayId } = useLocalSearchParams<{ stayId: string }>();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const { colors, scheme } = useTheme();
+  const styles = getStyles(colors, scheme);
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
@@ -255,7 +258,7 @@ export default function StayDetailScreen() {
   );
 
   if (loading) {
-    return renderStatePage(<ActivityIndicator color="#7C3AED" size="large" />);
+    return renderStatePage(<ActivityIndicator color={colors.accent} size="large" />);
   }
 
   if (error) {
@@ -281,8 +284,8 @@ export default function StayDetailScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-            colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+            tintColor={Platform.OS === 'ios' ? colors.accent : undefined}
+            colors={Platform.OS === 'android' ? [colors.accent] : undefined}
           />
         }
         scrollEnabled={true}
@@ -325,21 +328,21 @@ export default function StayDetailScreen() {
                 style={styles.duplicateButton}
                 onPress={handleDuplicate}
               >
-                <Ionicons name="copy-outline" size={17} color="#5B21B6" />
+                <Ionicons name="copy-outline" size={17} color={colors.accentDark} />
                 <Text style={styles.duplicateButtonText}>複製</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.editButton}
                 onPress={handleEdit}
               >
-                <Ionicons name="create-outline" size={17} color="#FFFFFF" />
+                <Ionicons name="create-outline" size={17} color={colors.accentContrastText} />
                 <Text style={styles.editButtonText}>編集</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={handleDelete}
               >
-                <Ionicons name="trash-outline" size={17} color="#DC2626" />
+                <Ionicons name="trash-outline" size={17} color={scheme === "dark" ? "#F87171" : "#DC2626"} />
                 <Text style={styles.deleteButtonText}>削除</Text>
               </TouchableOpacity>
             </View>
@@ -479,10 +482,10 @@ function formatDateValue(value: string): string {
   return value.replace(/^(\d{4})-(\d{2})-(\d{2})/, "$1.$2.$3");
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, scheme: SchemeKey) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
   stateScroll: { flexGrow: 1 },
   stateContent: { minHeight: 420, padding: 24, alignItems: "center", justifyContent: "center" },
@@ -510,7 +513,7 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 40,
     fontWeight: "700",
-    color: "#37352f",
+    color: colors.ink,
     lineHeight: 48,
     flex: 1,
   },
@@ -523,48 +526,54 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   duplicateButton: {
-    backgroundColor: "#F5F3FF",
+    backgroundColor: colors.accentSoft,
     borderWidth: 1,
-    borderColor: "#C4B5FD",
+    borderColor: colors.border,
     paddingHorizontal: 16,
     minHeight: 42,
     borderRadius: 9,
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7,
   },
   duplicateButtonText: {
-    color: "#5B21B6",
+    color: colors.accentDark,
     fontSize: 14,
     fontWeight: "600",
   },
   editButton: {
-    backgroundColor: "#7C3AED",
+    backgroundColor: colors.accent,
     paddingHorizontal: 16,
     minHeight: 42,
     borderRadius: 9,
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7,
   },
   editButtonText: {
-    color: "#ffffff",
+    color: colors.accentContrastText,
     fontSize: 14,
     fontWeight: "600",
   },
   deleteButton: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: scheme === "dark" ? "rgba(220,38,38,0.16)" : "#FEF2F2",
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: scheme === "dark" ? "rgba(220,38,38,0.35)" : "#FECACA",
     paddingHorizontal: 16,
     minHeight: 42,
     borderRadius: 9,
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7,
   },
   deleteButtonText: {
-    color: "#DC2626",
+    color: scheme === "dark" ? "#F87171" : "#DC2626",
     fontSize: 14,
     fontWeight: "600",
   },
   emptyValue: {
     fontSize: 14,
-    color: "#9b9a97",
+    color: colors.muted,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: colors.ink,
+    marginBottom: 8,
   },
   errorText: {
     color: "#d93025",
@@ -582,7 +591,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#37352f",
+    color: colors.muted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },

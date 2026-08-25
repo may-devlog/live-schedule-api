@@ -23,9 +23,12 @@ import {
   saveSelectOptions,
 } from "../utils/select-options-storage";
 import { useAuth } from "@/contexts/AuthContext";
-import { AppHeader, PublicFooter, brand } from "../components/GenBGTBrand";
+import { AppHeader, PublicFooter } from "../components/GenBGTBrand";
+import { useTheme, type ThemeColors } from "../contexts/ThemeContext";
 
 export default function NewScheduleScreen() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const router = useRouter();
   const { copyFrom, date: initialDate } = useLocalSearchParams<{ copyFrom?: string; date?: string }>();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -549,8 +552,8 @@ export default function NewScheduleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: brand.lavender },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.surfaceAlt },
   pageContent: { flexGrow: 1 },
   container: {
     paddingTop: 32,
@@ -560,19 +563,19 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
   },
-  eyebrow: { color: brand.violet, fontSize: 11, fontWeight: "800", letterSpacing: 1.8, marginBottom: 7 },
+  eyebrow: { color: colors.accent, fontSize: 11, fontWeight: "800", letterSpacing: 1.8, marginBottom: 7 },
   title: {
     fontSize: 36,
     fontWeight: "800",
-    color: brand.ink,
+    color: colors.ink,
     marginBottom: 8,
   },
-  lead: { color: brand.muted, fontSize: 14, marginBottom: 24 },
-  formCard: { backgroundColor: brand.white, borderWidth: 1, borderColor: brand.border, borderRadius: 16, padding: 28, shadowColor: '#2E1065', shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
+  lead: { color: colors.muted, fontSize: 14, marginBottom: 24 },
+  formCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 28, shadowColor: '#2E1065', shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
   label: {
     fontSize: 13,
     fontWeight: "700",
-    color: brand.ink,
+    color: colors.ink,
     marginBottom: 7,
   },
   required: {
@@ -581,12 +584,12 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: brand.border,
+    borderColor: colors.border,
     borderRadius: 9,
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontSize: 14,
-    color: brand.ink,
+    color: colors.ink,
     minHeight: 46,
     marginBottom: 18,
   },
@@ -596,7 +599,7 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 32,
-    backgroundColor: brand.violet,
+    backgroundColor: colors.accent,
     minHeight: 50,
     paddingVertical: 14,
     borderRadius: 10,
@@ -606,7 +609,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: "#ffffff",
+    color: colors.accentContrastText,
     fontSize: 14,
     fontWeight: "600",
   },

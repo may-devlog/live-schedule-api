@@ -2,9 +2,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTheme, type ThemeColors } from '../../contexts/ThemeContext';
 
 export default function BillingCancelScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   return (
     <View style={styles.container}>
       <Text style={styles.title}>お支払いをキャンセルしました</Text>
@@ -16,10 +19,10 @@ export default function BillingCancelScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#ffffff' },
-  title: { fontSize: 22, fontWeight: '800', marginBottom: 12, color: '#201B2C', textAlign: 'center' },
-  message: { fontSize: 15, textAlign: 'center', marginBottom: 24, color: '#6B6675', lineHeight: 22 },
-  button: { backgroundColor: '#7C3AED', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 10 },
-  buttonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: colors.background },
+  title: { fontSize: 22, fontWeight: '800', marginBottom: 12, color: colors.ink, textAlign: 'center' },
+  message: { fontSize: 15, textAlign: 'center', marginBottom: 24, color: colors.muted, lineHeight: 22 },
+  button: { backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 14, borderRadius: 10 },
+  buttonText: { color: colors.accentContrastText, fontSize: 16, fontWeight: '700' },
 });

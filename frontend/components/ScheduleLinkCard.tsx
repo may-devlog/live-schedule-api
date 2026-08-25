@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { NotionTag } from "./notion-tag";
 import { getOptionColor, getOptionColorSync } from "../utils/get-option-color";
 import { isJapaneseHolidayDate } from "./ScheduleCalendar";
-import { brand } from "./GenBGTBrand";
+import { useTheme, type ThemeColors } from "../contexts/ThemeContext";
 
 type ScheduleLinkCardProps = {
   date?: string | null;
@@ -30,6 +30,8 @@ function formatDateWithWeekday(raw?: string | null) {
 }
 
 export function ScheduleLinkCard({ date, title, area, onPress, onRemove }: ScheduleLinkCardProps) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [areaColor, setAreaColor] = useState<string | undefined>(() => (area ? getOptionColorSync(area, "AREAS") : undefined));
 
   useEffect(() => {
@@ -73,42 +75,42 @@ export function ScheduleLinkCard({ date, title, area, onPress, onRemove }: Sched
       </View>
       {!!onPress && (
         <View style={styles.arrowButton}>
-          <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+          <Ionicons name="arrow-forward" size={18} color={colors.accentContrastText} />
         </View>
       )}
       {!!onRemove && (
         <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
-          <Ionicons name="close" size={18} color={brand.muted} />
+          <Ionicons name="close" size={18} color={colors.muted} />
         </TouchableOpacity>
       )}
     </Wrapper>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: brand.white,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: brand.border,
+    borderColor: colors.border,
     borderRadius: 14,
     padding: 14,
     ...(Platform.OS === "web" ? ({ boxShadow: "0 6px 20px rgba(46,16,101,0.05)" } as any) : {}),
   },
   content: { flex: 1, gap: 6, minWidth: 0 },
   dateRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
-  dateText: { color: brand.ink, fontSize: 13, lineHeight: 18, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  weekdayText: { color: brand.ink, fontSize: 12, lineHeight: 16, fontWeight: "700" },
+  dateText: { color: colors.ink, fontSize: 13, lineHeight: 18, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  weekdayText: { color: colors.ink, fontSize: 12, lineHeight: 16, fontWeight: "700" },
   saturdayText: { color: "#2563EB" },
   holidayText: { color: "#DC2626" },
-  title: { color: brand.ink, fontSize: 15, fontWeight: "700", lineHeight: 21 },
+  title: { color: colors.ink, fontSize: 15, fontWeight: "700", lineHeight: 21 },
   arrowButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: brand.violet,
+    backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
   },

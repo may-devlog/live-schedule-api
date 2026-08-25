@@ -22,7 +22,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="twitter:description" content="ライブの予定と費用を、ひとつの場所に。" />
         <meta name="application-name" content="GenBGT" />
         <meta name="apple-mobile-web-app-title" content="GenBGT" />
-        <meta name="theme-color" content="#5B21B6" />
+        <meta name="theme-color" content="#18181B" />
         <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="dns-prefetch" href="https://api.genbgt.com" />
         <link rel="preconnect" href="https://api.genbgt.com" crossOrigin="anonymous" />
