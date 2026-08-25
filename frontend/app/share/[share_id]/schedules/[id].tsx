@@ -21,7 +21,8 @@ import { getOptionColor } from "../../../../utils/get-option-color";
 import { loadSelectOptions } from "../../../../utils/select-options-storage";
 import type { Schedule } from "../../../HomeScreen";
 import { CollapsibleDetailSection } from "../../../../components/CollapsibleDetailSection";
-import { AppHeader, PublicFooter, PublicHeader, brand } from "../../../../components/GenBGTBrand";
+import { AppHeader, PublicFooter, PublicHeader } from "../../../../components/GenBGTBrand";
+import { useTheme, type ThemeColors } from "../../../../contexts/ThemeContext";
 import { AppTabBar } from "../../../../components/AppTabBar";
 import { isJapaneseHolidayDate } from "../../../../components/ScheduleCalendar";
 
@@ -64,6 +65,8 @@ type StaySummary = {
 type DetailScreenProps = { authenticated?: boolean; scheduleId?: string };
 
 export default function SharedScheduleDetailScreen({ authenticated = false, scheduleId }: DetailScreenProps = {}) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
   const isMobile = width < 600;
@@ -532,7 +535,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                   <View style={styles.relationScheduleRow}>
                     {!!related.start && <Text style={styles.relationTime}>{related.start}</Text>}
                     <Text style={styles.relationTitle} numberOfLines={2}>{related.title}</Text>
-                    <Ionicons name="chevron-forward" size={18} color={brand.muted} />
+                    <Ionicons name="chevron-forward" size={18} color={colors.muted} />
                   </View>
                   {(related.area || related.status) && (
                     <View style={styles.relationArea}>
@@ -583,7 +586,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
               <View style={[styles.cardMain, isMobile && styles.cardMainMobile]}>
                 <Text style={styles.cardRouteBold}>{detailWithNotes}</Text>
                 <View style={styles.cardSubRow}>
-                  <Ionicons name="calendar-outline" size={15} color={brand.violet} />
+                  <Ionicons name="calendar-outline" size={15} color={colors.accent} />
                   <View style={styles.datePartsRow}>
                     <Text style={styles.dateValue}>{dateDisplay(traffic.date).date}</Text>
                     <Text style={[styles.weekdayText, dateDisplay(traffic.date).tone === "saturday" && styles.saturdayText, dateDisplay(traffic.date).tone === "holiday" && styles.holidayText]}>{dateDisplay(traffic.date).weekday}</Text>
@@ -594,7 +597,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                 <Text style={styles.cardPrice}>{formatCurrency(displayFare)}</Text>
                 {displayMiles !== null && displayMiles !== undefined && <Text style={styles.cardMiles}>{displayMiles}マイル</Text>}
               </View>
-              <Ionicons name="chevron-forward" size={20} color={brand.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
+              <Ionicons name="chevron-forward" size={20} color={colors.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
             </TouchableOpacity>
           );
         })
@@ -629,7 +632,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
               <View style={[styles.cardMain, isMobile && styles.stayMainMobile]}>
                 {authenticated && <Text style={styles.cardRouteBold}>{stay.hotel_name}</Text>}
                 <View style={styles.cardSubRow}>
-                  {!isNarrowMobile && <Ionicons name="calendar-outline" size={15} color={brand.violet} />}
+                  {!isNarrowMobile && <Ionicons name="calendar-outline" size={15} color={colors.accent} />}
                   <Text style={[styles.stayDateLabel, isMobile && styles.stayDateLabelMobile, isNarrowMobile && styles.stayDateLabelNarrow]}>チェックイン</Text>
                   <View style={[styles.datePartsRow, isMobile && styles.stayDatePartsMobile, isNarrowMobile && styles.stayDatePartsNarrow]}>
                     <Text style={styles.dateValue}>{checkInFormatted.date}</Text>
@@ -638,7 +641,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                   </View>
                 </View>
                 <View style={styles.cardSubRow}>
-                  {!isNarrowMobile && <Ionicons name="calendar-outline" size={15} color={brand.violet} />}
+                  {!isNarrowMobile && <Ionicons name="calendar-outline" size={15} color={colors.accent} />}
                   <Text style={[styles.stayDateLabel, isMobile && styles.stayDateLabelMobile, isNarrowMobile && styles.stayDateLabelNarrow]}>チェックアウト</Text>
                   <View style={[styles.datePartsRow, isMobile && styles.stayDatePartsMobile, isNarrowMobile && styles.stayDatePartsNarrow]}>
                     <Text style={styles.dateValue}>{checkOutFormatted.date}</Text>
@@ -653,7 +656,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                 </Text>
                 <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={brand.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
+              <Ionicons name="chevron-forward" size={20} color={colors.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
             </TouchableOpacity>
           );
         })
@@ -723,14 +726,14 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
             </View>
             <View style={styles.heroMeta}>
               <View style={styles.metaItem}>
-                <Ionicons name="calendar-outline" size={16} color={brand.violet} />
+                <Ionicons name="calendar-outline" size={16} color={colors.accent} />
                 <View style={styles.heroDateRow}>
                   <Text style={styles.metaText}>{scheduleDateDisplay.date}</Text>
                   <Text style={[styles.weekdayText, scheduleDateDisplay.tone === "saturday" && styles.saturdayText, scheduleDateDisplay.tone === "holiday" && styles.holidayText]}>{scheduleDateDisplay.weekday}</Text>
                 </View>
               </View>
               <View style={styles.timeMetaRow}>
-                <Ionicons name="time-outline" size={16} color={brand.violet} />
+                <Ionicons name="time-outline" size={16} color={colors.accent} />
                 <Text style={styles.metaText}>
                   {[
                     schedule.open ? `開場 ${schedule.open}` : null,
@@ -741,20 +744,20 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
               </View>
               {!!schedule.venue && (
                 <View style={styles.metaItem}>
-                  <Ionicons name="location-outline" size={16} color={brand.violet} />
+                  <Ionicons name="location-outline" size={16} color={colors.accent} />
                   <Text style={styles.metaText}>{schedule.venue}</Text>
                 </View>
               )}
             </View>
             {authenticated && isMobile && <View style={styles.heroActions}>
-              <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={brand.violetDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={brand.white} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={colors.accentDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={'#FFFFFF'} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
               <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Ionicons name="trash-outline" size={17} color="#DC2626" /><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
             </View>}
           </View>
           {authenticated && !isMobile && <View style={[styles.heroActions, styles.heroActionsVertical]}>
-            <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={brand.violetDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={brand.white} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={colors.accentDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={'#FFFFFF'} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
             <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Ionicons name="trash-outline" size={17} color="#DC2626" /><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
           </View>}
         </View>
@@ -798,10 +801,10 @@ const DESKTOP_GRID_GAP = 20;
 const DESKTOP_WIDE_COLUMN = { flex: 2 } as const;
 const DESKTOP_NARROW_COLUMN = { flex: 1 } as const;
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: brand.lavender,
+    backgroundColor: colors.surfaceAlt,
   },
   scrollPage: { flexGrow: 1 },
   scrollContent: {
@@ -819,7 +822,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginBottom: 18,
   },
-  backLinkText: { color: brand.violet, fontSize: 14, fontWeight: "400" },
+  backLinkText: { color: colors.accent, fontSize: 14, fontWeight: "400" },
   heroCard: {
     flexDirection: "row",
     gap: 18,
@@ -827,25 +830,25 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: brand.border,
-    backgroundColor: brand.white,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     ...(Platform.OS === "web" ? ({ boxShadow: "0 14px 40px rgba(46,16,101,0.08)" } as any) : {}),
   },
   heroCardMobile: { padding: 18 },
   heroCopy: { flex: 1, minWidth: 0 },
   heroActions: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 16 },
   heroActionsVertical: { flexDirection: "column", alignItems: "stretch", gap: 8, marginTop: 0 },
-  duplicateAction: { minHeight: 42, paddingHorizontal: 14, backgroundColor: brand.lavender, borderWidth: 1, borderColor: "#C4B5FD", borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
-  duplicateActionText: { color: brand.violetDark, fontSize: 14, fontWeight: "700" },
-  editAction: { minHeight: 42, paddingHorizontal: 14, backgroundColor: brand.violet, borderWidth: 1, borderColor: brand.violet, borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
-  editActionText: { color: brand.white, fontSize: 14, fontWeight: "700" },
+  duplicateAction: { minHeight: 42, paddingHorizontal: 14, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: "#C4B5FD", borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  duplicateActionText: { color: colors.accentDark, fontSize: 14, fontWeight: "700" },
+  editAction: { minHeight: 42, paddingHorizontal: 14, backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent, borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  editActionText: { color: '#FFFFFF', fontSize: 14, fontWeight: "700" },
   deleteAction: { minHeight: 42, paddingHorizontal: 14, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: 7, borderWidth: 1, borderColor: "#FECACA", backgroundColor: "#FEF2F2", borderRadius: 9 },
   deleteActionText: { color: "#DC2626", fontSize: 14, fontWeight: "600" },
   heroBadges: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 },
   mainTitle: {
     fontSize: 30,
     fontWeight: "800",
-    color: brand.ink,
+    color: colors.ink,
     lineHeight: 40,
     letterSpacing: -0.5,
   },
@@ -853,8 +856,8 @@ const styles = StyleSheet.create({
   timeMetaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" },
   heroDateRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
-  metaText: { color: brand.ink, fontSize: 14, lineHeight: 21, fontWeight: "400", flexShrink: 1 },
-  weekdayText: { color: brand.ink, fontWeight: "700", minWidth: 0, textAlign: "left", fontVariant: ["tabular-nums"], fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
+  metaText: { color: colors.ink, fontSize: 14, lineHeight: 21, fontWeight: "400", flexShrink: 1 },
+  weekdayText: { color: colors.ink, fontWeight: "700", minWidth: 0, textAlign: "left", fontVariant: ["tabular-nums"], fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
   stayWeekdayText: { width: 52, minWidth: 52, textAlign: "left" },
   stayWeekdayTextMobile: { width: 42, minWidth: 42 },
   stayWeekdayTextNarrow: { width: 36, minWidth: 36, fontSize: 12 },
@@ -892,22 +895,22 @@ const styles = StyleSheet.create({
   },
   relationDate: {
     fontSize: 13,
-    color: brand.ink,
+    color: colors.ink,
     fontWeight: "400",
     fontVariant: ["tabular-nums"],
     marginBottom: 6,
   },
   relationScheduleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  relationTime: { fontSize: 13, lineHeight: 20, color: brand.muted, fontVariant: ["tabular-nums"] },
+  relationTime: { fontSize: 13, lineHeight: 20, color: colors.muted, fontVariant: ["tabular-nums"] },
   relationTitle: {
     flex: 1,
     fontSize: 13,
     lineHeight: 20,
     fontWeight: "700",
-    color: brand.ink,
+    color: colors.ink,
   },
   relationArea: { alignSelf: "flex-start", marginLeft: 48, marginTop: 4, flexDirection: "row", gap: 7 },
-  relationVenue: { marginLeft: 48, marginTop: 4, color: brand.muted, fontSize: 12, lineHeight: 18 },
+  relationVenue: { marginLeft: 48, marginTop: 4, color: colors.muted, fontSize: 12, lineHeight: 18 },
   relationLink: {
     fontSize: 14,
     color: "#37352f",
@@ -956,10 +959,10 @@ const styles = StyleSheet.create({
   },
   trafficTag: { width: 82, alignItems: "flex-start" },
   trafficTagMobile: { width: 82 },
-  stayIcon: { width: 54, height: 54, borderRadius: 8, backgroundColor: brand.violet, alignItems: "center", justifyContent: "center" },
+  stayIcon: { width: 54, height: 54, borderRadius: 8, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   cardMain: { flex: 1, minWidth: 0, gap: 7 },
-  cardRoute: { color: brand.ink, fontSize: 14, lineHeight: 20, fontWeight: "400" },
-  cardRouteBold: { color: brand.ink, fontSize: 14, lineHeight: 20, fontWeight: "700" },
+  cardRoute: { color: colors.ink, fontSize: 14, lineHeight: 20, fontWeight: "400" },
+  cardRouteBold: { color: colors.ink, fontSize: 14, lineHeight: 20, fontWeight: "700" },
   transportCardMobile: { flexWrap: "wrap", paddingRight: 38 },
   cardMainMobile: { flexBasis: "65%", flexGrow: 1 },
   cardPriceMobile: { marginLeft: "auto" },
@@ -968,7 +971,7 @@ const styles = StyleSheet.create({
   stayCardActions: { flexDirection: "row", alignItems: "center", gap: 14 },
   stayCardActionsMobile: { flexBasis: "100%", justifyContent: "flex-end", paddingRight: 2 },
   cardSubRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  stayDateLabel: { width: 100, color: brand.muted, fontSize: 11, fontWeight: "400" },
+  stayDateLabel: { width: 100, color: colors.muted, fontSize: 11, fontWeight: "400" },
   stayDateLabelMobile: { width: 82, flexShrink: 0 },
   stayDateLabelNarrow: { width: 72, fontSize: 10 },
   stayDatePartsMobile: { flexWrap: "nowrap", columnGap: 6 },
@@ -992,7 +995,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontVariant: ["tabular-nums"],
   },
-  totalCostText: { color: brand.violet, fontSize: 20, lineHeight: 26, fontWeight: "800", fontVariant: ["tabular-nums"], textAlign: "right" },
+  totalCostText: { color: colors.accent, fontSize: 20, lineHeight: 26, fontWeight: "800", fontVariant: ["tabular-nums"], textAlign: "right" },
   cardMiles: {
     fontSize: 12,
     color: "#787774",
@@ -1015,5 +1018,5 @@ const styles = StyleSheet.create({
   },
   breakfastTagOff: { color: "#77717F", backgroundColor: "#F0EEF2" },
   addAction: { alignSelf: "center", paddingHorizontal: 18, paddingVertical: 8 },
-  addActionText: { color: brand.violet, fontSize: 14, fontWeight: "600", textAlign: "center" },
+  addActionText: { color: colors.accent, fontSize: 14, fontWeight: "600", textAlign: "center" },
 });

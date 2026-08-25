@@ -7465,6 +7465,67 @@ async fn update_notification_settings(
     }))
 }
 
+#[derive(Serialize)]
+struct ThemeSettings {
+    scheme: String,
+    accent: String,
+}
+
+#[derive(Deserialize)]
+struct UpdateThemeSettingsRequest {
+    scheme: String,
+    accent: String,
+}
+
+const VALID_THEME_SCHEMES: [&str; 2] = ["light", "dark"];
+const VALID_THEME_ACCENTS: [&str; 6] = ["black", "blue", "green", "orange", "pink", "purple"];
+
+// 外観設定（Scheme: light/dark、Accent Color）を取得
+async fn get_theme_settings(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+) -> Result<Json<ThemeSettings>, StatusCode> {
+    let row: (String, String) = sqlx::query_as(
+        "SELECT theme_scheme, theme_accent FROM users WHERE id = ?"
+    )
+    .bind(user.user_id as i64)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        eprintln!("Error fetching theme settings: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(ThemeSettings { scheme: row.0, accent: row.1 }))
+}
+
+// 外観設定（Scheme: light/dark、Accent Color）を更新
+async fn update_theme_settings(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<UpdateThemeSettingsRequest>,
+) -> Result<Json<ThemeSettings>, (StatusCode, Json<ErrorResponse>)> {
+    if !VALID_THEME_SCHEMES.contains(&payload.scheme.as_str()) {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "不正なSchemeです".to_string() })));
+    }
+    if !VALID_THEME_ACCENTS.contains(&payload.accent.as_str()) {
+        return Err((StatusCode::BAD_REQUEST, Json(ErrorResponse { error: "不正なAccent Colorです".to_string() })));
+    }
+
+    sqlx::query("UPDATE users SET theme_scheme = ?, theme_accent = ? WHERE id = ?")
+        .bind(&payload.scheme)
+        .bind(&payload.accent)
+        .bind(user.user_id as i64)
+        .execute(&pool)
+        .await
+        .map_err(|e| {
+            eprintln!("Error updating theme settings: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "外観設定の更新に失敗しました".to_string() }))
+        })?;
+
+    Ok(Json(ThemeSettings { scheme: payload.scheme, accent: payload.accent }))
+}
+
 #[derive(Deserialize)]
 struct PushTokenRequest {
     token: String,
@@ -7989,6 +8050,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/notifications", get(list_notifications))
         .route("/notifications/:id/read", put(mark_notification_read))
         .route("/notification-settings", get(get_notification_settings).put(update_notification_settings))
+        .route("/theme-settings", get(get_theme_settings).put(update_theme_settings))
         .route("/push-tokens", post(register_push_token).delete(delete_push_token))
         .layer(cors)
         .layer(Extension(pool.clone()));
@@ -8053,6 +8115,8 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       sharing_enabled       INTEGER NOT NULL DEFAULT 0,
       avatar_data_url       TEXT,
       display_name          TEXT,
+      theme_scheme          TEXT NOT NULL DEFAULT 'light',
+      theme_accent          TEXT NOT NULL DEFAULT 'black',
       created_at            TEXT,
       updated_at            TEXT
     );
@@ -8816,6 +8880,18 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     }
     if !column_exists(pool, "users", "notify_push_enabled").await? {
         sqlx::query("ALTER TABLE users ADD COLUMN notify_push_enabled INTEGER NOT NULL DEFAULT 1")
+            .execute(pool)
+            .await?;
+    }
+
+    // 外観設定（Scheme: light/dark、Accent Color: black/blue/green/orange/pink/purple）
+    if !column_exists(pool, "users", "theme_scheme").await? {
+        sqlx::query("ALTER TABLE users ADD COLUMN theme_scheme TEXT NOT NULL DEFAULT 'light'")
+            .execute(pool)
+            .await?;
+    }
+    if !column_exists(pool, "users", "theme_accent").await? {
+        sqlx::query("ALTER TABLE users ADD COLUMN theme_accent TEXT NOT NULL DEFAULT 'black'")
             .execute(pool)
             .await?;
     }

@@ -12,9 +12,12 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { IconEye, IconEyeOff } from '@/components/FeatherSvgIcons';
-import { AuthHeader, BrandMark, PublicFooter, brand } from '@/components/GenBGTBrand';
+import { AuthHeader, BrandMark, PublicFooter } from '@/components/GenBGTBrand';
+import { useTheme, type ThemeColors } from '@/contexts/ThemeContext';
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -92,7 +95,7 @@ export default function LoginScreen() {
                 underlineColorAndroid="transparent"
               />
               <TouchableOpacity style={styles.passwordToggle} onPress={() => setShowPassword(!showPassword)} disabled={loading} accessibilityLabel="パスワードを表示">
-                {showPassword ? <IconEye size={19} color={brand.muted} /> : <IconEyeOff size={19} color={brand.muted} />}
+                {showPassword ? <IconEye size={19} color={colors.muted} /> : <IconEyeOff size={19} color={colors.muted} />}
               </TouchableOpacity>
             </View>
 
@@ -122,32 +125,32 @@ export default function LoginScreen() {
 
 const cardShadow = Platform.OS === 'web' ? ({ boxShadow: '0 18px 50px rgba(46,16,101,0.10)' } as any) : {};
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: brand.lavender },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.surfaceAlt },
   scrollContent: { flexGrow: 1 },
   main: { flex: 1, minHeight: 720, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 54, zIndex: 1 },
-  form: { width: '100%', maxWidth: 460, backgroundColor: '#FFFFFF', borderRadius: 24, borderWidth: 1, borderColor: brand.border, padding: 38, ...cardShadow },
+  form: { width: '100%', maxWidth: 460, backgroundColor: colors.surface, borderRadius: 24, borderWidth: 1, borderColor: colors.border, padding: 38, ...cardShadow },
   logoWrap: { alignItems: 'center', marginBottom: 20 },
-  title: { color: brand.ink, fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: -0.4 },
-  subtitle: { color: brand.muted, fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 9, marginBottom: 28 },
-  label: { color: brand.ink, fontSize: 14, fontWeight: '700', marginBottom: 8 },
-  input: { height: 50, borderWidth: 1, borderColor: '#D8D3E0', borderRadius: 10, paddingHorizontal: 14, fontSize: 15, color: brand.ink, backgroundColor: '#FFFFFF', marginBottom: 18 },
-  passwordContainer: { height: 50, flexDirection: 'row', alignItems: 'stretch', borderWidth: 1, borderColor: '#D8D3E0', borderRadius: 10, backgroundColor: '#FFFFFF', overflow: 'hidden' },
-  passwordInput: { flex: 1, minWidth: 0, paddingHorizontal: 14, fontSize: 15, color: brand.ink },
+  title: { color: colors.ink, fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: -0.4 },
+  subtitle: { color: colors.muted, fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 9, marginBottom: 28 },
+  label: { color: colors.ink, fontSize: 14, fontWeight: '700', marginBottom: 8 },
+  input: { height: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, fontSize: 15, color: colors.ink, backgroundColor: colors.surface, marginBottom: 18 },
+  passwordContainer: { height: 50, flexDirection: 'row', alignItems: 'stretch', borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.surface, overflow: 'hidden' },
+  passwordInput: { flex: 1, minWidth: 0, paddingHorizontal: 14, fontSize: 15, color: colors.ink },
   passwordToggle: { width: 48, alignItems: 'center', justifyContent: 'center' },
   forgotButton: { alignSelf: 'flex-end', paddingVertical: 10 },
-  linkText: { color: brand.violet, fontSize: 13, fontWeight: '600' },
+  linkText: { color: colors.accent, fontSize: 13, fontWeight: '600' },
   errorBox: { backgroundColor: '#FEF2F2', borderRadius: 8, padding: 11, marginBottom: 12 },
   errorText: { color: '#C2414B', fontSize: 13, lineHeight: 18 },
-  loginButton: { height: 50, backgroundColor: brand.violet, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  loginButton: { height: 50, backgroundColor: colors.accent, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   buttonDisabled: { opacity: 0.6 },
   loginButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginVertical: 20 },
-  divider: { flex: 1, height: 1, backgroundColor: brand.border },
-  dividerText: { color: brand.muted, fontSize: 12 },
-  registerButton: { height: 50, borderWidth: 1, borderColor: brand.violet, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  registerText: { color: brand.violet, fontSize: 14, fontWeight: '700' },
-  tagline: { color: brand.muted, fontSize: 14, marginTop: 28, textAlign: 'center' },
-  decorLeft: { position: 'absolute', width: 360, height: 360, borderRadius: 180, left: -200, top: 170, backgroundColor: '#EDE9FE', opacity: 0.55 },
-  decorRight: { position: 'absolute', width: 300, height: 300, borderRadius: 150, right: -150, top: 250, backgroundColor: '#EDE9FE', opacity: 0.55 },
+  divider: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { color: colors.muted, fontSize: 12 },
+  registerButton: { height: 50, borderWidth: 1, borderColor: colors.accent, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  registerText: { color: colors.accent, fontSize: 14, fontWeight: '700' },
+  tagline: { color: colors.muted, fontSize: 14, marginTop: 28, textAlign: 'center' },
+  decorLeft: { position: 'absolute', width: 360, height: 360, borderRadius: 180, left: -200, top: 170, backgroundColor: colors.accentSoft, opacity: 0.55 },
+  decorRight: { position: 'absolute', width: 300, height: 300, borderRadius: 150, right: -150, top: 250, backgroundColor: colors.accentSoft, opacity: 0.55 },
 });

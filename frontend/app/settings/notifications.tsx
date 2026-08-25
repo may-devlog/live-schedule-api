@@ -14,8 +14,7 @@ import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { getExpoPushToken, registerPushTokenWithServer } from "../../utils/pushNotifications";
 import { AppHeader } from "../../components/GenBGTBrand";
 import { AppTabBar } from "../../components/AppTabBar";
-
-const brand = { violet: "#7C3AED", violetDark: "#5B21B6", ink: "#201B2C", muted: "#6B6675", border: "#E8E3F1" };
+import { useTheme, type ThemeColors } from "../../contexts/ThemeContext";
 
 type NotificationSettings = {
   email_enabled: boolean;
@@ -23,6 +22,8 @@ type NotificationSettings = {
 };
 
 export default function NotificationSettingsScreen() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -113,7 +114,7 @@ export default function NotificationSettingsScreen() {
       <View style={styles.container}>
         <AppHeader active="archive" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color={brand.violet} />
+          <ActivityIndicator color={colors.accent} />
         </View>
         <AppTabBar active="archive" homePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
       </View>
@@ -121,7 +122,7 @@ export default function NotificationSettingsScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader active="archive" />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>通知設定</Text>
@@ -138,7 +139,7 @@ export default function NotificationSettingsScreen() {
             value={settings.email_enabled}
             onValueChange={handleToggleEmail}
             disabled={updating}
-            trackColor={{ false: "#E8E3F1", true: brand.violet }}
+            trackColor={{ false: colors.border, true: colors.accent }}
             thumbColor="#ffffff"
           />
         </View>
@@ -152,7 +153,7 @@ export default function NotificationSettingsScreen() {
             value={settings.push_enabled}
             onValueChange={handleTogglePush}
             disabled={updating}
-            trackColor={{ false: "#E8E3F1", true: brand.violet }}
+            trackColor={{ false: colors.border, true: colors.accent }}
             thumbColor="#ffffff"
           />
         </View>
@@ -162,22 +163,22 @@ export default function NotificationSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { padding: 16 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 8, color: brand.ink },
-  description: { fontSize: 14, color: brand.muted, marginBottom: 24, lineHeight: 20 },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 8, color: colors.ink },
+  description: { fontSize: 14, color: colors.muted, marginBottom: 24, lineHeight: 20 },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: brand.border,
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
   },
   rowText: { flex: 1, paddingRight: 16 },
-  rowTitle: { fontSize: 16, fontWeight: "700", color: brand.ink, marginBottom: 4 },
-  rowHelp: { fontSize: 12, color: brand.muted, lineHeight: 18 },
+  rowTitle: { fontSize: 16, fontWeight: "700", color: colors.ink, marginBottom: 4 },
+  rowHelp: { fontSize: 12, color: colors.muted, lineHeight: 18 },
 });

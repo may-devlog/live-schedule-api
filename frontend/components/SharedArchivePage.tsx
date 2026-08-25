@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { Schedule } from "../app/HomeScreen";
-import { AppHeader, PublicFooter, PublicHeader, brand } from "./GenBGTBrand";
+import { AppHeader, PublicFooter, PublicHeader } from "./GenBGTBrand";
+import { useTheme, type ThemeColors } from "../contexts/ThemeContext";
 import { AppTabBar } from "./AppTabBar";
 import { NotionTag } from "./notion-tag";
 import { getOptionColorSync, preloadOptionColors } from "../utils/get-option-color";
@@ -73,6 +74,8 @@ function GroupingChipsRow({ label, options, selected, onSelect, isDisabled }: {
   onSelect: (value: string) => void;
   isDisabled?: (value: string) => boolean;
 }) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const chips = options.map(([value, text]) => {
     const disabled = isDisabled?.(value) ?? false;
     return (
@@ -132,6 +135,8 @@ function dateParts(raw: string): ArchiveDateParts {
 }
 
 export function SharedArchivePage({ shareId, authenticated = false, initialYear, fetchSchedules, fetchStays, fetchAvailableYears, onSelectYear, onSchedulePress, onStayPress, canUseGrouping = true }: Props) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { width } = useWindowDimensions();
   const mobile = width < 720;
   // グループ化チップ行と並び順コントロールを横並びにすると、この間の幅では
@@ -405,7 +410,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           </View>
           {!!item.venue && <Text style={styles.venue} numberOfLines={1}>{item.venue}</Text>}
         </View>
-        <Ionicons name="chevron-forward" size={24} color={brand.violet} />
+        <Ionicons name="chevron-forward" size={24} color={colors.accent} />
       </TouchableOpacity>
     );
   };
@@ -434,7 +439,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
           </View>
           <Text style={styles.venue}>{stay.check_in.replace(/-/g, ".")} → {stay.check_out.replace(/-/g, ".")}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={24} color={brand.violet} />
+        <Ionicons name="chevron-forward" size={24} color={colors.accent} />
       </TouchableOpacity>
     );
   };
@@ -494,18 +499,18 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                 <Text style={styles.compactSelectLabel}>グループ順</Text>
                 <TouchableOpacity style={styles.compactSelect} onPress={() => { setMainSortMenuOpen((open) => !open); setSortMenuOpen(false); }}>
                   <Text style={styles.compactSelectText}>{mainSortMode === "default" ? "デフォルト" : "五十音順"}</Text>
-                  <Ionicons name={mainSortMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
+                  <Ionicons name={mainSortMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={colors.muted} />
                 </TouchableOpacity>
                 {mainSortMenuOpen && <View style={styles.compactSelectMenu}>
                   {([['default', 'デフォルト'], ['kana', '五十音順']] as const).map(([value, label]) => <TouchableOpacity key={value} style={styles.compactSelectOption} onPress={() => { setMainSortMode(value); setMainSortMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, mainSortMode === value && styles.compactSelectOptionActive]}>{label}</Text></TouchableOpacity>)}
                 </View>}
-                {isSortingKana && <ActivityIndicator size="small" color={brand.violet} style={styles.kanaSortingIndicator} />}
+                {isSortingKana && <ActivityIndicator size="small" color={colors.accent} style={styles.kanaSortingIndicator} />}
               </View>}
               <View style={styles.compactSelectWrap}>
                 <Text style={styles.compactSelectLabel}>並び順</Text>
                 <TouchableOpacity style={styles.compactSelect} onPress={() => { setSortMenuOpen((open) => !open); setMainSortMenuOpen(false); }}>
                   <Text style={styles.compactSelectText}>{sortOrder === "asc" ? "昇順" : "降順"}</Text>
-                  <Ionicons name={sortMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={brand.muted} />
+                  <Ionicons name={sortMenuOpen ? "chevron-up" : "chevron-down"} size={16} color={colors.muted} />
                 </TouchableOpacity>
                 {sortMenuOpen && <View style={styles.compactSelectMenu}>
                   {([['asc', '昇順'], ['desc', '降順']] as const).map(([value, label]) => <TouchableOpacity key={value} style={styles.compactSelectOption} onPress={() => { setSortOrder(value); setSortMenuOpen(false); }}><Text style={[styles.compactSelectOptionText, sortOrder === value && styles.compactSelectOptionActive]}>{label}</Text></TouchableOpacity>)}
@@ -514,13 +519,13 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
             </View>
           </View>
 
-          {loading ? <ActivityIndicator color={brand.violet} style={styles.loader} /> : error ? <Text style={styles.error}>{error}</Text> : archiveType === "stay" ? (
+          {loading ? <ActivityIndicator color={colors.accent} style={styles.loader} /> : error ? <Text style={styles.error}>{error}</Text> : archiveType === "stay" ? (
             stayGroups.map(([title, items]) => {
               const key = `stay-${title}`;
               const collapsed = collapsedSections.has(key);
               const color = stayGrouping === "website" ? (websiteColorMap.get(title) ?? getOptionColorSync(title, "WEBSITE")) : stayGrouping === "status" ? (stayStatusColorMap.get(title) ?? getOptionColorSync(title, "STAY_STATUS")) : null;
               return <View key={key} style={styles.monthSection}>
-                {stayGrouping === "none" ? <Text style={styles.monthTitle}>{title}</Text> : <TouchableOpacity style={styles.groupHeader} onPress={() => toggleSection(key)}><Ionicons name={collapsed ? "chevron-forward" : "chevron-down"} size={18} color={brand.muted} style={styles.groupChevron} />{color ? <View style={styles.groupTagWrap}><NotionTag label={title} color={color} /></View> : <Text style={styles.groupTitle}>{title}</Text>}<Text style={styles.groupCount}>({items.length})</Text></TouchableOpacity>}
+                {stayGrouping === "none" ? <Text style={styles.monthTitle}>{title}</Text> : <TouchableOpacity style={styles.groupHeader} onPress={() => toggleSection(key)}><Ionicons name={collapsed ? "chevron-forward" : "chevron-down"} size={18} color={colors.muted} style={styles.groupChevron} />{color ? <View style={styles.groupTagWrap}><NotionTag label={title} color={color} /></View> : <Text style={styles.groupTitle}>{title}</Text>}<Text style={styles.groupCount}>({items.length})</Text></TouchableOpacity>}
                 {(stayGrouping === "none" || !collapsed) && <View style={styles.cardList}>{items.map(renderStayCard)}</View>}
               </View>;
             })
@@ -540,7 +545,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                 <View key={mainKey} style={styles.groupSection}>
                   {!!mainGroup.title && <>
                     <TouchableOpacity style={styles.groupHeader} onPress={() => toggleSection(mainKey)}>
-                      <Ionicons name={mainCollapsed ? "chevron-forward" : "chevron-down"} size={18} color={brand.muted} style={styles.groupChevron} />
+                      <Ionicons name={mainCollapsed ? "chevron-forward" : "chevron-down"} size={18} color={colors.muted} style={styles.groupChevron} />
                       {mainColor ? <View style={styles.groupTagWrap}><NotionTag label={mainGroup.title} color={mainColor} /></View> : <Text style={styles.groupTitle}>{mainGroup.title}</Text>}
                       <Text style={styles.groupCount}>({mainCount})</Text>
                     </TouchableOpacity>
@@ -555,7 +560,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                       <View key={subKey}>
                         {!!subGroup.title && <>
                           <TouchableOpacity style={[styles.groupHeader, !!mainGroup.title && styles.subGroupHeader]} onPress={() => toggleSection(subKey)}>
-                            <Ionicons name={subCollapsed ? "chevron-forward" : "chevron-down"} size={16} color={brand.muted} style={styles.groupChevron} />
+                            <Ionicons name={subCollapsed ? "chevron-forward" : "chevron-down"} size={16} color={colors.muted} style={styles.groupChevron} />
                             {subColor ? <View style={styles.groupTagWrap}><NotionTag label={subGroup.title} color={subColor} /></View> : <Text style={styles.subGroupTitle}>{subGroup.title}</Text>}
                             <Text style={styles.groupCount}>({subGroup.data.length})</Text>
                           </TouchableOpacity>
@@ -581,33 +586,33 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: brand.lavender },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.surfaceAlt },
   scrollContent: { flexGrow: 1 },
   // flexGrowで残り余白を吸収し、絞り込み結果が0件など中身が短いときにフッターが
   // 画面途中に浮き上がらず、常に最下部に収まるようにする
   main: { width: "100%", maxWidth: 1180, alignSelf: "center", paddingHorizontal: 48, paddingTop: 34, paddingBottom: 54, flexGrow: 1 },
   mainMobile: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 36 },
   back: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start", marginBottom: 22 },
-  backText: { color: brand.violet, fontSize: 14, fontWeight: "700" },
-  title: { color: brand.plum, fontSize: 48, lineHeight: 56, fontWeight: "800", letterSpacing: -1.2 },
+  backText: { color: colors.accent, fontSize: 14, fontWeight: "700" },
+  title: { color: colors.accentDeep, fontSize: 48, lineHeight: 56, fontWeight: "800", letterSpacing: -1.2 },
   titleMobile: { fontSize: 32, lineHeight: 40, letterSpacing: -0.6 },
-  archiveTabs: { marginTop: 22, flexDirection: "row", borderRadius: 8, overflow: "hidden", borderWidth: 1, borderColor: brand.border },
+  archiveTabs: { marginTop: 22, flexDirection: "row", borderRadius: 8, overflow: "hidden", borderWidth: 1, borderColor: colors.border },
   archiveTab: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
-  archiveTabActive: { backgroundColor: brand.plum },
-  archiveTabText: { color: brand.ink, fontSize: 14, fontWeight: "500" },
+  archiveTabActive: { backgroundColor: colors.accentDeep },
+  archiveTabText: { color: colors.ink, fontSize: 14, fontWeight: "500" },
   archiveTabTextActive: { color: "#FFFFFF", fontWeight: "700" },
   yearChipsRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 22, marginBottom: 16, zIndex: 5 },
-  yearChip: { minHeight: 40, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: "transparent", backgroundColor: brand.lavender, alignItems: "center", justifyContent: "center" },
-  yearChipActive: { backgroundColor: "#FFFFFF", borderColor: brand.violet },
-  yearChipText: { color: brand.ink, fontSize: 14, fontWeight: "600" },
-  yearChipTextActive: { color: brand.violet, fontWeight: "800" },
+  yearChip: { minHeight: 40, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: "transparent", backgroundColor: colors.surfaceAlt, alignItems: "center", justifyContent: "center" },
+  yearChipActive: { backgroundColor: colors.surface, borderColor: colors.accent },
+  yearChipText: { color: colors.ink, fontSize: 14, fontWeight: "600" },
+  yearChipTextActive: { color: colors.accent, fontWeight: "800" },
   yearMoreWrap: { position: "relative" },
   // 他のプルダウン（白背景+枠線）とは違い、薄い背景・枠線なしの見た目にする
   yearMenu: { position: "absolute", top: 46, left: 0, minWidth: 110, borderRadius: 10, backgroundColor: "#FFFFFF", padding: 5, ...shadow },
   yearOption: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 5 },
-  yearOptionText: { color: brand.ink, fontSize: 14 },
-  yearOptionTextActive: { color: brand.violet, fontWeight: "700" },
+  yearOptionText: { color: colors.ink, fontSize: 14 },
+  yearOptionTextActive: { color: colors.accent, fontWeight: "700" },
   archiveControls: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 20, marginBottom: 28, zIndex: 4 },
   // alignItems: flex-start のままだとgroupingPanelが中身の幅に合わせて広がり、
   // チップの横スクロール行が画面幅を超えてしまうため、モバイルでは幅いっぱいに揃える
@@ -617,67 +622,67 @@ const styles = StyleSheet.create({
   sortControlsMobile: { alignSelf: "flex-end" },
   sortControlsSolo: { marginLeft: "auto" },
   compactSelectWrap: { position: "relative", width: 126, zIndex: 5 },
-  compactSelectLabel: { color: brand.ink, fontSize: 12, fontWeight: "700", marginBottom: 5, textAlign: "right" },
-  compactSelect: { minHeight: 36, paddingHorizontal: 11, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  compactSelectText: { color: brand.ink, fontSize: 13, fontWeight: "500" },
-  compactSelectMenu: { position: "absolute", top: 59, left: 0, right: 0, padding: 4, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", ...shadow },
+  compactSelectLabel: { color: colors.ink, fontSize: 12, fontWeight: "700", marginBottom: 5, textAlign: "right" },
+  compactSelect: { minHeight: 36, paddingHorizontal: 11, borderRadius: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  compactSelectText: { color: colors.ink, fontSize: 13, fontWeight: "500" },
+  compactSelectMenu: { position: "absolute", top: 59, left: 0, right: 0, padding: 4, borderRadius: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, ...shadow },
   kanaSortingIndicator: { position: "absolute", right: -24, top: 8 },
   compactSelectOption: { paddingHorizontal: 10, paddingVertical: 9, borderRadius: 4 },
-  compactSelectOptionText: { color: brand.ink, fontSize: 13 },
-  compactSelectOptionActive: { color: brand.violet, fontWeight: "700" },
+  compactSelectOptionText: { color: colors.ink, fontSize: 13 },
+  compactSelectOptionActive: { color: colors.accent, fontWeight: "700" },
   compactSelectOptionDisabled: { color: "#C7C2D1" },
   // flexWrapだと選択肢が幅に収まらないときに2行になってしまうため、折り返さず横スクロールに任せる
   groupingRow: { flexDirection: "row", flexWrap: "nowrap", alignItems: "center", gap: 8 },
-  groupingLabel: { width: 48, color: brand.ink, fontSize: 13, lineHeight: 36, fontWeight: "700" },
-  groupingButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 6, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  groupingButtonActive: { backgroundColor: brand.plum, borderColor: brand.plum },
-  groupingButtonText: { color: brand.ink, fontSize: 13, fontWeight: "400" },
+  groupingLabel: { width: 48, color: colors.ink, fontSize: 13, lineHeight: 36, fontWeight: "700" },
+  groupingButton: { minHeight: 36, paddingHorizontal: 13, borderRadius: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
+  groupingButtonActive: { backgroundColor: colors.accentDeep, borderColor: colors.accentDeep },
+  groupingButtonText: { color: colors.ink, fontSize: 13, fontWeight: "400" },
   groupingButtonTextActive: { color: "#FFFFFF", fontWeight: "600" },
   // メイン/サブで自身・お目当て⇄出演者と重複するため選べない選択肢。トップページARCHIVEの非当年チップと同系色でグレーアウト
   groupingButtonDisabled: { backgroundColor: "#F5F3F7", borderColor: "#F5F3F7" },
-  groupingButtonTextDisabled: { color: brand.muted },
+  groupingButtonTextDisabled: { color: colors.muted },
   // モバイルではチップが折り返さず横スクロールで1行に収まるようにする
   groupingChipsScroll: { flex: 1, minWidth: 0 },
   groupingChipsScrollContent: { flexDirection: "row", gap: 8, paddingRight: 48 },
   loader: { marginVertical: 60 },
   error: { color: "#C2414B", marginVertical: 30 },
   monthSection: { marginBottom: 28 },
-  monthTitle: { color: brand.plum, fontSize: 25, lineHeight: 32, fontWeight: "800", marginBottom: 10 },
-  groupSection: { marginBottom: 18, overflow: "hidden", borderRadius: 10, borderWidth: 1, borderColor: brand.border, backgroundColor: "#F9F7FC" },
-  groupHeader: { minHeight: 54, paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: brand.border, backgroundColor: "#F9F7FC" },
+  monthTitle: { color: colors.accentDeep, fontSize: 25, lineHeight: 32, fontWeight: "800", marginBottom: 10 },
+  groupSection: { marginBottom: 18, overflow: "hidden", borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt },
+  groupHeader: { minHeight: 54, paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surfaceAlt },
   subGroupHeader: { paddingLeft: 32, minHeight: 48, backgroundColor: "#FCFBFD" },
   groupChevron: { width: 26 },
   groupTagWrap: { flex: 1, minWidth: 0, alignSelf: "center", justifyContent: "center" },
-  groupTitle: { flexShrink: 1, color: brand.ink, fontSize: 16, fontWeight: "700" },
-  subGroupTitle: { flexShrink: 1, color: brand.ink, fontSize: 14, fontWeight: "600" },
-  groupCount: { marginLeft: 8, color: brand.muted, fontSize: 12 },
-  groupTotal: { paddingLeft: 42, paddingRight: 16, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: brand.border, backgroundColor: "#F9F7FC" },
+  groupTitle: { flexShrink: 1, color: colors.ink, fontSize: 16, fontWeight: "700" },
+  subGroupTitle: { flexShrink: 1, color: colors.ink, fontSize: 14, fontWeight: "600" },
+  groupCount: { marginLeft: 8, color: colors.muted, fontSize: 12 },
+  groupTotal: { paddingLeft: 42, paddingRight: 16, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surfaceAlt },
   subGroupTotal: { paddingLeft: 58, backgroundColor: "#FCFBFD" },
-  groupTotalText: { color: brand.ink, fontSize: 14, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  groupTotalText: { color: colors.ink, fontSize: 14, fontWeight: "700", fontVariant: ["tabular-nums"] },
   cardList: { gap: 12 },
-  groupCardList: { padding: 12, backgroundColor: brand.lavender },
-  card: { minHeight: 108, paddingHorizontal: 24, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: brand.border, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 22, ...shadow, ...deferredCardRendering },
+  groupCardList: { padding: 12, backgroundColor: colors.surfaceAlt },
+  card: { minHeight: 108, paddingHorizontal: 24, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", gap: 22, ...shadow, ...deferredCardRendering },
   cardMobile: { minHeight: 0, paddingHorizontal: 14, paddingVertical: 14, gap: 10, alignItems: "flex-start", ...(Platform.OS === "web" ? ({ boxShadow: "none" } as any) : {}) },
   dateBlock: { width: 104, alignItems: "center" },
   dateBlockMobile: { width: 0, display: "none" },
-  dateText: { color: brand.plum, fontSize: 29, lineHeight: 35, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  dateText: { color: colors.accentDeep, fontSize: 29, lineHeight: 35, fontWeight: "800", fontVariant: ["tabular-nums"] },
   dateTextMobile: { fontSize: 17, lineHeight: 22 },
-  weekday: { color: brand.ink, fontSize: 15, fontWeight: "800", minWidth: 32, textAlign: "center", marginTop: 2, fontVariant: ["tabular-nums"], fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
+  weekday: { color: colors.ink, fontSize: 15, fontWeight: "800", minWidth: 32, textAlign: "center", marginTop: 2, fontVariant: ["tabular-nums"], fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
   saturday: { color: "#2563EB" },
   holiday: { color: "#DC2626" },
-  dateDivider: { width: 1, height: 66, backgroundColor: brand.border },
+  dateDivider: { width: 1, height: 66, backgroundColor: colors.border },
   cardBody: { flex: 1, minWidth: 0 },
   titleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  cardCost: { color: brand.ink, fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"], textAlign: "right" },
+  cardCost: { color: colors.ink, fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"], textAlign: "right" },
   mobileDateRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 7 },
   mobileDateLeft: { flexDirection: "row", alignItems: "baseline", gap: 8 },
-  mobileDate: { color: brand.ink, fontSize: 17, lineHeight: 22, fontWeight: "800", fontVariant: ["tabular-nums"] },
-  mobileWeekday: { color: brand.ink, fontSize: 15, lineHeight: 20, fontWeight: "800", minWidth: 32, fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
-  cardTitle: { flex: 1, color: brand.ink, fontSize: 16, lineHeight: 22, fontWeight: "800" },
+  mobileDate: { color: colors.ink, fontSize: 17, lineHeight: 22, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  mobileWeekday: { color: colors.ink, fontSize: 15, lineHeight: 20, fontWeight: "800", minWidth: 32, fontFamily: Platform.OS === "web" ? "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" : "monospace" },
+  cardTitle: { flex: 1, color: colors.ink, fontSize: 16, lineHeight: 22, fontWeight: "800" },
   archiveTags: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 9 },
   breakfastBadge: { alignSelf: "flex-start", backgroundColor: "#F5F3FF", borderRadius: 5, paddingHorizontal: 10, paddingVertical: 4 },
   breakfastBadgeOff: { backgroundColor: "#F0EEF2" },
-  breakfastLabel: { color: brand.violetDark, fontSize: 12 },
-  breakfastLabelOff: { color: brand.muted },
-  venue: { color: brand.muted, fontSize: 13, marginTop: 8 },
+  breakfastLabel: { color: colors.accentDark, fontSize: 12 },
+  breakfastLabelOff: { color: colors.muted },
+  venue: { color: colors.muted, fontSize: 13, marginTop: 8 },
 });

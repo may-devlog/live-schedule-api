@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { AuthHeader, PublicFooter, brand } from '@/components/GenBGTBrand';
+import { AuthHeader, PublicFooter } from '@/components/GenBGTBrand';
+import { useTheme, type ThemeColors } from '@/contexts/ThemeContext';
 import { getApiUrl } from '@/utils/api';
 
 type SearchResult = {
@@ -22,6 +23,8 @@ type SearchResult = {
 
 export default function FindUserScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [userId, setUserId] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -85,7 +88,7 @@ export default function FindUserScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.main}>
           <View style={styles.card}>
-            <View style={styles.iconCircle}><Ionicons name="people-outline" size={30} color={brand.violet} /></View>
+            <View style={styles.iconCircle}><Ionicons name="people-outline" size={30} color={colors.accent} /></View>
             <Text style={styles.title}>共有ユーザーを探す</Text>
             <Text style={styles.lead}>ユーザーIDを入力すると、共有を公開しているユーザーのスケジュールを表示できます。</Text>
 
@@ -130,26 +133,26 @@ export default function FindUserScreen() {
 }
 
 const shadow = Platform.OS === 'web' ? ({ boxShadow: '0 18px 50px rgba(46,16,101,0.09)' } as any) : {};
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: brand.lavender },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.surfaceAlt },
   scrollContent: { flexGrow: 1 },
   main: { flex: 1, minHeight: 650, padding: 24, alignItems: 'center', justifyContent: 'center' },
-  card: { width: '100%', maxWidth: 620, padding: 36, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: brand.border, borderRadius: 24, ...shadow },
-  iconCircle: { width: 58, height: 58, borderRadius: 29, alignSelf: 'center', backgroundColor: '#EDE9FE', alignItems: 'center', justifyContent: 'center' },
-  title: { marginTop: 18, color: brand.ink, fontSize: 27, fontWeight: '800', textAlign: 'center' },
-  lead: { marginTop: 10, marginBottom: 28, color: brand.muted, fontSize: 14, lineHeight: 22, textAlign: 'center' },
-  label: { color: brand.ink, fontSize: 14, fontWeight: '700', marginBottom: 8 },
+  card: { width: '100%', maxWidth: 620, padding: 36, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 24, ...shadow },
+  iconCircle: { width: 58, height: 58, borderRadius: 29, alignSelf: 'center', backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  title: { marginTop: 18, color: colors.ink, fontSize: 27, fontWeight: '800', textAlign: 'center' },
+  lead: { marginTop: 10, marginBottom: 28, color: colors.muted, fontSize: 14, lineHeight: 22, textAlign: 'center' },
+  label: { color: colors.ink, fontSize: 14, fontWeight: '700', marginBottom: 8 },
   searchRow: { flexDirection: 'row', gap: 10 },
-  input: { flex: 1, height: 50, borderWidth: 1, borderColor: '#D8D3E0', borderRadius: 10, paddingHorizontal: 14, color: brand.ink, fontSize: 15 },
-  searchButton: { height: 50, minWidth: 104, paddingHorizontal: 16, borderRadius: 10, backgroundColor: brand.violet, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' },
+  input: { flex: 1, height: 50, borderWidth: 1, borderColor: '#D8D3E0', borderRadius: 10, paddingHorizontal: 14, color: colors.ink, fontSize: 15 },
+  searchButton: { height: 50, minWidth: 104, paddingHorizontal: 16, borderRadius: 10, backgroundColor: colors.accent, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' },
   searchButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
   messageBox: { marginTop: 18, padding: 14, borderRadius: 10, backgroundColor: '#F7F5FA' },
-  message: { color: brand.muted, fontSize: 13, lineHeight: 20 },
+  message: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   resultCard: { marginTop: 20, borderWidth: 1, borderColor: '#DDD6FE', borderRadius: 14, padding: 15, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAF9FF' },
   avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#F0EEF3', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   avatarImage: { width: '100%', height: '100%' },
   resultCopy: { flex: 1, marginLeft: 13 },
-  resultId: { color: brand.ink, fontSize: 17, fontWeight: '800' },
-  resultLabel: { color: brand.muted, fontSize: 12, marginTop: 3 },
-  openButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: brand.violet, alignItems: 'center', justifyContent: 'center' },
+  resultId: { color: colors.ink, fontSize: 17, fontWeight: '800' },
+  resultLabel: { color: colors.muted, fontSize: 12, marginTop: 3 },
+  openButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
 });
