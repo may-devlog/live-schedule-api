@@ -103,7 +103,7 @@ export default function AppearanceSettingsScreen() {
                 disabled={updating}
               >
                 <View style={styles.rowLabelWithSwatch}>
-                  <View style={[styles.swatch, { backgroundColor: ACCENT_SWATCH[option.key] }]} />
+                  <View style={[styles.swatch, { backgroundColor: ACCENT_SWATCH[option.key], borderColor: colors.border }]} />
                   <Text style={[styles.rowLabel, { color: colors.ink }]}>{option.label}</Text>
                 </View>
                 <RadioIndicator selected={selected} color={colors.accent} />
@@ -140,6 +140,6 @@ const styles = StyleSheet.create({
   rowDivider: { borderBottomWidth: 1 },
   rowLabel: { fontSize: 16, fontWeight: "600" },
   rowLabelWithSwatch: { flexDirection: "row", alignItems: "center", gap: 12 },
-  swatch: { width: 20, height: 20, borderRadius: 10 },
+  swatch: { width: 20, height: 20, borderRadius: 10, borderWidth: 1 },
   radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: "center", justifyContent: "center" },
 });

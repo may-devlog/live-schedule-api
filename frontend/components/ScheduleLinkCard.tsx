@@ -75,7 +75,7 @@ export function ScheduleLinkCard({ date, title, area, onPress, onRemove }: Sched
       </View>
       {!!onPress && (
         <View style={styles.arrowButton}>
-          <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+          <Ionicons name="arrow-forward" size={18} color={colors.accentContrastText} />
         </View>
       )}
       {!!onRemove && (

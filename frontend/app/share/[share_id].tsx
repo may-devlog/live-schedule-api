@@ -202,7 +202,7 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
                         </View>
                         {!!item.venue && <View style={styles.venuePill}><Ionicons name="location-outline" size={14} color={colors.accent} /><Text style={styles.venueText}>{item.venue}</Text></View>}
                       </View>
-                      <View style={styles.arrowButton}><Ionicons name="arrow-forward" size={20} color="#FFFFFF" /></View>
+                      <View style={styles.arrowButton}><Ionicons name="arrow-forward" size={20} color={colors.accentContrastText} /></View>
                     </TouchableOpacity>
                   );
                 }}
@@ -279,5 +279,5 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   stateText: { color: colors.muted, fontSize: 14, marginTop: 14 },
   errorText: { color: '#C2414B', fontSize: 15, textAlign: 'center', marginBottom: 18 },
   retryButton: { backgroundColor: colors.accent, paddingHorizontal: 20, paddingVertical: 11, borderRadius: 10 },
-  retryText: { color: '#FFFFFF', fontWeight: '700' },
+  retryText: { color: colors.accentContrastText, fontWeight: '700' },
 });

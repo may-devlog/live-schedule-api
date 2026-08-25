@@ -373,7 +373,7 @@ export default function EditStayScreen() {
       <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
         <AppHeader active="archive" />
         <View style={styles.container}>
-          <ActivityIndicator color="#37352f" size="large" />
+          <ActivityIndicator color={colors.muted} size="large" />
         </View>
       </View>
     );
@@ -578,7 +578,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: "#ffffff",
+    color: colors.accentContrastText,
     fontSize: 14,
     fontWeight: "600",
   },

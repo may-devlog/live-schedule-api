@@ -6,7 +6,7 @@ import { openBrowserAsync } from 'expo-web-browser';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme, type ThemeColors } from '../contexts/ThemeContext';
+import { useTheme, type SchemeKey, type ThemeColors } from '../contexts/ThemeContext';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 
 type AccountMenuProps = {
@@ -22,8 +22,8 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { email, logout, changeEmail } = useAuth();
-  const { colors } = useTheme();
-  const styles = getStyles(colors);
+  const { colors, scheme } = useTheme();
+  const styles = getStyles(colors, scheme);
   const [sharingEnabled, setSharingEnabled] = useState(false);
   const [shareId, setShareId] = useState<string | null>(null);
   const [sharingUrl, setSharingUrl] = useState<string | null>(null);
@@ -270,7 +270,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
       <View style={styles.iconBox}><Ionicons name={icon} size={19} color={colors.accentDark} /></View>
       <Text style={styles.menuLabel}>{label}</Text>
-      <Ionicons name="chevron-forward" size={18} color="#AAA3B5" />
+      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
     </TouchableOpacity>
   );
 
@@ -310,7 +310,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                     </View>
                   )}
                 </View>
-                <Switch value={sharingEnabled} onValueChange={toggleSharing} disabled={!isPaidEffective} trackColor={{ false: '#D9D4E2', true: '#A78BFA' }} thumbColor={sharingEnabled ? colors.accentDark : '#FFFFFF'} />
+                <Switch value={sharingEnabled} onValueChange={toggleSharing} disabled={!isPaidEffective} trackColor={{ false: colors.border, true: colors.accent }} thumbColor={sharingEnabled ? colors.accentContrastText : '#FFFFFF'} />
               </View>
             </View>
             {plan === 'premium' ? (
@@ -333,7 +333,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                 <Text style={styles.trialTitle}>1ヶ月無料トライアル</Text>
                 <Text style={styles.trialDescription}>共有化やアーカイブのグループ化など、プレミアム機能を1ヶ月間お試しいただけます。</Text>
                 <TouchableOpacity style={styles.trialButton} onPress={confirmStartTrial} disabled={trialStarting}>
-                  {trialStarting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.trialButtonText}>無料トライアルを始める</Text>}
+                  {trialStarting ? <ActivityIndicator color={colors.accentContrastText} /> : <Text style={styles.trialButtonText}>無料トライアルを始める</Text>}
                 </TouchableOpacity>
               </View>
             )}
@@ -343,7 +343,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               </TouchableOpacity>
             ) : plan === 'premium' || isPaidEffective || !trialUsed ? null : (
               <TouchableOpacity style={styles.upgradeButton} onPress={startCheckout} disabled={checkoutLoading}>
-                {checkoutLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.upgradeButtonText}>プレミアムプランに登録する（月額400円）</Text>}
+                {checkoutLoading ? <ActivityIndicator color={colors.accentContrastText} /> : <Text style={styles.upgradeButtonText}>プレミアムプランに登録する（月額400円）</Text>}
               </TouchableOpacity>
             )}
             <TouchableOpacity style={styles.logoutButton} onPress={confirmLogout}><Ionicons name="log-out-outline" size={19} color="#DC2626" /><Text style={styles.logoutText}>ログアウト</Text></TouchableOpacity>
@@ -356,30 +356,30 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
           <View style={styles.dialogHeader}><Text style={styles.dialogTitle}>{dialog === 'name' ? '名前変更' : dialog === 'email' ? 'メールアドレス変更' : 'ユーザーID変更'}</Text><TouchableOpacity onPress={() => setDialog(null)}><Ionicons name="close" size={22} color={colors.ink} /></TouchableOpacity></View>
           <Text style={styles.dialogHelp}>{dialog === 'name' ? `現在: ${displayName || '未設定'}` : dialog === 'email' ? `現在: ${email}` : `現在: ${shareId || '未設定'}`}</Text>
           <TextInput style={styles.input} value={dialog === 'name' ? newDisplayName : dialog === 'email' ? newEmail : newShareId} onChangeText={dialog === 'name' ? setNewDisplayName : dialog === 'email' ? setNewEmail : setNewShareId} placeholder={dialog === 'name' ? '名前（50文字以内）' : dialog === 'email' ? '新しいメールアドレス' : '新しいユーザーID'} autoCapitalize={dialog === 'name' ? 'sentences' : 'none'} maxLength={dialog === 'name' ? 50 : undefined} />
-          <TouchableOpacity style={styles.saveButton} onPress={dialog === 'name' ? submitDisplayName : dialog === 'email' ? submitEmail : submitShareId} disabled={saving}>{saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveText}>変更する</Text>}</TouchableOpacity>
+          <TouchableOpacity style={styles.saveButton} onPress={dialog === 'name' ? submitDisplayName : dialog === 'email' ? submitEmail : submitShareId} disabled={saving}>{saving ? <ActivityIndicator color={colors.accentContrastText} /> : <Text style={styles.saveText}>変更する</Text>}</TouchableOpacity>
         </View></View>
       </Modal>
     </Modal>
   );
 }
 
-const getStyles = (colors: ThemeColors) => StyleSheet.create({
+const getStyles = (colors: ThemeColors, scheme: SchemeKey) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(32,27,44,0.48)', alignItems: 'flex-end' },
   panel: { width: '100%', maxWidth: 440, height: '100%', backgroundColor: colors.surface, paddingHorizontal: 26, paddingTop: 28, paddingBottom: 24, shadowColor: '#1C1133', shadowOpacity: 0.2, shadowRadius: 28 },
   panelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 22 },
   eyebrow: { color: colors.accent, fontWeight: '800', fontSize: 11, letterSpacing: 1.5, marginBottom: 4 }, title: { color: colors.ink, fontSize: 24, fontWeight: '800' },
   closeButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
   profileCard: { backgroundColor: colors.accentSoft, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.surface, borderWidth: 2, borderColor: '#DDD6FE', alignItems: 'center', justifyContent: 'center' }, avatarImage: { width: '100%', height: '100%', borderRadius: 27 },
+  avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }, avatarImage: { width: '100%', height: '100%', borderRadius: 27 },
   profileCopy: { flex: 1, minWidth: 0 }, profileName: { color: colors.ink, fontSize: 16, fontWeight: '800' }, email: { color: colors.muted, fontSize: 12, marginTop: 3 },
   avatarButton: { minHeight: 38, borderWidth: 1, borderColor: colors.accent, borderRadius: 9, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }, avatarButtonText: { color: colors.accentDark, fontSize: 12, fontWeight: '700' }, removeAvatar: { color: colors.muted, textAlign: 'right', fontSize: 12, marginTop: 8 },
   menuGroup: { marginTop: 22, borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden' }, menuItem: { minHeight: 64, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border }, iconBox: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }, menuLabel: { color: colors.ink, fontSize: 14, fontWeight: '600' }, premiumBadge: { fontSize: 12 }, shareCopy: { flex: 1 }, shareUrlRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }, shareUrl: { color: colors.muted, fontSize: 10, flexShrink: 1 },
-  logoutButton: { marginTop: 18, minHeight: 52, borderRadius: 11, backgroundColor: '#FEF2F2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, logoutText: { color: '#DC2626', fontWeight: '700' },
+  logoutButton: { marginTop: 18, minHeight: 52, borderRadius: 11, backgroundColor: scheme === 'dark' ? 'rgba(220,38,38,0.16)' : '#FEF2F2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, logoutText: { color: scheme === 'dark' ? '#F87171' : '#DC2626', fontWeight: '700' },
   deleteAccountLink: { marginTop: 14, alignItems: 'center', paddingVertical: 6 }, deleteAccountLinkText: { color: colors.muted, fontSize: 12, textDecorationLine: 'underline' },
   planCard: { marginTop: 18, minHeight: 44, borderRadius: 11, backgroundColor: colors.accentSoft, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14 }, planCardText: { color: colors.ink, fontSize: 13, fontWeight: '600', flex: 1 },
-  trialCard: { marginTop: 18, borderRadius: 14, borderWidth: 1, borderColor: '#DDD6FE', backgroundColor: colors.accentSoft, padding: 16 }, trialTitle: { color: colors.accentDark, fontSize: 15, fontWeight: '800' }, trialDescription: { color: colors.muted, fontSize: 12, marginTop: 6, lineHeight: 18 },
-  trialButton: { marginTop: 14, minHeight: 44, borderRadius: 10, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }, trialButtonText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
-  upgradeButton: { marginTop: 12, minHeight: 48, borderRadius: 10, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }, upgradeButtonText: { color: '#FFFFFF', fontWeight: '800', fontSize: 13, textAlign: 'center' },
+  trialCard: { marginTop: 18, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.accentSoft, padding: 16 }, trialTitle: { color: colors.accentDark, fontSize: 15, fontWeight: '800' }, trialDescription: { color: colors.muted, fontSize: 12, marginTop: 6, lineHeight: 18 },
+  trialButton: { marginTop: 14, minHeight: 44, borderRadius: 10, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }, trialButtonText: { color: colors.accentContrastText, fontWeight: '800', fontSize: 13 },
+  upgradeButton: { marginTop: 12, minHeight: 48, borderRadius: 10, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }, upgradeButtonText: { color: colors.accentContrastText, fontWeight: '800', fontSize: 13, textAlign: 'center' },
   manageBillingButton: { marginTop: 12, minHeight: 44, borderRadius: 10, borderWidth: 1, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center' }, manageBillingButtonText: { color: colors.accentDark, fontWeight: '700', fontSize: 13 },
-  dialogOverlay: { flex: 1, backgroundColor: 'rgba(32,27,44,0.48)', alignItems: 'center', justifyContent: 'center', padding: 20 }, dialog: { width: '100%', maxWidth: 480, backgroundColor: colors.surface, borderRadius: 16, padding: 24 }, dialogHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, dialogTitle: { color: colors.ink, fontSize: 20, fontWeight: '800' }, dialogHelp: { color: colors.muted, fontSize: 13, marginTop: 18, marginBottom: 8 }, input: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, color: colors.ink }, saveButton: { marginTop: 18, minHeight: 48, borderRadius: 10, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }, saveText: { color: '#FFFFFF', fontWeight: '800' },
+  dialogOverlay: { flex: 1, backgroundColor: 'rgba(32,27,44,0.48)', alignItems: 'center', justifyContent: 'center', padding: 20 }, dialog: { width: '100%', maxWidth: 480, backgroundColor: colors.surface, borderRadius: 16, padding: 24 }, dialogHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, dialogTitle: { color: colors.ink, fontSize: 20, fontWeight: '800' }, dialogHelp: { color: colors.muted, fontSize: 13, marginTop: 18, marginBottom: 8 }, input: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, color: colors.ink }, saveButton: { marginTop: 18, minHeight: 48, borderRadius: 10, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }, saveText: { color: colors.accentContrastText, fontWeight: '800' },
 });

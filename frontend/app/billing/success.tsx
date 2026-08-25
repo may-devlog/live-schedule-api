@@ -3,9 +3,12 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { authenticatedFetch, getApiUrl } from '../../utils/api';
+import { useTheme, type ThemeColors } from '../../contexts/ThemeContext';
 
 export default function BillingSuccessScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [status, setStatus] = useState<'checking' | 'confirmed' | 'pending'>('checking');
 
   useEffect(() => {
@@ -42,7 +45,7 @@ export default function BillingSuccessScreen() {
     <View style={styles.container}>
       {status === 'checking' && (
         <>
-          <ActivityIndicator size="large" color="#7C3AED" />
+          <ActivityIndicator size="large" color={colors.accent} />
           <Text style={styles.message}>お支払い状況を確認しています…</Text>
         </>
       )}
@@ -66,11 +69,11 @@ export default function BillingSuccessScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#ffffff' },
-  title: { fontSize: 22, fontWeight: '800', marginTop: 16, marginBottom: 12, color: '#201B2C', textAlign: 'center' },
-  message: { fontSize: 15, textAlign: 'center', marginBottom: 24, color: '#6B6675', lineHeight: 22 },
-  successIcon: { fontSize: 56, color: '#7C3AED' },
-  button: { backgroundColor: '#7C3AED', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 10, marginTop: 8 },
-  buttonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: colors.background },
+  title: { fontSize: 22, fontWeight: '800', marginTop: 16, marginBottom: 12, color: colors.ink, textAlign: 'center' },
+  message: { fontSize: 15, textAlign: 'center', marginBottom: 24, color: colors.muted, lineHeight: 22 },
+  successIcon: { fontSize: 56, color: colors.accent },
+  button: { backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 14, borderRadius: 10, marginTop: 8 },
+  buttonText: { color: colors.accentContrastText, fontSize: 16, fontWeight: '700' },
 });

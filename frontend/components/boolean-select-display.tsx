@@ -1,11 +1,14 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTheme, type ThemeColors } from "../contexts/ThemeContext";
 
 type BooleanSelectDisplayProps = {
   value: boolean;
 };
 
 export function BooleanSelectDisplay({ value }: BooleanSelectDisplayProps) {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   return (
     <View
       style={styles.container}
@@ -21,7 +24,7 @@ export function BooleanSelectDisplay({ value }: BooleanSelectDisplayProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     alignSelf: "flex-start",
     flexDirection: "row",
@@ -36,10 +39,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   trackOn: {
-    backgroundColor: "#7C3AED",
+    backgroundColor: colors.accent,
   },
   trackOff: {
-    backgroundColor: "#D6D0DE",
+    backgroundColor: colors.border,
   },
   thumb: {
     width: 18,
@@ -58,9 +61,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   textOn: {
-    color: "#5B21B6",
+    color: colors.accentDark,
   },
   textOff: {
-    color: "#706878",
+    color: colors.muted,
   },
 });

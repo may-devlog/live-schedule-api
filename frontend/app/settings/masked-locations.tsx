@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { AppHeader } from "../../components/GenBGTBrand";
 import { AppTabBar } from "../../components/AppTabBar";
+import { useTheme, type ThemeColors, type SchemeKey } from "../../contexts/ThemeContext";
 
 type MaskedLocation = {
   id: number;
@@ -26,6 +27,8 @@ type MaskedLocation = {
 
 export default function MaskedLocationsScreen() {
   const router = useRouter();
+  const { colors, scheme } = useTheme();
+  const styles = getStyles(colors, scheme);
   const [locations, setLocations] = useState<MaskedLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -221,7 +224,7 @@ export default function MaskedLocationsScreen() {
       <View style={styles.container}>
         <AppHeader active="archive" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#333333" />
+          <ActivityIndicator color={colors.accent} />
         </View>
         <AppTabBar active="archive" homePath="/" archivePath={`/year/${new Date().getFullYear()}`} />
       </View>
@@ -229,7 +232,7 @@ export default function MaskedLocationsScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader active="archive" />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>出発地・到着地マスク設定</Text>
@@ -246,6 +249,7 @@ export default function MaskedLocationsScreen() {
               value={newLocationName}
               onChangeText={setNewLocationName}
               placeholder="駅名を入力"
+              placeholderTextColor={colors.muted}
               editable={!submitting}
             />
             <TouchableOpacity
@@ -320,7 +324,7 @@ export default function MaskedLocationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors, scheme: SchemeKey) => StyleSheet.create({
   container: {
     padding: 16,
   },
@@ -333,11 +337,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 8,
-    color: "#333333",
+    color: colors.ink,
   },
   description: {
     fontSize: 14,
-    color: "#666666",
+    color: colors.muted,
     marginBottom: 24,
     lineHeight: 20,
   },
@@ -351,7 +355,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 12,
-    color: "#333333",
+    color: colors.ink,
   },
   addRow: {
     flexDirection: "row",
@@ -360,31 +364,32 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#dddddd",
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
+    color: colors.ink,
   },
   addButton: {
-    backgroundColor: "#6366f1",
+    backgroundColor: colors.accent,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     justifyContent: "center",
   },
   addButtonText: {
-    color: "#ffffff",
+    color: colors.accentContrastText,
     fontSize: 16,
     fontWeight: "600",
   },
   listItem: {
     borderWidth: 1,
-    borderColor: "#dddddd",
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
   },
   itemRow: {
     flexDirection: "row",
@@ -398,7 +403,7 @@ const styles = StyleSheet.create({
   },
   locationName: {
     fontSize: 16,
-    color: "#333333",
+    color: colors.ink,
     flex: 1,
   },
   buttonRow: {
@@ -406,43 +411,51 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   editButton: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
   editButtonText: {
-    color: "#333333",
+    color: colors.ink,
     fontSize: 14,
   },
   deleteButton: {
-    backgroundColor: "#ef4444",
+    backgroundColor: scheme === "dark" ? "rgba(220,38,38,0.16)" : "#FEF2F2",
+    borderWidth: 1,
+    borderColor: scheme === "dark" ? "rgba(220,38,38,0.35)" : "#FECACA",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
   deleteButtonText: {
-    color: "#ffffff",
+    color: scheme === "dark" ? "#F87171" : "#DC2626",
     fontSize: 14,
   },
   saveButton: {
-    backgroundColor: "#10b981",
+    backgroundColor: scheme === "dark" ? "rgba(16,185,129,0.18)" : "#ECFDF5",
+    borderWidth: 1,
+    borderColor: scheme === "dark" ? "rgba(16,185,129,0.4)" : "#A7F3D0",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
   saveButtonText: {
-    color: "#ffffff",
+    color: scheme === "dark" ? "#34D399" : "#059669",
     fontSize: 14,
   },
   cancelButton: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
   cancelButtonText: {
-    color: "#333333",
+    color: colors.ink,
     fontSize: 14,
   },
   buttonDisabled: {
@@ -450,7 +463,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: "#999999",
+    color: colors.muted,
     textAlign: "center",
     padding: 24,
   },

@@ -22,7 +22,7 @@ import { loadSelectOptions } from "../../../../utils/select-options-storage";
 import type { Schedule } from "../../../HomeScreen";
 import { CollapsibleDetailSection } from "../../../../components/CollapsibleDetailSection";
 import { AppHeader, PublicFooter, PublicHeader } from "../../../../components/GenBGTBrand";
-import { useTheme, type ThemeColors } from "../../../../contexts/ThemeContext";
+import { useTheme, type SchemeKey, type ThemeColors } from "../../../../contexts/ThemeContext";
 import { AppTabBar } from "../../../../components/AppTabBar";
 import { isJapaneseHolidayDate } from "../../../../components/ScheduleCalendar";
 
@@ -65,8 +65,8 @@ type StaySummary = {
 type DetailScreenProps = { authenticated?: boolean; scheduleId?: string };
 
 export default function SharedScheduleDetailScreen({ authenticated = false, scheduleId }: DetailScreenProps = {}) {
-  const { colors } = useTheme();
-  const styles = getStyles(colors);
+  const { colors, scheme } = useTheme();
+  const styles = getStyles(colors, scheme);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
   const isMobile = width < 600;
@@ -319,7 +319,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator color="#333333" />
+        <ActivityIndicator color={colors.muted} />
       </View>
     );
   }
@@ -627,7 +627,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
               onPress={() => router.push(authenticated ? `/stay/${stay.id}` : `/share/${share_id}/stay/${stay.id}`)}
             >
               {authenticated && isDesktop && <View style={styles.stayIcon}>
-                <Ionicons name="bed" size={28} color="#FFFFFF" />
+                <Ionicons name="bed" size={28} color={colors.accentContrastText} />
               </View>}
               <View style={[styles.cardMain, isMobile && styles.stayMainMobile]}>
                 {authenticated && <Text style={styles.cardRouteBold}>{stay.hotel_name}</Text>}
@@ -675,8 +675,8 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
             <RefreshControl 
               refreshing={refreshing} 
               onRefresh={onRefresh}
-              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+              tintColor={Platform.OS === 'ios' ? colors.accent : undefined}
+              colors={Platform.OS === 'android' ? [colors.accent] : undefined}
             />
           ) : undefined
         }
@@ -751,13 +751,13 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
             </View>
             {authenticated && isMobile && <View style={styles.heroActions}>
               <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={colors.accentDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={'#FFFFFF'} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={colors.accentContrastText} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
               <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Ionicons name="trash-outline" size={17} color="#DC2626" /><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
             </View>}
           </View>
           {authenticated && !isMobile && <View style={[styles.heroActions, styles.heroActionsVertical]}>
             <TouchableOpacity style={styles.duplicateAction} onPress={() => router.push(`/new?copyFrom=${id}`)}><Ionicons name="copy-outline" size={18} color={colors.accentDark} /><Text style={styles.duplicateActionText}>複製</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={'#FFFFFF'} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.editAction} onPress={() => router.push(`/live/${id}/edit`)}><Ionicons name="create-outline" size={18} color={colors.accentContrastText} /><Text style={styles.editActionText}>編集</Text></TouchableOpacity>
             <TouchableOpacity style={styles.deleteAction} onPress={handleDelete}><Ionicons name="trash-outline" size={17} color="#DC2626" /><Text style={styles.deleteActionText}>削除</Text></TouchableOpacity>
           </View>}
         </View>
@@ -801,7 +801,7 @@ const DESKTOP_GRID_GAP = 20;
 const DESKTOP_WIDE_COLUMN = { flex: 2 } as const;
 const DESKTOP_NARROW_COLUMN = { flex: 1 } as const;
 
-const getStyles = (colors: ThemeColors) => StyleSheet.create({
+const getStyles = (colors: ThemeColors, scheme: SchemeKey) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.surfaceAlt,
@@ -838,12 +838,12 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   heroCopy: { flex: 1, minWidth: 0 },
   heroActions: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 16 },
   heroActionsVertical: { flexDirection: "column", alignItems: "stretch", gap: 8, marginTop: 0 },
-  duplicateAction: { minHeight: 42, paddingHorizontal: 14, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: "#C4B5FD", borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  duplicateAction: { minHeight: 42, paddingHorizontal: 14, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   duplicateActionText: { color: colors.accentDark, fontSize: 14, fontWeight: "700" },
   editAction: { minHeight: 42, paddingHorizontal: 14, backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent, borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
-  editActionText: { color: '#FFFFFF', fontSize: 14, fontWeight: "700" },
-  deleteAction: { minHeight: 42, paddingHorizontal: 14, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: 7, borderWidth: 1, borderColor: "#FECACA", backgroundColor: "#FEF2F2", borderRadius: 9 },
-  deleteActionText: { color: "#DC2626", fontSize: 14, fontWeight: "600" },
+  editActionText: { color: colors.accentContrastText, fontSize: 14, fontWeight: "700" },
+  deleteAction: { minHeight: 42, paddingHorizontal: 14, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: 7, borderWidth: 1, borderColor: scheme === "dark" ? "rgba(220,38,38,0.35)" : "#FECACA", backgroundColor: scheme === "dark" ? "rgba(220,38,38,0.16)" : "#FEF2F2", borderRadius: 9 },
+  deleteActionText: { color: scheme === "dark" ? "#F87171" : "#DC2626", fontSize: 14, fontWeight: "600" },
   heroBadges: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 },
   mainTitle: {
     fontSize: 30,
@@ -869,13 +869,13 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#37352f",
+    color: colors.ink,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 4,
     borderLeftWidth: 4,
-    borderLeftColor: "#37352f",
+    borderLeftColor: colors.accent,
     letterSpacing: 0.3,
     alignSelf: "stretch",
   },
@@ -883,9 +883,9 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: 8,
   },
   relationCard: {
-    backgroundColor: "#FAF9FF",
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: "#e9e9e7",
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -913,7 +913,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   relationVenue: { marginLeft: 48, marginTop: 4, color: colors.muted, fontSize: 12, lineHeight: 18 },
   relationLink: {
     fontSize: 14,
-    color: "#37352f",
+    color: colors.ink,
     textDecorationLine: "underline",
   },
   errorText: {
@@ -923,7 +923,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   emptyValue: {
     fontSize: 14,
-    color: "#9b9a97",
+    color: colors.muted,
   },
   section: {
     marginTop: 24,
@@ -938,9 +938,9 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   trafficCard: {
     marginBottom: 12,
     padding: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#e9e9e7",
+    borderColor: colors.border,
     borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -949,9 +949,9 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   stayCard: {
     marginBottom: 12,
     padding: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#e9e9e7",
+    borderColor: colors.border,
     borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -983,14 +983,14 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     marginBottom: 8,
   },
   datePartsRow: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "baseline", flexWrap: "wrap", columnGap: 6, rowGap: 2 },
-  dateValue: { fontSize: 14, color: "#37352f", fontVariant: ["tabular-nums"] },
-  timeValue: { fontSize: 14, color: "#37352f", fontVariant: ["tabular-nums"] },
+  dateValue: { fontSize: 14, color: colors.ink, fontVariant: ["tabular-nums"] },
+  timeValue: { fontSize: 14, color: colors.ink, fontVariant: ["tabular-nums"] },
   cardPriceContainer: {
     alignItems: "flex-end",
   },
   cardPrice: {
     fontSize: 14,
-    color: "#37352f",
+    color: colors.ink,
     fontWeight: "700",
     textAlign: "right",
     fontVariant: ["tabular-nums"],
@@ -998,25 +998,25 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   totalCostText: { color: colors.accent, fontSize: 20, lineHeight: 26, fontWeight: "800", fontVariant: ["tabular-nums"], textAlign: "right" },
   cardMiles: {
     fontSize: 12,
-    color: "#787774",
+    color: colors.muted,
     marginTop: 2,
   },
   cardDetail: {
     fontSize: 14,
-    color: "#37352f",
+    color: colors.ink,
     marginLeft: 6,
     flex: 1,
   },
   breakfastTag: {
-    color: "#6D28D9",
-    backgroundColor: "#F5F3FF",
+    color: colors.accentDark,
+    backgroundColor: colors.accentSoft,
     borderRadius: 5,
     paddingHorizontal: 12,
     paddingVertical: 4,
     fontSize: 12,
     fontWeight: "400",
   },
-  breakfastTagOff: { color: "#77717F", backgroundColor: "#F0EEF2" },
+  breakfastTagOff: { color: colors.muted, backgroundColor: colors.surfaceAlt },
   addAction: { alignSelf: "center", paddingHorizontal: 18, paddingVertical: 8 },
   addActionText: { color: colors.accent, fontSize: 14, fontWeight: "600", textAlign: "center" },
 });

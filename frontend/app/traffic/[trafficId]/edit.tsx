@@ -212,7 +212,7 @@ export default function EditTrafficScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator color="#37352f" size="large" />
+        <ActivityIndicator color={colors.muted} size="large" />
       </View>
     );
   }
@@ -405,7 +405,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: "#ffffff",
+    color: colors.accentContrastText,
     fontSize: 14,
     fontWeight: "600",
   },

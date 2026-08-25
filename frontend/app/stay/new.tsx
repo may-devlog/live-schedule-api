@@ -626,7 +626,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: "#ffffff",
+    color: colors.accentContrastText,
     fontSize: 14,
     fontWeight: "600",
   },

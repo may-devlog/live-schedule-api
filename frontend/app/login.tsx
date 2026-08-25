@@ -106,7 +106,7 @@ export default function LoginScreen() {
             {!!error && <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View>}
 
             <TouchableOpacity style={[styles.loginButton, loading && styles.buttonDisabled]} onPress={handleSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.loginButtonText}>ログイン</Text>}
+              {loading ? <ActivityIndicator color={colors.accentContrastText} /> : <Text style={styles.loginButtonText}>ログイン</Text>}
             </TouchableOpacity>
 
             <View style={styles.dividerRow}><View style={styles.divider} /><Text style={styles.dividerText}>または</Text><View style={styles.divider} /></View>
@@ -144,7 +144,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   errorText: { color: '#C2414B', fontSize: 13, lineHeight: 18 },
   loginButton: { height: 50, backgroundColor: colors.accent, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   buttonDisabled: { opacity: 0.6 },
-  loginButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  loginButtonText: { color: colors.accentContrastText, fontSize: 15, fontWeight: '800' },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginVertical: 20 },
   divider: { flex: 1, height: 1, backgroundColor: colors.border },
   dividerText: { color: colors.muted, fontSize: 12 },

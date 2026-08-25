@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { AuthHeader, PublicFooter } from '@/components/GenBGTBrand';
+import { AppHeader, AuthHeader, PublicFooter } from '@/components/GenBGTBrand';
+import { useAuth } from '@/contexts/AuthContext';
 import { useTheme, type ThemeColors } from '@/contexts/ThemeContext';
 import { getApiUrl } from '@/utils/api';
 
@@ -23,6 +24,7 @@ type SearchResult = {
 
 export default function FindUserScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const [userId, setUserId] = useState('');
@@ -84,7 +86,7 @@ export default function FindUserScreen() {
 
   return (
     <View style={styles.page}>
-      <AuthHeader />
+      {isAuthenticated ? <AppHeader active="archive" /> : <AuthHeader />}
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.main}>
           <View style={styles.card}>
@@ -105,7 +107,7 @@ export default function FindUserScreen() {
                 editable={!loading}
               />
               <TouchableOpacity style={styles.searchButton} onPress={search} disabled={loading}>
-                {loading ? <ActivityIndicator color="#FFFFFF" /> : <Ionicons name="search" size={20} color="#FFFFFF" />}
+                {loading ? <ActivityIndicator color={colors.accentContrastText} /> : <Ionicons name="search" size={20} color={colors.accentContrastText} />}
                 <Text style={styles.searchButtonText}>検索</Text>
               </TouchableOpacity>
             </View>
@@ -115,13 +117,12 @@ export default function FindUserScreen() {
             {result && (
               <TouchableOpacity style={styles.resultCard} onPress={() => router.push(`/share/${result.share_id}`)}>
                 <View style={styles.avatar}>
-                  {result.avatar_data_url ? <Image source={{ uri: result.avatar_data_url }} style={styles.avatarImage} /> : <Ionicons name="person" size={27} color="#A6A0AE" />}
+                  {result.avatar_data_url ? <Image source={{ uri: result.avatar_data_url }} style={styles.avatarImage} /> : <Ionicons name="person" size={27} color={colors.muted} />}
                 </View>
                 <View style={styles.resultCopy}>
                   <Text style={styles.resultId}>{result.share_id}</Text>
-                  <Text style={styles.resultLabel}>公開中のライブスケジュール</Text>
                 </View>
-                <View style={styles.openButton}><Ionicons name="arrow-forward" size={19} color="#FFFFFF" /></View>
+                <View style={styles.openButton}><Ionicons name="arrow-forward" size={19} color={colors.accentContrastText} /></View>
               </TouchableOpacity>
             )}
           </View>
@@ -143,16 +144,15 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   lead: { marginTop: 10, marginBottom: 28, color: colors.muted, fontSize: 14, lineHeight: 22, textAlign: 'center' },
   label: { color: colors.ink, fontSize: 14, fontWeight: '700', marginBottom: 8 },
   searchRow: { flexDirection: 'row', gap: 10 },
-  input: { flex: 1, height: 50, borderWidth: 1, borderColor: '#D8D3E0', borderRadius: 10, paddingHorizontal: 14, color: colors.ink, fontSize: 15 },
+  input: { flex: 1, height: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, color: colors.ink, fontSize: 15 },
   searchButton: { height: 50, minWidth: 104, paddingHorizontal: 16, borderRadius: 10, backgroundColor: colors.accent, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' },
-  searchButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-  messageBox: { marginTop: 18, padding: 14, borderRadius: 10, backgroundColor: '#F7F5FA' },
+  searchButtonText: { color: colors.accentContrastText, fontSize: 14, fontWeight: '800' },
+  messageBox: { marginTop: 18, padding: 14, borderRadius: 10, backgroundColor: colors.surfaceAlt },
   message: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  resultCard: { marginTop: 20, borderWidth: 1, borderColor: '#DDD6FE', borderRadius: 14, padding: 15, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAF9FF' },
-  avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#F0EEF3', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  resultCard: { marginTop: 20, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 15, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceAlt },
+  avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   avatarImage: { width: '100%', height: '100%' },
   resultCopy: { flex: 1, marginLeft: 13 },
   resultId: { color: colors.ink, fontSize: 17, fontWeight: '800' },
-  resultLabel: { color: colors.muted, fontSize: 12, marginTop: 3 },
   openButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
 });

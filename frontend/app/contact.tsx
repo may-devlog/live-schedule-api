@@ -136,7 +136,7 @@ export default function ContactScreen() {
                 {!!error && <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View>}
 
                 <TouchableOpacity style={[styles.submitButton, loading && styles.buttonDisabled]} onPress={handleSubmit} disabled={loading}>
-                  {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.submitButtonText}>送信する</Text>}
+                  {loading ? <ActivityIndicator color={colors.accentContrastText} /> : <Text style={styles.submitButtonText}>送信する</Text>}
                 </TouchableOpacity>
               </>
             )}
@@ -165,7 +165,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   errorText: { color: '#C2414B', fontSize: 13, lineHeight: 18 },
   submitButton: { height: 50, backgroundColor: colors.accent, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   buttonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  submitButtonText: { color: colors.accentContrastText, fontSize: 15, fontWeight: '800' },
   sentBox: { backgroundColor: colors.accentSoft, borderRadius: 12, padding: 20, borderLeftWidth: 4, borderLeftColor: colors.accent },
   sentTitle: { color: colors.accentDark, fontSize: 16, fontWeight: '800', marginBottom: 8 },
   sentBody: { color: colors.ink, fontSize: 14, lineHeight: 22 },

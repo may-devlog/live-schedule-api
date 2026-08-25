@@ -369,7 +369,7 @@ export default function EditScheduleScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator color="#37352f" size="large" />
+        <ActivityIndicator color={colors.muted} size="large" />
       </View>
     );
   }
@@ -642,7 +642,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     color: "#37352f",
   },
   buttonText: {
-    color: "#ffffff",
+    color: colors.accentContrastText,
     fontSize: 14,
     fontWeight: "600",
   },

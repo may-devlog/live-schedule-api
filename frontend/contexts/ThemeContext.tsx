@@ -1,5 +1,6 @@
 // contexts/ThemeContext.tsx - 外観設定（Scheme: Light/Dark、Accent Color）
 import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
+import { useColorScheme } from 'react-native';
 import { useAuth } from './AuthContext';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 
@@ -17,10 +18,16 @@ export type ThemeColors = {
   accentDark: string;
   accentSoft: string;
   accentDeep: string;
+  // colors.accentで塗った面の上に置く文字・アイコンの色（Lightは白文字、Darkはアクセントを
+  // 薄い色にする分、濃い文字にしないと読めなくなるため）
+  accentContrastText: string;
+  // ヘッダー・フッター（chrome）用のトークン。Lightでは白背景+濃色文字、Darkでは
+  // Lightのフッターで使っていた「濃色アクセント背景+白文字」をヘッダー・フッター共通にする
+  chrome: string;
+  chromeText: string;
+  chromeMuted: string;
+  chromeBorder: string;
 };
-
-type AccentPalette = Pick<ThemeColors, 'accent' | 'accentDark' | 'accentSoft' | 'accentDeep'>;
-type SchemeTokens = Pick<ThemeColors, 'background' | 'surface' | 'surfaceAlt' | 'ink' | 'muted' | 'border'>;
 
 export const ACCENT_OPTIONS: { key: AccentKey; label: string }[] = [
   { key: 'black', label: 'Black' },
@@ -36,27 +43,121 @@ export const SCHEME_OPTIONS: { key: SchemeKey; label: string }[] = [
   { key: 'dark', label: 'Dark' },
 ];
 
-// Blackは真っ黒ではなく、ほぼ黒の色にする
-const ACCENT_PALETTES: Record<AccentKey, AccentPalette> = {
-  black: { accent: '#18181B', accentDark: '#000000', accentSoft: '#F0F0F2', accentDeep: '#000000' },
-  blue: { accent: '#2563EB', accentDark: '#1D4ED8', accentSoft: '#DBEAFE', accentDeep: '#1E3A8A' },
-  green: { accent: '#16A34A', accentDark: '#15803D', accentSoft: '#DCFCE7', accentDeep: '#14532D' },
-  orange: { accent: '#EA580C', accentDark: '#C2410C', accentSoft: '#FFEDD5', accentDeep: '#7C2D12' },
-  pink: { accent: '#DB2777', accentDark: '#BE185D', accentSoft: '#FCE7F3', accentDeep: '#831843' },
-  // 従来のブランドカラーをそのままPurpleプリセットとして移行
-  purple: { accent: '#7C3AED', accentDark: '#5B21B6', accentSoft: '#EDE9FE', accentDeep: '#2E1065' },
+// Lightは「白背景+ビビッドなアクセント」、Darkは背景をアクセントカラーで沈めた濃色にし、
+// アクセント自体は薄い色にすることでLightと明暗関係を反転させている
+type AccentSchemePalette = {
+  background: string;
+  surface: string;
+  surfaceAlt: string;
+  border: string;
+  accent: string;
+  accentDark: string;
+  accentSoft: string;
+  accentDeep: string;
+  accentContrastText: string;
 };
 
-const SCHEME_TOKENS: Record<SchemeKey, SchemeTokens> = {
-  light: { background: '#FFFFFF', surface: '#FFFFFF', surfaceAlt: '#F7F6FA', ink: '#201B2C', muted: '#6B6675', border: '#E8E3F1' },
-  dark: { background: '#18181B', surface: '#242428', surfaceAlt: '#1F1F23', ink: '#F4F4F5', muted: '#A1A1AA', border: '#3A3A40' },
+const LIGHT_INK = '#201B2C';
+const LIGHT_MUTED = '#6B6675';
+const LIGHT_BORDER = '#E8E3F1';
+const LIGHT_WHITE = '#FFFFFF';
+
+const DARK_INK = '#F4F4F5';
+const DARK_MUTED = '#A7A7AE';
+const DARK_BORDER = 'rgba(255,255,255,0.24)';
+const DARK_CONTRAST_TEXT = '#14141A';
+
+const PALETTES: Record<AccentKey, { light: AccentSchemePalette; dark: AccentSchemePalette }> = {
+  // Blackは真っ黒ではなく、ほぼ黒の色にする
+  black: {
+    light: {
+      background: LIGHT_WHITE, surface: LIGHT_WHITE, surfaceAlt: '#F7F6FA', border: LIGHT_BORDER,
+      accent: '#18181B', accentDark: '#000000', accentSoft: '#F0F0F2', accentDeep: '#000000',
+      accentContrastText: LIGHT_WHITE,
+    },
+    dark: {
+      background: '#0A0A0B', surface: '#19191C', surfaceAlt: '#000000', border: DARK_BORDER,
+      accent: '#FFFFFF', accentDark: '#FFFFFF', accentSoft: 'rgba(255,255,255,0.10)', accentDeep: '#000000',
+      accentContrastText: DARK_CONTRAST_TEXT,
+    },
+  },
+  blue: {
+    light: {
+      background: LIGHT_WHITE, surface: LIGHT_WHITE, surfaceAlt: '#EFF6FF', border: LIGHT_BORDER,
+      accent: '#2563EB', accentDark: '#1D4ED8', accentSoft: '#DBEAFE', accentDeep: '#1E3A8A',
+      accentContrastText: LIGHT_WHITE,
+    },
+    dark: {
+      background: '#0A121F', surface: '#122036', surfaceAlt: '#0A121F', border: DARK_BORDER,
+      accent: '#7FB1FD', accentDark: '#A9CBFC', accentSoft: 'rgba(127,177,253,0.14)', accentDeep: '#000000',
+      accentContrastText: DARK_CONTRAST_TEXT,
+    },
+  },
+  green: {
+    light: {
+      background: LIGHT_WHITE, surface: LIGHT_WHITE, surfaceAlt: '#F0FDF4', border: LIGHT_BORDER,
+      accent: '#16A34A', accentDark: '#15803D', accentSoft: '#DCFCE7', accentDeep: '#14532D',
+      accentContrastText: LIGHT_WHITE,
+    },
+    dark: {
+      background: '#08150F', surface: '#0F2419', surfaceAlt: '#08150F', border: DARK_BORDER,
+      accent: '#63E094', accentDark: '#8FEFB2', accentSoft: 'rgba(99,224,148,0.14)', accentDeep: '#000000',
+      accentContrastText: DARK_CONTRAST_TEXT,
+    },
+  },
+  orange: {
+    light: {
+      background: LIGHT_WHITE, surface: LIGHT_WHITE, surfaceAlt: '#FFF7ED', border: LIGHT_BORDER,
+      accent: '#EA580C', accentDark: '#C2410C', accentSoft: '#FFEDD5', accentDeep: '#7C2D12',
+      accentContrastText: LIGHT_WHITE,
+    },
+    dark: {
+      background: '#190F07', surface: '#291A0D', surfaceAlt: '#190F07', border: DARK_BORDER,
+      accent: '#FDA860', accentDark: '#FDC08C', accentSoft: 'rgba(253,168,96,0.14)', accentDeep: '#000000',
+      accentContrastText: DARK_CONTRAST_TEXT,
+    },
+  },
+  pink: {
+    light: {
+      background: LIGHT_WHITE, surface: LIGHT_WHITE, surfaceAlt: '#FDF2F8', border: LIGHT_BORDER,
+      accent: '#DB2777', accentDark: '#BE185D', accentSoft: '#FCE7F3', accentDeep: '#831843',
+      accentContrastText: LIGHT_WHITE,
+    },
+    dark: {
+      background: '#190A12', surface: '#2A1220', surfaceAlt: '#190A12', border: DARK_BORDER,
+      accent: '#F598C4', accentDark: '#F8BAD9', accentSoft: 'rgba(245,152,196,0.14)', accentDeep: '#000000',
+      accentContrastText: DARK_CONTRAST_TEXT,
+    },
+  },
+  purple: {
+    // 従来のブランドカラーをそのままPurpleプリセットとして移行
+    light: {
+      background: LIGHT_WHITE, surface: LIGHT_WHITE, surfaceAlt: '#F5F3FF', border: LIGHT_BORDER,
+      accent: '#7C3AED', accentDark: '#5B21B6', accentSoft: '#EDE9FE', accentDeep: '#2E1065',
+      accentContrastText: LIGHT_WHITE,
+    },
+    dark: {
+      background: '#130A22', surface: '#201136', surfaceAlt: '#130A22', border: DARK_BORDER,
+      accent: '#B89DF8', accentDark: '#D0C2FA', accentSoft: 'rgba(184,157,248,0.14)', accentDeep: '#000000',
+      accentContrastText: DARK_CONTRAST_TEXT,
+    },
+  },
 };
 
 export const DEFAULT_SCHEME: SchemeKey = 'light';
 export const DEFAULT_ACCENT: AccentKey = 'black';
 
 function resolveColors(scheme: SchemeKey, accent: AccentKey): ThemeColors {
-  return { ...SCHEME_TOKENS[scheme], ...ACCENT_PALETTES[accent] };
+  const palette = PALETTES[accent][scheme];
+  const ink = scheme === 'dark' ? DARK_INK : LIGHT_INK;
+  const muted = scheme === 'dark' ? DARK_MUTED : LIGHT_MUTED;
+  // Darkのヘッダー・フッターは、LightパレットのaccentDeep（濃色アクセント）を流用する
+  const lightAccentDeep = PALETTES[accent].light.accentDeep;
+  const chrome = scheme === 'dark' ? lightAccentDeep : palette.background;
+  const chromeText = scheme === 'dark' ? '#FFFFFF' : ink;
+  const chromeMuted = scheme === 'dark' ? 'rgba(255,255,255,0.72)' : muted;
+  const chromeBorder = scheme === 'dark' ? DARK_BORDER : LIGHT_BORDER;
+  return { ...palette, ink, muted, chrome, chromeText, chromeMuted, chromeBorder };
 }
 
 interface ThemeContextType {
@@ -72,13 +173,15 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
+  // 未ログイン（共有ページ・ログイン前ページ）は、閲覧者の端末側の外観設定に追従する
+  const systemScheme = useColorScheme();
   const [scheme, setSchemeState] = useState<SchemeKey>(DEFAULT_SCHEME);
   const [accent, setAccentState] = useState<AccentKey>(DEFAULT_ACCENT);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
-      setSchemeState(DEFAULT_SCHEME);
+      setSchemeState(systemScheme === 'dark' ? 'dark' : 'light');
       setAccentState(DEFAULT_ACCENT);
       return;
     }
@@ -91,7 +194,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => undefined)
       .finally(() => setLoading(false));
-  }, [isAuthenticated]);
+  }, [isAuthenticated, systemScheme]);
 
   const persist = useCallback(async (next: { scheme: SchemeKey; accent: AccentKey }) => {
     const res = await authenticatedFetch(getApiUrl('/theme-settings'), {
