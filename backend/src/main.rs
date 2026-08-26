@@ -553,6 +553,7 @@ async fn send_expo_push_notifications(
     title: &str,
     body: &str,
     schedule_id: i64,
+    schedule_user_seq: Option<i32>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if tokens.is_empty() {
         return Ok(());
@@ -566,7 +567,9 @@ async fn send_expo_push_notifications(
                 "to": token,
                 "title": title,
                 "body": body,
-                "data": { "schedule_id": schedule_id },
+                // schedule_idは内部id。フロントエンドのディープリンクはURLに内部idを
+                // 含めないため、代わりにschedule_user_seqを使ってリンクを構築する
+                "data": { "schedule_id": schedule_id, "schedule_user_seq": schedule_user_seq },
                 "sound": "default",
             })
         })
@@ -932,6 +935,9 @@ struct Schedule {
     // 認証・公開関連
     user_id: Option<i32>,
     is_public: bool,
+
+    // ユーザーごとの連番（公開URLではなくログイン中ユーザー向けURLで内部idの代わりに使う）
+    user_seq: Option<i32>,
 }
 
 // ====== Schedule 行定義（DB 用） ======
@@ -967,6 +973,7 @@ struct ScheduleRow {
     is_public: i32, // INTEGER型として読み込む（0または1）
     created_at: Option<String>,
     updated_at: Option<String>,
+    user_seq: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1015,6 +1022,7 @@ struct Traffic {
     return_flag: bool,
     total_fare: Option<i32>,
     total_miles: Option<i32>,
+    user_seq: Option<i32>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -1033,6 +1041,7 @@ struct TrafficRow {
     return_flag: i32, // 0/1
     total_fare: Option<i32>,
     total_miles: Option<i32>,
+    user_seq: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1100,6 +1109,7 @@ struct Stay {
     deadline: Option<String>,
     penalty: Option<i32>,
     status: String,
+    user_seq: Option<i32>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -1115,6 +1125,7 @@ struct StayRow {
     deadline: Option<String>,
     penalty: Option<i32>,
     status: String,
+    user_seq: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1364,6 +1375,7 @@ fn row_to_schedule(row: ScheduleRow) -> Schedule {
         stay_ids: vec![],
         user_id: row.user_id.map(|id| id as i32),
         is_public: row.is_public != 0,
+        user_seq: row.user_seq,
     }
 }
 
@@ -1382,6 +1394,7 @@ fn row_to_traffic(row: TrafficRow) -> Traffic {
         return_flag: row.return_flag != 0,
         total_fare: row.total_fare,
         total_miles: row.total_miles,
+        user_seq: row.user_seq,
     }
 }
 
@@ -1408,6 +1421,7 @@ fn row_to_stay(row: StayRow) -> Stay {
         deadline: row.deadline,
         penalty: row.penalty,
         status: row.status,
+        user_seq: row.user_seq,
     }
 }
 
@@ -4087,6 +4101,7 @@ async fn list_schedules(
           status,
           related_schedule_ids,
           user_id,
+          user_seq,
           CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
@@ -4139,6 +4154,7 @@ async fn list_schedules(
           status,
           related_schedule_ids,
           user_id,
+          user_seq,
           CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
@@ -4228,6 +4244,7 @@ async fn list_upcoming(
           status,
           related_schedule_ids,
           user_id,
+          user_seq,
           CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
@@ -4272,6 +4289,7 @@ async fn list_upcoming(
           status,
           related_schedule_ids,
           user_id,
+          user_seq,
           CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
@@ -4377,6 +4395,7 @@ async fn create_schedule(
     let now = Utc::now().to_rfc3339();
     let is_public = payload.is_public.unwrap_or(true) as i32;
     eprintln!("[CreateSchedule] is_public value: {} (from payload: {:?})", is_public, payload.is_public);
+
     let result = sqlx::query(
         r#"
         INSERT INTO schedules (
@@ -4404,10 +4423,15 @@ async fn create_schedule(
           related_schedule_ids,
           is_public,
           public_id,
+          user_seq,
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?,
+          -- user_seqはSELECT+INSERTを1つの文にまとめることでSQLiteの書き込みロックの
+          -- 範囲内に収め、同一ユーザーからの同時作成による連番の重複（競合状態）を防ぐ
+          (SELECT COALESCE(MAX(user_seq), 0) + 1 FROM schedules WHERE user_id = ?),
+          ?, ?
         )
         "#,
     )
@@ -4440,6 +4464,7 @@ async fn create_schedule(
     }))
     .bind(is_public)
     .bind(generate_public_id())
+    .bind(user.user_id)
     .bind(&now)
     .bind(&now)
     .execute(&pool)
@@ -4485,6 +4510,7 @@ async fn create_schedule(
           status,
           related_schedule_ids,
           user_id,
+          user_seq,
           CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
@@ -4537,6 +4563,7 @@ async fn create_schedule(
                   status,
                   related_schedule_ids,
                   user_id,
+                  user_seq,
                   CAST(is_public AS INTEGER) as is_public,
                   created_at,
                   updated_at
@@ -4592,8 +4619,9 @@ async fn update_schedule(
     Json(payload): Json<NewSchedule>,
 ) -> Result<Json<Schedule>, (StatusCode, Json<ErrorResponse>)> {
     // 必須項目のバリデーション（targetはNULL許可）
-    
+
     // スケジュールが存在し、ユーザーが所有しているかチェック
+    // Path(id)はユーザーごとの連番(user_seq)として解釈する（内部idではない）
     let existing: Option<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
         r#"
         SELECT
@@ -4620,13 +4648,15 @@ async fn update_schedule(
           status,
           related_schedule_ids,
           user_id,
+          user_seq,
           CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
         FROM schedules
-        WHERE id = ?
+        WHERE user_id = ? AND user_seq = ?
         "#,
     )
+    .bind(user.user_id)
     .bind(id)
     .fetch_optional(&pool)
     .await
@@ -4646,14 +4676,8 @@ async fn update_schedule(
             error: "スケジュールが見つかりませんでした".to_string(),
         }),
     ))?;
-    if existing.user_id.map(|uid| uid as i32) != Some(user.user_id) {
-        return Err((
-            StatusCode::FORBIDDEN,
-            Json(ErrorResponse {
-                error: "このスケジュールを編集する権限がありません".to_string(),
-            }),
-        ));
-    }
+    // 上のクエリで既にuser_id一致を絞り込み済みのため、以降は常にこのユーザーの所有物
+    let real_id = existing.id as i32;
 
     let now = Utc::now().to_rfc3339();
     let existing_is_public = existing.is_public != 0;
@@ -4733,7 +4757,7 @@ async fn update_schedule(
     }))
     .bind(is_public)
     .bind(&now)
-    .bind(id)
+    .bind(real_id)
     .bind(user.user_id)
     .execute(&pool)
     .await
@@ -4757,8 +4781,8 @@ async fn update_schedule(
     }
 
     // ロールアップ計算を実行
-    calculate_rollup(&pool, id as i64).await.ok();
-    
+    calculate_rollup(&pool, real_id as i64).await.ok();
+
     // 計算後のスケジュールを再取得
     let row: ScheduleRow = sqlx::query_as::<_, ScheduleRow>(
         r#"
@@ -4786,6 +4810,7 @@ async fn update_schedule(
           status,
           related_schedule_ids,
           user_id,
+          user_seq,
           CAST(is_public AS INTEGER) as is_public,
           created_at,
           updated_at
@@ -4793,7 +4818,7 @@ async fn update_schedule(
         WHERE id = ?
         "#,
     )
-    .bind(id)
+    .bind(real_id)
     .fetch_one(&pool)
     .await
     .map_err(|_| {
@@ -4836,6 +4861,7 @@ async fn update_schedule(
               status,
               related_schedule_ids,
               user_id,
+              user_seq,
               CAST(is_public AS INTEGER) as is_public,
               created_at,
               updated_at
@@ -4855,8 +4881,8 @@ async fn update_schedule(
                 .and_then(|json| serde_json::from_str::<Vec<i32>>(json).ok())
                 .unwrap_or_default();
             
-            if !related_ids_vec.contains(&id) {
-                related_ids_vec.push(id);
+            if !related_ids_vec.contains(&real_id) {
+                related_ids_vec.push(real_id);
                 let updated_json = serde_json::to_string(&related_ids_vec).ok();
                 
                 let _ = sqlx::query(
@@ -4904,6 +4930,7 @@ async fn update_schedule(
               status,
               related_schedule_ids,
               user_id,
+              user_seq,
               is_public,
               created_at,
               updated_at
@@ -4923,13 +4950,13 @@ async fn update_schedule(
                 .and_then(|json| serde_json::from_str::<Vec<i32>>(json).ok())
                 .unwrap_or_default();
             
-            related_ids_vec.retain(|&x| x != id);
+            related_ids_vec.retain(|&x| x != real_id);
             let updated_json = if related_ids_vec.is_empty() {
                 None
             } else {
                 serde_json::to_string(&related_ids_vec).ok()
             };
-            
+
             let _ = sqlx::query(
                 r#"
                 UPDATE schedules SET
@@ -4945,7 +4972,7 @@ async fn update_schedule(
             .await;
         }
     }
-    
+
     Ok(Json(schedule))
 }
 
@@ -4956,6 +4983,7 @@ async fn delete_schedule(
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
     // スケジュールが存在し、ユーザーが所有しているかチェック
+    // Path(id)はユーザーごとの連番(user_seq)として解釈する（内部idではない）
     let existing: Option<ScheduleRow> = sqlx::query_as::<_, ScheduleRow>(
         r#"
         SELECT
@@ -4982,13 +5010,15 @@ async fn delete_schedule(
           status,
           related_schedule_ids,
           user_id,
+          user_seq,
           is_public,
           created_at,
           updated_at
         FROM schedules
-        WHERE id = ?
+        WHERE user_id = ? AND user_seq = ?
         "#,
     )
+    .bind(user.user_id)
     .bind(id)
     .fetch_optional(&pool)
     .await
@@ -5007,15 +5037,8 @@ async fn delete_schedule(
             error: "スケジュールが見つかりませんでした".to_string(),
         }),
     ))?;
-    
-    if existing.user_id.map(|uid| uid as i32) != Some(user.user_id) {
-        return Err((
-            StatusCode::FORBIDDEN,
-            Json(ErrorResponse {
-                error: "このスケジュールを削除する権限がありません".to_string(),
-            }),
-        ));
-    }
+    // 上のクエリで既にuser_id一致を絞り込み済みのため、以降は常にこのユーザーの所有物
+    let real_id = existing.id as i32;
 
     let mut transaction = pool.begin().await.map_err(|_| {
         (
@@ -5060,6 +5083,7 @@ async fn delete_schedule(
               status,
               related_schedule_ids,
               user_id,
+              user_seq,
               is_public,
               created_at,
               updated_at
@@ -5079,13 +5103,13 @@ async fn delete_schedule(
                 .and_then(|json| serde_json::from_str::<Vec<i32>>(json).ok())
                 .unwrap_or_default();
             
-            related_ids_vec.retain(|&x| x != id);
+            related_ids_vec.retain(|&x| x != real_id);
             let updated_json = if related_ids_vec.is_empty() {
                 None
             } else {
                 serde_json::to_string(&related_ids_vec).ok()
             };
-            
+
             let _ = sqlx::query(
                 r#"
                 UPDATE schedules SET
@@ -5108,7 +5132,7 @@ async fn delete_schedule(
 
     // 宿泊情報を参照する通知を先に削除
     sqlx::query("DELETE FROM notifications WHERE schedule_id = ?")
-        .bind(id)
+        .bind(real_id)
         .execute(&mut *transaction)
         .await
         .map_err(|_| (
@@ -5118,7 +5142,7 @@ async fn delete_schedule(
 
     // 関連する交通・宿泊情報を同じトランザクションで削除
     sqlx::query("DELETE FROM traffics WHERE schedule_id = ?")
-        .bind(id)
+        .bind(real_id)
         .execute(&mut *transaction)
         .await
         .map_err(|_| (
@@ -5127,7 +5151,7 @@ async fn delete_schedule(
         ))?;
 
     sqlx::query("DELETE FROM stays WHERE schedule_id = ?")
-        .bind(id)
+        .bind(real_id)
         .execute(&mut *transaction)
         .await
         .map_err(|_| (
@@ -5137,7 +5161,7 @@ async fn delete_schedule(
 
     // スケジュールを削除
     let result = sqlx::query("DELETE FROM schedules WHERE id = ? AND user_id = ?")
-        .bind(id)
+        .bind(real_id)
         .bind(user.user_id)
         .execute(&mut *transaction)
         .await
@@ -5849,7 +5873,8 @@ async fn list_traffics(
           t.miles,
           t.return_flag,
           t.total_fare,
-          t.total_miles
+          t.total_miles,
+          t.user_seq
         FROM traffics t
         INNER JOIN schedules s ON t.schedule_id = s.id
         WHERE t.schedule_id = ? AND s.user_id = ?
@@ -5867,6 +5892,7 @@ async fn list_traffics(
 }
 
 // GET /traffic/:id
+// Path(id)はユーザーごとの連番(user_seq)として解釈する（内部idではない）
 async fn get_traffic(
     Path(id): Path<i32>,
     user: AuthenticatedUser,
@@ -5887,11 +5913,13 @@ async fn get_traffic(
           miles,
           return_flag,
           total_fare,
-          total_miles
+          total_miles,
+          user_seq
         FROM traffics
-        WHERE id = ?
+        WHERE owner_user_id = ? AND user_seq = ?
         "#,
     )
+    .bind(user.user_id)
     .bind(id)
     .fetch_optional(&pool)
     .await
@@ -5941,6 +5969,7 @@ async fn create_traffic(
         return Err(StatusCode::NOT_FOUND);
     }
 
+    // owner_user_idは上で確認済みのスケジュール所有者（=このユーザー）を非正規化して持たせる
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
         r#"
@@ -5958,10 +5987,16 @@ async fn create_traffic(
           total_fare,
           total_miles,
           public_id,
+          owner_user_id,
+          user_seq,
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?,
+          -- SELECT+INSERTを1つの文にまとめることでSQLiteの書き込みロックの範囲内に収め、
+          -- 同一ユーザーからの同時作成による連番の重複（競合状態）を防ぐ
+          (SELECT COALESCE(MAX(user_seq), 0) + 1 FROM traffics WHERE owner_user_id = ?),
+          ?, ?
         )
         "#,
     )
@@ -5976,6 +6011,8 @@ async fn create_traffic(
     .bind(payload.miles)
     .bind(if payload.return_flag { 1 } else { 0 })
     .bind(generate_public_id())
+    .bind(user.user_id)
+    .bind(user.user_id)
     .bind(&now)
     .bind(&now)
     .execute(&pool)
@@ -6002,7 +6039,8 @@ async fn create_traffic(
           miles,
           return_flag,
           total_fare,
-          total_miles
+          total_miles,
+          user_seq
         FROM traffics
         WHERE id = ?
         "#,
@@ -6016,21 +6054,23 @@ async fn create_traffic(
 }
 
 // PUT /traffic/:id
+// Path(id)はユーザーごとの連番(user_seq)として解釈する（内部idではない）
 async fn update_traffic(
     Path(id): Path<i32>,
     user: AuthenticatedUser,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<NewTraffic>,
 ) -> Result<Json<Traffic>, StatusCode> {
-    // 更新対象のtrafficが現在所属しているスケジュールの所有者を確認
-    let current_schedule_id: Option<i64> = sqlx::query_scalar(
-        "SELECT schedule_id FROM traffics WHERE id = ?",
+    // 更新対象のtrafficをuser_seqから解決し、現在所属しているスケジュールの所有者を確認
+    let existing: Option<(i64, i64)> = sqlx::query_as(
+        "SELECT id, schedule_id FROM traffics WHERE owner_user_id = ? AND user_seq = ?",
     )
+    .bind(user.user_id)
     .bind(id)
     .fetch_optional(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let current_schedule_id = current_schedule_id.ok_or(StatusCode::NOT_FOUND)?;
+    let (real_id, current_schedule_id) = existing.ok_or(StatusCode::NOT_FOUND)?;
 
     // 付け替え先（またはそのまま）のスケジュールの所有者も併せて確認し、
     // 他人のスケジュールへ再割り当てできないようにする
@@ -6078,7 +6118,7 @@ async fn update_traffic(
     .bind(payload.miles)
     .bind(if payload.return_flag { 1 } else { 0 })
     .bind(&now)
-    .bind(id)
+    .bind(real_id)
     .execute(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -6105,12 +6145,13 @@ async fn update_traffic(
           miles,
           return_flag,
           total_fare,
-          total_miles
+          total_miles,
+          user_seq
         FROM traffics
         WHERE id = ?
         "#,
     )
-    .bind(id)
+    .bind(real_id)
     .fetch_one(&pool)
     .await
     .map_err(|_| StatusCode::NOT_FOUND)?;
@@ -6138,7 +6179,8 @@ async fn list_all_traffics(
           t.miles,
           t.return_flag,
           t.total_fare,
-          t.total_miles
+          t.total_miles,
+          t.user_seq
         FROM traffics t
         INNER JOIN schedules s ON t.schedule_id = s.id
         WHERE s.user_id = ?
@@ -6175,7 +6217,8 @@ async fn list_all_stays(
           st.breakfast_flag,
           st.deadline,
           st.penalty,
-          st.status
+          st.status,
+          st.user_seq
         FROM stays st
         INNER JOIN schedules s ON st.schedule_id = s.id
         WHERE s.user_id = ?
@@ -6232,7 +6275,8 @@ async fn list_stays(
           st.breakfast_flag,
           st.deadline,
           st.penalty,
-          st.status
+          st.status,
+          st.user_seq
         FROM stays st
         INNER JOIN schedules s ON st.schedule_id = s.id
         WHERE st.schedule_id = ? AND s.user_id = ?
@@ -6249,6 +6293,7 @@ async fn list_stays(
 }
 
 // GET /stay/:id
+// Path(id)はユーザーごとの連番(user_seq)として解釈する（内部idではない）
 async fn get_stay(
     Path(id): Path<i32>,
     user: AuthenticatedUser,
@@ -6267,11 +6312,13 @@ async fn get_stay(
           breakfast_flag,
           deadline,
           penalty,
-          status
+          status,
+          user_seq
         FROM stays
-        WHERE id = ?
+        WHERE owner_user_id = ? AND user_seq = ?
         "#,
     )
+    .bind(user.user_id)
     .bind(id)
     .fetch_optional(&pool)
     .await
@@ -6321,6 +6368,7 @@ async fn create_stay(
         return Err(StatusCode::NOT_FOUND);
     }
 
+    // owner_user_idは上で確認済みのスケジュール所有者（=このユーザー）を非正規化して持たせる
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
         r#"
@@ -6336,10 +6384,16 @@ async fn create_stay(
           penalty,
           status,
           public_id,
+          owner_user_id,
+          user_seq,
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          -- SELECT+INSERTを1つの文にまとめることでSQLiteの書き込みロックの範囲内に収め、
+          -- 同一ユーザーからの同時作成による連番の重複（競合状態）を防ぐ
+          (SELECT COALESCE(MAX(user_seq), 0) + 1 FROM stays WHERE owner_user_id = ?),
+          ?, ?
         )
         "#,
     )
@@ -6354,6 +6408,8 @@ async fn create_stay(
     .bind(payload.penalty)
     .bind(payload.status.as_deref().unwrap_or("Keep"))
     .bind(generate_public_id())
+    .bind(user.user_id)
+    .bind(user.user_id)
     .bind(&now)
     .bind(&now)
     .execute(&pool)
@@ -6378,7 +6434,8 @@ async fn create_stay(
           breakfast_flag,
           deadline,
           penalty,
-          status
+          status,
+          user_seq
         FROM stays
         WHERE id = ?
         "#,
@@ -6392,21 +6449,23 @@ async fn create_stay(
 }
 
 // PUT /stay/:id
+// Path(id)はユーザーごとの連番(user_seq)として解釈する（内部idではない）
 async fn update_stay(
     Path(id): Path<i32>,
     user: AuthenticatedUser,
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(payload): Json<NewStay>,
 ) -> Result<Json<Stay>, StatusCode> {
-    // 更新対象のstayが現在所属しているスケジュールの所有者を確認
-    let current_schedule_id: Option<i64> = sqlx::query_scalar(
-        "SELECT schedule_id FROM stays WHERE id = ?",
+    // 更新対象のstayをuser_seqから解決し、現在所属しているスケジュールの所有者を確認
+    let existing: Option<(i64, i64)> = sqlx::query_as(
+        "SELECT id, schedule_id FROM stays WHERE owner_user_id = ? AND user_seq = ?",
     )
+    .bind(user.user_id)
     .bind(id)
     .fetch_optional(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let current_schedule_id = current_schedule_id.ok_or(StatusCode::NOT_FOUND)?;
+    let (real_id, current_schedule_id) = existing.ok_or(StatusCode::NOT_FOUND)?;
 
     // 付け替え先（またはそのまま）のスケジュールの所有者も併せて確認し、
     // 他人のスケジュールへ再割り当てできないようにする
@@ -6454,7 +6513,7 @@ async fn update_stay(
     .bind(payload.penalty)
     .bind(payload.status.as_deref().unwrap_or("Keep"))
     .bind(&now)
-    .bind(id)
+    .bind(real_id)
     .execute(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -6479,12 +6538,13 @@ async fn update_stay(
           breakfast_flag,
           deadline,
           penalty,
-          status
+          status,
+          user_seq
         FROM stays
         WHERE id = ?
         "#,
     )
-    .bind(id)
+    .bind(real_id)
     .fetch_one(&pool)
     .await
     .map_err(|_| StatusCode::NOT_FOUND)?;
@@ -7333,6 +7393,8 @@ struct Notification {
     message: String,
     is_read: bool,
     created_at: String,
+    // 関連スケジュールのユーザーごとの連番（フロントエンドが/live/${schedule_user_seq}のURL生成に使う）
+    schedule_user_seq: Option<i32>,
 }
 
 // 通知の行定義（DB用）
@@ -7346,6 +7408,7 @@ struct NotificationRow {
     message: String,
     is_read: i32,
     created_at: String,
+    schedule_user_seq: Option<i32>,
 }
 
 // NotificationRowをNotificationに変換
@@ -7359,6 +7422,7 @@ fn row_to_notification(row: NotificationRow) -> Notification {
         message: row.message,
         is_read: row.is_read != 0,
         created_at: row.created_at,
+        schedule_user_seq: row.schedule_user_seq,
     }
 }
 
@@ -7368,7 +7432,22 @@ async fn list_notifications(
     Extension(pool): Extension<Pool<Sqlite>>,
 ) -> Result<Json<Vec<Notification>>, StatusCode> {
     let rows: Vec<NotificationRow> = sqlx::query_as(
-        "SELECT id, user_id, stay_id, schedule_id, title, message, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC"
+        r#"
+        SELECT
+          n.id,
+          n.user_id,
+          n.stay_id,
+          n.schedule_id,
+          n.title,
+          n.message,
+          n.is_read,
+          n.created_at,
+          s.user_seq as schedule_user_seq
+        FROM notifications n
+        LEFT JOIN schedules s ON s.id = n.schedule_id AND s.user_id = n.user_id
+        WHERE n.user_id = ?
+        ORDER BY n.created_at DESC
+        "#
     )
     .bind(user.user_id as i64)
     .fetch_all(&pool)
@@ -7589,15 +7668,16 @@ async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn
     
     // 期限が24時間以内の宿泊情報を取得
     // deadlineは "YYYY-MM-DD HH:MM" 形式で保存されていると仮定
-    let stays: Vec<(i64, i64, i64, String, String, String)> = sqlx::query_as(
+    let stays: Vec<(i64, i64, i64, String, String, String, Option<i32>)> = sqlx::query_as(
         r#"
-        SELECT 
+        SELECT
             st.id,
             st.schedule_id,
             s.user_id,
             st.hotel_name,
             st.deadline,
-            s.title
+            s.title,
+            s.user_seq
         FROM stays st
         INNER JOIN schedules s ON st.schedule_id = s.id
         WHERE st.deadline IS NOT NULL
@@ -7608,8 +7688,8 @@ async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn
     )
     .fetch_all(pool)
     .await?;
-    
-    for (stay_id, schedule_id, user_id, hotel_name, deadline_str, schedule_title) in stays {
+
+    for (stay_id, schedule_id, user_id, hotel_name, deadline_str, schedule_title, schedule_user_seq) in stays {
         // deadlineをパース（複数の形式に対応）
         let deadline = match deadline_str.parse::<DateTime<Utc>>() {
             Ok(dt) => dt,
@@ -7731,6 +7811,7 @@ async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn
                     &notification_title,
                     &format!("期限日時: {}", formatted_deadline),
                     schedule_id,
+                    schedule_user_seq,
                 ).await {
                     Ok(()) => {
                         sqlx::query("UPDATE notifications SET push_sent_at = ? WHERE id = ?")
@@ -8848,6 +8929,84 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     backfill_public_ids(pool, "schedules").await?;
     backfill_public_ids(pool, "traffics").await?;
     backfill_public_ids(pool, "stays").await?;
+
+    // ログイン中ユーザー向けURLで内部連番の代わりに使う「ユーザーごとの連番」カラムを追加（マイグレーション）
+    // 本番で複数ユーザーが存在することが判明し、内部id（グローバル連番）をURLにそのまま使うと
+    // ユーザー間でレコード総数などの情報が漏洩するため、ユーザーごとに1,2,3...と独立に振り直す。
+    // 削除時のリナンバリングは行わない（欠番はそのまま残る）。
+    // schedulesは既存のuser_idで直接パーティションできるが、traffics/staysはschedule_id経由でしか
+    // user_idを持たないため、インデックス付きJOINなしで一意制約を張れるよう、
+    // owner_user_idという非正規化カラムを別途追加して単純な(owner_user_id, user_seq)一意インデックスを使う。
+    for table in ["schedules", "traffics", "stays"] {
+        if !column_exists(pool, table, "user_seq").await? {
+            sqlx::query(&format!("ALTER TABLE {} ADD COLUMN user_seq INTEGER", table))
+                .execute(pool)
+                .await?;
+        }
+    }
+    for table in ["traffics", "stays"] {
+        if !column_exists(pool, table, "owner_user_id").await? {
+            sqlx::query(&format!("ALTER TABLE {} ADD COLUMN owner_user_id INTEGER", table))
+                .execute(pool)
+                .await?;
+        }
+    }
+
+    sqlx::query("CREATE UNIQUE INDEX IF NOT EXISTS idx_schedules_user_seq ON schedules(user_id, user_seq) WHERE user_seq IS NOT NULL")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE UNIQUE INDEX IF NOT EXISTS idx_traffics_owner_user_seq ON traffics(owner_user_id, user_seq) WHERE user_seq IS NOT NULL")
+        .execute(pool)
+        .await?;
+    sqlx::query("CREATE UNIQUE INDEX IF NOT EXISTS idx_stays_owner_user_seq ON stays(owner_user_id, user_seq) WHERE user_seq IS NOT NULL")
+        .execute(pool)
+        .await?;
+
+    // owner_user_idをschedules.user_idからバックフィル（traffics/staysはschedule_id経由でしかuser_idを持たないため）
+    sqlx::query(
+        "UPDATE traffics SET owner_user_id = (SELECT s.user_id FROM schedules s WHERE s.id = traffics.schedule_id) WHERE owner_user_id IS NULL"
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        "UPDATE stays SET owner_user_id = (SELECT s.user_id FROM schedules s WHERE s.id = stays.schedule_id) WHERE owner_user_id IS NULL"
+    )
+    .execute(pool)
+    .await?;
+
+    // user_seqをパーティションキー（schedulesはuser_id、traffics/staysはowner_user_id）ごとに、
+    // 各テーブル自身のid昇順（=作成順）でバックフィルする。
+    // パーティションキーがNULLの行（孤立レコードなど既存のエッジケース）はuser_seqをNULLのままにする
+    // （その場合、user_seq経由での参照は404になるが、これはこのマイグレーションで新たに生じる問題ではない）
+    sqlx::query(
+        r#"
+        UPDATE schedules SET user_seq = (
+          SELECT COUNT(*) FROM schedules s2 WHERE s2.user_id = schedules.user_id AND s2.id <= schedules.id
+        ) WHERE user_seq IS NULL AND user_id IS NOT NULL
+        "#
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        r#"
+        UPDATE traffics SET user_seq = (
+          SELECT COUNT(*) FROM traffics t2 WHERE t2.owner_user_id = traffics.owner_user_id AND t2.id <= traffics.id
+        ) WHERE user_seq IS NULL AND owner_user_id IS NOT NULL
+        "#
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        r#"
+        UPDATE stays SET user_seq = (
+          SELECT COUNT(*) FROM stays st2 WHERE st2.owner_user_id = stays.owner_user_id AND st2.id <= stays.id
+        ) WHERE user_seq IS NULL AND owner_user_id IS NOT NULL
+        "#
+    )
+    .execute(pool)
+    .await?;
+
+    eprintln!("[Migration] Backfilled user_seq (and owner_user_id for traffics/stays)");
 
     // 有料プラン（premium）と1ヶ月お試し期間の管理用カラムを追加（マイグレーション）
     // trial_ends_atは持たず、trial_started_at + 1ヶ月を都度計算して判定する（has_paid_accessを参照）

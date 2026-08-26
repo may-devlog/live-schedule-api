@@ -20,7 +20,7 @@ import { useTheme, type ThemeColors } from "../contexts/ThemeContext";
 interface ScheduleCalendarProps {
   schedules: Schedule[];
   isPublic?: boolean; // 共有ページ用：trueの場合は新規作成や編集を無効化
-  onSchedulePress?: (scheduleId: number) => void; // スケジュールクリック時のカスタムハンドラ
+  onSchedulePress?: (schedule: Schedule) => void; // スケジュールクリック時のカスタムハンドラ
 }
 
 // 法定祝日のみ（振替休日は含めない）
@@ -296,14 +296,14 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
   };
 
   // スケジュールを選択したときの処理
-  const handleSelectSchedule = (scheduleId: number) => {
+  const handleSelectSchedule = (schedule: Schedule) => {
     setShowScheduleModal(false);
     if (onSchedulePress) {
-      onSchedulePress(scheduleId);
+      onSchedulePress(schedule);
     } else if (isPublic) {
-      router.push(`/public/${scheduleId}`);
+      router.push(`/public/${schedule.id}`);
     } else {
-      router.push(`/live/${scheduleId}`);
+      router.push(`/live/${schedule.user_seq}`);
     }
   };
 
@@ -462,7 +462,7 @@ export function ScheduleCalendar({ schedules, isPublic = false, onSchedulePress 
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.scheduleItem}
-                  onPress={() => handleSelectSchedule(item.id)}
+                  onPress={() => handleSelectSchedule(item)}
                 >
                   <Text style={styles.scheduleItemTime}>
                     {item.start ? item.start : item.open || "時間未設定"}

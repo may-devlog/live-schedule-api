@@ -50,8 +50,9 @@ type Stay = {
 export default function NewStayScreen() {
   const { colors } = useTheme();
   const styles = getStyles(colors);
-  const { scheduleId: initialScheduleId, copyFrom } = useLocalSearchParams<{
+  const { scheduleId: initialScheduleId, scheduleSeq, copyFrom } = useLocalSearchParams<{
     scheduleId?: string;
+    scheduleSeq?: string;
     copyFrom?: string;
   }>();
   const router = useRouter();
@@ -388,10 +389,15 @@ export default function NewStayScreen() {
 
       const created = await res.json();
       const successMessage = copyFrom ? "宿泊情報を複製しました。" : "宿泊情報を登録しました。";
+      // リダイレクト先のuser_seqを決定する。scheduleId（内部id）がURLのscheduleSeqと一致しない
+      // 場合（NotionRelationで別のスケジュールを選び直した場合など）に備え、allSchedulesから
+      // 現在選択中のscheduleIdに対応するuser_seqを優先して使う
+      const selectedSchedule = allSchedules.find((s) => s.id.toString() === scheduleId);
+      const targetSeq = selectedSchedule?.user_seq ?? (scheduleSeq ? Number(scheduleSeq) : null);
       if (Platform.OS === "web") {
         window.alert(`登録完了\n\n${successMessage}`);
-        if (scheduleId) {
-          router.push(`/live/${scheduleId}`);
+        if (targetSeq != null) {
+          router.push(`/live/${targetSeq}`);
         } else {
           router.push("/");
         }
@@ -400,8 +406,8 @@ export default function NewStayScreen() {
           {
             text: "OK",
             onPress: () => {
-              if (scheduleId) {
-                router.push(`/live/${scheduleId}`);
+              if (targetSeq != null) {
+                router.push(`/live/${targetSeq}`);
               } else {
                 router.push("/");
               }

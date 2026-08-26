@@ -60,6 +60,7 @@ export type Schedule = {
   stay_ids?: string[];
   user_id?: number | null;
   is_public?: boolean;
+  user_seq?: number | null; // ユーザーごとの連番（ログイン中ユーザー向けURLで内部idの代わりに使う）
 };
 
 export type Notification = {
@@ -71,6 +72,7 @@ export type Notification = {
   message: string;
   is_read: boolean;
   created_at: string;
+  schedule_user_seq?: number | null; // 関連スケジュールのユーザーごとの連番（URL生成に使う）
 };
 
 import { authenticatedFetch, getApiUrl } from "../utils/api";
@@ -605,8 +607,9 @@ export default function HomeScreen() {
     return calculateTotalCostWithReturnFlag(schedule, emptyTrafficMap);
   };
 
-  const handleOpenDetail = (id: number) => {
-    router.push(`/live/${id}`);
+  const handleOpenDetail = (userSeq: number | null | undefined) => {
+    if (userSeq == null) return;
+    router.push(`/live/${userSeq}`);
   };
 
   return (
@@ -724,7 +727,7 @@ export default function HomeScreen() {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}
-                onPress={() => handleOpenDetail(item.id)}
+                onPress={() => handleOpenDetail(item.user_seq)}
               >
                 <View style={styles.cardRow}>
                   <Text style={styles.cardDate}>
@@ -854,7 +857,7 @@ export default function HomeScreen() {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}
-                onPress={() => handleOpenDetail(item.id)}
+                onPress={() => handleOpenDetail(item.user_seq)}
               >
                 <View style={styles.cardRow}>
                   <Text style={styles.cardDate}>
@@ -1331,7 +1334,9 @@ export default function HomeScreen() {
                       if (!notification.is_read) {
                         markNotificationAsRead(notification.id);
                       }
-                      router.push(`/live/${notification.schedule_id}`);
+                      if (notification.schedule_user_seq != null) {
+                        router.push(`/live/${notification.schedule_user_seq}`);
+                      }
                       setShowNotificationModal(false);
                     }}
                   >

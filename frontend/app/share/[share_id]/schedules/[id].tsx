@@ -47,6 +47,7 @@ type TrafficSummary = {
   return_flag: boolean;
   total_fare?: number | null;
   total_miles?: number | null;
+  user_seq?: number | null; // ユーザーごとの連番（ログイン中ユーザー向けURLで内部idの代わりに使う）
 };
 
 type StaySummary = {
@@ -60,6 +61,7 @@ type StaySummary = {
   deadline?: string | null;
   penalty?: number | null;
   status: string;
+  user_seq?: number | null; // ユーザーごとの連番（ログイン中ユーザー向けURLで内部idの代わりに使う）
 };
 
 type DetailScreenProps = { authenticated?: boolean; scheduleId?: string };
@@ -117,7 +119,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         const res = await authenticatedFetch(getApiUrl('/schedules?include_canceled=true'));
         if (!res.ok) throw new Error(`status: ${res.status}`);
         const allData: Schedule[] = await res.json();
-        const matched = allData.find((item) => item.id === Number(id));
+        const matched = allData.find((item) => item.user_seq === Number(id));
         if (!matched) {
           throw new Error("スケジュールが見つかりません");
         }
@@ -511,11 +513,15 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         <View style={styles.relationContainer}>
           {relatedIds.map((rid) => {
             const related = allSchedules.find((s) => s.id === rid);
+            // authenticated（ログイン中ユーザー向け）の場合はuser_seqを、共有ページの場合は
+            // 従来どおりrid（=public_id）を使う。authenticatedでrelatedが見つからない場合は
+            // user_seqを解決できないためリンクさせない
+            const target = authenticated ? related?.user_seq : rid;
             if (!related) {
               return (
                 <TouchableOpacity
                   key={rid}
-                  onPress={() => router.push(authenticated ? `/live/${rid}` : `/share/${share_id}/schedules/${rid}`)}
+                  onPress={() => { if (target != null) router.push(authenticated ? `/live/${target}` : `/share/${share_id}/schedules/${rid}`); }}
                 >
                   <Text style={styles.relationLink}>Live #${rid}</Text>
                 </TouchableOpacity>
@@ -525,7 +531,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
             return (
               <TouchableOpacity
                 key={rid}
-                onPress={() => router.push(authenticated ? `/live/${rid}` : `/share/${share_id}/schedules/${rid}`)}
+                onPress={() => { if (target != null) router.push(authenticated ? `/live/${target}` : `/share/${share_id}/schedules/${rid}`); }}
                 style={styles.relationCard}
               >
                 <View style={styles.relationCardContent}>
@@ -576,7 +582,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
             <TouchableOpacity
               key={traffic.id}
               style={[styles.trafficCard, isMobile && styles.transportCardMobile]}
-              onPress={() => router.push(authenticated ? `/traffic/${traffic.id}` : `/share/${share_id}/traffic/${traffic.id}`)}
+              onPress={() => router.push(authenticated ? `/traffic/${traffic.user_seq}` : `/share/${share_id}/traffic/${traffic.id}`)}
             >
               {traffic.transportation && (
                 <View style={[styles.trafficTag, isMobile && styles.trafficTagMobile]}>
@@ -602,7 +608,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
           );
         })
       )}
-      {authenticated && <TouchableOpacity style={styles.addAction} onPress={() => router.push(`/traffic/new?scheduleId=${schedule.id}`)}><Text style={styles.addActionText}>＋ 交通を追加</Text></TouchableOpacity>}
+      {authenticated && <TouchableOpacity style={styles.addAction} onPress={() => router.push(`/traffic/new?scheduleId=${schedule.id}&scheduleSeq=${schedule.user_seq}`)}><Text style={styles.addActionText}>＋ 交通を追加</Text></TouchableOpacity>}
     </CollapsibleDetailSection>
   );
 
@@ -624,7 +630,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
             <TouchableOpacity
               key={stay.id}
               style={[styles.stayCard, isMobile && styles.stayCardMobile]}
-              onPress={() => router.push(authenticated ? `/stay/${stay.id}` : `/share/${share_id}/stay/${stay.id}`)}
+              onPress={() => router.push(authenticated ? `/stay/${stay.user_seq}` : `/share/${share_id}/stay/${stay.id}`)}
             >
               {authenticated && isDesktop && <View style={styles.stayIcon}>
                 <Ionicons name="bed" size={28} color={colors.accentContrastText} />
@@ -661,7 +667,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
           );
         })
       )}
-      {authenticated && <TouchableOpacity style={styles.addAction} onPress={() => router.push(`/stay/new?scheduleId=${schedule.id}`)}><Text style={styles.addActionText}>＋ 宿泊を追加</Text></TouchableOpacity>}
+      {authenticated && <TouchableOpacity style={styles.addAction} onPress={() => router.push(`/stay/new?scheduleId=${schedule.id}&scheduleSeq=${schedule.user_seq}`)}><Text style={styles.addActionText}>＋ 宿泊を追加</Text></TouchableOpacity>}
     </CollapsibleDetailSection>
   );
 
