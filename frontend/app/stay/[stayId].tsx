@@ -194,10 +194,14 @@ export default function StayDetailScreen() {
       }
       
       // Website選択肢を取得
+      // レスポンスは { options, exists } 形式（古い配列形式との互換のため両方に対応する）
       try {
         const websiteRes = await authenticatedFetch(getApiUrl("/stay-select-options/WEBSITE"));
         if (websiteRes.ok) {
-          const websiteData: SelectOption[] = await websiteRes.json();
+          const websiteResData = await websiteRes.json();
+          const websiteData: SelectOption[] = Array.isArray(websiteResData)
+            ? websiteResData
+            : (websiteResData.options || []);
           setWebsiteOptions(websiteData);
         }
       } catch (e) {
