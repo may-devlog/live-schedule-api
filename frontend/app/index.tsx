@@ -1,36 +1,33 @@
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import ScheduleScreen from './share/[share_id]';
+import { LandingScreen } from '@/components/LandingScreen';
 
 export default function Index() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  
-  // ログイン必須化：未ログイン時はログイン画面にリダイレクト
+
+  // ネイティブアプリはSEOと無関係なため、未ログイン時は従来どおりログイン画面へ即リダイレクトする
   useEffect(() => {
-    // 認証状態の読み込みが完了してからチェック
-    if (!isLoading) {
-      if (!isAuthenticated) {
-        console.log('[Index] Not authenticated, redirecting to login');
-        router.replace('/login');
-      } else {
-        console.log('[Index] Authenticated, showing HomeScreen');
-      }
-    } else {
-      console.log('[Index] Still loading auth state...');
+    if (Platform.OS === 'web') return;
+    if (!isLoading && !isAuthenticated) {
+      console.log('[Index] Not authenticated, redirecting to login');
+      router.replace('/login');
     }
   }, [isAuthenticated, isLoading, router]);
-  
-  // 認証状態の読み込み中は何も表示しない
-  if (isLoading) {
-    return null;
+
+  if (Platform.OS !== 'web') {
+    if (isLoading || !isAuthenticated) return null;
+    return <ScheduleScreen authenticated />;
   }
-  
-  // 未認証時も何も表示しない（リダイレクト中）
-  if (!isAuthenticated) {
-    return null;
+
+  // Web: 認証済みならホーム画面、それ以外（未ログイン・判定中）は常に公開ランディングページを表示する。
+  // 静的書き出し（output: "static"）時点ではisLoadingがtrueのままHTMLが生成されるため、
+  // ここでnullを返すとGoogleのクローラーが空のシェルしか見られず、SEO用の実コンテンツが失われる。
+  if (!isLoading && isAuthenticated) {
+    return <ScheduleScreen authenticated />;
   }
-  
-  return <ScheduleScreen authenticated />;
+  return <LandingScreen />;
 }
