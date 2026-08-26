@@ -99,7 +99,7 @@ export default function PublicStayDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <PublicHeader active="archive" />
+      <PublicHeader active="archive" showNav={false} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.detailContent}>
         {/* タイトル */}

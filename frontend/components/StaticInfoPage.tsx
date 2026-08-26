@@ -13,7 +13,7 @@ export function StaticInfoPage({ title, lead, sections, notice }: { title: strin
   const styles = getStyles(colors);
   return (
     <View style={styles.page}>
-      <PublicHeader active="none" />
+      <PublicHeader active="none" showNav={false} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.main}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
