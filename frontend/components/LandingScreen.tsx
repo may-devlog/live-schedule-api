@@ -88,7 +88,7 @@ export function LandingScreen() {
         <View style={styles.hero}>
           <HeroTitle styles={styles} />
           <Text style={styles.heroLead}>
-            遠征の日程・交通・宿泊・費用をまとめて管理。出発地や宿泊先を伏せて安全に共有できる、ライブ遠征のためのスケジュール管理サービスです。
+            遠征の日程・交通・宿泊・費用をまとめて管理。{'\n'}出発地や宿泊先を伏せて安全に共有できる、ライブ遠征のためのスケジュール管理サービスです。
           </Text>
           <TouchableOpacity style={styles.textButton} onPress={() => router.push('/guide')}>
             <Text style={[styles.textButtonText, { color: colors.accent }]}>使い方を見る →</Text>
