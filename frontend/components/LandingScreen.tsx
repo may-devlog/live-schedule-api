@@ -45,14 +45,6 @@ export function LandingScreen() {
           <Text style={styles.heroLead}>
             遠征の日程・交通・宿泊・費用をまとめて管理。出発地や宿泊先を伏せて安全に共有できる、ライブ遠征のためのスケジュール管理サービスです。
           </Text>
-          <View style={[styles.heroButtonRow, narrow && styles.heroButtonRowNarrow]}>
-            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.accent }]} onPress={() => router.push('/register')}>
-              <Text style={[styles.primaryButtonText, { color: colors.accentContrastText }]}>無料ではじめる</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.outlineButton, { borderColor: colors.accent }]} onPress={() => router.push('/login')}>
-              <Text style={[styles.outlineButtonText, { color: colors.accent }]}>ログイン</Text>
-            </TouchableOpacity>
-          </View>
           <TouchableOpacity style={styles.textButton} onPress={() => router.push('/guide')}>
             <Text style={[styles.textButtonText, { color: colors.accent }]}>使い方を見る →</Text>
           </TouchableOpacity>
@@ -92,13 +84,9 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   hero: { width: '100%', maxWidth: 800, alignSelf: 'center', paddingHorizontal: 24, paddingTop: 64, paddingBottom: 48, alignItems: 'center' },
   heroTitle: { color: colors.ink, fontSize: 36, fontWeight: '800', letterSpacing: -0.5, textAlign: 'center', lineHeight: 46 },
   heroLead: { color: colors.muted, fontSize: 16, lineHeight: 26, marginTop: 20, textAlign: 'center', maxWidth: 560 },
-  heroButtonRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 32 },
-  heroButtonRowNarrow: { flexDirection: 'column', width: '100%' },
   primaryButton: { borderRadius: 10, minHeight: 48, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center' },
   primaryButtonText: { fontWeight: '800', fontSize: 15 },
-  outlineButton: { borderWidth: 1, borderRadius: 10, minHeight: 48, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
-  outlineButtonText: { fontWeight: '700', fontSize: 15 },
-  textButton: { minHeight: 40, paddingHorizontal: 10, marginTop: 4, alignItems: 'center', justifyContent: 'center' },
+  textButton: { minHeight: 40, paddingHorizontal: 10, marginTop: 28, alignItems: 'center', justifyContent: 'center' },
   textButtonText: { fontWeight: '700', fontSize: 15 },
   featuresSection: { width: '100%', maxWidth: 1080, alignSelf: 'center', paddingHorizontal: 24, paddingBottom: 56 },
   featureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 24 },

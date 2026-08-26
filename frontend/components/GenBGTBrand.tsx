@@ -126,14 +126,14 @@ export function PublicHeader({ active = 'archive', homePath = '/', archivePath, 
           </View>
         )}
         <View style={styles.headerActions}>
+          {!narrow && (
+            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.accent }]} onPress={() => router.push('/register')}>
+              <Text style={[styles.primaryButtonText, { color: colors.accentContrastText }]}>無料ではじめる</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={[styles.outlineButton, { borderColor: colors.accent }]} onPress={() => router.push('/login')}>
             <Text style={[styles.outlineButtonText, { color: colors.accent }]}>ログイン</Text>
           </TouchableOpacity>
-          {!narrow && (
-            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.accent }]} onPress={() => router.push('/register')}>
-              <Text style={[styles.primaryButtonText, { color: colors.accentContrastText }]}>GenBGTをはじめる</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
     </View>
