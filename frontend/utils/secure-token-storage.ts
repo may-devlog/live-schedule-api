@@ -7,16 +7,24 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // （localStorage相当）にフォールバックする。
 const isNative = Platform.OS !== 'web';
 
+// expo-secure-storeのキーは英数字・"."・"-"・"_"のみ許可されており、それ以外の文字
+// （旧AsyncStorageキーで使っていた"@"など）を含めるとInvalid key providedエラーになる。
+// AsyncStorage側のキー（移行元の値を探す際に使う）はそのまま維持しつつ、SecureStoreに
+// 渡すキーだけ安全な文字列に変換する。
+function toSecureStoreKey(key: string): string {
+  return key.replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
 export async function getSecureItem(key: string): Promise<string | null> {
   if (isNative) {
-    return SecureStore.getItemAsync(key);
+    return SecureStore.getItemAsync(toSecureStoreKey(key));
   }
   return AsyncStorage.getItem(key);
 }
 
 export async function setSecureItem(key: string, value: string): Promise<void> {
   if (isNative) {
-    await SecureStore.setItemAsync(key, value);
+    await SecureStore.setItemAsync(toSecureStoreKey(key), value);
     return;
   }
   await AsyncStorage.setItem(key, value);
@@ -24,7 +32,7 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
 
 export async function removeSecureItem(key: string): Promise<void> {
   if (isNative) {
-    await SecureStore.deleteItemAsync(key);
+    await SecureStore.deleteItemAsync(toSecureStoreKey(key));
     return;
   }
   await AsyncStorage.removeItem(key);
@@ -44,7 +52,7 @@ export async function getSecureItemWithMigration(key: string): Promise<string | 
     return null;
   }
 
-  await SecureStore.setItemAsync(key, legacyValue);
+  await SecureStore.setItemAsync(toSecureStoreKey(key), legacyValue);
   await AsyncStorage.removeItem(key);
   return legacyValue;
 }
