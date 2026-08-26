@@ -27,18 +27,18 @@ export default function GuideScreen() {
       ],
     },
     {
-      heading: '4. 出発地・到着地をマスクして安全に共有する',
+      heading: '4. 共有ページを公開する',
+      body: 'アカウントメニューの「共有化」をONにすると、専用URLからスケジュールを公開できます。家族や友人はログインなしで、カレンダーや遠征の詳細を閲覧できます。共有ページの公開はプレミアムプラン限定の機能です。',
+      images: [
+        { source: require('@/assets/images/guide/share-page-anonymous.png'), caption: '共有ページはログインなしで閲覧できます', aspectRatio: 16 / 9 },
+      ],
+    },
+    {
+      heading: '5. 出発地・到着地をマスクして安全に共有する',
       body: '設定画面で自分の最寄駅などをあらかじめ登録しておくと、共有ページ上ではその駅名が「***」に置き換わって表示されます。宿泊先のホテル名も、ログインしていない閲覧者には表示されません。行動範囲を知られる心配なく、安心して予定を共有できます。',
       images: [
         { source: require('@/assets/images/guide/masked-locations.png'), caption: 'マスクしたい駅名をあらかじめ登録', aspectRatio: 16 / 9 },
         { source: require('@/assets/images/guide/share-page-masked.png'), caption: '共有ページでは出発駅が「***」に、宿泊先の名前は非表示になります', aspectRatio: 16 / 9 },
-      ],
-    },
-    {
-      heading: '5. 共有ページを公開する',
-      body: 'アカウントメニューの「共有化」をONにすると、専用URLからスケジュールを公開できます。家族や友人はログインなしで、カレンダーや遠征の詳細を閲覧できます。',
-      images: [
-        { source: require('@/assets/images/guide/share-page-anonymous.png'), caption: '共有ページはログインなしで閲覧できます', aspectRatio: 16 / 9 },
       ],
     },
     {
@@ -57,7 +57,14 @@ export default function GuideScreen() {
       ],
     },
     {
-      heading: '8. プレミアムプランでできること',
+      heading: '8. 外観を変えられる',
+      body: 'アカウントメニューの「外観」から、ライト・ダークの切り替えとアクセントカラーの変更ができます。自分好みの見た目にカスタマイズして使えます。',
+      images: [
+        { source: require('@/assets/images/guide/appearance-settings.png'), caption: '外観設定画面。ライト・ダークとアクセントカラーを選べます', aspectRatio: 16 / 9 },
+      ],
+    },
+    {
+      heading: '9. プレミアムプランでできること',
       body: 'プレミアムプラン（月額400円、初回1ヶ月の無料トライアルあり）に登録すると、共有ページの公開と、アーカイブの無制限閲覧（無料プランは直近2年分まで）が可能になります。さらにアーカイブ画面では、メイン・サブの2軸でグループ・カテゴリ・エリア・お目当てなどを組み合わせてグループ化でき、過去のライブを自分の見たい切り口で振り返れます。設定はアカウントメニューからいつでも変更できます。',
       images: [
         { source: require('@/assets/images/guide/account-menu-premium.png'), caption: '共有化やプレミアムプランの設定はアカウントメニューから', aspectRatio: 977 / 1600 },
