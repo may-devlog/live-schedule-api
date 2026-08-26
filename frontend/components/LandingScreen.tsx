@@ -23,11 +23,23 @@ function measureTextWidth(fontNode: HTMLElement, text: string, fontSizeOverride?
 // minFontSize以上）。フォント幅はサイズにほぼ比例するため、baseFontSizeでの実測値から
 // 逆算する（0.97倍の安全マージン付き）。段階的な固定サイズの出し分けと違い、
 // どんな画面幅でも「行が増える」ことなくフォントサイズだけで収める。
+// ただしminFontSizeに達してもなお収まらない場合（極端に狭い画面幅や、将来の文言変更で
+// テキストが長くなった場合）は、意図しない折り返しが再発しうる。開発時に気づけるよう
+// その場合は警告を出す。
 function fitFontSize(fontNode: HTMLElement, text: string, containerWidth: number, baseFontSize: number, minFontSize: number): number {
   const baseWidth = measureTextWidth(fontNode, text, baseFontSize);
   if (!baseWidth || baseWidth <= containerWidth) return baseFontSize;
   const fitted = Math.floor((containerWidth / baseWidth) * baseFontSize * 0.97);
-  return Math.max(minFontSize, Math.min(baseFontSize, fitted));
+  const fontSize = Math.max(minFontSize, Math.min(baseFontSize, fitted));
+  if (fitted < minFontSize && process.env.NODE_ENV !== 'production') {
+    const minWidth = measureTextWidth(fontNode, text, minFontSize);
+    if (minWidth > containerWidth) {
+      console.warn(
+        `[LandingScreen] "${text}" は最小フォントサイズ(${minFontSize}px)でも幅${Math.round(minWidth)}pxとなり、コンテナ幅${Math.round(containerWidth)}pxに収まりません。折り返しが発生する可能性があります。`
+      );
+    }
+  }
+  return fontSize;
 }
 
 function fontMetrics(style: { fontSize?: number; lineHeight?: number }): { fontSize: number; lineHeightRatio: number } {
