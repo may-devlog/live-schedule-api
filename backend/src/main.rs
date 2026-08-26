@@ -4396,22 +4396,6 @@ async fn create_schedule(
     let is_public = payload.is_public.unwrap_or(true) as i32;
     eprintln!("[CreateSchedule] is_public value: {} (from payload: {:?})", is_public, payload.is_public);
 
-    // ユーザーごとの連番を採番（ログイン中ユーザー向けURLで内部idの代わりに使う）
-    let next_seq: i32 = sqlx::query_scalar(
-        "SELECT COALESCE(MAX(user_seq), 0) + 1 FROM schedules WHERE user_id = ?",
-    )
-    .bind(user.user_id)
-    .fetch_one(&pool)
-    .await
-    .map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-                error: "データベースエラーが発生しました".to_string(),
-            }),
-        )
-    })?;
-
     let result = sqlx::query(
         r#"
         INSERT INTO schedules (
@@ -4443,7 +4427,11 @@ async fn create_schedule(
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?,
+          -- user_seqはSELECT+INSERTを1つの文にまとめることでSQLiteの書き込みロックの
+          -- 範囲内に収め、同一ユーザーからの同時作成による連番の重複（競合状態）を防ぐ
+          (SELECT COALESCE(MAX(user_seq), 0) + 1 FROM schedules WHERE user_id = ?),
+          ?, ?
         )
         "#,
     )
@@ -4476,7 +4464,7 @@ async fn create_schedule(
     }))
     .bind(is_public)
     .bind(generate_public_id())
-    .bind(next_seq)
+    .bind(user.user_id)
     .bind(&now)
     .bind(&now)
     .execute(&pool)
@@ -5981,16 +5969,7 @@ async fn create_traffic(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    // ユーザーごとの連番を採番（ログイン中ユーザー向けURLで内部idの代わりに使う）
     // owner_user_idは上で確認済みのスケジュール所有者（=このユーザー）を非正規化して持たせる
-    let next_seq: i32 = sqlx::query_scalar(
-        "SELECT COALESCE(MAX(user_seq), 0) + 1 FROM traffics WHERE owner_user_id = ?",
-    )
-    .bind(user.user_id)
-    .fetch_one(&pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
         r#"
@@ -6013,7 +5992,11 @@ async fn create_traffic(
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?,
+          -- SELECT+INSERTを1つの文にまとめることでSQLiteの書き込みロックの範囲内に収め、
+          -- 同一ユーザーからの同時作成による連番の重複（競合状態）を防ぐ
+          (SELECT COALESCE(MAX(user_seq), 0) + 1 FROM traffics WHERE owner_user_id = ?),
+          ?, ?
         )
         "#,
     )
@@ -6029,7 +6012,7 @@ async fn create_traffic(
     .bind(if payload.return_flag { 1 } else { 0 })
     .bind(generate_public_id())
     .bind(user.user_id)
-    .bind(next_seq)
+    .bind(user.user_id)
     .bind(&now)
     .bind(&now)
     .execute(&pool)
@@ -6385,16 +6368,7 @@ async fn create_stay(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    // ユーザーごとの連番を採番（ログイン中ユーザー向けURLで内部idの代わりに使う）
     // owner_user_idは上で確認済みのスケジュール所有者（=このユーザー）を非正規化して持たせる
-    let next_seq: i32 = sqlx::query_scalar(
-        "SELECT COALESCE(MAX(user_seq), 0) + 1 FROM stays WHERE owner_user_id = ?",
-    )
-    .bind(user.user_id)
-    .fetch_one(&pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
         r#"
@@ -6415,7 +6389,11 @@ async fn create_stay(
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          -- SELECT+INSERTを1つの文にまとめることでSQLiteの書き込みロックの範囲内に収め、
+          -- 同一ユーザーからの同時作成による連番の重複（競合状態）を防ぐ
+          (SELECT COALESCE(MAX(user_seq), 0) + 1 FROM stays WHERE owner_user_id = ?),
+          ?, ?
         )
         "#,
     )
@@ -6431,7 +6409,7 @@ async fn create_stay(
     .bind(payload.status.as_deref().unwrap_or("Keep"))
     .bind(generate_public_id())
     .bind(user.user_id)
-    .bind(next_seq)
+    .bind(user.user_id)
     .bind(&now)
     .bind(&now)
     .execute(&pool)
