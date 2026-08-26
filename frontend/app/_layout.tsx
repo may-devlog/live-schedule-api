@@ -79,12 +79,12 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <AppThemeProvider>
+    <AuthProvider>
+      <AppThemeProvider>
+        <ErrorBoundary>
           <RootLayoutNav />
-        </AppThemeProvider>
-      </AuthProvider>
-    </ErrorBoundary>
+        </ErrorBoundary>
+      </AppThemeProvider>
+    </AuthProvider>
   );
 }
