@@ -40,6 +40,7 @@ type StaySummary = {
   fee: number;
   breakfast_flag: boolean;
   status: string;
+  user_seq?: number | null; // ユーザーごとの連番（ログイン中ユーザー向けURLで内部idの代わりに使う）
 };
 
 const shadow = Platform.OS === "web" ? ({ boxShadow: "0 8px 24px rgba(46,16,101,0.08)" } as any) : {};
@@ -391,8 +392,11 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const renderCard = (item: Schedule) => {
     const parts = dateParts(item.date ?? item.datetime);
     const cost = totalCost(item);
+    // authenticated（ログイン中ユーザー向け）の場合はuser_seqを、公開共有ページの場合は
+    // 従来どおりid（=public_id経由で解決された値）を使う
+    const targetId = authenticated ? item.user_seq : item.id;
     return (
-      <TouchableOpacity key={item.id} style={[styles.card, mobile && styles.cardMobile]} onPress={() => onSchedulePress(item.id)}>
+      <TouchableOpacity key={item.id} style={[styles.card, mobile && styles.cardMobile]} onPress={() => { if (targetId != null) onSchedulePress(targetId); }}>
         <View style={[styles.dateBlock, mobile && styles.dateBlockMobile]}>
           <Text style={[styles.dateText, mobile && styles.dateTextMobile]}>{String(parts.month).padStart(2, "0")}.{parts.day}</Text>
           <Text style={[styles.weekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text>
@@ -417,8 +421,11 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
 
   const renderStayCard = (stay: StaySummary) => {
     const parts = dateParts(stay.check_in);
+    // authenticated（ログイン中ユーザー向け）の場合はuser_seqを、公開共有ページの場合は
+    // 従来どおりid（=public_id経由で解決された値）を使う
+    const targetId = authenticated ? stay.user_seq : stay.id;
     return (
-      <TouchableOpacity key={stay.id} style={[styles.card, mobile && styles.cardMobile]} onPress={() => onStayPress?.(stay.id)}>
+      <TouchableOpacity key={stay.id} style={[styles.card, mobile && styles.cardMobile]} onPress={() => { if (targetId != null) onStayPress?.(targetId); }}>
         <View style={[styles.dateBlock, mobile && styles.dateBlockMobile]}>
           <Text style={styles.dateText}>{String(parts.month).padStart(2, "0")}.{parts.day}</Text>
           <Text style={[styles.weekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text>

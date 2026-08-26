@@ -14,6 +14,7 @@ type Notification = {
   message: string;
   is_read: boolean;
   created_at: string;
+  schedule_user_seq?: number | null; // 関連スケジュールのユーザーごとの連番（URL生成に使う）
 };
 
 function formatDeadlineMessage(message: string): string {
@@ -88,7 +89,9 @@ export function NotificationMenu({ hideTrigger = false, visible: controlledVisib
       await authenticatedFetch(getApiUrl(`/notifications/${notification.id}/read`), { method: 'PUT' }).catch(() => undefined);
     }
     setVisible(false);
-    router.push(`/live/${notification.schedule_id}`);
+    if (notification.schedule_user_seq != null) {
+      router.push(`/live/${notification.schedule_user_seq}`);
+    }
   };
 
   return (

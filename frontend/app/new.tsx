@@ -104,7 +104,8 @@ export default function NewScheduleScreen() {
         const res = await authenticatedFetch(getApiUrl("/schedules"));
         if (!res.ok) throw new Error(`status: ${res.status}`);
         const data: Schedule[] = await res.json();
-        const found = data.find((s) => s.id.toString() === copyFrom);
+        // copyFromはユーザーごとの連番(user_seq)（/new?copyFrom=... はuser_seqベースのURLから生成される）
+        const found = data.find((s) => s.user_seq != null && s.user_seq.toString() === copyFrom);
         if (!found) {
           console.warn("Schedule not found for copy:", copyFrom);
           return;
@@ -326,8 +327,8 @@ export default function NewScheduleScreen() {
         window.alert(successMessage);
         // 少し待ってから遷移（アラートが閉じるのを待つ）
         setTimeout(() => {
-          if (created.id) {
-            router.push(`/live/${created.id}`);
+          if (created.user_seq) {
+            router.push(`/live/${created.user_seq}`);
           } else {
             router.back();
           }
@@ -337,8 +338,8 @@ export default function NewScheduleScreen() {
           {
             text: "OK",
             onPress: () => {
-              if (created.id) {
-                router.push(`/live/${created.id}`);
+              if (created.user_seq) {
+                router.push(`/live/${created.user_seq}`);
               } else {
                 router.back();
               }

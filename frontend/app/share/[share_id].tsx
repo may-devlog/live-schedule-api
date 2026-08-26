@@ -173,7 +173,7 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
 
           <View style={styles.calendarSection}>
             <Text style={styles.pageTitle}>SCHEDULE</Text>
-            <ScheduleCalendar schedules={schedules} isPublic={!authenticated} onSchedulePress={(id) => router.push(authenticated ? `/live/${id}` : `/share/${share_id}/schedules/${id}`)} />
+            <ScheduleCalendar schedules={schedules} isPublic={!authenticated} onSchedulePress={(item) => router.push(authenticated ? `/live/${item.user_seq}` : `/share/${share_id}/schedules/${item.id}`)} />
           </View>
 
           <View style={styles.sectionCard}>
@@ -189,7 +189,7 @@ export default function SharedScheduleScreen({ authenticated = false }: Schedule
                 renderItem={({ item }) => {
                   const dateDisplay = nextDateDisplay(item.date ?? item.datetime);
                   return (
-                    <TouchableOpacity style={styles.eventRow} onPress={() => router.push(authenticated ? `/live/${item.id}` : `/share/${share_id}/schedules/${item.id}`)}>
+                    <TouchableOpacity style={styles.eventRow} onPress={() => router.push(authenticated ? `/live/${item.user_seq}` : `/share/${share_id}/schedules/${item.id}`)}>
                       <View style={styles.eventContent}>
                         <View style={styles.nextDateRow}>
                           <Text style={styles.nextDate}>{dateDisplay.label}</Text>
