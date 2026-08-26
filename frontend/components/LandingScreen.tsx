@@ -38,7 +38,7 @@ export function LandingScreen() {
 
   return (
     <View style={styles.page}>
-      <PublicHeader active="home" />
+      <PublicHeader active="home" showNav={false} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
           <Text style={styles.heroTitle}>ライブの予定と費用を、ひとつの場所に。</Text>

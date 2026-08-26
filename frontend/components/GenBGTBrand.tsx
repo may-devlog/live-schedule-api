@@ -97,7 +97,7 @@ export function BrandWordmark({ light, compact = false }: { light?: boolean; com
   );
 }
 
-export function PublicHeader({ active = 'archive', homePath = '/', archivePath }: { active?: 'home' | 'archive' | 'none'; homePath?: string; archivePath?: string }) {
+export function PublicHeader({ active = 'archive', homePath = '/', archivePath, showNav = true }: { active?: 'home' | 'archive' | 'none'; homePath?: string; archivePath?: string; showNav?: boolean }) {
   const router = useRouter();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
@@ -111,7 +111,7 @@ export function PublicHeader({ active = 'archive', homePath = '/', archivePath }
         <TouchableOpacity onPress={() => router.push(homePath)} activeOpacity={0.8}>
           <BrandWordmark compact={narrow} />
         </TouchableOpacity>
-        {!narrow && (
+        {!narrow && showNav && (
           <View style={styles.nav}>
             <TouchableOpacity onPress={() => router.push(homePath)}>
               <Text style={[styles.navText, { color: colors.chromeText }, active === 'home' && { color: colors.accent, borderBottomWidth: 2, borderBottomColor: colors.accent }]}>HOME</Text>
