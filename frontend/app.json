@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.genbgt.app",
-      "versionCode": 29,
+      "versionCode": 30,
       "adaptiveIcon": {
         "backgroundColor": "#18181B",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
