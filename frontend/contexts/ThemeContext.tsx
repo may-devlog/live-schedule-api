@@ -36,7 +36,7 @@ export type ThemeColors = {
 };
 
 export const ACCENT_OPTIONS: { key: AccentKey; label: string }[] = [
-  { key: 'black', label: 'Black' },
+  { key: 'black', label: 'Mono' },
   { key: 'blue', label: 'Blue' },
   { key: 'green', label: 'Green' },
   { key: 'orange', label: 'Orange' },
