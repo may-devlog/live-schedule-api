@@ -131,7 +131,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   heroTitle: { color: colors.ink, fontSize: 36, fontWeight: '800', letterSpacing: -0.5, textAlign: 'center', lineHeight: 46 },
   heroTitleNarrow: { fontSize: 28, lineHeight: 38 },
   heroTitleMeasure: { position: 'absolute', opacity: 0 },
-  heroLead: { color: colors.muted, fontSize: 16, lineHeight: 26, marginTop: 20, textAlign: 'center', maxWidth: 560 },
+  heroLead: { color: colors.muted, fontSize: 16, lineHeight: 26, marginTop: 20, textAlign: 'center', maxWidth: 720 },
   primaryButton: { borderRadius: 10, minHeight: 48, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center' },
   primaryButtonText: { fontWeight: '800', fontSize: 15 },
   textButton: { minHeight: 40, paddingHorizontal: 10, marginTop: 28, alignItems: 'center', justifyContent: 'center' },
@@ -147,5 +147,5 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   featureBody: { color: colors.muted, fontSize: 14, lineHeight: 22 },
   ctaBand: { width: '100%', paddingVertical: 56, paddingHorizontal: 24, alignItems: 'center' },
   ctaTitle: { color: colors.ink, fontSize: 24, fontWeight: '800', textAlign: 'center' },
-  ctaBody: { color: colors.muted, fontSize: 14, lineHeight: 22, textAlign: 'center', marginTop: 12, marginBottom: 28, maxWidth: 520 },
+  ctaBody: { color: colors.muted, fontSize: 14, lineHeight: 22, textAlign: 'center', marginTop: 12, marginBottom: 28, maxWidth: 780 },
 });
