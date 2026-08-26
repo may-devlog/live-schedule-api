@@ -151,7 +151,9 @@ export function AuthHeader() {
   return (
     <View style={[styles.header, { backgroundColor: colors.chrome, borderBottomColor: colors.chromeBorder }]}>
       <View style={styles.headerInner}>
-        <BrandWordmark compact={narrow} />
+        <TouchableOpacity onPress={() => router.push('/')} activeOpacity={0.8}>
+          <BrandWordmark compact={narrow} />
+        </TouchableOpacity>
         <View style={styles.headerActions}>
           {!narrow && (
             <TouchableOpacity style={styles.textButton} onPress={() => router.push('/find-user')}>
