@@ -12,10 +12,13 @@ import { ScheduleLinkCard } from "../../../../components/ScheduleLinkCard";
 import { BooleanSelectDisplay } from "../../../../components/boolean-select-display";
 import { shareScheduleHref } from "../../../../utils/public-schedule-links";
 import type { PublicSchedule, PublicTraffic } from "../../../../types/public-schedule";
+import { useTheme, type ThemeColors } from "../../../../contexts/ThemeContext";
 
 export default function SharedTrafficDetailScreen() {
   const { share_id, trafficId } = useLocalSearchParams<{ share_id: string; trafficId: string }>();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [traffic, setTraffic] = useState<PublicTraffic | null>(null);
   const [schedule, setSchedule] = useState<PublicSchedule | null>(null);
   const [loading, setLoading] = useState(false);
@@ -81,7 +84,7 @@ export default function SharedTrafficDetailScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator color="#333333" />
+        <ActivityIndicator color={colors.accent} />
       </View>
     );
   }
@@ -116,8 +119,8 @@ export default function SharedTrafficDetailScreen() {
             <RefreshControl 
               refreshing={refreshing} 
               onRefresh={onRefresh}
-              tintColor={Platform.OS === 'ios' ? '#37352f' : undefined}
-              colors={Platform.OS === 'android' ? ['#37352f'] : undefined}
+              tintColor={Platform.OS === 'ios' ? colors.muted : undefined}
+              colors={Platform.OS === 'android' ? [colors.muted] : undefined}
             />
           ) : undefined
         }
@@ -237,10 +240,10 @@ function formatDateValue(value: string): string {
   return value.replace(/^(\d{4})-(\d{2})-(\d{2})/, "$1.$2.$3");
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -262,16 +265,16 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 40,
     fontWeight: "700",
-    color: "#37352f",
+    color: colors.ink,
     lineHeight: 48,
     flex: 1,
   },
   emptyValue: {
     fontSize: 14,
-    color: "#9b9a97",
+    color: colors.muted,
   },
   errorText: {
-    color: "#d93025",
+    color: "#C2414B",
     marginVertical: 8,
     fontSize: 14,
   },
@@ -286,7 +289,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#37352f",
+    color: colors.muted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },

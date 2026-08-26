@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Platform,
   View,
   Text,
   TextInput,
@@ -10,9 +11,12 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { API_BASE } from '../constants/api';
+import { useTheme, type ThemeColors } from '../contexts/ThemeContext';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const params = useLocalSearchParams<{ token?: string }>();
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -196,6 +200,7 @@ export default function ForgotPasswordScreen() {
           <TextInput
             style={styles.input}
             placeholder="新しいパスワード"
+            placeholderTextColor={colors.muted}
             value={newPassword}
             onChangeText={setNewPassword}
             secureTextEntry
@@ -207,6 +212,7 @@ export default function ForgotPasswordScreen() {
           <TextInput
             style={styles.input}
             placeholder="パスワード（確認）"
+            placeholderTextColor={colors.muted}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
@@ -221,7 +227,7 @@ export default function ForgotPasswordScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.accentContrastText} />
             ) : (
               <Text style={styles.buttonText}>パスワードをリセット</Text>
             )}
@@ -272,6 +278,7 @@ export default function ForgotPasswordScreen() {
         <TextInput
           style={styles.input}
           placeholder="メールアドレス"
+          placeholderTextColor={colors.muted}
           value={email}
           onChangeText={(text) => {
             setEmail(text);
@@ -298,7 +305,7 @@ export default function ForgotPasswordScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.accentContrastText} />
           ) : (
             <Text style={styles.buttonText}>リセット用メールを送信</Text>
           )}
@@ -315,50 +322,52 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const cardShadow = Platform.OS === 'web' ? ({ boxShadow: '0 18px 50px rgba(46,16,101,0.10)' } as any) : {};
+
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.surfaceAlt,
     padding: 20,
   },
   form: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...cardShadow,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 24,
     textAlign: 'center',
+    color: colors.ink,
   },
   message: {
     fontSize: 14,
-    color: '#666',
+    color: colors.muted,
     marginBottom: 24,
     lineHeight: 20,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 4,
+    borderColor: colors.border,
+    borderRadius: 10,
     padding: 12,
     fontSize: 16,
     marginBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
+    color: colors.ink,
   },
   button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 4,
+    backgroundColor: colors.accent,
+    borderRadius: 10,
     padding: 14,
     alignItems: 'center',
     marginTop: 8,
@@ -367,7 +376,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.accentContrastText,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -376,12 +385,13 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   backButtonText: {
-    color: '#007AFF',
+    color: colors.accent,
     textAlign: 'center',
     fontSize: 14,
+    fontWeight: '600',
   },
   errorText: {
-    color: '#d93025',
+    color: '#C2414B',
     fontSize: 14,
     marginTop: 8,
     marginBottom: 8,

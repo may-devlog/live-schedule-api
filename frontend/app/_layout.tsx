@@ -12,6 +12,7 @@ import 'react-native-reanimated';
 
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider as AppThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -80,7 +81,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <AppThemeProvider>
-        <RootLayoutNav />
+        <ErrorBoundary>
+          <RootLayoutNav />
+        </ErrorBoundary>
       </AppThemeProvider>
     </AuthProvider>
   );

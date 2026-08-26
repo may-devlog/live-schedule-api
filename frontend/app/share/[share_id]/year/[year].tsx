@@ -6,10 +6,13 @@ import { View, StyleSheet, Text } from "react-native";
 import type { Schedule } from "../../../HomeScreen";
 import { getApiUrl } from "../../../../utils/api";
 import { SharedArchivePage } from "../../../../components/SharedArchivePage";
+import { useTheme, type ThemeColors } from "../../../../contexts/ThemeContext";
 
 export default function SharedYearScreen() {
   const { share_id, year } = useLocalSearchParams<{ share_id: string; year: string }>();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
 
   if (!share_id) {
     return (
@@ -94,15 +97,15 @@ export default function SharedYearScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   errorContainer: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
     justifyContent: "center",
     alignItems: "center",
   },
   errorText: {
-    color: "#d93025",
+    color: "#C2414B",
     marginVertical: 8,
     fontSize: 14,
   },

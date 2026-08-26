@@ -4,9 +4,12 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'rea
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getApiUrl } from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme, type ThemeColors } from '../contexts/ThemeContext';
 
 export default function VerifyEmailChangeScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { token } = useLocalSearchParams<{ token?: string }>();
   const { updateEmail, reloadAuth } = useAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -59,7 +62,7 @@ export default function VerifyEmailChangeScreen() {
     <View style={styles.container}>
       {status === 'loading' && (
         <>
-          <ActivityIndicator size="large" color="#333333" />
+          <ActivityIndicator size="large" color={colors.accent} />
           <Text style={styles.message}>メールアドレス変更を確認中...</Text>
         </>
       )}
@@ -95,50 +98,50 @@ export default function VerifyEmailChangeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.surfaceAlt,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#333333',
+    color: colors.ink,
   },
   message: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 24,
-    color: '#666666',
+    color: colors.muted,
   },
   errorMessage: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 24,
-    color: '#ff0000',
+    color: '#C2414B',
   },
   successIcon: {
     fontSize: 64,
-    color: '#4CAF50',
+    color: '#16A34A',
     marginBottom: 16,
   },
   errorIcon: {
     fontSize: 64,
-    color: '#ff0000',
+    color: '#C2414B',
     marginBottom: 16,
   },
   button: {
-    backgroundColor: '#333333',
+    backgroundColor: colors.accent,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 4,
+    borderRadius: 10,
   },
   buttonText: {
-    color: '#ffffff',
+    color: colors.accentContrastText,
     fontSize: 16,
     fontWeight: '600',
   },
