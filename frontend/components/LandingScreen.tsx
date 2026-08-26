@@ -9,15 +9,31 @@ const HERO_TITLE_LINE1 = 'ライブの予定と費用を、';
 const HERO_TITLE_LINE2 = 'ひとつの場所に。';
 const HERO_TITLE_TWO_LINES = `${HERO_TITLE_LINE1}\n${HERO_TITLE_LINE2}`;
 
-type HeroLayout = 'oneLine' | 'twoLines' | 'twoLinesCompact';
-
-function measureTextWidth(fontNode: HTMLElement, text: string): number {
+function measureTextWidth(fontNode: HTMLElement, text: string, fontSizeOverride?: number): number {
   const cs = window.getComputedStyle(fontNode);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return 0;
-  ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const fontSize = fontSizeOverride != null ? `${fontSizeOverride}px` : cs.fontSize;
+  ctx.font = `${cs.fontWeight} ${fontSize} ${cs.fontFamily}`;
   return ctx.measureText(text).width;
+}
+
+// 指定テキストがcontainerWidthに収まる最大のフォントサイズを返す（baseFontSize以下、
+// minFontSize以上）。フォント幅はサイズにほぼ比例するため、baseFontSizeでの実測値から
+// 逆算する（0.97倍の安全マージン付き）。段階的な固定サイズの出し分けと違い、
+// どんな画面幅でも「行が増える」ことなくフォントサイズだけで収める。
+function fitFontSize(fontNode: HTMLElement, text: string, containerWidth: number, baseFontSize: number, minFontSize: number): number {
+  const baseWidth = measureTextWidth(fontNode, text, baseFontSize);
+  if (!baseWidth || baseWidth <= containerWidth) return baseFontSize;
+  const fitted = Math.floor((containerWidth / baseWidth) * baseFontSize * 0.97);
+  return Math.max(minFontSize, Math.min(baseFontSize, fitted));
+}
+
+function fontMetrics(style: { fontSize?: number; lineHeight?: number }): { fontSize: number; lineHeightRatio: number } {
+  const fontSize = style.fontSize ?? 16;
+  const lineHeightRatio = style.lineHeight ? style.lineHeight / fontSize : 1.4;
+  return { fontSize, lineHeightRatio };
 }
 
 // 画面幅の閾値ではなく実測で判定する。閾値方式だと、フォント計量の誤差や
@@ -41,46 +57,92 @@ function useMeasuredWidths(containerRef: React.RefObject<View | null>, fontRef: 
   return { containerWidth, fontNode };
 }
 
+const HERO_TITLE_MIN_SIZE = 20;
+
+// 全体が1行に収まる幅ではそのまま、収まらない幅では常にline1/line2の2行に分割し、
+// その2行目（より長いline1）が確実に1行に収まるまでフォントサイズを縮める。
+// 「行が増える」のではなく「文字が小さくなる」ことで、どんな画面幅でも
+// 意図した行数（1行 or 2行）を保つ。
 function HeroTitle({ styles }: { styles: ReturnType<typeof getStyles> }) {
   const containerRef = useRef<View>(null);
   const fontRef = useRef<Text>(null);
   const { containerWidth, fontNode } = useMeasuredWidths(containerRef, fontRef);
+  const { fontSize: baseFontSize, lineHeightRatio } = fontMetrics(styles.heroTitle);
 
-  let layout: HeroLayout = 'oneLine';
+  let display = HERO_TITLE;
+  let fontSize = baseFontSize;
   if (containerWidth && fontNode) {
-    const fullWidth = measureTextWidth(fontNode, HERO_TITLE);
+    const fullWidth = measureTextWidth(fontNode, HERO_TITLE, baseFontSize);
     if (fullWidth > containerWidth) {
-      const line1Width = measureTextWidth(fontNode, HERO_TITLE_LINE1);
-      layout = line1Width <= containerWidth ? 'twoLines' : 'twoLinesCompact';
+      display = HERO_TITLE_TWO_LINES;
+      fontSize = fitFontSize(fontNode, HERO_TITLE_LINE1, containerWidth, baseFontSize, HERO_TITLE_MIN_SIZE);
     }
   }
 
   return (
     <View ref={containerRef} style={styles.heroTitleWrap}>
       <Text ref={fontRef} style={[styles.heroTitle, styles.heroTitleMeasure]}>{HERO_TITLE}</Text>
-      <Text style={[styles.heroTitle, layout === 'twoLinesCompact' && styles.heroTitleNarrow]}>
-        {layout === 'oneLine' ? HERO_TITLE : HERO_TITLE_TWO_LINES}
+      <Text style={[styles.heroTitle, { fontSize, lineHeight: Math.round(fontSize * lineHeightRatio) }]}>
+        {display}
       </Text>
     </View>
   );
 }
 
-// 1行に収まる幅なら1文字列のまま、収まらなければbreakAfterの直後で改行する。
-// 閾値ではなく実測判定にすることで、タブレット/PC幅では1行、スマホ幅では
-// 指定どおりの2行のどちらかに必ず揃い、中途半端な折り返しが発生しない。
+const BREAKABLE_TEXT_MIN_SIZE = 9;
+
+// 1行に収まる幅ならそのまま、収まらなければbreakAfterの直後で改行する。改行後の
+// 2行のうち、より幅の広い方が確実に1行に収まるまでフォントサイズを縮めることで、
+// 「行が増える」のではなく「文字が小さくなる」ことでどんな画面幅でも
+// 意図した行数（1行 or 指定位置での2行）を保つ。
 function BreakableText({ text, breakAfter, style, maxWidth }: { text: string; breakAfter: string; style: any; maxWidth?: number }) {
   const containerRef = useRef<View>(null);
   const fontRef = useRef<Text>(null);
   const { containerWidth, fontNode } = useMeasuredWidths(containerRef, fontRef);
+  const { fontSize: baseFontSize, lineHeightRatio } = fontMetrics(style);
 
-  const oneLine = !containerWidth || !fontNode || measureTextWidth(fontNode, text) <= containerWidth;
   const rest = text.slice(breakAfter.length);
   const measureStyle = { position: 'absolute' as const, opacity: 0 };
+
+  let display = text;
+  let fontSize = baseFontSize;
+  if (containerWidth && fontNode) {
+    const fullWidth = measureTextWidth(fontNode, text, baseFontSize);
+    if (fullWidth > containerWidth) {
+      display = `${breakAfter}\n${rest}`;
+      const line1Width = measureTextWidth(fontNode, breakAfter, baseFontSize);
+      const line2Width = measureTextWidth(fontNode, rest, baseFontSize);
+      const widerLine = line1Width >= line2Width ? breakAfter : rest;
+      fontSize = fitFontSize(fontNode, widerLine, containerWidth, baseFontSize, BREAKABLE_TEXT_MIN_SIZE);
+    }
+  }
 
   return (
     <View ref={containerRef} style={{ width: '100%', maxWidth, alignItems: 'center' }}>
       <Text ref={fontRef} style={[style, measureStyle]}>{text}</Text>
-      <Text style={style}>{oneLine ? text : `${breakAfter}\n${rest}`}</Text>
+      <Text style={[style, { fontSize, lineHeight: Math.round(fontSize * lineHeightRatio) }]}>{display}</Text>
+    </View>
+  );
+}
+
+// heroLeadの1文目（改行位置を持たない単一の文）が確実に1行に収まるまで
+// フォントサイズを縮める。BreakableTextと同じ考え方の、改行なし版。
+function AutoFitLine({ text, style }: { text: string; style: any }) {
+  const containerRef = useRef<View>(null);
+  const fontRef = useRef<Text>(null);
+  const { containerWidth, fontNode } = useMeasuredWidths(containerRef, fontRef);
+  const { fontSize: baseFontSize, lineHeightRatio } = fontMetrics(style);
+  const measureStyle = { position: 'absolute' as const, opacity: 0 };
+
+  const fontSize =
+    containerWidth && fontNode
+      ? fitFontSize(fontNode, text, containerWidth, baseFontSize, BREAKABLE_TEXT_MIN_SIZE)
+      : baseFontSize;
+
+  return (
+    <View ref={containerRef} style={{ width: '100%', alignItems: 'center' }}>
+      <Text ref={fontRef} style={[style, measureStyle]}>{text}</Text>
+      <Text style={[style, { fontSize, lineHeight: Math.round(fontSize * lineHeightRatio) }]}>{text}</Text>
     </View>
   );
 }
@@ -124,7 +186,7 @@ export function LandingScreen() {
         <View style={styles.hero}>
           <HeroTitle styles={styles} />
           <View style={styles.heroLeadWrap}>
-            <Text style={styles.heroLead}>遠征の日程・交通・宿泊・費用をまとめて管理。</Text>
+            <AutoFitLine text="遠征の日程・交通・宿泊・費用をまとめて管理。" style={styles.heroLead} />
             <BreakableText
               text="出発地や宿泊先を伏せて安全に共有できる、ライブ遠征のためのスケジュール管理サービスです。"
               breakAfter="出発地や宿泊先を伏せて安全に共有できる、"
@@ -175,7 +237,6 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   hero: { width: '100%', maxWidth: 800, alignSelf: 'center', paddingHorizontal: 24, paddingTop: 64, paddingBottom: 48, alignItems: 'center' },
   heroTitleWrap: { width: '100%', alignItems: 'center' },
   heroTitle: { color: colors.ink, fontSize: 36, fontWeight: '800', letterSpacing: -0.5, textAlign: 'center', lineHeight: 46 },
-  heroTitleNarrow: { fontSize: 28, lineHeight: 38 },
   heroTitleMeasure: { position: 'absolute', opacity: 0 },
   heroLeadWrap: { width: '100%', alignItems: 'center', marginTop: 20 },
   heroLead: { color: colors.muted, fontSize: 16, lineHeight: 26, textAlign: 'center' },
