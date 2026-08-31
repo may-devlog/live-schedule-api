@@ -662,7 +662,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
                 </Text>
                 <Text style={styles.cardPrice}>{formatCurrency(stay.fee)}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.muted} style={isMobile ? styles.cardChevronMobile : undefined} />
+              <Ionicons name="chevron-forward" size={20} color={colors.muted} style={isMobile ? styles.stayCardChevronMobile : undefined} />
             </TouchableOpacity>
           );
         })
@@ -975,7 +975,7 @@ const getStyles = (colors: ThemeColors, scheme: SchemeKey) => StyleSheet.create(
   stayCardMobile: { flexWrap: "wrap", paddingRight: 38 },
   stayMainMobile: { flexBasis: "72%", flexGrow: 1 },
   stayCardActions: { flexDirection: "row", alignItems: "center", gap: 14 },
-  stayCardActionsMobile: { flexBasis: "100%", justifyContent: "flex-end", paddingRight: 2 },
+  stayCardActionsMobile: { flexBasis: "100%", justifyContent: "flex-end", paddingRight: 16 },
   cardSubRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   stayDateLabel: { width: 100, color: colors.muted, fontSize: 11, fontWeight: "400" },
   stayDateLabelMobile: { width: 82, flexShrink: 0 },
@@ -983,6 +983,7 @@ const getStyles = (colors: ThemeColors, scheme: SchemeKey) => StyleSheet.create(
   stayDatePartsMobile: { flexWrap: "nowrap", columnGap: 6 },
   stayDatePartsNarrow: { columnGap: 3 },
   cardChevronMobile: { position: "absolute", right: 12, top: "50%" },
+  stayCardChevronMobile: { position: "absolute", right: 12, bottom: 14 },
   cardRow: {
     flexDirection: "row",
     alignItems: "center",
