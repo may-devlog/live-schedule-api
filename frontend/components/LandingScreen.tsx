@@ -93,7 +93,13 @@ function HeroTitle({ styles }: { styles: ReturnType<typeof getStyles> }) {
 
   return (
     <View ref={containerRef} style={styles.heroTitleWrap}>
-      <Text ref={fontRef} style={[styles.heroTitle, styles.heroTitleMeasure]}>{HERO_TITLE}</Text>
+      <Text
+        ref={fontRef}
+        style={[styles.heroTitle, styles.heroTitleMeasure]}
+        aria-hidden={true}
+      >
+        {HERO_TITLE}
+      </Text>
       <Text style={[styles.heroTitle, { fontSize, lineHeight: Math.round(fontSize * lineHeightRatio) }]}>
         {display}
       </Text>
@@ -131,7 +137,13 @@ function BreakableText({ text, breakAfter, style, maxWidth }: { text: string; br
 
   return (
     <View ref={containerRef} style={{ width: '100%', maxWidth, alignItems: 'center' }}>
-      <Text ref={fontRef} style={[style, measureStyle]}>{text}</Text>
+      <Text
+        ref={fontRef}
+        style={[style, measureStyle]}
+        aria-hidden={true}
+      >
+        {text}
+      </Text>
       <Text style={[style, { fontSize, lineHeight: Math.round(fontSize * lineHeightRatio) }]}>{display}</Text>
     </View>
   );
@@ -153,7 +165,13 @@ function AutoFitLine({ text, style }: { text: string; style: any }) {
 
   return (
     <View ref={containerRef} style={{ width: '100%', alignItems: 'center' }}>
-      <Text ref={fontRef} style={[style, measureStyle]}>{text}</Text>
+      <Text
+        ref={fontRef}
+        style={[style, measureStyle]}
+        aria-hidden={true}
+      >
+        {text}
+      </Text>
       <Text style={[style, { fontSize, lineHeight: Math.round(fontSize * lineHeightRatio) }]}>{text}</Text>
     </View>
   );
