@@ -29,7 +29,9 @@ export default function Root({ children }: PropsWithChildren) {
         <script dangerouslySetInnerHTML={{ __html: 'window.__genbgtReplaceState = window.history.replaceState.bind(window.history);' }} />
         <ScrollViewStyleReset />
       </head>
-      <body>{children}</body>
+      <body>
+        <div data-nosnippet>{children}</div>
+      </body>
     </html>
   );
 }
