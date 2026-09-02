@@ -30,7 +30,12 @@ export default function Root({ children }: PropsWithChildren) {
         <ScrollViewStyleReset />
       </head>
       <body>
-        <div data-nosnippet>{children}</div>
+        {/*
+          height:100%を指定しないと、#root/body/htmlに設定されているheight:100%の連鎖が
+          このラッパーで途切れ、#rootの高さが解決できずアプリの内容全体が
+          （DOM上には存在するが視覚的には）非表示になってしまう。
+        */}
+        <div data-nosnippet style={{ height: '100%' }}>{children}</div>
       </body>
     </html>
   );
