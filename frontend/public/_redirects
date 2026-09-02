@@ -1,0 +1,35 @@
+# Expo Router's static web export (app.json: web.output = "static") only produces
+# a literal "[param].html" file for a dynamic route when it has no
+# generateStaticParams (e.g. dist/year/[year].html, dist/share/[share_id].html).
+# None of this app's dynamic routes have generateStaticParams, so without these
+# rules Cloudflare Pages has no file matching a real URL like /year/2026 and
+# falls back to serving the top-level index.html (the marketing home page).
+# The client-side router then tries to mount a completely different page onto
+# that HTML, React fails to hydrate it (error #418), and the recovery re-render
+# leaves the page blank below the header.
+#
+# These rules rewrite each real URL to the matching generated "[param].html" so
+# the browser hydrates the correct page shell instead. Order matters: more
+# specific paths must come before their wildcard parents, and targets must NOT
+# include ".html" or Cloudflare Pages 308-redirects to the extensionless URL
+# instead of rewriting in place.
+/share/*/year/*      /share/[share_id]/year/[year]      200
+/share/*/stay/*      /share/[share_id]/stay/[stayId]     200
+/share/*/traffic/*   /share/[share_id]/traffic/[trafficId]  200
+/share/*/schedules/* /share/[share_id]/schedules/[id]    200
+/share/*             /share/[share_id]                   200
+
+/public/stay/*       /public/stay/[stayId]               200
+/public/traffic/*    /public/traffic/[trafficId]         200
+/public/*            /public/[id]                        200
+
+/live/*/edit         /live/[id]/edit                     200
+/live/*              /live/[id]                          200
+
+/stay/*/edit         /stay/[stayId]/edit                 200
+/stay/*              /stay/[stayId]                      200
+
+/traffic/*/edit      /traffic/[trafficId]/edit           200
+/traffic/*           /traffic/[trafficId]                200
+
+/year/*              /year/[year]                        200
