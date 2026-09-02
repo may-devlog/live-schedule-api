@@ -13,6 +13,12 @@
 # specific paths must come before their wildcard parents, and targets must NOT
 # include ".html" or Cloudflare Pages 308-redirects to the extensionless URL
 # instead of rewriting in place.
+#
+# /stay/new and /traffic/new are real static routes (app/stay/new.tsx,
+# app/traffic/new.tsx) that live under the same prefix as the dynamic
+# [stayId]/[trafficId] routes. _redirects rules are checked before static
+# assets, so without an explicit passthrough here the wildcard rules below
+# would wrongly rewrite them to the detail page instead of leaving them alone.
 /share/*/year/*      /share/[share_id]/year/[year]      200
 /share/*/stay/*      /share/[share_id]/stay/[stayId]     200
 /share/*/traffic/*   /share/[share_id]/traffic/[trafficId]  200
@@ -26,9 +32,11 @@
 /live/*/edit         /live/[id]/edit                     200
 /live/*              /live/[id]                          200
 
+/stay/new            /stay/new                           200
 /stay/*/edit         /stay/[stayId]/edit                 200
 /stay/*              /stay/[stayId]                      200
 
+/traffic/new         /traffic/new                        200
 /traffic/*/edit      /traffic/[trafficId]/edit           200
 /traffic/*           /traffic/[trafficId]                200
 
