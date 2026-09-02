@@ -56,7 +56,12 @@ function RootLayoutNav() {
     }
   }, [pathname]);
 
-  if (!fontsLoaded) {
+  // Webの静的書き出しはuseFontsが解決済みの状態でHTMLを生成するが、実際のブラウザでは
+  // フォント読み込みは非同期のため、初回描画時点ではfontsLoadedがfalseになる。ここでnullを
+  // 返すと静的HTML(フル描画済み)とクライアントの初回描画(null)が一致せずハイドレーションに
+  // 失敗し(React error #418)、react-native-webのスタイル解決が壊れて本文全体が真っ白になる。
+  // ネイティブはハイドレーションが無いため従来どおりフォント読み込み完了を待つ。
+  if (!fontsLoaded && Platform.OS !== 'web') {
     return null;
   }
 
