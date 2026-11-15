@@ -44,8 +44,16 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
   const [url, setUrl] = useState("");
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [imageName, setImageName] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
+
+  const setSelectedImage = (dataUrl: string, fileName: string | null) => {
+    if (dataUrl.length > 7_100_000) throw new Error("画像サイズは5MB以下にしてください");
+    setImageDataUrl(dataUrl);
+    setImageName(fileName || "選択した画像");
+    setPreview(null);
+  };
 
   const pickImage = async () => {
     try {
@@ -56,14 +64,41 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
       if (!asset.base64) throw new Error("画像を読み込めませんでした");
       const mimeType = ["image/png", "image/webp", "image/gif"].includes(asset.mimeType || "") ? asset.mimeType : "image/jpeg";
       const dataUrl = `data:${mimeType};base64,${asset.base64}`;
-      if (dataUrl.length > 7_100_000) throw new Error("画像サイズは5MB以下にしてください");
-      setImageDataUrl(dataUrl);
-      setImageName(asset.fileName || "選択した画像");
-      setPreview(null);
+      setSelectedImage(dataUrl, asset.fileName || null);
     } catch (error: any) {
       showError(error.message || "画像を読み込めませんでした");
     }
   };
+
+  const handleDrop = (event: any) => {
+    if (Platform.OS !== "web") return;
+    event.preventDefault?.();
+    event.stopPropagation?.();
+    setIsDragging(false);
+    const file = event.dataTransfer?.files?.[0] as File | undefined;
+    if (!file) return;
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowedTypes.includes(file.type)) return showError("JPEG、PNG、WebP、GIF画像のみ使用できます");
+    if (file.size > 5 * 1024 * 1024) return showError("画像サイズは5MB以下にしてください");
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        if (typeof reader.result !== "string") throw new Error("画像を読み込めませんでした");
+        setSelectedImage(reader.result, file.name);
+      } catch (error: any) {
+        showError(error.message || "画像を読み込めませんでした");
+      }
+    };
+    reader.onerror = () => showError("画像を読み込めませんでした");
+    reader.readAsDataURL(file);
+  };
+
+  const webDropProps = Platform.OS === "web" ? {
+    onDragEnter: (event: any) => { event.preventDefault?.(); setIsDragging(true); },
+    onDragOver: (event: any) => { event.preventDefault?.(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); },
+    onDragLeave: (event: any) => { event.preventDefault?.(); setIsDragging(false); },
+    onDrop: handleDrop,
+  } : {};
 
   const analyze = async () => {
     if (sourceType === "url" && !url.trim()) return showError("URLを入力してください");
@@ -120,9 +155,9 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
       {sourceType === "url" ? (
         <TextInput style={styles.input} value={url} onChangeText={(value) => { setUrl(value); setPreview(null); }} placeholder="https://example.com/event" placeholderTextColor={colors.muted} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
       ) : (
-        <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+        <TouchableOpacity {...webDropProps} style={[styles.imagePicker, isDragging && styles.imagePickerDragging]} onPress={pickImage}>
           {imageDataUrl ? <Image source={{ uri: imageDataUrl }} style={styles.thumbnail} /> : <View style={styles.imagePlaceholder}><Ionicons name="cloud-upload-outline" size={27} color={colors.accent} /></View>}
-          <View style={styles.imageCopy}><Text style={styles.imageTitle}>{imageName || "スクリーンショットを選択"}</Text><Text style={styles.imageHint}>JPEG・PNG・WebP・GIF、5MBまで</Text></View>
+          <View style={styles.imageCopy}><Text style={styles.imageTitle}>{imageName || (Platform.OS === "web" ? "クリックまたはドラッグ＆ドロップ" : "スクリーンショットを選択")}</Text><Text style={styles.imageHint}>JPEG・PNG・WebP・GIF、5MBまで</Text></View>
           <Text style={styles.chooseText}>{imageDataUrl ? "変更" : "選択"}</Text>
         </TouchableOpacity>
       )}
@@ -157,6 +192,7 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   tabActive: { backgroundColor: colors.accent }, tabText: { color: colors.muted, fontSize: 12, fontWeight: "700" }, tabTextActive: { color: colors.accentContrastText },
   input: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: 9, paddingHorizontal: 14, color: colors.ink, backgroundColor: colors.surface, fontSize: 14 },
   imagePicker: { minHeight: 72, borderWidth: 1, borderStyle: "dashed", borderColor: colors.border, borderRadius: 10, padding: 10, flexDirection: "row", alignItems: "center" },
+  imagePickerDragging: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
   imagePlaceholder: { width: 50, height: 50, borderRadius: 8, backgroundColor: colors.accentSoft, alignItems: "center", justifyContent: "center" }, thumbnail: { width: 50, height: 50, borderRadius: 8, resizeMode: "cover" },
   imageCopy: { flex: 1, marginHorizontal: 12 }, imageTitle: { color: colors.ink, fontSize: 13, fontWeight: "700" }, imageHint: { color: colors.muted, fontSize: 11, marginTop: 4 }, chooseText: { color: colors.accent, fontSize: 12, fontWeight: "700" },
   analyzeButton: { marginTop: 14, minHeight: 46, borderRadius: 9, backgroundColor: colors.accent, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center" }, disabled: { opacity: 0.6 }, analyzeText: { color: colors.accentContrastText, fontSize: 13, fontWeight: "700" },
