@@ -319,16 +319,18 @@ export default function EditTrafficScreen() {
         <Switch value={returnFlag} onValueChange={setReturnFlag} />
       </View>
 
-      <NotionDatePicker
-        label="予約開始日時"
-        value={reservationStartAt}
-        onValueChange={(value) => {
-          reservationStartManuallySet.current = true;
-          setReservationStartAt(value);
-        }}
-        mode="datetime"
-        placeholder="YYYY-MM-DD HH:MM"
-      />
+      <View style={styles.reservationStartField}>
+        <NotionDatePicker
+          label="予約開始日時"
+          value={reservationStartAt}
+          onValueChange={(value) => {
+            reservationStartManuallySet.current = true;
+            setReservationStartAt(value);
+          }}
+          mode="datetime"
+          placeholder="YYYY-MM-DD HH:MM"
+        />
+      </View>
 
       <TouchableOpacity
         style={[styles.button, submitting && styles.buttonDisabled]}
@@ -415,6 +417,9 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 16,
     paddingVertical: 8,
+  },
+  reservationStartField: {
+    marginTop: 16,
   },
   button: {
     marginTop: 32,
