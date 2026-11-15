@@ -25,6 +25,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { AppHeader, PublicFooter } from "../components/GenBGTBrand";
 import { useTheme, type ThemeColors } from "../contexts/ThemeContext";
+import { ScheduleImportCard } from "../components/ScheduleImportCard";
 
 export default function NewScheduleScreen() {
   const { colors } = useTheme();
@@ -232,6 +233,21 @@ export default function NewScheduleScreen() {
 
   const [submitting, setSubmitting] = useState(false);
 
+  const handleImportApply = (preview: {
+    title: string | null; date: string | null; open: string | null; start: string | null;
+    end: string | null; area: string | null; venue: string | null;
+  }) => {
+    if (preview.title) setTitle(preview.title);
+    if (preview.date) setDate(preview.date);
+    if (preview.open) setOpenTime(preview.open);
+    if (preview.start) setStartTime(preview.start);
+    if (preview.end) setEndTime(preview.end);
+    if (preview.area) setArea(preview.area);
+    if (preview.venue) setVenue(preview.venue);
+    if (Platform.OS === "web") window.alert("入力候補をフォームに反映しました。内容をご確認ください。");
+    else Alert.alert("自動入力", "入力候補をフォームに反映しました。内容をご確認ください。");
+  };
+
   const handleSubmit = async () => {
     // 必須項目のチェック（targetはNULL許可のため除外）
     if (!title.trim() || !area || !venue.trim()) {
@@ -374,6 +390,7 @@ export default function NewScheduleScreen() {
           <Text style={styles.eyebrow}>EVENT</Text>
           <Text style={styles.title}>{copyFrom ? "イベントを複製" : "新規イベント"}</Text>
           <Text style={styles.lead}>ライブの基本情報や費用を登録します。</Text>
+          {!copyFrom && <ScheduleImportCard areas={areas} onApply={handleImportApply} />}
           <View style={styles.formCard}>
 
       {/* Text型 */}
