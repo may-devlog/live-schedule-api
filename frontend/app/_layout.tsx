@@ -28,11 +28,15 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    // プッシュ通知をタップして開いた場合、関連するライブの詳細画面へ遷移する
-    // URLはuser_seq（ユーザーごとの連番）ベースのため、内部id(schedule_id)ではなくschedule_user_seqを使う
+    // プッシュ通知をタップして開いた場合、通知種別に応じた詳細画面へ遷移する。
+    // URLには内部idではなく、ユーザーごとの連番を使用する。
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const scheduleUserSeq = response.notification.request.content.data?.schedule_user_seq;
-      if (scheduleUserSeq != null) {
+      const data = response.notification.request.content.data;
+      const trafficUserSeq = data?.traffic_user_seq;
+      const scheduleUserSeq = data?.schedule_user_seq;
+      if (data?.notification_type === 'traffic_reservation_start' && trafficUserSeq != null) {
+        router.push(`/traffic/${trafficUserSeq}`);
+      } else if (scheduleUserSeq != null) {
         router.push(`/live/${scheduleUserSeq}`);
       }
     });

@@ -579,6 +579,8 @@ async fn send_expo_push_notifications(
     body: &str,
     schedule_id: i64,
     schedule_user_seq: Option<i32>,
+    notification_type: &str,
+    traffic_user_seq: Option<i32>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if tokens.is_empty() {
         return Ok(());
@@ -592,9 +594,14 @@ async fn send_expo_push_notifications(
                 "to": token,
                 "title": title,
                 "body": body,
-                // schedule_idは内部id。フロントエンドのディープリンクはURLに内部idを
-                // 含めないため、代わりにschedule_user_seqを使ってリンクを構築する
-                "data": { "schedule_id": schedule_id, "schedule_user_seq": schedule_user_seq },
+                // URLには内部idを含めず、通知種別に応じてユーザーごとの連番から
+                // ライブまたは交通の詳細リンクを構築する。
+                "data": {
+                    "schedule_id": schedule_id,
+                    "schedule_user_seq": schedule_user_seq,
+                    "notification_type": notification_type,
+                    "traffic_user_seq": traffic_user_seq
+                },
                 "sound": "default",
             })
         })
@@ -7858,6 +7865,8 @@ async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn
                     &format!("期限日時: {}", formatted_deadline),
                     schedule_id,
                     schedule_user_seq,
+                    "stay_cancellation_deadline",
+                    None,
                 ).await {
                     Ok(()) => {
                         sqlx::query("UPDATE notifications SET push_sent_at = ? WHERE id = ?")
@@ -7890,10 +7899,10 @@ fn parse_jst_datetime(value: &str) -> Option<DateTime<Utc>> {
 async fn check_traffic_reservation_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn std::error::Error>> {
     let now = Utc::now();
     let one_day_later = now + chrono::Duration::hours(24);
-    let rows: Vec<(i64, i64, i64, String, String, String, String, Option<i32>)> = sqlx::query_as(
+    let rows: Vec<(i64, i64, i64, String, String, String, String, Option<i32>, Option<i32>)> = sqlx::query_as(
         r#"
         SELECT t.id, t.schedule_id, s.user_id, t.from_place, t.to_place,
-               t.reservation_start_at, s.title, s.user_seq
+               t.reservation_start_at, s.title, s.user_seq, t.user_seq
         FROM traffics t
         INNER JOIN schedules s ON s.id = t.schedule_id
         WHERE t.reservation_start_at IS NOT NULL AND t.reservation_start_at != ''
@@ -7901,7 +7910,7 @@ async fn check_traffic_reservation_notifications(pool: &Pool<Sqlite>) -> Result<
         "#
     ).fetch_all(pool).await?;
 
-    for (traffic_id, schedule_id, user_id, from, to, start_str, schedule_title, schedule_user_seq) in rows {
+    for (traffic_id, schedule_id, user_id, from, to, start_str, schedule_title, schedule_user_seq, traffic_user_seq) in rows {
         let Some(start) = parse_jst_datetime(&start_str) else {
             eprintln!("[RESERVATION_CHECK] Failed to parse reservation start: {}", start_str);
             continue;
@@ -7945,7 +7954,16 @@ async fn check_traffic_reservation_notifications(pool: &Pool<Sqlite>) -> Result<
             sqlx::query("UPDATE notifications SET email_sent_at = ? WHERE id = ?")
                 .bind(Utc::now().to_rfc3339()).bind(notification_id).execute(pool).await?;
         }
-        if should_push && send_expo_push_notifications(pool, &push_tokens, &title, &format!("予約開始日時: {}", formatted), schedule_id, schedule_user_seq).await.is_ok() {
+        if should_push && send_expo_push_notifications(
+            pool,
+            &push_tokens,
+            &title,
+            &format!("予約開始日時: {}", formatted),
+            schedule_id,
+            schedule_user_seq,
+            "traffic_reservation_start",
+            traffic_user_seq,
+        ).await.is_ok() {
             sqlx::query("UPDATE notifications SET push_sent_at = ? WHERE id = ?")
                 .bind(Utc::now().to_rfc3339()).bind(notification_id).execute(pool).await?;
         }
