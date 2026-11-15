@@ -10,6 +10,7 @@ import {
   Alert,
   ScrollView,
   Switch,
+  Platform,
 } from "react-native";
 import { authenticatedFetch, getApiUrl } from "../../utils/api";
 import { NotionSelect } from "../../components/notion-select";
@@ -24,6 +25,7 @@ import { NotionRelation } from "../../components/notion-relation";
 import type { Schedule } from "../HomeScreen";
 import { AppHeader, PublicFooter } from "../../components/GenBGTBrand";
 import { useTheme, type ThemeColors } from "../../contexts/ThemeContext";
+import { suggestTrafficReservationStart } from "../../utils/traffic-reservation-start";
 
 type Traffic = {
   id: number;
@@ -37,6 +39,7 @@ type Traffic = {
   fare: number;
   miles?: number | null;
   return_flag: boolean;
+  reservation_start_at?: string | null;
   total_fare?: number | null;
   total_miles?: number | null;
 };
@@ -99,6 +102,8 @@ export default function NewTrafficScreen() {
         setFare(data.fare.toString());
         setMiles(data.miles?.toString() || "");
         setReturnFlag(data.return_flag);
+        setReservationStartAt(data.reservation_start_at || null);
+        reservationStartManuallySet.current = Boolean(data.reservation_start_at);
         // scheduleIdも設定（もし指定されていなければ）
         if (!scheduleId && data.schedule_id) {
           setScheduleId(data.schedule_id.toString());
@@ -139,7 +144,14 @@ export default function NewTrafficScreen() {
   const [fare, setFare] = useState("");
   const [miles, setMiles] = useState("");
   const [returnFlag, setReturnFlag] = useState(false);
+  const [reservationStartAt, setReservationStartAt] = useState<string | null>(null);
+  const reservationStartManuallySet = React.useRef(false);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (reservationStartManuallySet.current) return;
+    setReservationStartAt(suggestTrafficReservationStart(date, notes));
+  }, [date, notes]);
 
   const handleSubmit = async () => {
     if (!scheduleId || scheduleId === "undefined" || scheduleId === "null") {
@@ -177,6 +189,7 @@ export default function NewTrafficScreen() {
       fare: fareNum,
       miles: milesNum ?? null,
       return_flag: returnFlag,
+      reservation_start_at: reservationStartAt || null,
     };
 
     try {
@@ -346,6 +359,17 @@ export default function NewTrafficScreen() {
         <Text style={styles.label}>往復フラグ</Text>
         <Switch value={returnFlag} onValueChange={setReturnFlag} trackColor={{ false: "#D9D4E2", true: "#C4B5FD" }} thumbColor={returnFlag ? colors.accent : "#FFFFFF"} />
       </View>
+
+      <NotionDatePicker
+        label="予約開始日時"
+        value={reservationStartAt}
+        onValueChange={(value) => {
+          reservationStartManuallySet.current = true;
+          setReservationStartAt(value);
+        }}
+        mode="datetime"
+        placeholder="YYYY-MM-DD HH:MM"
+      />
 
       <TouchableOpacity
         style={[styles.button, submitting && styles.buttonDisabled]}

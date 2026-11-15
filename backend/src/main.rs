@@ -8,7 +8,7 @@ use axum::{
     Router,
 };
 use axum::async_trait;
-use chrono::{DateTime, Datelike, TimeZone, Utc};
+use chrono::{DateTime, Datelike, NaiveDate, TimeZone, Utc};
 use hmac::{Hmac, Mac};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use rand::Rng;
@@ -541,6 +541,31 @@ async fn send_deadline_notification_email(
     }
 }
 
+async fn send_reservation_start_notification_email(
+    email: &str,
+    route: &str,
+    reservation_start: &str,
+    schedule_title: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let api_key = match std::env::var("RESEND_API_KEY") {
+        Ok(key) => key,
+        Err(_) => {
+            println!("[RESERVATION_NOTIFICATION] {} / {} / {} / {}", email, route, reservation_start, schedule_title);
+            return Ok(());
+        }
+    };
+    let body = format!(
+        r#"<p>交通「{}」の予約開始日時が24時間以内に迫っています。</p><p><strong>予約開始日時:</strong> {}</p><p><strong>関連イベント:</strong> {}</p>"#,
+        route, reservation_start, schedule_title
+    );
+    let resend = Resend::new(&api_key);
+    resend.emails.send(
+        CreateEmailBaseOptions::new(&get_email_from(), [email], "交通の予約開始日時が近づいています")
+            .with_html(&body)
+    ).await?;
+    Ok(())
+}
+
 // Expo Push APIを使ってアプリへプッシュ通知を送信する。
 // 無効化されたトークン（DeviceNotRegistered）はpush_tokensテーブルから削除する。
 // Expo APIへの通信・レスポンス解析に失敗した場合はErrを返す（一時的な障害で
@@ -1020,6 +1045,7 @@ struct Traffic {
     fare: i32,
     miles: Option<i32>,
     return_flag: bool,
+    reservation_start_at: Option<String>,
     total_fare: Option<i32>,
     total_miles: Option<i32>,
     user_seq: Option<i32>,
@@ -1039,6 +1065,7 @@ struct TrafficRow {
     fare: i32,
     miles: Option<i32>,
     return_flag: i32, // 0/1
+    reservation_start_at: Option<String>,
     total_fare: Option<i32>,
     total_miles: Option<i32>,
     user_seq: Option<i32>,
@@ -1062,6 +1089,7 @@ struct NewTraffic {
     fare: i32,
     miles: Option<i32>,
     return_flag: bool,
+    reservation_start_at: Option<String>,
 }
 
 // ====== MaskedLocation 型定義 ======
@@ -1222,6 +1250,7 @@ struct PublicTraffic {
     fare: i32,
     miles: Option<i32>,
     return_flag: bool,
+    reservation_start_at: Option<String>,
     total_fare: Option<i32>,
     total_miles: Option<i32>,
 }
@@ -1239,6 +1268,7 @@ struct PublicTrafficRow {
     fare: i32,
     miles: Option<i32>,
     return_flag: i32,
+    reservation_start_at: Option<String>,
     total_fare: Option<i32>,
     total_miles: Option<i32>,
 }
@@ -1262,6 +1292,7 @@ struct SharedTrafficRow {
     fare: i32,
     miles: Option<i32>,
     return_flag: i32,
+    reservation_start_at: Option<String>,
     total_fare: Option<i32>,
     total_miles: Option<i32>,
     schedule_public_id: String,
@@ -1392,6 +1423,7 @@ fn row_to_traffic(row: TrafficRow) -> Traffic {
         fare: row.fare,
         miles: row.miles,
         return_flag: row.return_flag != 0,
+        reservation_start_at: row.reservation_start_at,
         total_fare: row.total_fare,
         total_miles: row.total_miles,
         user_seq: row.user_seq,
@@ -1511,6 +1543,7 @@ fn row_to_public_traffic(row: PublicTrafficRow, schedule_public_id: &str) -> Pub
         fare: row.fare,
         miles: row.miles,
         return_flag: row.return_flag != 0,
+        reservation_start_at: row.reservation_start_at,
         total_fare: row.total_fare,
         total_miles: row.total_miles,
     }
@@ -1529,6 +1562,7 @@ fn shared_row_to_public_traffic(row: SharedTrafficRow) -> PublicTraffic {
         fare: row.fare,
         miles: row.miles,
         return_flag: row.return_flag != 0,
+        reservation_start_at: row.reservation_start_at,
         total_fare: row.total_fare,
         total_miles: row.total_miles,
     }
@@ -5432,6 +5466,7 @@ async fn list_public_traffics(
           fare,
           miles,
           return_flag,
+          reservation_start_at,
           total_fare,
           total_miles
         FROM traffics
@@ -5550,6 +5585,7 @@ async fn get_public_traffic(
           fare,
           miles,
           return_flag,
+          reservation_start_at,
           total_fare,
           total_miles
         FROM traffics
@@ -5673,7 +5709,7 @@ async fn list_shared_traffics(
         r#"
         SELECT t.public_id, t.date, t."order", t.transportation,
                t.from_place, t.to_place, t.notes, t.fare, t.miles,
-               t.return_flag, t.total_fare, t.total_miles,
+               t.return_flag, t.reservation_start_at, t.total_fare, t.total_miles,
                s.public_id AS schedule_public_id
         FROM traffics t
         INNER JOIN schedules s ON s.id = t.schedule_id
@@ -5730,7 +5766,7 @@ async fn get_shared_traffic(
             r#"
             SELECT t.public_id, t.date, t."order", t.transportation,
                    t.from_place, t.to_place, t.notes, t.fare, t.miles,
-                   t.return_flag, t.total_fare, t.total_miles,
+                   t.return_flag, t.reservation_start_at, t.total_fare, t.total_miles,
                    s.public_id AS schedule_public_id
             FROM traffics t
             INNER JOIN schedules s ON s.id = t.schedule_id
@@ -5872,6 +5908,7 @@ async fn list_traffics(
           t.fare,
           t.miles,
           t.return_flag,
+          t.reservation_start_at,
           t.total_fare,
           t.total_miles,
           t.user_seq
@@ -5912,6 +5949,7 @@ async fn get_traffic(
           fare,
           miles,
           return_flag,
+          reservation_start_at,
           total_fare,
           total_miles,
           user_seq
@@ -5984,6 +6022,7 @@ async fn create_traffic(
           fare,
           miles,
           return_flag,
+          reservation_start_at,
           total_fare,
           total_miles,
           public_id,
@@ -5992,7 +6031,7 @@ async fn create_traffic(
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?,
           -- SELECT+INSERTを1つの文にまとめることでSQLiteの書き込みロックの範囲内に収め、
           -- 同一ユーザーからの同時作成による連番の重複（競合状態）を防ぐ
           (SELECT COALESCE(MAX(user_seq), 0) + 1 FROM traffics WHERE owner_user_id = ?),
@@ -6010,6 +6049,7 @@ async fn create_traffic(
     .bind(payload.fare)
     .bind(payload.miles)
     .bind(if payload.return_flag { 1 } else { 0 })
+    .bind(&payload.reservation_start_at)
     .bind(generate_public_id())
     .bind(user.user_id)
     .bind(user.user_id)
@@ -6038,6 +6078,7 @@ async fn create_traffic(
           fare,
           miles,
           return_flag,
+          reservation_start_at,
           total_fare,
           total_miles,
           user_seq
@@ -6103,6 +6144,7 @@ async fn update_traffic(
           fare = ?,
           miles = ?,
           return_flag = ?,
+          reservation_start_at = ?,
           updated_at = ?
         WHERE id = ?
         "#,
@@ -6117,6 +6159,7 @@ async fn update_traffic(
     .bind(payload.fare)
     .bind(payload.miles)
     .bind(if payload.return_flag { 1 } else { 0 })
+    .bind(&payload.reservation_start_at)
     .bind(&now)
     .bind(real_id)
     .execute(&pool)
@@ -6144,6 +6187,7 @@ async fn update_traffic(
           fare,
           miles,
           return_flag,
+          reservation_start_at,
           total_fare,
           total_miles,
           user_seq
@@ -6178,6 +6222,7 @@ async fn list_all_traffics(
           t.fare,
           t.miles,
           t.return_flag,
+          t.reservation_start_at,
           t.total_fare,
           t.total_miles,
           t.user_seq
@@ -7387,7 +7432,9 @@ async fn get_readings(
 struct Notification {
     id: i32,
     user_id: i32,
-    stay_id: i32,
+    stay_id: Option<i32>,
+    traffic_id: Option<i32>,
+    notification_type: String,
     schedule_id: i32,
     title: String,
     message: String,
@@ -7395,6 +7442,7 @@ struct Notification {
     created_at: String,
     // 関連スケジュールのユーザーごとの連番（フロントエンドが/live/${schedule_user_seq}のURL生成に使う）
     schedule_user_seq: Option<i32>,
+    traffic_user_seq: Option<i32>,
 }
 
 // 通知の行定義（DB用）
@@ -7402,13 +7450,16 @@ struct Notification {
 struct NotificationRow {
     id: i64,
     user_id: i64,
-    stay_id: i64,
+    stay_id: Option<i64>,
+    traffic_id: Option<i64>,
+    notification_type: String,
     schedule_id: i64,
     title: String,
     message: String,
     is_read: i32,
     created_at: String,
     schedule_user_seq: Option<i32>,
+    traffic_user_seq: Option<i32>,
 }
 
 // NotificationRowをNotificationに変換
@@ -7416,13 +7467,16 @@ fn row_to_notification(row: NotificationRow) -> Notification {
     Notification {
         id: row.id as i32,
         user_id: row.user_id as i32,
-        stay_id: row.stay_id as i32,
+        stay_id: row.stay_id.map(|id| id as i32),
+        traffic_id: row.traffic_id.map(|id| id as i32),
+        notification_type: row.notification_type,
         schedule_id: row.schedule_id as i32,
         title: row.title,
         message: row.message,
         is_read: row.is_read != 0,
         created_at: row.created_at,
         schedule_user_seq: row.schedule_user_seq,
+        traffic_user_seq: row.traffic_user_seq,
     }
 }
 
@@ -7437,14 +7491,18 @@ async fn list_notifications(
           n.id,
           n.user_id,
           n.stay_id,
+          n.traffic_id,
+          n.notification_type,
           n.schedule_id,
           n.title,
           n.message,
           n.is_read,
           n.created_at,
-          s.user_seq as schedule_user_seq
+          s.user_seq as schedule_user_seq,
+          t.user_seq as traffic_user_seq
         FROM notifications n
         LEFT JOIN schedules s ON s.id = n.schedule_id AND s.user_id = n.user_id
+        LEFT JOIN traffics t ON t.id = n.traffic_id AND t.owner_user_id = n.user_id
         WHERE n.user_id = ?
         ORDER BY n.created_at DESC
         "#
@@ -7690,22 +7748,10 @@ async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn
     .await?;
 
     for (stay_id, schedule_id, user_id, hotel_name, deadline_str, schedule_title, schedule_user_seq) in stays {
-        // deadlineをパース（複数の形式に対応）
-        let deadline = match deadline_str.parse::<DateTime<Utc>>() {
-            Ok(dt) => dt,
-            Err(_) => {
-                // RFC3339形式でパースできない場合は、"YYYY-MM-DD HH:MM" 形式を試す
-                match chrono::NaiveDateTime::parse_from_str(&deadline_str, "%Y-%m-%d %H:%M") {
-                    Ok(naive_dt) => {
-                        // UTCとして扱う（実際のタイムゾーンに応じて調整が必要な場合あり）
-                        DateTime::from_naive_utc_and_offset(naive_dt, Utc)
-                    }
-                    Err(_) => {
-                        eprintln!("[DEADLINE_CHECK] Failed to parse deadline: {}", deadline_str);
-                        continue;
-                    }
-                }
-            }
+        // 画面の日時形式は日本時間、RFC3339形式は含まれるオフセットに従って解釈する。
+        let Some(deadline) = parse_jst_datetime(&deadline_str) else {
+            eprintln!("[DEADLINE_CHECK] Failed to parse deadline: {}", deadline_str);
+            continue;
         };
         
         // 期限が24時間以内かチェック
@@ -7828,6 +7874,82 @@ async fn check_deadline_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn
         }
     }
 
+    Ok(())
+}
+
+fn parse_jst_datetime(value: &str) -> Option<DateTime<Utc>> {
+    if let Ok(value) = value.parse::<DateTime<Utc>>() {
+        return Some(value);
+    }
+    let naive = chrono::NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M").ok()?;
+    let jst = chrono::FixedOffset::east_opt(9 * 60 * 60)?;
+    jst.from_local_datetime(&naive).single().map(|value| value.with_timezone(&Utc))
+}
+
+// 予約開始日時が24時間以内の交通情報をチェックし、宿泊通知と同じチャネルへ送信する。
+async fn check_traffic_reservation_notifications(pool: &Pool<Sqlite>) -> Result<(), Box<dyn std::error::Error>> {
+    let now = Utc::now();
+    let one_day_later = now + chrono::Duration::hours(24);
+    let rows: Vec<(i64, i64, i64, String, String, String, String, Option<i32>)> = sqlx::query_as(
+        r#"
+        SELECT t.id, t.schedule_id, s.user_id, t.from_place, t.to_place,
+               t.reservation_start_at, s.title, s.user_seq
+        FROM traffics t
+        INNER JOIN schedules s ON s.id = t.schedule_id
+        WHERE t.reservation_start_at IS NOT NULL AND t.reservation_start_at != ''
+          AND s.user_id IS NOT NULL
+        "#
+    ).fetch_all(pool).await?;
+
+    for (traffic_id, schedule_id, user_id, from, to, start_str, schedule_title, schedule_user_seq) in rows {
+        let Some(start) = parse_jst_datetime(&start_str) else {
+            eprintln!("[RESERVATION_CHECK] Failed to parse reservation start: {}", start_str);
+            continue;
+        };
+        if start <= now || start > one_day_later {
+            continue;
+        }
+
+        let existing: Option<(i64, Option<String>, Option<String>)> = sqlx::query_as(
+            "SELECT id, email_sent_at, push_sent_at FROM notifications WHERE traffic_id = ? AND user_id = ? AND notification_type = 'traffic_reservation_start' AND target_at = ? ORDER BY id DESC LIMIT 1"
+        ).bind(traffic_id).bind(user_id).bind(&start_str).fetch_optional(pool).await?;
+        let Some((email, email_verified, email_enabled, push_enabled)): Option<(String, i32, i32, i32)> =
+            sqlx::query_as("SELECT email, email_verified, notify_email_enabled, notify_push_enabled FROM users WHERE id = ?")
+                .bind(user_id).fetch_optional(pool).await?
+        else { continue; };
+        let push_tokens: Vec<String> = if push_enabled != 0 {
+            sqlx::query_scalar("SELECT token FROM push_tokens WHERE user_id = ?")
+                .bind(user_id).fetch_all(pool).await?
+        } else { vec![] };
+        let email_sent = matches!(existing.as_ref(), Some((_, Some(_), _)));
+        let push_sent = matches!(existing.as_ref(), Some((_, _, Some(_))));
+        let should_email = email_verified != 0 && email_enabled != 0 && !email_sent;
+        let should_push = push_enabled != 0 && !push_tokens.is_empty() && !push_sent;
+        if existing.is_some() && !should_email && !should_push { continue; }
+
+        let formatted = start.with_timezone(&chrono::FixedOffset::east_opt(9 * 60 * 60).unwrap())
+            .format("%Y.%m.%d %H:%M").to_string();
+        let route = format!("{} → {}", from, to);
+        let title = format!("予約開始日時が近づいています: {}", route);
+        let message = format!("予約開始日時: {}\n関連イベント: {}", formatted, schedule_title);
+        let notification_id = if let Some((id, _, _)) = existing { id } else {
+            sqlx::query_scalar::<_, i64>(
+                r#"INSERT INTO notifications
+                   (user_id, stay_id, traffic_id, notification_type, target_at, schedule_id, title, message, is_read, created_at, email_sent_at, push_sent_at)
+                   VALUES (?, NULL, ?, 'traffic_reservation_start', ?, ?, ?, ?, 0, ?, NULL, NULL) RETURNING id"#
+            ).bind(user_id).bind(traffic_id).bind(&start_str).bind(schedule_id).bind(&title).bind(&message)
+             .bind(Utc::now().to_rfc3339()).fetch_one(pool).await?
+        };
+
+        if should_email && send_reservation_start_notification_email(&email, &route, &formatted, &schedule_title).await.is_ok() {
+            sqlx::query("UPDATE notifications SET email_sent_at = ? WHERE id = ?")
+                .bind(Utc::now().to_rfc3339()).bind(notification_id).execute(pool).await?;
+        }
+        if should_push && send_expo_push_notifications(pool, &push_tokens, &title, &format!("予約開始日時: {}", formatted), schedule_id, schedule_user_seq).await.is_ok() {
+            sqlx::query("UPDATE notifications SET push_sent_at = ? WHERE id = ?")
+                .bind(Utc::now().to_rfc3339()).bind(notification_id).execute(pool).await?;
+        }
+    }
     Ok(())
 }
 
@@ -8157,6 +8279,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Err(e) = check_deadline_notifications(&pool_clone).await {
                 eprintln!("[BACKGROUND_TASK] Error checking deadline notifications: {:?}", e);
             }
+            if let Err(e) = check_traffic_reservation_notifications(&pool_clone).await {
+                eprintln!("[BACKGROUND_TASK] Error checking traffic reservation notifications: {:?}", e);
+            }
         }
     });
 
@@ -8178,6 +8303,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+fn migrated_reservation_start(date: &str, is_tokudane: bool) -> Option<String> {
+    let travel = NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?;
+    let (year, month) = if travel.month() == 1 {
+        (travel.year() - 1, 12)
+    } else {
+        (travel.year(), travel.month() - 1)
+    };
+    let last_day = NaiveDate::from_ymd_opt(
+        if month == 12 { year + 1 } else { year },
+        if month == 12 { 1 } else { month + 1 },
+        1,
+    )?
+    .pred_opt()?
+    .day();
+    let sale_date = if travel.day() > last_day {
+        NaiveDate::from_ymd_opt(travel.year(), travel.month(), 1)?
+    } else {
+        NaiveDate::from_ymd_opt(year, month, travel.day())?
+    };
+    let start_date = if is_tokudane {
+        sale_date - chrono::Duration::days(7)
+    } else {
+        sale_date
+    };
+    Some(format!(
+        "{} {}",
+        start_date.format("%Y-%m-%d"),
+        if is_tokudane { "14:00" } else { "10:00" }
+    ))
+}
+
+#[cfg(test)]
+mod reservation_start_tests {
+    use super::migrated_reservation_start;
+
+    #[test]
+    fn ex_hayatoku_uses_one_month_before_at_ten() {
+        assert_eq!(migrated_reservation_start("2026-08-15", false).as_deref(), Some("2026-07-15 10:00"));
+    }
+
+    #[test]
+    fn jr_month_end_rule_uses_first_of_travel_month() {
+        assert_eq!(migrated_reservation_start("2026-03-31", false).as_deref(), Some("2026-03-01 10:00"));
+    }
+
+    #[test]
+    fn tokudane_uses_seven_days_before_sale_date_at_fourteen() {
+        assert_eq!(migrated_reservation_start("2026-08-15", true).as_deref(), Some("2026-07-08 14:00"));
+        assert_eq!(migrated_reservation_start("2026-03-31", true).as_deref(), Some("2026-02-22 14:00"));
+    }
+}
+
 async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     // ユーザーテーブルの作成
     let create_users = r#"
@@ -8315,6 +8492,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       fare         INTEGER NOT NULL,
       miles        INTEGER,
       return_flag  INTEGER NOT NULL,
+      reservation_start_at TEXT,
       total_fare   INTEGER,
       total_miles  INTEGER,
       created_at   TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
@@ -8370,7 +8548,10 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
     CREATE TABLE IF NOT EXISTS notifications (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id      INTEGER NOT NULL,
-      stay_id      INTEGER NOT NULL,
+      stay_id      INTEGER,
+      traffic_id   INTEGER,
+      notification_type TEXT NOT NULL DEFAULT 'stay_cancellation_deadline',
+      target_at    TEXT,
       schedule_id  INTEGER NOT NULL,
       title         TEXT NOT NULL,
       message       TEXT NOT NULL,
@@ -8380,6 +8561,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       push_sent_at  TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (stay_id) REFERENCES stays(id),
+      FOREIGN KEY (traffic_id) REFERENCES traffics(id),
       FOREIGN KEY (schedule_id) REFERENCES schedules(id)
     );
     "#;
@@ -9053,6 +9235,79 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         sqlx::query("ALTER TABLE users ADD COLUMN theme_accent TEXT NOT NULL DEFAULT 'black'")
             .execute(pool)
             .await?;
+    }
+
+    // 通知を宿泊・交通のどちらにも関連付けられる構造へ移行する。
+    let notification_stay_not_null: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(MAX(\"notnull\"), 0) FROM pragma_table_info('notifications') WHERE name = 'stay_id'"
+    ).fetch_one(pool).await?;
+    if notification_stay_not_null != 0 || !column_exists(pool, "notifications", "traffic_id").await? {
+        let mut tx = pool.begin().await?;
+        sqlx::query(
+            r#"
+            CREATE TABLE notifications_new (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER NOT NULL,
+              stay_id INTEGER,
+              traffic_id INTEGER,
+              notification_type TEXT NOT NULL DEFAULT 'stay_cancellation_deadline',
+              target_at TEXT,
+              schedule_id INTEGER NOT NULL,
+              title TEXT NOT NULL,
+              message TEXT NOT NULL,
+              is_read INTEGER NOT NULL DEFAULT 0,
+              created_at TEXT,
+              email_sent_at TEXT,
+              push_sent_at TEXT,
+              FOREIGN KEY (user_id) REFERENCES users(id),
+              FOREIGN KEY (stay_id) REFERENCES stays(id),
+              FOREIGN KEY (traffic_id) REFERENCES traffics(id),
+              FOREIGN KEY (schedule_id) REFERENCES schedules(id)
+            )
+            "#
+        ).execute(&mut *tx).await?;
+        sqlx::query(
+            r#"
+            INSERT INTO notifications_new
+              (id, user_id, stay_id, traffic_id, notification_type, target_at, schedule_id, title, message,
+               is_read, created_at, email_sent_at, push_sent_at)
+            SELECT id, user_id, stay_id, NULL, 'stay_cancellation_deadline', NULL, schedule_id, title, message,
+                   is_read, created_at, email_sent_at, push_sent_at
+            FROM notifications
+            "#
+        ).execute(&mut *tx).await?;
+        sqlx::query("DROP TABLE notifications").execute(&mut *tx).await?;
+        sqlx::query("ALTER TABLE notifications_new RENAME TO notifications").execute(&mut *tx).await?;
+        tx.commit().await?;
+        eprintln!("[Migration] Generalized notifications for stays and traffics");
+    }
+    if !column_exists(pool, "notifications", "target_at").await? {
+        sqlx::query("ALTER TABLE notifications ADD COLUMN target_at TEXT").execute(pool).await?;
+    }
+
+    // 交通の予約開始日時。既存データは、部分一致した対象商品のみ一度だけ補完する。
+    if !column_exists(pool, "traffics", "reservation_start_at").await? {
+        sqlx::query("ALTER TABLE traffics ADD COLUMN reservation_start_at TEXT")
+            .execute(pool)
+            .await?;
+
+        let rows: Vec<(i64, String, Option<String>)> = sqlx::query_as(
+            // 過去の「EX早特」表記はEX早特7として扱う（商品番号が省略された備考も対象）。
+            "SELECT id, date, notes FROM traffics WHERE notes LIKE '%トクだ値%' OR notes LIKE '%EX早特%'"
+        )
+        .fetch_all(pool)
+        .await?;
+        for (id, date, notes) in rows {
+            let is_tokudane = notes.as_deref().is_some_and(|value| value.contains("トクだ値"));
+            if let Some(start) = migrated_reservation_start(&date, is_tokudane) {
+                sqlx::query("UPDATE traffics SET reservation_start_at = ? WHERE id = ? AND reservation_start_at IS NULL")
+                    .bind(start)
+                    .bind(id)
+                    .execute(pool)
+                    .await?;
+            }
+        }
+        eprintln!("[Migration] Added traffics.reservation_start_at and backfilled matching rows");
     }
 
     // パフォーマンス向上のためのインデックス追加

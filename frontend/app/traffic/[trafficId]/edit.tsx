@@ -23,6 +23,7 @@ import {
 } from "../../../utils/select-options-storage";
 import { AppHeader, PublicFooter } from "../../../components/GenBGTBrand";
 import { useTheme, type ThemeColors } from "../../../contexts/ThemeContext";
+import { suggestTrafficReservationStart } from "../../../utils/traffic-reservation-start";
 
 type Traffic = {
   id: number;
@@ -36,6 +37,7 @@ type Traffic = {
   fare: number;
   miles?: number | null;
   return_flag: boolean;
+  reservation_start_at?: string | null;
   total_fare?: number | null;
   total_miles?: number | null;
 };
@@ -74,6 +76,8 @@ export default function EditTrafficScreen() {
   const [fare, setFare] = useState("");
   const [miles, setMiles] = useState("");
   const [returnFlag, setReturnFlag] = useState(false);
+  const [reservationStartAt, setReservationStartAt] = useState<string | null>(null);
+  const reservationStartManuallySet = React.useRef(false);
 
   // 既存データを読み込む
   useEffect(() => {
@@ -100,6 +104,8 @@ export default function EditTrafficScreen() {
         setFare(data.fare.toString());
         setMiles(data.miles?.toString() || "");
         setReturnFlag(data.return_flag);
+        setReservationStartAt(data.reservation_start_at || null);
+        reservationStartManuallySet.current = Boolean(data.reservation_start_at);
       } catch (e: any) {
         console.error("Error fetching traffic:", e);
         Alert.alert("エラー", "データの読み込みに失敗しました。");
@@ -111,6 +117,11 @@ export default function EditTrafficScreen() {
 
     fetchTraffic();
   }, [trafficId, router]);
+
+  useEffect(() => {
+    if (loading || reservationStartManuallySet.current) return;
+    setReservationStartAt(suggestTrafficReservationStart(date, notes));
+  }, [date, notes, loading]);
 
   const handleSubmit = async () => {
     if (!trafficId) {
@@ -160,6 +171,7 @@ export default function EditTrafficScreen() {
       fare: fareNum,
       miles: milesNum ?? null,
       return_flag: returnFlag,
+      reservation_start_at: reservationStartAt || null,
     };
 
     try {
@@ -306,6 +318,17 @@ export default function EditTrafficScreen() {
         <Text style={styles.label}>往復フラグ</Text>
         <Switch value={returnFlag} onValueChange={setReturnFlag} />
       </View>
+
+      <NotionDatePicker
+        label="予約開始日時"
+        value={reservationStartAt}
+        onValueChange={(value) => {
+          reservationStartManuallySet.current = true;
+          setReservationStartAt(value);
+        }}
+        mode="datetime"
+        placeholder="YYYY-MM-DD HH:MM"
+      />
 
       <TouchableOpacity
         style={[styles.button, submitting && styles.buttonDisabled]}

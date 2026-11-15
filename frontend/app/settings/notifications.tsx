@@ -127,7 +127,7 @@ export default function NotificationSettingsScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>通知設定</Text>
         <Text style={styles.description}>
-          宿泊の取消料発生日時が近づいたときの通知方法を設定します。
+          宿泊の取消料発生日時または交通の予約開始日時が近づいたときの通知方法を設定します。
         </Text>
 
         <View style={styles.row}>

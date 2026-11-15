@@ -8,25 +8,29 @@ import { useTheme, type ThemeColors } from '../contexts/ThemeContext';
 
 type Notification = {
   id: number;
-  stay_id: number;
+  stay_id?: number | null;
+  traffic_id?: number | null;
+  notification_type: 'stay_cancellation_deadline' | 'traffic_reservation_start';
   schedule_id: number;
   title: string;
   message: string;
   is_read: boolean;
   created_at: string;
   schedule_user_seq?: number | null; // 関連スケジュールのユーザーごとの連番（URL生成に使う）
+  traffic_user_seq?: number | null;
 };
 
 function formatDeadlineMessage(message: string): string {
   return message
     .split('\n')
     .map((line) => {
-      if (!line.startsWith('期限日時:')) return line;
-      const rawDeadline = line.slice('期限日時:'.length).trim();
+      const prefix = line.startsWith('予約開始日時:') ? '予約開始日時:' : line.startsWith('期限日時:') ? '期限日時:' : null;
+      if (!prefix) return line;
+      const rawDeadline = line.slice(prefix.length).trim();
       const deadline = new Date(rawDeadline);
       if (Number.isNaN(deadline.getTime())) return line;
       const pad = (value: number) => String(value).padStart(2, '0');
-      return `期限日時: ${deadline.getFullYear()}.${pad(deadline.getMonth() + 1)}.${pad(deadline.getDate())} ${pad(deadline.getHours())}:${pad(deadline.getMinutes())}`;
+      return `${prefix} ${deadline.getFullYear()}.${pad(deadline.getMonth() + 1)}.${pad(deadline.getDate())} ${pad(deadline.getHours())}:${pad(deadline.getMinutes())}`;
     })
     .join('\n');
 }
@@ -89,7 +93,9 @@ export function NotificationMenu({ hideTrigger = false, visible: controlledVisib
       await authenticatedFetch(getApiUrl(`/notifications/${notification.id}/read`), { method: 'PUT' }).catch(() => undefined);
     }
     setVisible(false);
-    if (notification.schedule_user_seq != null) {
+    if (notification.traffic_user_seq != null) {
+      router.push(`/traffic/${notification.traffic_user_seq}`);
+    } else if (notification.schedule_user_seq != null) {
       router.push(`/live/${notification.schedule_user_seq}`);
     }
   };
@@ -133,7 +139,7 @@ export function NotificationMenu({ hideTrigger = false, visible: controlledVisib
               <View style={styles.center}>
                 <View style={styles.emptyIcon}><Ionicons name="notifications-outline" size={30} color={colors.accent} /></View>
                 <Text style={styles.emptyTitle}>新しい通知はありません</Text>
-                <Text style={styles.emptyHelp}>宿泊の取消料発生日時が近づくと、ここにお知らせします。</Text>
+                <Text style={styles.emptyHelp}>宿泊の取消料発生日時や交通の予約開始日時が近づくと、ここにお知らせします。</Text>
               </View>
             )}
             {!loading && !error && notifications.length > 0 && (
@@ -145,7 +151,7 @@ export function NotificationMenu({ hideTrigger = false, visible: controlledVisib
                     onPress={() => selectNotification(notification)}
                   >
                     <View style={[styles.itemIcon, !notification.is_read && styles.unreadIcon]}>
-                      <Ionicons name="bed-outline" size={19} color={colors.accentDark} />
+                      <Ionicons name={notification.notification_type === 'traffic_reservation_start' ? 'train-outline' : 'bed-outline'} size={19} color={colors.accentDark} />
                     </View>
                     <View style={styles.itemCopy}>
                       <View style={styles.itemTitleRow}>

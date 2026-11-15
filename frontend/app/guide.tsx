@@ -51,7 +51,7 @@ export default function GuideScreen() {
     },
     {
       heading: '7. 通知を受け取る',
-      body: '宿泊のキャンセル料発生日時が近づくと、メールまたはアプリのプッシュ通知でお知らせします。設定画面からON・OFFを切り替えられます（プッシュ通知はスマートフォンアプリのみの対応です）。',
+      body: '宿泊のキャンセル料発生日時や交通の予約開始日時が近づくと、メールまたはアプリのプッシュ通知でお知らせします。設定画面からON・OFFを切り替えられます（プッシュ通知はスマートフォンアプリのみの対応です）。',
       images: [
         { source: require('@/assets/images/guide/notification-settings.png'), caption: '通知設定画面', aspectRatio: 16 / 9 },
       ],

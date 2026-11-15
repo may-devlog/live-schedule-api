@@ -155,6 +155,7 @@ export default function PublicTrafficDetailScreen() {
           <NotionProperty label="往復フラグ">
             <BooleanSelectDisplay value={traffic.return_flag} />
           </NotionProperty>
+          <NotionProperty label="予約開始日時" value={traffic.reservation_start_at || undefined} />
         </NotionPropertyBlock>
 
         {/* [Schedule Link] 閲覧専用: リンク先の変更はできない */}

@@ -95,6 +95,7 @@
 | fare | INTEGER | NO | - | 運賃 | Number | 円単位 |
 | miles | INTEGER | YES | - | 消費マイル　| Number | |
 | return_flag | INTEGER | NO | 0 | 往復フラグ | Checkbox | 0: 片道, 1: 往復 |
+| reservation_start_at | TEXT | YES | NULL | 予約開始日時 | Date | YYYY-MM-DD HH:MM形式（日本時間） |
 | total_fare | INTEGER | YES | NULL | 運賃合計 | Number | 円単位（計算値） |
 | total_miles | INTEGER | YES | NULL | 消費マイル合計 | Number | マイル単位（計算値） |
 | public_id | TEXT | YES | NULL | 公開用ランダムID | Text | 共有URL・公開APIで内部連番の代わりに使う推測困難なID |
@@ -184,7 +185,7 @@
 
 **通知関連カラムについて:**
 
-- `notify_email_enabled` / `notify_push_enabled`は宿泊の取消料発生日時が近づいた際の通知方法の設定で、notifications（通知履歴）テーブルへの送信要否をこの値で判定する
+- `notify_email_enabled` / `notify_push_enabled`は宿泊の取消料発生日時・交通の予約開始日時が近づいた際の通知方法の設定で、notifications（通知履歴）テーブルへの送信要否をこの値で判定する
 - `GET /notification-settings` / `PUT /notification-settings`で取得・更新する
 
 **プラン・トライアル関連カラムについて:**
@@ -317,13 +318,16 @@ select_optionsと異なり、`sort_order`カラムは持ちません（並び順
 
 ### 9. notifications（通知履歴）
 
-宿泊のキャンセル料発生日時が近づいたことを知らせる通知の送信履歴を管理するテーブルです。
+宿泊のキャンセル料発生日時または交通の予約開始日時が近づいたことを知らせる通知の送信履歴を管理するテーブルです。
 
 | カラム名 | データ型 | NULL許可 | デフォルト値 | 説明 | 備考 |
 |---------|---------|---------|------------|------|------|
 | id | INTEGER | NO | AUTO_INCREMENT | 主キー | PRIMARY KEY |
 | user_id | INTEGER | NO | - | ユーザーID | FOREIGN KEY → users.id |
-| stay_id | INTEGER | NO | - | 宿泊ID | FOREIGN KEY → stays.id |
+| stay_id | INTEGER | YES | NULL | 宿泊ID | FOREIGN KEY → stays.id |
+| traffic_id | INTEGER | YES | NULL | 交通ID | FOREIGN KEY → traffics.id |
+| notification_type | TEXT | NO | stay_cancellation_deadline | 通知種別 | `stay_cancellation_deadline` / `traffic_reservation_start` |
+| target_at | TEXT | YES | NULL | 通知対象日時 | 予約開始日時を変更した場合の重複判定にも利用 |
 | schedule_id | INTEGER | NO | - | スケジュールID | FOREIGN KEY → schedules.id |
 | title | TEXT | NO | - | 通知タイトル | |
 | message | TEXT | NO | - | 通知本文 | |
@@ -333,7 +337,8 @@ select_optionsと異なり、`sort_order`カラムは持ちません（並び順
 | push_sent_at | TEXT | YES | NULL | プッシュ通知送信日時 | 送信結果（成功時のみ）に応じて設定。未送信時はNULL |
 
 **制約:**
-- user_id, stay_id, schedule_idは必須
+- user_id, schedule_id, notification_typeは必須
+- stay_idまたはtraffic_idのいずれかを通知種別に応じて設定
 
 `email_sent_at` / `push_sent_at`は、それぞれメール・プッシュ通知の送信を試みた結果に応じて更新され、二重送信の防止に使われます。ユーザーの`notify_email_enabled` / `notify_push_enabled`がOFFの場合はそもそも送信を行いません。
 
@@ -363,6 +368,7 @@ schedules (1) ──< (N) traffics
 schedules (1) ──< (N) stays
 schedules (1) ──< (N) notifications
 stays     (1) ──< (N) notifications
+traffics  (1) ──< (N) notifications
 users     (1) ──< (N) schedules
 users     (1) ──< (N) select_options
 users     (1) ──< (N) stay_select_options
