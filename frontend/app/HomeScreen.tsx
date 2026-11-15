@@ -66,13 +66,16 @@ export type Schedule = {
 export type Notification = {
   id: number;
   user_id: number;
-  stay_id: number;
+  stay_id?: number | null;
+  traffic_id?: number | null;
+  notification_type: 'stay_cancellation_deadline' | 'traffic_reservation_start';
   schedule_id: number;
   title: string;
   message: string;
   is_read: boolean;
   created_at: string;
   schedule_user_seq?: number | null; // 関連スケジュールのユーザーごとの連番（URL生成に使う）
+  traffic_user_seq?: number | null;
 };
 
 import { authenticatedFetch, getApiUrl } from "../utils/api";
@@ -1334,7 +1337,9 @@ export default function HomeScreen() {
                       if (!notification.is_read) {
                         markNotificationAsRead(notification.id);
                       }
-                      if (notification.schedule_user_seq != null) {
+                      if (notification.notification_type === 'traffic_reservation_start' && notification.traffic_user_seq != null) {
+                        router.push(`/traffic/${notification.traffic_user_seq}`);
+                      } else if (notification.schedule_user_seq != null) {
                         router.push(`/live/${notification.schedule_user_seq}`);
                       }
                       setShowNotificationModal(false);

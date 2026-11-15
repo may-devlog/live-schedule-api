@@ -354,6 +354,10 @@ export default function PublicDetailScreen() {
                   label="往復フラグ"
                   value={traffic.return_flag ? "あり" : "なし"}
                 />
+                <NotionProperty
+                  label="予約開始日時"
+                  value={traffic.reservation_start_at || undefined}
+                />
               </View>
             ))
           )}

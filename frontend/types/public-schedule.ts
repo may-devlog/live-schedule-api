@@ -41,6 +41,7 @@ export type PublicTraffic = {
   fare: number;
   miles?: number | null;
   return_flag: boolean;
+  reservation_start_at?: string | null;
   total_fare?: number | null;
   total_miles?: number | null;
 };

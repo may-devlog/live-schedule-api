@@ -16,6 +16,7 @@ type Traffic = {
   fare: number;
   miles?: number | null;
   return_flag: boolean;
+  reservation_start_at?: string | null;
   total_fare?: number | null;
   total_miles?: number | null;
 };
@@ -369,6 +370,7 @@ export default function TrafficDetailScreen() {
           <NotionProperty label="往復フラグ">
             <BooleanSelectDisplay value={traffic.return_flag} />
           </NotionProperty>
+          <NotionProperty label="予約開始日時" value={traffic.reservation_start_at || undefined} />
         </NotionPropertyBlock>
 
         {/* [Schedule Link] */}
@@ -402,6 +404,7 @@ export default function TrafficDetailScreen() {
                         fare: traffic.fare,
                         miles: traffic.miles,
                         return_flag: traffic.return_flag,
+                        reservation_start_at: traffic.reservation_start_at,
                       }),
                     });
                     
