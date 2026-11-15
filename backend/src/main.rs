@@ -170,6 +170,9 @@ struct ScheduleImportPreview {
     area: Option<String>,
     venue: Option<String>,
     warnings: Vec<String>,
+    // Claudeへ要求するJSON Schemaには含めず、解析後にリクエスト種別を設定する。
+    // デシリアライズ時はClaude応答にこのフィールドがなくても受け入れる。
+    #[serde(default)]
     source_type: String,
 }
 
@@ -386,6 +389,25 @@ mod schedule_import_tests {
         assert_eq!(preview.open, None);
         assert_eq!(preview.start.as_deref(), Some("18:30"));
         assert!(preview.warnings.iter().any(|warning| warning.contains("終演")));
+    }
+
+    #[test]
+    fn parses_claude_preview_without_source_type() {
+        let claude_json = r#"{
+            "title":"Sample Live",
+            "date":"2026-11-15",
+            "open":"17:00",
+            "start":"18:00",
+            "end":null,
+            "area":"東京",
+            "venue":"Sample Hall",
+            "warnings":[]
+        }"#;
+        let mut preview: ScheduleImportPreview = serde_json::from_str(claude_json).unwrap();
+        assert_eq!(preview.source_type, "");
+        preview.source_type = "url".to_string();
+        assert_eq!(preview.source_type, "url");
+        assert_eq!(preview.title.as_deref(), Some("Sample Live"));
     }
 
     async fn accept_import_json(Json(_payload): Json<ScheduleImportRequest>) -> StatusCode {
