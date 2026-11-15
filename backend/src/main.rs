@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use axum::{
     body::Bytes,
-    extract::{ConnectInfo, Extension, Path, Query},
+    extract::{ConnectInfo, DefaultBodyLimit, Extension, Path, Query},
     http::{header::AUTHORIZATION, HeaderValue, StatusCode, HeaderMap, request::Parts},
     response::Json,
     routing::{get, post, put, delete}, // delete is used in route definitions (line 5269)
@@ -148,6 +148,8 @@ struct ErrorResponse {
 
 const SCHEDULE_IMPORT_MAX_IMAGE_BYTES: usize = 5 * 1024 * 1024;
 const SCHEDULE_IMPORT_MAX_HTML_BYTES: usize = 2 * 1024 * 1024;
+// 5MB画像はbase64化で約4/3倍になるため、data URLとJSONのオーバーヘッドを含めて7MBまで受け付ける。
+const SCHEDULE_IMPORT_MAX_REQUEST_BYTES: usize = 7 * 1024 * 1024;
 const SCHEDULE_IMPORT_RATE_LIMIT_MAX: usize = 10;
 const SCHEDULE_IMPORT_RATE_LIMIT_WINDOW: std::time::Duration = std::time::Duration::from_secs(10 * 60);
 
@@ -269,11 +271,16 @@ async fn fetch_import_page(raw_url: &str) -> std::result::Result<String, String>
         }))
         .user_agent("GenBGT schedule importer/1.0")
         .build().map_err(|e| format!("URL取得の準備に失敗しました: {}", e))?;
-    let response = client.get(url).send().await.map_err(|_| "URLを取得できませんでした".to_string())?;
+    let mut response = client.get(url).send().await.map_err(|_| "URLを取得できませんでした".to_string())?;
     if !response.status().is_success() { return Err(format!("URLを取得できませんでした（status: {}）", response.status())); }
     if response.content_length().is_some_and(|length| length as usize > SCHEDULE_IMPORT_MAX_HTML_BYTES) { return Err("ページのサイズが大きすぎます".to_string()); }
-    let bytes = response.bytes().await.map_err(|_| "ページ本文を読み込めませんでした".to_string())?;
-    if bytes.len() > SCHEDULE_IMPORT_MAX_HTML_BYTES { return Err("ページのサイズが大きすぎます".to_string()); }
+    let mut bytes = Vec::with_capacity(response.content_length().unwrap_or(0).min(SCHEDULE_IMPORT_MAX_HTML_BYTES as u64) as usize);
+    while let Some(chunk) = response.chunk().await.map_err(|_| "ページ本文を読み込めませんでした".to_string())? {
+        if bytes.len().saturating_add(chunk.len()) > SCHEDULE_IMPORT_MAX_HTML_BYTES {
+            return Err("ページのサイズが大きすぎます".to_string());
+        }
+        bytes.extend_from_slice(&chunk);
+    }
     Ok(html_to_import_text(&String::from_utf8_lossy(&bytes)))
 }
 
@@ -347,6 +354,8 @@ async fn preview_schedule_import(user: AuthenticatedUser, Json(payload): Json<Sc
 #[cfg(test)]
 mod schedule_import_tests {
     use super::*;
+    use axum::{body::Body, http::Request};
+    use tower::ServiceExt;
 
     #[test]
     fn rejects_local_and_private_import_urls() {
@@ -377,6 +386,34 @@ mod schedule_import_tests {
         assert_eq!(preview.open, None);
         assert_eq!(preview.start.as_deref(), Some("18:30"));
         assert!(preview.warnings.iter().any(|warning| warning.contains("終演")));
+    }
+
+    async fn accept_import_json(Json(_payload): Json<ScheduleImportRequest>) -> StatusCode {
+        StatusCode::OK
+    }
+
+    #[tokio::test]
+    async fn import_route_accepts_base64_payload_above_axum_default_limit() {
+        let app = Router::new().route(
+            "/schedule-import/preview",
+            post(accept_import_json).layer(DefaultBodyLimit::max(SCHEDULE_IMPORT_MAX_REQUEST_BYTES)),
+        );
+        let image_data = "A".repeat(3 * 1024 * 1024);
+        let body = serde_json::json!({ "source_type": "image", "image_data_url": format!("data:image/png;base64,{}", image_data) }).to_string();
+        let response = app.oneshot(Request::post("/schedule-import/preview").header("content-type", "application/json").body(Body::from(body)).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn import_route_rejects_payload_above_its_explicit_limit() {
+        let app = Router::new().route(
+            "/schedule-import/preview",
+            post(accept_import_json).layer(DefaultBodyLimit::max(SCHEDULE_IMPORT_MAX_REQUEST_BYTES)),
+        );
+        let image_data = "A".repeat(SCHEDULE_IMPORT_MAX_REQUEST_BYTES + 1);
+        let body = serde_json::json!({ "source_type": "image", "image_data_url": format!("data:image/png;base64,{}", image_data) }).to_string();
+        let response = app.oneshot(Request::post("/schedule-import/preview").header("content-type", "application/json").body(Body::from(body)).unwrap()).await.unwrap();
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
     }
 }
 
@@ -8493,7 +8530,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/public/stay", get(list_public_stays))
         .route("/public/stay/:id", get(get_public_stay))
         .route("/schedules", get(list_schedules).post(create_schedule))
-        .route("/schedule-import/preview", post(preview_schedule_import))
+        .route(
+            "/schedule-import/preview",
+            post(preview_schedule_import).layer(DefaultBodyLimit::max(SCHEDULE_IMPORT_MAX_REQUEST_BYTES)),
+        )
         .route("/schedules/:id", put(update_schedule).delete(delete_schedule))
         .route("/schedules/upcoming", get(list_upcoming))
         .route("/traffic", get(list_traffics).post(create_traffic))
