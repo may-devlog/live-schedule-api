@@ -232,6 +232,30 @@ export default function NewScheduleScreen() {
   const [relatedScheduleIds, setRelatedScheduleIds] = useState<number[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
+  const [canUseScheduleImport, setCanUseScheduleImport] = useState(false);
+
+  // 自動入力はプレミアム契約中または無料トライアル中のユーザーだけに表示する。
+  // 取得失敗時は通常フォームだけを表示し、権限のない機能が一瞬見えることも防ぐ。
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setCanUseScheduleImport(false);
+      return;
+    }
+    let active = true;
+    authenticatedFetch(getApiUrl("/auth/plan-status"))
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`status: ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        if (active) setCanUseScheduleImport(Boolean(data.is_paid_effective));
+      })
+      .catch((error) => {
+        console.error("[New] Failed to load plan status:", error);
+        if (active) setCanUseScheduleImport(false);
+      });
+    return () => { active = false; };
+  }, [isAuthenticated]);
 
   const handleImportApply = (preview: {
     title: string | null; date: string | null; open: string | null; start: string | null;
@@ -390,7 +414,7 @@ export default function NewScheduleScreen() {
           <Text style={styles.eyebrow}>EVENT</Text>
           <Text style={styles.title}>{copyFrom ? "イベントを複製" : "新規イベント"}</Text>
           <Text style={styles.lead}>ライブの基本情報や費用を登録します。</Text>
-          {!copyFrom && <ScheduleImportCard areas={areas} onApply={handleImportApply} />}
+          {!copyFrom && canUseScheduleImport && <ScheduleImportCard areas={areas} onApply={handleImportApply} />}
           <View style={styles.formCard}>
 
       {/* Text型 */}
