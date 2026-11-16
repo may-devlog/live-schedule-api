@@ -133,7 +133,7 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
         body: JSON.stringify({ source_type: sourceType, url: sourceType === "url" ? url.trim() : null, image_data_url: sourceType === "image" ? imageDataUrl : null }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "情報を読み取れませんでした");
+      if (!res.ok) throw new Error(data.error === "premium_required" ? "自動入力はプレミアムプラン限定の機能です" : data.error || "情報を読み取れませんでした");
       setPreview(data as ImportPreview);
     } catch (error: any) {
       showError(error.message || "情報を読み取れませんでした");

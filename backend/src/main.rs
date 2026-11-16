@@ -341,7 +341,18 @@ async fn extract_schedule_from_claude(content: serde_json::Value, source_type: &
     Ok(preview)
 }
 
-async fn preview_schedule_import(user: AuthenticatedUser, Json(payload): Json<ScheduleImportRequest>) -> std::result::Result<Json<ScheduleImportPreview>, (StatusCode, Json<ErrorResponse>)> {
+async fn preview_schedule_import(
+    user: AuthenticatedUser,
+    Extension(pool): Extension<Pool<Sqlite>>,
+    Json(payload): Json<ScheduleImportRequest>,
+) -> std::result::Result<Json<ScheduleImportPreview>, (StatusCode, Json<ErrorResponse>)> {
+    let (plan, trial_started_at) = fetch_user_plan(&pool, user.user_id).await.map_err(|e| {
+        eprintln!("[ScheduleImport] Failed to fetch plan: {}", e);
+        import_error(StatusCode::INTERNAL_SERVER_ERROR, "Database error")
+    })?;
+    if !has_paid_access(&plan, trial_started_at.as_deref()) {
+        return Err(import_error(StatusCode::FORBIDDEN, "premium_required"));
+    }
     if !check_schedule_import_rate_limit(user.user_id) { return Err(import_error(StatusCode::TOO_MANY_REQUESTS, "しばらく待ってからもう一度お試しください")); }
     let (content, source_type) = match payload.source_type.as_str() {
         "url" => {
@@ -443,6 +454,23 @@ mod schedule_import_tests {
         let body = serde_json::json!({ "source_type": "image", "image_data_url": format!("data:image/png;base64,{}", image_data) }).to_string();
         let response = app.oneshot(Request::post("/schedule-import/preview").header("content-type", "application/json").body(Body::from(body)).unwrap()).await.unwrap();
         assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    #[tokio::test]
+    async fn schedule_import_rejects_free_plan_before_external_requests() {
+        let pool = SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        sqlx::query("CREATE TABLE users (id INTEGER PRIMARY KEY, plan TEXT NOT NULL, trial_started_at TEXT)")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO users (id, plan, trial_started_at) VALUES (1, 'free', NULL)")
+            .execute(&pool).await.unwrap();
+        let result = preview_schedule_import(
+            AuthenticatedUser { user_id: 1 },
+            Extension(pool),
+            Json(ScheduleImportRequest { source_type: "url".to_string(), url: Some("https://example.com".to_string()), image_data_url: None }),
+        ).await;
+        let (status, Json(error)) = result.unwrap_err();
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert_eq!(error.error, "premium_required");
     }
 }
 
