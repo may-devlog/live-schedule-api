@@ -22,6 +22,23 @@ type Props = {
   onApply: (preview: ImportPreview & { area: string | null }) => void;
 };
 
+const ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+const IMAGE_MIME_BY_EXTENSION: Record<string, typeof ALLOWED_IMAGE_MIME_TYPES[number]> = {
+  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif",
+};
+
+function resolveAllowedImageMimeType(mimeType?: string | null, fileName?: string | null) {
+  const normalizedMimeType = mimeType?.toLowerCase();
+  if (normalizedMimeType && ALLOWED_IMAGE_MIME_TYPES.includes(normalizedMimeType as typeof ALLOWED_IMAGE_MIME_TYPES[number])) {
+    return normalizedMimeType as typeof ALLOWED_IMAGE_MIME_TYPES[number];
+  }
+  if (!normalizedMimeType && fileName) {
+    const extension = fileName.split(".").pop()?.toLowerCase() || "";
+    return IMAGE_MIME_BY_EXTENSION[extension] || null;
+  }
+  return null;
+}
+
 const labels: { key: keyof Pick<ImportPreview, "title" | "date" | "open" | "start" | "end" | "area" | "venue">; label: string }[] = [
   { key: "title", label: "タイトル" },
   { key: "date", label: "日付" },
@@ -49,6 +66,10 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
   const [preview, setPreview] = useState<ImportPreview | null>(null);
 
   const setSelectedImage = (dataUrl: string, fileName: string | null) => {
+    const dataUrlMimeType = dataUrl.match(/^data:([^;,]+);base64,/)?.[1]?.toLowerCase();
+    if (!resolveAllowedImageMimeType(dataUrlMimeType, fileName)) {
+      throw new Error("JPEG、PNG、WebP、GIF画像のみ使用できます");
+    }
     if (dataUrl.length > 7_100_000) throw new Error("画像サイズは5MB以下にしてください");
     setImageDataUrl(dataUrl);
     setImageName(fileName || "選択した画像");
@@ -62,7 +83,8 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
       if (result.canceled) return;
       const asset = result.assets[0];
       if (!asset.base64) throw new Error("画像を読み込めませんでした");
-      const mimeType = ["image/png", "image/webp", "image/gif"].includes(asset.mimeType || "") ? asset.mimeType : "image/jpeg";
+      const mimeType = resolveAllowedImageMimeType(asset.mimeType, asset.fileName);
+      if (!mimeType) throw new Error("JPEG、PNG、WebP、GIF画像のみ使用できます");
       const dataUrl = `data:${mimeType};base64,${asset.base64}`;
       setSelectedImage(dataUrl, asset.fileName || null);
     } catch (error: any) {
@@ -77,8 +99,7 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
     setIsDragging(false);
     const file = event.dataTransfer?.files?.[0] as File | undefined;
     if (!file) return;
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-    if (!allowedTypes.includes(file.type)) return showError("JPEG、PNG、WebP、GIF画像のみ使用できます");
+    if (!resolveAllowedImageMimeType(file.type, file.name)) return showError("JPEG、PNG、WebP、GIF画像のみ使用できます");
     if (file.size > 5 * 1024 * 1024) return showError("画像サイズは5MB以下にしてください");
     const reader = new FileReader();
     reader.onload = () => {
