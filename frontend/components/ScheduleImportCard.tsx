@@ -112,7 +112,7 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
   }, [setSelectedImage]);
 
   useEffect(() => {
-    if (Platform.OS !== "web") return;
+    if (Platform.OS !== "web" || sourceType !== "image") return;
     const dropZone = dropZoneRef.current as HTMLElement | null;
     if (!dropZone?.addEventListener) return;
 
@@ -154,7 +154,7 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
       dropZone.removeEventListener("dragleave", handleDragLeave);
       dropZone.removeEventListener("drop", handleDrop);
     };
-  }, [readDroppedFile]);
+  }, [readDroppedFile, sourceType]);
 
   const analyze = async () => {
     if (sourceType === "url" && !url.trim()) return showError("URLを入力してください");
