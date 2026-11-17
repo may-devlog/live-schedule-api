@@ -27,6 +27,7 @@ export type PublicSchedule = {
   status: string;
   related_schedule_ids: string[];
   is_public: boolean;
+  travel_sharing_enabled: boolean;
 };
 
 export type PublicTraffic = {

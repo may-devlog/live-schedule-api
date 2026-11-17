@@ -25,6 +25,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
   const { colors, scheme } = useTheme();
   const styles = getStyles(colors, scheme);
   const [sharingEnabled, setSharingEnabled] = useState(false);
+  const [travelSharingEnabled, setTravelSharingEnabled] = useState(false);
   const [shareId, setShareId] = useState<string | null>(null);
   const [sharingUrl, setSharingUrl] = useState<string | null>(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
@@ -48,6 +49,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
     if (!response.ok) return;
     const data = await response.json();
     setSharingEnabled(Boolean(data.sharing_enabled));
+    setTravelSharingEnabled(Boolean(data.travel_sharing_enabled));
     setShareId(data.share_id ?? null);
     setSharingUrl(data.sharing_url ?? null);
   }, []);
@@ -193,7 +195,9 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
   };
 
   const toggleSharing = async (enabled: boolean) => {
+    const previousTravelSharingEnabled = travelSharingEnabled;
     setSharingEnabled(enabled);
+    if (!enabled) setTravelSharingEnabled(false);
     try {
       const response = await authenticatedFetch(getApiUrl('/auth/toggle-sharing'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),
@@ -205,6 +209,21 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
       await fetchSharing();
     } catch (error: any) {
       setSharingEnabled(!enabled);
+      setTravelSharingEnabled(previousTravelSharingEnabled);
+      showAlert('エラー', error.message);
+    }
+  };
+
+  const toggleTravelSharing = async (enabled: boolean) => {
+    setTravelSharingEnabled(enabled);
+    try {
+      const response = await authenticatedFetch(getApiUrl('/auth/toggle-travel-sharing'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),
+      });
+      if (!response.ok) throw new Error('交通・宿泊の共有設定の更新に失敗しました');
+      await fetchSharing();
+    } catch (error: any) {
+      setTravelSharingEnabled(!enabled);
       showAlert('エラー', error.message);
     }
   };
@@ -297,7 +316,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               {menuItem('shield-checkmark-outline', '出発地・到着地マスク設定', () => { onClose(); router.push('/settings/masked-locations'); })}
               {menuItem('notifications-outline', '通知設定', () => { onClose(); router.push('/settings/notifications'); })}
               {menuItem('color-palette-outline', '外観', () => { onClose(); router.push('/settings/appearance'); })}
-              <View style={styles.menuItem}>
+              <View style={[styles.menuItem, styles.shareMenuItem]}>
                 <View style={styles.iconBox}><Ionicons name="share-social-outline" size={19} color={colors.accentDark} /></View>
                 <View style={styles.shareCopy}>
                   <Text style={styles.menuLabel}>共有化{!isPaidEffective && <Text style={styles.premiumBadge}> 🔒</Text>}</Text>
@@ -309,8 +328,21 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                       </TouchableOpacity>
                     </View>
                   )}
+                  <View style={styles.travelShareRow}>
+                    <Text style={[styles.travelShareLabel, (!sharingEnabled || !isPaidEffective) && styles.travelShareLabelDisabled]}>交通・宿泊を共有化</Text>
+                  </View>
                 </View>
-                <Switch value={sharingEnabled} onValueChange={toggleSharing} disabled={!isPaidEffective} trackColor={{ false: colors.border, true: colors.accent }} thumbColor={sharingEnabled ? colors.accentContrastText : '#FFFFFF'} />
+                <View style={styles.shareToggles}>
+                  <Switch value={sharingEnabled} onValueChange={toggleSharing} disabled={!isPaidEffective} trackColor={{ false: colors.border, true: colors.accent }} thumbColor={sharingEnabled ? colors.accentContrastText : '#FFFFFF'} />
+                  <Switch
+                    value={sharingEnabled && isPaidEffective && travelSharingEnabled}
+                    onValueChange={toggleTravelSharing}
+                    disabled={!sharingEnabled || !isPaidEffective}
+                    trackColor={{ false: colors.border, true: colors.accent }}
+                    thumbColor={sharingEnabled && isPaidEffective && travelSharingEnabled ? colors.accentContrastText : '#FFFFFF'}
+                    style={styles.travelShareSwitch}
+                  />
+                </View>
               </View>
             </View>
             {plan === 'premium' ? (
@@ -373,7 +405,7 @@ const getStyles = (colors: ThemeColors, scheme: SchemeKey) => StyleSheet.create(
   avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }, avatarImage: { width: '100%', height: '100%', borderRadius: 27 },
   profileCopy: { flex: 1, minWidth: 0 }, profileName: { color: colors.ink, fontSize: 16, fontWeight: '800' }, email: { color: colors.muted, fontSize: 12, marginTop: 3 },
   avatarButton: { minHeight: 38, borderWidth: 1, borderColor: colors.accent, borderRadius: 9, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }, avatarButtonText: { color: colors.accentDark, fontSize: 12, fontWeight: '700' }, removeAvatar: { color: colors.muted, textAlign: 'right', fontSize: 12, marginTop: 8 },
-  menuGroup: { marginTop: 22, borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden' }, menuItem: { minHeight: 64, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border }, iconBox: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }, menuLabel: { color: colors.ink, fontSize: 14, fontWeight: '600' }, premiumBadge: { fontSize: 12 }, shareCopy: { flex: 1 }, shareUrlRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }, shareUrl: { color: colors.muted, fontSize: 10, flexShrink: 1 },
+  menuGroup: { marginTop: 22, borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden' }, menuItem: { minHeight: 64, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border }, shareMenuItem: { paddingVertical: 10 }, iconBox: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }, menuLabel: { color: colors.ink, fontSize: 14, fontWeight: '600' }, premiumBadge: { fontSize: 12 }, shareCopy: { flex: 1 }, shareUrlRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }, shareUrl: { color: colors.muted, fontSize: 10, flexShrink: 1 }, travelShareRow: { minHeight: 30, marginTop: 5, flexDirection: 'row', alignItems: 'center' }, travelShareLabel: { color: colors.ink, fontSize: 11, fontWeight: '600' }, travelShareLabelDisabled: { color: colors.muted, opacity: 0.55 }, shareToggles: { alignSelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }, travelShareSwitch: { transform: [{ scaleX: 0.72 }, { scaleY: 0.72 }] },
   logoutButton: { marginTop: 18, minHeight: 52, borderRadius: 11, backgroundColor: scheme === 'dark' ? 'rgba(220,38,38,0.16)' : '#FEF2F2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, logoutText: { color: scheme === 'dark' ? '#F87171' : '#DC2626', fontWeight: '700' },
   deleteAccountLink: { marginTop: 14, alignItems: 'center', paddingVertical: 6 }, deleteAccountLinkText: { color: colors.muted, fontSize: 12, textDecorationLine: 'underline' },
   planCard: { marginTop: 18, minHeight: 44, borderRadius: 11, backgroundColor: colors.accentSoft, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14 }, planCardText: { color: colors.ink, fontSize: 13, fontWeight: '600', flex: 1 },

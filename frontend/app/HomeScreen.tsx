@@ -60,6 +60,7 @@ export type Schedule = {
   stay_ids?: string[];
   user_id?: number | null;
   is_public?: boolean;
+  travel_sharing_enabled?: boolean;
   user_seq?: number | null; // ユーザーごとの連番（ログイン中ユーザー向けURLで内部idの代わりに使う）
 };
 
