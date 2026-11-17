@@ -1514,6 +1514,24 @@ fn apply_travel_sharing(mut schedule: PublicSchedule, enabled: bool) -> PublicSc
     schedule
 }
 
+async fn travel_sharing_enabled_for_schedule(pool: &Pool<Sqlite>, schedule_id: i64) -> bool {
+    sqlx::query_scalar::<_, i32>(
+        r#"
+        SELECT COALESCE(u.travel_sharing_enabled, 1)
+        FROM schedules s
+        LEFT JOIN users u ON u.id = s.user_id
+        WHERE s.id = ?
+        "#,
+    )
+    .bind(schedule_id)
+    .fetch_optional(pool)
+    .await
+    .ok()
+    .flatten()
+    // 公開APIのプライバシー設定なので、取得失敗時は安全側（非公開）に倒す。
+    .unwrap_or(0) != 0
+}
+
 fn row_to_public_traffic(row: PublicTrafficRow, schedule_public_id: &str) -> PublicTraffic {
     PublicTraffic {
         id: row.public_id,
@@ -5350,7 +5368,9 @@ async fn list_public_schedules(
 
     let mut schedules = Vec::with_capacity(rows.len());
     for row in rows {
-        schedules.push(row_to_public_schedule(&pool, row).await);
+        let travel_sharing_enabled = travel_sharing_enabled_for_schedule(&pool, row.id).await;
+        let schedule = row_to_public_schedule(&pool, row).await;
+        schedules.push(apply_travel_sharing(schedule, travel_sharing_enabled));
     }
 
     if let Some(year) = params.year {
@@ -5451,8 +5471,9 @@ async fn get_public_schedule(
         .map_err(|_| StatusCode::NOT_FOUND)?
     };
 
+    let travel_sharing_enabled = travel_sharing_enabled_for_schedule(&pool, row.id).await;
     let schedule = row_to_public_schedule(&pool, row).await;
-    Ok(Json(schedule))
+    Ok(Json(apply_travel_sharing(schedule, travel_sharing_enabled)))
 }
 
 // GET /public/traffic?schedule_id=... - 公開スケジュールの交通情報
@@ -5479,6 +5500,9 @@ async fn list_public_traffics(
     let Some(schedule_internal_id) = schedule_exists else {
         return Json(vec![]);
     };
+    if !travel_sharing_enabled_for_schedule(&pool, schedule_internal_id).await {
+        return Json(vec![]);
+    }
 
     let rows: Vec<PublicTrafficRow> = sqlx::query_as::<_, PublicTrafficRow>(
         r#"
@@ -5553,6 +5577,9 @@ async fn list_public_stays(
     let Some(schedule_internal_id) = schedule_exists else {
         return Json(vec![]);
     };
+    if !travel_sharing_enabled_for_schedule(&pool, schedule_internal_id).await {
+        return Json(vec![]);
+    }
 
     let rows: Vec<PublicStayRow> = sqlx::query_as::<_, PublicStayRow>(
         r#"
@@ -5597,6 +5624,9 @@ async fn get_public_traffic(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let schedule_internal_id = schedule_internal_id.ok_or(StatusCode::NOT_FOUND)?;
+    if !travel_sharing_enabled_for_schedule(&pool, schedule_internal_id).await {
+        return Err(StatusCode::FORBIDDEN);
+    }
 
     let row: Option<PublicTrafficRow> = sqlx::query_as::<_, PublicTrafficRow>(
         r#"
@@ -5676,6 +5706,9 @@ async fn get_public_stay(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let schedule_internal_id = schedule_internal_id.ok_or(StatusCode::NOT_FOUND)?;
+    if !travel_sharing_enabled_for_schedule(&pool, schedule_internal_id).await {
+        return Err(StatusCode::FORBIDDEN);
+    }
 
     let row: Option<PublicStayRow> = sqlx::query_as::<_, PublicStayRow>(
         r#"
