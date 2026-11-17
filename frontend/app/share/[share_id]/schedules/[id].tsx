@@ -144,7 +144,12 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         }
       }
 
-      await fetchTrafficAndStay(found.id);
+      if (authenticated || found.travel_sharing_enabled !== false) {
+        await fetchTrafficAndStay(found.id);
+      } else {
+        setTrafficSummaries([]);
+        setStaySummaries([]);
+      }
       
       // TargetとLineupの選択肢を読み込んでフィルタリング
       const targets = await loadSelectOptions("TARGETS", authenticated ? undefined : share_id);
@@ -343,6 +348,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
   }
 
   const relatedIds = schedule.related_schedule_ids ?? [];
+  const showTravelDetails = authenticated || schedule.travel_sharing_enabled !== false;
 
   // UTC そのまま表示
   function formatDateTimeUTC(iso: string): string {
@@ -772,21 +778,21 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
           <View style={styles.detailGridDesktop}>
             <View style={styles.leftColumnDesktop}>
               {eventInfoBlock}
-              {trafficBlock}
-              {stayBlock}
+              {showTravelDetails && trafficBlock}
+              {showTravelDetails && stayBlock}
             </View>
             <View style={styles.rightColumnDesktop}>
-              {costBlock}
+              {showTravelDetails && costBlock}
               {relatedBlock}
             </View>
           </View>
         ) : (
           <>
             {eventInfoBlock}
-            {costBlock}
+            {showTravelDetails && costBlock}
             {relatedBlock}
-            {trafficBlock}
-            {stayBlock}
+            {showTravelDetails && trafficBlock}
+            {showTravelDetails && stayBlock}
           </>
         )}
         </View>

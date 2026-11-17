@@ -215,7 +215,9 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
               }
             }),
           ]),
-          fetchTrafficBySchedule(sorted, authenticated, shareId),
+          authenticated || sorted.some((schedule) => schedule.travel_sharing_enabled !== false)
+            ? fetchTrafficBySchedule(sorted, authenticated, shareId)
+            : Promise.resolve(new Map()),
           fetchAreaColors(sorted),
         ]).then(([, trafficMap, colors]) => {
           if (!active) return;
@@ -373,6 +375,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   }, [schedules, trafficBySchedule]);
 
   const totalCost = (schedule: Schedule) => totalCostBySchedule.get(schedule.id) ?? 0;
+  const showSharedCosts = authenticated || schedules[0]?.travel_sharing_enabled !== false;
 
   const groupColor = (field: MainGroupingField | SubGroupingField, title: string) => {
     const optionTypes = {
@@ -392,6 +395,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
   const renderCard = (item: Schedule) => {
     const parts = dateParts(item.date ?? item.datetime);
     const cost = totalCost(item);
+    const showCost = authenticated || item.travel_sharing_enabled !== false;
     // authenticated（ログイン中ユーザー向け）の場合はuser_seqを、公開共有ページの場合は
     // 従来どおりid（=public_id経由で解決された値）を使う
     const targetId = authenticated ? item.user_seq : item.id;
@@ -403,10 +407,10 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
         </View>
         {!mobile && <View style={styles.dateDivider} />}
         <View style={styles.cardBody}>
-          {mobile && <View style={styles.mobileDateRow}><View style={styles.mobileDateLeft}><Text style={styles.mobileDate}>{String(parts.month).padStart(2, "0")}.{parts.day}</Text><Text style={[styles.mobileWeekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text></View>{cost > 0 && mainGrouping !== "lineup" && <Text style={styles.cardCost}>¥{cost.toLocaleString()}</Text>}</View>}
+          {mobile && <View style={styles.mobileDateRow}><View style={styles.mobileDateLeft}><Text style={styles.mobileDate}>{String(parts.month).padStart(2, "0")}.{parts.day}</Text><Text style={[styles.mobileWeekday, parts.tone === "sat" && styles.saturday, parts.tone === "holiday" && styles.holiday]}>{parts.weekday}</Text></View>{showCost && cost > 0 && mainGrouping !== "lineup" && <Text style={styles.cardCost}>¥{cost.toLocaleString()}</Text>}</View>}
           <View style={styles.titleRow}>
             <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-            {!mobile && cost > 0 && mainGrouping !== "lineup" && <Text style={styles.cardCost}>¥{cost.toLocaleString()}</Text>}
+            {!mobile && showCost && cost > 0 && mainGrouping !== "lineup" && <Text style={styles.cardCost}>¥{cost.toLocaleString()}</Text>}
           </View>
           <View style={styles.archiveTags}>
             {!!item.area && subGrouping !== "area" && <NotionTag label={item.area} color={areaColors.get(item.id) || getOptionColorSync(item.area, "AREAS")} />}
@@ -556,7 +560,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                       {mainColor ? <View style={styles.groupTagWrap}><NotionTag label={mainGroup.title} color={mainColor} /></View> : <Text style={styles.groupTitle}>{mainGroup.title}</Text>}
                       <Text style={styles.groupCount}>({mainCount})</Text>
                     </TouchableOpacity>
-                    {!mainCollapsed && mainTotal > 0 && mainGrouping !== "lineup" && <View style={styles.groupTotal}><Text style={styles.groupTotalText}>¥{mainTotal.toLocaleString()}</Text></View>}
+                    {showSharedCosts && !mainCollapsed && mainTotal > 0 && mainGrouping !== "lineup" && <View style={styles.groupTotal}><Text style={styles.groupTotalText}>¥{mainTotal.toLocaleString()}</Text></View>}
                   </>}
                   {(!mainGroup.title || !mainCollapsed) && mainGroup.subGroups.map((subGroup) => {
                     const subKey = `sub-${mainGroup.title}-${subGroup.title}`;
@@ -571,7 +575,7 @@ export function SharedArchivePage({ shareId, authenticated = false, initialYear,
                             {subColor ? <View style={styles.groupTagWrap}><NotionTag label={subGroup.title} color={subColor} /></View> : <Text style={styles.subGroupTitle}>{subGroup.title}</Text>}
                             <Text style={styles.groupCount}>({subGroup.data.length})</Text>
                           </TouchableOpacity>
-                          {!subCollapsed && subTotal > 0 && mainGrouping !== "lineup" && <View style={[styles.groupTotal, !!mainGroup.title && styles.subGroupTotal]}><Text style={styles.groupTotalText}>¥{subTotal.toLocaleString()}</Text></View>}
+                          {showSharedCosts && !subCollapsed && subTotal > 0 && mainGrouping !== "lineup" && <View style={[styles.groupTotal, !!mainGroup.title && styles.subGroupTotal]}><Text style={styles.groupTotalText}>¥{subTotal.toLocaleString()}</Text></View>}
                         </>}
                         {(!subGroup.title || !subCollapsed) && <View style={[styles.cardList, styles.groupCardList]}>{subGroup.data.map(renderCard)}</View>}
                       </View>

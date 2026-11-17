@@ -166,6 +166,7 @@
 | share_id | TEXT | YES | NULL | 共有URL・ユーザー検索に使う一意のユーザーID | 公開 |
 | display_name | TEXT | YES | NULL | プロフィールに表示する名前（最大50文字） | 公開 |
 | sharing_enabled | INTEGER | NO | 0 | 共有ページ公開フラグ | 非公開 |
+| travel_sharing_enabled | INTEGER | NO | 1 | 共有ページで交通・宿泊・費用を公開するフラグ | 非公開 |
 | avatar_data_url | TEXT | YES | NULL | プロフィール画像 | 公開 |
 | plan | TEXT | NO | 'free' | プラン種別（'free' または 'premium'） | 非公開 |
 | premium_started_at | TEXT | YES | NULL | プレミアムプラン開始日時（ISO 8601形式） | 非公開 |
@@ -199,6 +200,12 @@
 - `PUT /auth/profile`: 名前を更新。`{ "display_name": "名前" }`、`null`または空文字で未設定に戻す
 - `PUT /auth/profile-avatar`: プロフィール画像を更新
 - `GET /share/:share_id/profile`: 公開中ユーザーのユーザーID、名前、画像を取得
+
+**共有設定API:**
+
+- `GET /auth/sharing-status`: 共有ページと交通・宿泊の共有状態を取得
+- `POST /auth/toggle-sharing`: 共有ページ全体の公開を切り替え。オフ時は交通・宿泊の共有もオフにする
+- `POST /auth/toggle-travel-sharing`: 共有ページ上の交通・宿泊・費用の公開を切り替える
 
 **プラン関連API:**
 
