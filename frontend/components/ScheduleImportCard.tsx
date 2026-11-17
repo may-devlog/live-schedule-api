@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useTheme, type ThemeColors } from "../contexts/ThemeContext";
 import { authenticatedFetch, getApiUrl } from "../utils/api";
@@ -65,7 +65,9 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
 
-  const setSelectedImage = (dataUrl: string, fileName: string | null) => {
+  const dropZoneRef = useRef<any>(null);
+
+  const setSelectedImage = useCallback((dataUrl: string, fileName: string | null) => {
     const dataUrlMimeType = dataUrl.match(/^data:([^;,]+);base64,/)?.[1]?.toLowerCase();
     if (!resolveAllowedImageMimeType(dataUrlMimeType, fileName)) {
       throw new Error("JPEG、PNG、WebP、GIF画像のみ使用できます");
@@ -74,7 +76,7 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
     setImageDataUrl(dataUrl);
     setImageName(fileName || "選択した画像");
     setPreview(null);
-  };
+  }, []);
 
   const pickImage = async () => {
     try {
@@ -92,12 +94,7 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
     }
   };
 
-  const handleDrop = (event: any) => {
-    if (Platform.OS !== "web") return;
-    event.preventDefault?.();
-    event.stopPropagation?.();
-    setIsDragging(false);
-    const file = event.dataTransfer?.files?.[0] as File | undefined;
+  const readDroppedFile = useCallback((file?: File) => {
     if (!file) return;
     if (!resolveAllowedImageMimeType(file.type, file.name)) return showError("JPEG、PNG、WebP、GIF画像のみ使用できます");
     if (file.size > 5 * 1024 * 1024) return showError("画像サイズは5MB以下にしてください");
@@ -112,14 +109,52 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
     };
     reader.onerror = () => showError("画像を読み込めませんでした");
     reader.readAsDataURL(file);
-  };
+  }, [setSelectedImage]);
 
-  const webDropProps = Platform.OS === "web" ? {
-    onDragEnter: (event: any) => { event.preventDefault?.(); setIsDragging(true); },
-    onDragOver: (event: any) => { event.preventDefault?.(); event.dataTransfer.dropEffect = "copy"; setIsDragging(true); },
-    onDragLeave: (event: any) => { event.preventDefault?.(); setIsDragging(false); },
-    onDrop: handleDrop,
-  } : {};
+  useEffect(() => {
+    if (Platform.OS !== "web" || sourceType !== "image") return;
+    const dropZone = dropZoneRef.current as HTMLElement | null;
+    if (!dropZone?.addEventListener) return;
+
+    let dragDepth = 0;
+    const containsFiles = (event: DragEvent) => Array.from(event.dataTransfer?.types || []).includes("Files");
+    const handleDragEnter = (event: DragEvent) => {
+      if (!containsFiles(event)) return;
+      event.preventDefault();
+      dragDepth += 1;
+      setIsDragging(true);
+    };
+    const handleDragOver = (event: DragEvent) => {
+      if (!containsFiles(event)) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    };
+    const handleDragLeave = (event: DragEvent) => {
+      if (!containsFiles(event)) return;
+      event.preventDefault();
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) setIsDragging(false);
+    };
+    const handleDrop = (event: DragEvent) => {
+      if (!containsFiles(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      dragDepth = 0;
+      setIsDragging(false);
+      readDroppedFile(event.dataTransfer?.files?.[0]);
+    };
+
+    dropZone.addEventListener("dragenter", handleDragEnter);
+    dropZone.addEventListener("dragover", handleDragOver);
+    dropZone.addEventListener("dragleave", handleDragLeave);
+    dropZone.addEventListener("drop", handleDrop);
+    return () => {
+      dropZone.removeEventListener("dragenter", handleDragEnter);
+      dropZone.removeEventListener("dragover", handleDragOver);
+      dropZone.removeEventListener("dragleave", handleDragLeave);
+      dropZone.removeEventListener("drop", handleDrop);
+    };
+  }, [readDroppedFile, sourceType]);
 
   const analyze = async () => {
     if (sourceType === "url" && !url.trim()) return showError("URLを入力してください");
@@ -176,11 +211,13 @@ export function ScheduleImportCard({ areas, onApply }: Props) {
       {sourceType === "url" ? (
         <TextInput style={styles.input} value={url} onChangeText={(value) => { setUrl(value); setPreview(null); }} placeholder="https://example.com/event" placeholderTextColor={colors.muted} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
       ) : (
-        <TouchableOpacity {...webDropProps} style={[styles.imagePicker, isDragging && styles.imagePickerDragging]} onPress={pickImage}>
-          {imageDataUrl ? <Image source={{ uri: imageDataUrl }} style={styles.thumbnail} /> : <View style={styles.imagePlaceholder}><Ionicons name="cloud-upload-outline" size={27} color={colors.accent} /></View>}
-          <View style={styles.imageCopy}><Text style={styles.imageTitle}>{imageName || (Platform.OS === "web" ? "クリックまたはドラッグ＆ドロップ" : "スクリーンショットを選択")}</Text><Text style={styles.imageHint}>JPEG・PNG・WebP・GIF、5MBまで</Text></View>
-          <Text style={styles.chooseText}>{imageDataUrl ? "変更" : "選択"}</Text>
-        </TouchableOpacity>
+        <View ref={dropZoneRef} style={[styles.imagePicker, isDragging && styles.imagePickerDragging]}>
+          <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
+            {imageDataUrl ? <Image source={{ uri: imageDataUrl }} style={styles.thumbnail} /> : <View style={styles.imagePlaceholder}><Ionicons name="cloud-upload-outline" size={27} color={colors.accent} /></View>}
+            <View style={styles.imageCopy}><Text style={styles.imageTitle}>{imageName || (Platform.OS === "web" ? "クリックまたはドラッグ＆ドロップ" : "スクリーンショットを選択")}</Text><Text style={styles.imageHint}>JPEG・PNG・WebP・GIF、5MBまで</Text></View>
+            <Text style={styles.chooseText}>{imageDataUrl ? "変更" : "選択"}</Text>
+          </TouchableOpacity>
+        </View>
       )}
       <TouchableOpacity style={[styles.analyzeButton, loading && styles.disabled]} onPress={analyze} disabled={loading}>
         {loading ? <ActivityIndicator color={colors.accentContrastText} /> : <><Ionicons name="sparkles" size={17} color={colors.accentContrastText} /><Text style={styles.analyzeText}>情報を読み取る</Text></>}
@@ -212,7 +249,8 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   tab: { minWidth: 92, flexDirection: "row", gap: 6, justifyContent: "center", alignItems: "center", paddingVertical: 9, borderRadius: 18, backgroundColor: colors.accentSoft },
   tabActive: { backgroundColor: colors.accent }, tabText: { color: colors.muted, fontSize: 12, fontWeight: "700" }, tabTextActive: { color: colors.accentContrastText },
   input: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: 9, paddingHorizontal: 14, color: colors.ink, backgroundColor: colors.surface, fontSize: 14 },
-  imagePicker: { minHeight: 72, borderWidth: 1, borderStyle: "dashed", borderColor: colors.border, borderRadius: 10, padding: 10, flexDirection: "row", alignItems: "center" },
+  imagePicker: { minHeight: 72, borderWidth: 1, borderStyle: "dashed", borderColor: colors.border, borderRadius: 10 },
+  imagePickerButton: { flex: 1, padding: 10, flexDirection: "row", alignItems: "center" },
   imagePickerDragging: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
   imagePlaceholder: { width: 50, height: 50, borderRadius: 8, backgroundColor: colors.accentSoft, alignItems: "center", justifyContent: "center" }, thumbnail: { width: 50, height: 50, borderRadius: 8, resizeMode: "cover" },
   imageCopy: { flex: 1, marginHorizontal: 12 }, imageTitle: { color: colors.ink, fontSize: 13, fontWeight: "700" }, imageHint: { color: colors.muted, fontSize: 11, marginTop: 4 }, chooseText: { color: colors.accent, fontSize: 12, fontWeight: "700" },
