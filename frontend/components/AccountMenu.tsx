@@ -313,6 +313,8 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               {menuItem('person-outline', '名前変更', () => { setNewDisplayName(displayName || ''); setDialog('name'); })}
               {menuItem('mail-outline', 'メールアドレス変更', () => setDialog('email'))}
               {menuItem('at-outline', 'ユーザーID変更', () => setDialog('shareId'))}
+              {menuItem('notifications-outline', '通知設定', () => { onClose(); router.push('/settings/notifications'); })}
+              {menuItem('color-palette-outline', '外観', () => { onClose(); router.push('/settings/appearance'); })}
               {isPaidEffective && (
                 <>
                   <View style={[styles.menuItem, styles.shareMenuItem]}>
@@ -346,8 +348,6 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                   {menuItem('shield-checkmark-outline', '出発地・到着地マスク設定', () => { onClose(); router.push('/settings/masked-locations'); })}
                 </>
               )}
-              {menuItem('notifications-outline', '通知設定', () => { onClose(); router.push('/settings/notifications'); })}
-              {menuItem('color-palette-outline', '外観', () => { onClose(); router.push('/settings/appearance'); })}
             </View>
             {plan === 'premium' ? (
               <View style={styles.planCard}>
