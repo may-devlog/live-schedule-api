@@ -9,7 +9,12 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "com.genbgt.app",
+      "buildNumber": "2",
       "supportsTablet": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "icon": {
         "light": "./assets/images/icon-light.png",
         "dark": "./assets/images/icon-dark.png"
@@ -69,7 +74,10 @@
           "color": "#18181B"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
