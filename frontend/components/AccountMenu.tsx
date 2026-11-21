@@ -313,37 +313,41 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               {menuItem('person-outline', '名前変更', () => { setNewDisplayName(displayName || ''); setDialog('name'); })}
               {menuItem('mail-outline', 'メールアドレス変更', () => setDialog('email'))}
               {menuItem('at-outline', 'ユーザーID変更', () => setDialog('shareId'))}
-              {menuItem('shield-checkmark-outline', '出発地・到着地マスク設定', () => { onClose(); router.push('/settings/masked-locations'); })}
+              {isPaidEffective && (
+                <>
+                  <View style={[styles.menuItem, styles.shareMenuItem]}>
+                    <View style={styles.iconBox}><Ionicons name="share-social-outline" size={19} color={colors.accentDark} /></View>
+                    <View style={styles.shareCopy}>
+                      <Text style={styles.menuLabel}>共有化</Text>
+                      {sharingUrl && sharingEnabled && (
+                        <View style={styles.shareUrlRow}>
+                          <Text numberOfLines={1} style={styles.shareUrl}>{sharingUrl}</Text>
+                          <TouchableOpacity onPress={copySharingUrl} hitSlop={8}>
+                            <Ionicons name={urlCopied ? 'checkmark' : 'copy-outline'} size={14} color={urlCopied ? '#16A34A' : colors.accentDark} />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      <View style={styles.travelShareRow}>
+                        <Text style={[styles.travelShareLabel, !sharingEnabled && styles.travelShareLabelDisabled]}>交通・宿泊を共有化</Text>
+                      </View>
+                    </View>
+                    <View style={styles.shareToggles}>
+                      <Switch value={sharingEnabled} onValueChange={toggleSharing} trackColor={{ false: colors.border, true: colors.accent }} thumbColor={sharingEnabled ? colors.accentContrastText : '#FFFFFF'} />
+                      <Switch
+                        value={sharingEnabled && travelSharingEnabled}
+                        onValueChange={toggleTravelSharing}
+                        disabled={!sharingEnabled}
+                        trackColor={{ false: colors.border, true: colors.accent }}
+                        thumbColor={sharingEnabled && travelSharingEnabled ? colors.accentContrastText : '#FFFFFF'}
+                        style={styles.travelShareSwitch}
+                      />
+                    </View>
+                  </View>
+                  {menuItem('shield-checkmark-outline', '出発地・到着地マスク設定', () => { onClose(); router.push('/settings/masked-locations'); })}
+                </>
+              )}
               {menuItem('notifications-outline', '通知設定', () => { onClose(); router.push('/settings/notifications'); })}
               {menuItem('color-palette-outline', '外観', () => { onClose(); router.push('/settings/appearance'); })}
-              <View style={[styles.menuItem, styles.shareMenuItem]}>
-                <View style={styles.iconBox}><Ionicons name="share-social-outline" size={19} color={colors.accentDark} /></View>
-                <View style={styles.shareCopy}>
-                  <Text style={styles.menuLabel}>共有化{!isPaidEffective && <Text style={styles.premiumBadge}> 🔒</Text>}</Text>
-                  {sharingUrl && sharingEnabled && isPaidEffective && (
-                    <View style={styles.shareUrlRow}>
-                      <Text numberOfLines={1} style={styles.shareUrl}>{sharingUrl}</Text>
-                      <TouchableOpacity onPress={copySharingUrl} hitSlop={8}>
-                        <Ionicons name={urlCopied ? 'checkmark' : 'copy-outline'} size={14} color={urlCopied ? '#16A34A' : colors.accentDark} />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                  <View style={styles.travelShareRow}>
-                    <Text style={[styles.travelShareLabel, (!sharingEnabled || !isPaidEffective) && styles.travelShareLabelDisabled]}>交通・宿泊を共有化</Text>
-                  </View>
-                </View>
-                <View style={styles.shareToggles}>
-                  <Switch value={sharingEnabled} onValueChange={toggleSharing} disabled={!isPaidEffective} trackColor={{ false: colors.border, true: colors.accent }} thumbColor={sharingEnabled ? colors.accentContrastText : '#FFFFFF'} />
-                  <Switch
-                    value={sharingEnabled && isPaidEffective && travelSharingEnabled}
-                    onValueChange={toggleTravelSharing}
-                    disabled={!sharingEnabled || !isPaidEffective}
-                    trackColor={{ false: colors.border, true: colors.accent }}
-                    thumbColor={sharingEnabled && isPaidEffective && travelSharingEnabled ? colors.accentContrastText : '#FFFFFF'}
-                    style={styles.travelShareSwitch}
-                  />
-                </View>
-              </View>
             </View>
             {plan === 'premium' ? (
               <View style={styles.planCard}>
@@ -405,7 +409,7 @@ const getStyles = (colors: ThemeColors, scheme: SchemeKey) => StyleSheet.create(
   avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }, avatarImage: { width: '100%', height: '100%', borderRadius: 27 },
   profileCopy: { flex: 1, minWidth: 0 }, profileName: { color: colors.ink, fontSize: 16, fontWeight: '800' }, email: { color: colors.muted, fontSize: 12, marginTop: 3 },
   avatarButton: { minHeight: 38, borderWidth: 1, borderColor: colors.accent, borderRadius: 9, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }, avatarButtonText: { color: colors.accentDark, fontSize: 12, fontWeight: '700' }, removeAvatar: { color: colors.muted, textAlign: 'right', fontSize: 12, marginTop: 8 },
-  menuGroup: { marginTop: 22, borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden' }, menuItem: { minHeight: 64, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border }, shareMenuItem: { paddingVertical: 10 }, iconBox: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }, menuLabel: { color: colors.ink, fontSize: 14, fontWeight: '600' }, premiumBadge: { fontSize: 12 }, shareCopy: { flex: 1 }, shareUrlRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }, shareUrl: { color: colors.muted, fontSize: 10, flexShrink: 1 }, travelShareRow: { minHeight: 30, marginTop: 5, flexDirection: 'row', alignItems: 'center' }, travelShareLabel: { color: colors.ink, fontSize: 11, fontWeight: '600' }, travelShareLabelDisabled: { color: colors.muted, opacity: 0.55 }, shareToggles: { alignSelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }, travelShareSwitch: { transform: [{ scaleX: 0.72 }, { scaleY: 0.72 }] },
+  menuGroup: { marginTop: 22, borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden' }, menuItem: { minHeight: 64, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border }, shareMenuItem: { paddingVertical: 10 }, iconBox: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }, menuLabel: { color: colors.ink, fontSize: 14, fontWeight: '600' }, shareCopy: { flex: 1 }, shareUrlRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }, shareUrl: { color: colors.muted, fontSize: 10, flexShrink: 1 }, travelShareRow: { minHeight: 30, marginTop: 5, flexDirection: 'row', alignItems: 'center' }, travelShareLabel: { color: colors.ink, fontSize: 11, fontWeight: '600' }, travelShareLabelDisabled: { color: colors.muted, opacity: 0.55 }, shareToggles: { alignSelf: 'stretch', justifyContent: 'space-between', alignItems: 'center' }, travelShareSwitch: { transform: [{ scaleX: 0.72 }, { scaleY: 0.72 }] },
   logoutButton: { marginTop: 18, minHeight: 52, borderRadius: 11, backgroundColor: scheme === 'dark' ? 'rgba(220,38,38,0.16)' : '#FEF2F2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, logoutText: { color: scheme === 'dark' ? '#F87171' : '#DC2626', fontWeight: '700' },
   deleteAccountLink: { marginTop: 14, alignItems: 'center', paddingVertical: 6 }, deleteAccountLinkText: { color: colors.muted, fontSize: 12, textDecorationLine: 'underline' },
   planCard: { marginTop: 18, minHeight: 44, borderRadius: 11, backgroundColor: colors.accentSoft, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14 }, planCardText: { color: colors.ink, fontSize: 13, fontWeight: '600', flex: 1 },
