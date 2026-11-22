@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PublicFooter, PublicHeader } from './GenBGTBrand';
 import { useTheme, type ThemeColors } from '../contexts/ThemeContext';
@@ -244,12 +244,14 @@ export function LandingScreen() {
 
         <View style={[styles.ctaBand, { backgroundColor: colors.accentSoft }]}>
           <Text style={styles.ctaTitle}>今すぐ無料ではじめよう</Text>
-          <BreakableText
-            text="プレミアムプラン（月額400円、初回1ヶ月無料）では、共有ページの公開やアーカイブの無制限閲覧も可能になります。"
-            breakAfter="プレミアムプラン（月額400円、初回1ヶ月無料）では、"
-            style={styles.ctaBody}
-            maxWidth={780}
-          />
+          {Platform.OS === 'web' && (
+            <BreakableText
+              text="プレミアムプラン（月額400円、初回1ヶ月無料）では、共有ページの公開やアーカイブの無制限閲覧も可能になります。"
+              breakAfter="プレミアムプラン（月額400円、初回1ヶ月無料）では、"
+              style={styles.ctaBody}
+              maxWidth={780}
+            />
+          )}
           <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.accent }]} onPress={() => router.push('/register')}>
             <Text style={[styles.primaryButtonText, { color: colors.accentContrastText }]}>無料ではじめる</Text>
           </TouchableOpacity>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { StaticInfoPage } from '@/components/StaticInfoPage';
 
 export default function GuideScreen() {
@@ -63,13 +64,13 @@ export default function GuideScreen() {
         { source: require('@/assets/images/guide/appearance-settings.png'), caption: '外観設定画面。ライト・ダークとアクセントカラーを選べます', aspectRatio: 16 / 9 },
       ],
     },
-    {
+    ...(Platform.OS === 'web' ? [{
       heading: '9. プレミアムプランでできること',
       body: 'プレミアムプラン（月額400円、初回1ヶ月の無料トライアルあり）に登録すると、共有ページの公開と、アーカイブの無制限閲覧（無料プランは直近2年分まで）が可能になります。さらにアーカイブ画面では、メイン・サブの2軸でグループ・カテゴリ・エリア・お目当てなどを組み合わせてグループ化でき、過去のライブを自分の見たい切り口で振り返れます。設定はアカウントメニューからいつでも変更できます。',
       images: [
         { source: require('@/assets/images/guide/account-menu-premium.png'), caption: '共有化やプレミアムプランの設定はアカウントメニューから', aspectRatio: 977 / 1600 },
         { source: require('@/assets/images/guide/archive-grouping.png'), caption: 'アーカイブ画面。メインを「お目当て」、サブを「グループ」にしてまとめて表示' },
       ],
-    },
+    }] : []),
   ]} />;
 }

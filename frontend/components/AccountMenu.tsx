@@ -359,12 +359,12 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                 <Ionicons name="time-outline" size={16} color={colors.accentDark} />
                 <Text style={styles.planCardText}>無料トライアル中です（プレミアム機能を利用できます）{trialEndsAtLabel ? `\n${trialEndsAtLabel}まで` : ''}</Text>
               </View>
-            ) : trialUsed ? (
+            ) : Platform.OS === 'web' && trialUsed ? (
               <View style={styles.planCard}>
                 <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
                 <Text style={styles.planCardText}>無料トライアルは利用済みです</Text>
               </View>
-            ) : (
+            ) : Platform.OS === 'web' ? (
               <View style={styles.trialCard}>
                 <Text style={styles.trialTitle}>1ヶ月無料トライアル</Text>
                 <Text style={styles.trialDescription}>共有化やアーカイブのグループ化など、プレミアム機能を1ヶ月間お試しいただけます。</Text>
@@ -372,8 +372,8 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                   {trialStarting ? <ActivityIndicator color={colors.accentContrastText} /> : <Text style={styles.trialButtonText}>無料トライアルを始める</Text>}
                 </TouchableOpacity>
               </View>
-            )}
-            {plan === 'premium' && hasStripeSubscription ? (
+            ) : null}
+            {Platform.OS === 'web' && (plan === 'premium' && hasStripeSubscription ? (
               <TouchableOpacity style={styles.manageBillingButton} onPress={openBillingPortal} disabled={portalLoading}>
                 {portalLoading ? <ActivityIndicator color={colors.accentDark} /> : <Text style={styles.manageBillingButtonText}>お支払い方法の確認・解約</Text>}
               </TouchableOpacity>
@@ -381,7 +381,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               <TouchableOpacity style={styles.upgradeButton} onPress={startCheckout} disabled={checkoutLoading}>
                 {checkoutLoading ? <ActivityIndicator color={colors.accentContrastText} /> : <Text style={styles.upgradeButtonText}>プレミアムプランに登録する（月額400円）</Text>}
               </TouchableOpacity>
-            )}
+            ))}
             <TouchableOpacity style={styles.logoutButton} onPress={confirmLogout}><Ionicons name="log-out-outline" size={19} color="#DC2626" /><Text style={styles.logoutText}>ログアウト</Text></TouchableOpacity>
             <TouchableOpacity style={styles.deleteAccountLink} onPress={() => { onClose(); router.push('/settings/delete-account'); }}><Text style={styles.deleteAccountLinkText}>退会をご希望の方はこちら</Text></TouchableOpacity>
           </ScrollView>
