@@ -26,36 +26,27 @@
         "marketingUrl": "https://www.genbgt.com",
         "supportUrl": "https://www.genbgt.com/contact",
         "privacyPolicyUrl": "https://www.genbgt.com/privacy"
+      },
+      "ja": {
+        "title": "GenBGT",
+        "subtitle": "ライブ遠征の予定・交通・宿泊・費用管理",
+        "description": "GenBGTは、ライブの予定と遠征に必要な情報をひとつにまとめて管理できるアプリです。\n\n【主な機能】\n・ライブの日時、会場、出演者を登録\n・交通経路、宿泊先、各種費用をまとめて管理\n・遠征全体の費用を自動集計\n・カレンダーと年別アーカイブで予定を確認\n・関連する複数公演をひとつの遠征として整理\n・予約開始日やキャンセル期限を通知\n・共有ページで家族や友人に予定を共有\n・共有時に出発地や宿泊先をマスクしてプライバシーに配慮\n\nライブの予定から交通、宿泊、費用まで、遠征に必要な情報を分散させずに管理できます。",
+        "keywords": [
+          "ライブ",
+          "遠征",
+          "予定管理",
+          "カレンダー",
+          "交通",
+          "宿泊",
+          "費用管理",
+          "スケジュール",
+          "コンサート"
+        ],
+        "promoText": "ライブの予定と費用を、ひとつの場所に。遠征の日程・交通・宿泊・費用をまとめて管理できます。",
+        "marketingUrl": "https://www.genbgt.com",
+        "supportUrl": "https://www.genbgt.com/contact",
+        "privacyPolicyUrl": "https://www.genbgt.com/privacy"
       }
-    },
-    "advisory": {
-      "ageRatingOverride": "NONE",
-      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
-      "contests": "NONE",
-      "gambling": false,
-      "gamblingSimulated": "NONE",
-      "horrorOrFearThemes": "NONE",
-      "kidsAgeBand": null,
-      "koreaAgeRatingOverride": "NONE",
-      "lootBox": false,
-      "matureOrSuggestiveThemes": "NONE",
-      "medicalOrTreatmentInformation": "NONE",
-      "profanityOrCrudeHumor": "NONE",
-      "sexualContentGraphicAndNudity": "NONE",
-      "sexualContentOrNudity": "NONE",
-      "unrestrictedWebAccess": false,
-      "violenceCartoonOrFantasy": "NONE",
-      "violenceRealistic": "NONE",
-      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
-      "advertising": false,
-      "ageAssurance": false,
-      "ageRatingOverrideV2": "NONE",
-      "developerAgeRatingInfoUrl": null,
-      "gunsOrOtherWeapons": "NONE",
-      "healthOrWellnessTopics": false,
-      "messagingAndChat": false,
-      "parentalControls": false,
-      "userGeneratedContent": false
     }
   }
 }
