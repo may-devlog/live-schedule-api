@@ -84,8 +84,6 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
-  const [pullDistance, setPullDistance] = useState(0);
   
   // 選択肢の色情報
   const [categoryColor, setCategoryColor] = useState<string | null>(null);
@@ -107,11 +105,11 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
   // TrafficのTransportation色情報
   const [transportationColors, setTransportationColors] = useState<Map<string | number, string>>(new Map());
 
-  const fetchDetail = async () => {
+  const fetchDetail = async (showLoading = true) => {
     if ((!authenticated && !share_id) || !id) return;
     
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError(null);
 
       let found: ScheduleLike;
@@ -209,7 +207,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
     } catch (e: any) {
       setError(e.message ?? "Unknown error");
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -220,7 +218,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetchDetail();
+      await fetchDetail(false);
     } finally {
       setRefreshing(false);
     }
@@ -681,6 +679,7 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
     <View style={styles.container}>
       {authenticated ? <AppHeader active="archive" /> : <PublicHeader active="archive" homePath={`/share/${share_id}`} archivePath={`/share/${share_id}/year/${new Date().getFullYear()}`} />}
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.scrollPage}
         refreshControl={
           Platform.OS !== 'web' ? (
@@ -694,37 +693,6 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         }
         scrollEnabled={true}
         nestedScrollEnabled={Platform.OS === 'web'}
-        onTouchStart={(e) => {
-          const touch = e.nativeEvent.touches[0];
-          if (touch) {
-            setTouchStartY(touch.pageY);
-          }
-        }}
-        onTouchMove={(e) => {
-          if (touchStartY !== null) {
-            const touch = e.nativeEvent.touches[0];
-            if (touch) {
-              const distance = touch.pageY - touchStartY;
-              if (distance > 0) {
-                setPullDistance(distance);
-              }
-            }
-          }
-        }}
-        onTouchEnd={() => {
-          if (pullDistance > 100 && !refreshing) {
-            onRefresh();
-          }
-          setTouchStartY(null);
-          setPullDistance(0);
-        }}
-        onScroll={(e) => {
-          const { contentOffset } = e.nativeEvent;
-          if (contentOffset.y === 0 && pullDistance > 100 && !refreshing) {
-            onRefresh();
-          }
-        }}
-        scrollEventThrottle={16}
       >
         <View style={styles.scrollContent}>
 
@@ -818,6 +786,7 @@ const getStyles = (colors: ThemeColors, scheme: SchemeKey) => StyleSheet.create(
     flex: 1,
     backgroundColor: colors.surfaceAlt,
   },
+  scroll: { flex: 1, backgroundColor: colors.surfaceAlt },
   scrollPage: { flexGrow: 1 },
   scrollContent: {
     paddingHorizontal: 24,
