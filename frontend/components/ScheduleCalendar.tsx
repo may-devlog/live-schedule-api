@@ -554,12 +554,11 @@ const getStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   dayCell: {
     width: "14.285%", // 100% / 7 ≈ 14.285%
-    aspectRatio: 1,
+    height: 62,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 4,
     position: "relative",
-    minHeight: 62,
   },
   todayCell: {
     borderRadius: 18,

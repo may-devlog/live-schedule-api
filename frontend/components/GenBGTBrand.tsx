@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -17,7 +17,13 @@ function NativeTopSpacer() {
 }
 
 // ログイン中のネイティブ画面向け: Safe Area余白+検索・通知・アカウントの3アイコン（Web版のスマホ表示と同じ構成）
-function NativeAppHeaderBar({ onDisplayNameChange }: { onDisplayNameChange?: (value: string | null) => void }) {
+function NativeAppHeaderBar({
+  onDisplayNameChange,
+  showBackButton,
+}: {
+  onDisplayNameChange?: (value: string | null) => void;
+  showBackButton: boolean;
+}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { email } = useAuth();
@@ -27,6 +33,14 @@ function NativeAppHeaderBar({ onDisplayNameChange }: { onDisplayNameChange?: (va
   const [profileShareId, setProfileShareId] = useState<string | null>(null);
   const [accountVisible, setAccountVisible] = useState(false);
   const accountLabel = displayName || profileShareId || email?.split('@')[0] || 'ユーザー';
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace('/');
+  };
 
   useEffect(() => {
     fetchProfile(true)
@@ -41,14 +55,22 @@ function NativeAppHeaderBar({ onDisplayNameChange }: { onDisplayNameChange?: (va
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: colors.chrome, borderBottomWidth: 1, borderBottomColor: colors.chromeBorder }}>
       <View style={styles.nativeHeaderBar}>
-        <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.accentSoft }]} onPress={() => router.push('/find-user')} accessibilityLabel="共有ページを検索">
-          <Ionicons name="search-outline" size={20} color={colors.accentDark} />
-        </TouchableOpacity>
-        <NotificationMenu />
-        <TouchableOpacity style={styles.accountButton} onPress={() => setAccountVisible(true)} accessibilityLabel="アカウントメニューを開く">
-          <View style={[styles.accountAvatar, { backgroundColor: colors.accentSoft }]}>{avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.accountAvatarImage} /> : <Text style={[styles.accountAvatarText, { color: colors.accentDark }]}>{accountLabel.slice(0, 1).toUpperCase()}</Text>}</View>
-          <Ionicons name="chevron-down" size={16} color={colors.chromeMuted} />
-        </TouchableOpacity>
+        {showBackButton ? (
+          <TouchableOpacity style={styles.nativeBackButton} onPress={handleBack} accessibilityRole="button" accessibilityLabel="前の画面に戻る">
+            <Ionicons name="chevron-back" size={22} color={colors.accentDark} />
+            <Text style={[styles.nativeBackButtonText, { color: colors.accentDark }]}>戻る</Text>
+          </TouchableOpacity>
+        ) : <View />}
+        <View style={styles.nativeHeaderActions}>
+          <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.accentSoft }]} onPress={() => router.push('/find-user')} accessibilityLabel="共有ページを検索">
+            <Ionicons name="search-outline" size={20} color={colors.accentDark} />
+          </TouchableOpacity>
+          <NotificationMenu />
+          <TouchableOpacity style={styles.accountButton} onPress={() => setAccountVisible(true)} accessibilityLabel="アカウントメニューを開く">
+            <View style={[styles.accountAvatar, { backgroundColor: colors.accentSoft }]}>{avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.accountAvatarImage} /> : <Text style={[styles.accountAvatarText, { color: colors.accentDark }]}>{accountLabel.slice(0, 1).toUpperCase()}</Text>}</View>
+            <Ionicons name="chevron-down" size={16} color={colors.chromeMuted} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <AccountMenu
@@ -169,8 +191,9 @@ export function AuthHeader() {
   );
 }
 
-export function AppHeader({ active = 'archive', onDisplayNameChange }: { active?: 'home' | 'archive'; onDisplayNameChange?: (value: string | null) => void }) {
+export function AppHeader({ active = 'archive', onDisplayNameChange, showBackButton }: { active?: 'home' | 'archive'; onDisplayNameChange?: (value: string | null) => void; showBackButton?: boolean }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { email } = useAuth();
   const { colors } = useTheme();
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
@@ -190,7 +213,10 @@ export function AppHeader({ active = 'archive', onDisplayNameChange }: { active?
       .catch(() => { setAvatarDataUrl(null); setDisplayName(null); setProfileShareId(null); });
   }, []);
 
-  if (Platform.OS !== 'web') return <NativeAppHeaderBar onDisplayNameChange={onDisplayNameChange} />;
+  const isNativeTopLevel = pathname === '/' || /^\/year\/[^/]+$/.test(pathname);
+  const resolvedShowBackButton = showBackButton ?? !isNativeTopLevel;
+
+  if (Platform.OS !== 'web') return <NativeAppHeaderBar onDisplayNameChange={onDisplayNameChange} showBackButton={resolvedShowBackButton} />;
 
   return (
     <View style={[styles.header, { backgroundColor: colors.chrome, borderBottomColor: colors.chromeBorder }]}>
@@ -249,7 +275,10 @@ export function PublicFooter({ compact = false }: { compact?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  nativeHeaderBar: { minHeight: 52, paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
+  nativeHeaderBar: { minHeight: 52, paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  nativeHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  nativeBackButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', paddingRight: 8 },
+  nativeBackButtonText: { fontSize: 16, fontWeight: '600' },
   mark: { alignItems: 'center', justifyContent: 'center', position: 'relative' },
   wordmarkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   wordmark: { fontSize: 27, fontWeight: '800', letterSpacing: -0.8 },
