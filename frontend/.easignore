@@ -1,0 +1,25 @@
+# Dependencies and local Expo state
+node_modules/
+.expo/
+.expo-shared/
+
+# Generated output and native projects (Expo managed workflow)
+dist/
+web-build/
+ios/
+android/
+
+# Local simulator and Android distribution artifacts
+Expo-Go-*.app/
+*.aab
+*.apk
+
+# Local environment and development files
+.env
+.env.local
+.env.*.local
+*.log
+*.tmp
+.DS_Store
+.git/
+
