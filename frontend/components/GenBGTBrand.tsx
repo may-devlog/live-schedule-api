@@ -62,9 +62,6 @@ function NativeAppHeaderBar({
           </TouchableOpacity>
         ) : <View />}
         <View style={styles.nativeHeaderActions}>
-          <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.accentSoft }]} onPress={() => router.push('/find-user')} accessibilityLabel="共有ページを検索">
-            <Ionicons name="search-outline" size={20} color={colors.accentDark} />
-          </TouchableOpacity>
           <NotificationMenu />
           <TouchableOpacity style={styles.accountButton} onPress={() => setAccountVisible(true)} accessibilityLabel="アカウントメニューを開く">
             <View style={[styles.accountAvatar, { backgroundColor: colors.accentSoft }]}>{avatarDataUrl ? <Image source={{ uri: avatarDataUrl }} style={styles.accountAvatarImage} /> : <Text style={[styles.accountAvatarText, { color: colors.accentDark }]}>{accountLabel.slice(0, 1).toUpperCase()}</Text>}</View>

@@ -237,7 +237,7 @@ export default function NewScheduleScreen() {
   // 自動入力はプレミアム契約中または無料トライアル中のユーザーだけに表示する。
   // 取得失敗時は通常フォームだけを表示し、権限のない機能が一瞬見えることも防ぐ。
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || Platform.OS !== "web") {
       setCanUseScheduleImport(false);
       return;
     }

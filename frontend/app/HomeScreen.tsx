@@ -1141,18 +1141,20 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.menuButton, { marginBottom: 12 }]}
-              onPress={() => {
-                setShowUserMenuModal(false);
-                router.push("/settings/masked-locations");
-              }}
-            >
-              <View style={styles.menuButtonContent}>
-                <IconLock size={18} color="#37352f" />
-                <Text style={styles.menuButtonText}>出発地・到着地マスク設定</Text>
-              </View>
-            </TouchableOpacity>
+            {Platform.OS === 'web' && (
+              <TouchableOpacity
+                style={[styles.menuButton, { marginBottom: 12 }]}
+                onPress={() => {
+                  setShowUserMenuModal(false);
+                  router.push("/settings/masked-locations");
+                }}
+              >
+                <View style={styles.menuButtonContent}>
+                  <IconLock size={18} color="#37352f" />
+                  <Text style={styles.menuButtonText}>出発地・到着地マスク設定</Text>
+                </View>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={[styles.menuButton, { marginBottom: 12 }]}
@@ -1167,7 +1169,7 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
 
-            <View style={[styles.menuButton, { marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 }]}>
+            {Platform.OS === 'web' && <><View style={[styles.menuButton, { marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 }]}>
               <View style={styles.menuButtonContent}>
                 <IconLink size={18} color="#37352f" />
                 <Text style={styles.menuButtonText}>共有化</Text>
@@ -1214,7 +1216,7 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-            )}
+            )}</>}
 
             <TouchableOpacity
               style={[styles.menuButton, styles.menuButtonDanger]}

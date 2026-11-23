@@ -315,7 +315,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
               {menuItem('at-outline', 'ユーザーID変更', () => setDialog('shareId'))}
               {menuItem('notifications-outline', '通知設定', () => { onClose(); router.push('/settings/notifications'); })}
               {menuItem('color-palette-outline', '外観', () => { onClose(); router.push('/settings/appearance'); })}
-              {isPaidEffective && (
+              {Platform.OS === 'web' && isPaidEffective && (
                 <>
                   <View style={[styles.menuItem, styles.shareMenuItem]}>
                     <View style={styles.iconBox}><Ionicons name="share-social-outline" size={19} color={colors.accentDark} /></View>
@@ -349,7 +349,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                 </>
               )}
             </View>
-            {plan === 'premium' ? (
+            {Platform.OS === 'web' && (plan === 'premium' ? (
               <View style={styles.planCard}>
                 <Ionicons name="star" size={16} color={colors.accentDark} />
                 <Text style={styles.planCardText}>プレミアムプランをご利用中です</Text>
@@ -364,7 +364,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                 <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
                 <Text style={styles.planCardText}>無料トライアルは利用済みです</Text>
               </View>
-            ) : Platform.OS === 'web' ? (
+            ) : (
               <View style={styles.trialCard}>
                 <Text style={styles.trialTitle}>1ヶ月無料トライアル</Text>
                 <Text style={styles.trialDescription}>共有化やアーカイブのグループ化など、プレミアム機能を1ヶ月間お試しいただけます。</Text>
@@ -372,7 +372,7 @@ export function AccountMenu({ visible, onClose, avatarDataUrl, onAvatarChange, d
                   {trialStarting ? <ActivityIndicator color={colors.accentContrastText} /> : <Text style={styles.trialButtonText}>無料トライアルを始める</Text>}
                 </TouchableOpacity>
               </View>
-            ) : null}
+            ))}
             {Platform.OS === 'web' && (plan === 'premium' && hasStripeSubscription ? (
               <TouchableOpacity style={styles.manageBillingButton} onPress={openBillingPortal} disabled={portalLoading}>
                 {portalLoading ? <ActivityIndicator color={colors.accentDark} /> : <Text style={styles.manageBillingButtonText}>お支払い方法の確認・解約</Text>}
