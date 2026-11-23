@@ -195,7 +195,8 @@ export default function EditScheduleScreen() {
         const res = await authenticatedFetch(getApiUrl("/schedules?include_canceled=true"));
         if (!res.ok) throw new Error(`status: ${res.status}`);
         const data: Schedule[] = await res.json();
-        const found = data.find((s) => s.id.toString() === id);
+        // /live/:id はデータベース内部IDではなく、ユーザーごとの連番（user_seq）を使う。
+        const found = data.find((s) => s.user_seq != null && s.user_seq.toString() === id);
         if (!found) {
           Alert.alert("エラー", "スケジュールが見つかりませんでした。");
           router.back();
