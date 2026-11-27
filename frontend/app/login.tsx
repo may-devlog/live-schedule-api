@@ -109,14 +109,10 @@ export default function LoginScreen() {
               {loading ? <ActivityIndicator color={colors.accentContrastText} /> : <Text style={styles.loginButtonText}>ログイン</Text>}
             </TouchableOpacity>
 
-            {Platform.OS === 'web' && (
-              <>
-                <View style={styles.dividerRow}><View style={styles.divider} /><Text style={styles.dividerText}>または</Text><View style={styles.divider} /></View>
-                <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/register')} disabled={loading}>
-                  <Text style={styles.registerText}>新規アカウントを作成</Text>
-                </TouchableOpacity>
-              </>
-            )}
+            <View style={styles.dividerRow}><View style={styles.divider} /><Text style={styles.dividerText}>または</Text><View style={styles.divider} /></View>
+            <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/register')} disabled={loading}>
+              <Text style={styles.registerText}>新規アカウントを作成</Text>
+            </TouchableOpacity>
           </View>
           <Text style={styles.tagline}>ライブの予定と費用を、ひとつの場所に。</Text>
         </View>
