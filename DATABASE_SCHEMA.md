@@ -51,6 +51,7 @@
 | seller | TEXT | YES | NULL | 販売元 | Select | チケットぴあ、イープラス 等 |
 | ticket_fee | INTEGER | YES | NULL | チケット代 | Number | 円単位 |
 | drink_fee | INTEGER | YES | NULL | ドリンク代 | Number | 円単位 |
+| other | INTEGER | YES | NULL | その他（ロッカー代など） | Number | 円単位 |
 | total_fare | INTEGER | YES | NULL | 交通費合計 | Number | 円単位（計算値） |
 | stay_fee | INTEGER | YES | NULL | 宿泊費合計 | Number | 円単位（計算値） |
 | travel_cost | INTEGER | YES | NULL | 遠征費合計 | Number | 円単位（計算値） |
@@ -405,7 +406,7 @@ users     (1) ──< (N) notifications
 - `total_fare`: 関連するtrafficsのfareの合計
 - `stay_fee`: 関連するstaysのfeeの合計
 - `travel_cost`: total_fare + stay_fee
-- `total_cost`: ticket_fee + drink_fee + travel_cost
+- `total_cost`: ticket_fee + drink_fee + other + travel_cost
 
 ### trafficsテーブル
 

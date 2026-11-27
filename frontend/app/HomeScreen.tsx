@@ -50,6 +50,7 @@ export type Schedule = {
   seller?: string | null;
   ticket_fee?: number | null;
   drink_fee?: number | null;
+  other?: number | null;
   total_fare?: number | null;
   stay_fee?: number | null;
   travel_cost?: number | null;

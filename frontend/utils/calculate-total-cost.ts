@@ -34,16 +34,17 @@ export function calculateTotalCostWithReturnFlag(
   }, 0);
   
   // 既存のtotal_costから、元のtotal_fareを引いて、新しいtrafficCostWithReturnを足す
-  // total_cost = ticket_fee + drink_fee + travel_cost
+  // total_cost = ticket_fee + drink_fee + other + travel_cost
   // travel_cost = total_fare + stay_fee
-  // つまり、total_cost = ticket_fee + drink_fee + total_fare + stay_fee
+  // つまり、total_cost = ticket_fee + drink_fee + other + total_fare + stay_fee
   const ticketFee = schedule.ticket_fee || 0;
   const drinkFee = schedule.drink_fee || 0;
+  const other = schedule.other || 0;
   const stayFee = schedule.stay_fee || 0;
   const originalTotalFare = schedule.total_fare || 0;
   
-  // 新しいtotal_cost = ticket_fee + drink_fee + (trafficCostWithReturn) + stay_fee
-  const newTotalCost = ticketFee + drinkFee + trafficCostWithReturn + stayFee;
+  // 新しいtotal_cost = ticket_fee + drink_fee + other + (trafficCostWithReturn) + stay_fee
+  const newTotalCost = ticketFee + drinkFee + other + trafficCostWithReturn + stayFee;
   
   return newTotalCost;
 }

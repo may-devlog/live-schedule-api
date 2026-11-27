@@ -265,6 +265,12 @@ export default function PublicDetailScreen() {
               value={`¥${schedule.drink_fee.toLocaleString()}`}
             />
           )}
+          {schedule.other !== null && schedule.other !== undefined && (
+            <NotionProperty
+              label="その他"
+              value={`¥${schedule.other.toLocaleString()}`}
+            />
+          )}
           {schedule.total_fare !== null && schedule.total_fare !== undefined && (
             <NotionProperty
               label="交通費合計"

@@ -455,6 +455,11 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         alignValue="right"
       />
       <NotionProperty
+        label="その他"
+        value={formatCurrency(schedule.other)}
+        alignValue="right"
+      />
+      <NotionProperty
         label="交通費合計"
         alignValue="right"
         value={formatCurrency(
@@ -498,9 +503,10 @@ export default function SharedScheduleDetailScreen({ authenticated = false, sche
         isLast={false}
       >
         <Text style={styles.totalCostText}>{formatCurrency(
-          // チケット代 + ドリンク代 + 遠征費合計（往復フラグ考慮済み）
+          // チケット代 + ドリンク代 + その他 + 遠征費合計（往復フラグ考慮済み）
           (schedule.ticket_fee || 0) +
           (schedule.drink_fee || 0) +
+          (schedule.other || 0) +
           trafficSummaries.reduce((sum, traffic) => {
             return sum + (traffic.return_flag ? traffic.fare * 2 : traffic.fare);
           }, 0) + (schedule.stay_fee || 0)
