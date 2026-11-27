@@ -81,6 +81,7 @@ async fn init_test_schema(pool: &Pool<Sqlite>) {
       seller       TEXT,
       ticket_fee   INTEGER,
       drink_fee    INTEGER,
+      other        INTEGER,
       total_fare   INTEGER,
       stay_fee     INTEGER,
       travel_cost  INTEGER,

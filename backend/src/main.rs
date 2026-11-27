@@ -1280,10 +1280,11 @@ struct Schedule {
     seller: Option<String>,
     ticket_fee: Option<i32>,  // チケット代
     drink_fee: Option<i32>,   // ドリンク代
+    other: Option<i32>,       // その他（ロッカー代など）
     total_fare: Option<i32>,  // Traffic の合計
     stay_fee: Option<i32>,    // Stay の合計
     travel_cost: Option<i32>, // = Total fare + Stay fee
-    total_cost: Option<i32>,  // = Ticket fee + Drink fee + Travel cost
+    total_cost: Option<i32>,  // = Ticket fee + Drink fee + Other + Travel cost
 
     status: String, // "Canceled" / "Pending" / "Keep" / "Done"
 
@@ -1325,6 +1326,7 @@ struct ScheduleRow {
     seller: Option<String>,
     ticket_fee: Option<i32>,
     drink_fee: Option<i32>,
+    other: Option<i32>,
     total_fare: Option<i32>,
     stay_fee: Option<i32>,
     travel_cost: Option<i32>,
@@ -1362,6 +1364,7 @@ struct NewSchedule {
     seller: Option<String>,
     ticket_fee: Option<i32>,
     drink_fee: Option<i32>,
+    other: Option<i32>,
     status: Option<String>,
     related_schedule_ids: Option<Vec<i32>>, // 関連スケジュールIDの配列
     is_public: Option<bool>, // 公開フラグ
@@ -1535,6 +1538,7 @@ struct PublicSchedule {
     seller: Option<String>,
     ticket_fee: Option<i32>,
     drink_fee: Option<i32>,
+    other: Option<i32>,
     total_fare: Option<i32>,
     stay_fee: Option<i32>,
     travel_cost: Option<i32>,
@@ -1566,6 +1570,7 @@ struct PublicScheduleRow {
     seller: Option<String>,
     ticket_fee: Option<i32>,
     drink_fee: Option<i32>,
+    other: Option<i32>,
     total_fare: Option<i32>,
     stay_fee: Option<i32>,
     travel_cost: Option<i32>,
@@ -1730,6 +1735,7 @@ fn row_to_schedule(row: ScheduleRow) -> Schedule {
         seller: row.seller,
         ticket_fee: row.ticket_fee,
         drink_fee: row.drink_fee,
+        other: row.other,
         total_fare: row.total_fare,
         stay_fee: row.stay_fee,
         travel_cost: row.travel_cost,
@@ -1858,6 +1864,7 @@ async fn row_to_public_schedule(pool: &Pool<Sqlite>, row: PublicScheduleRow) -> 
         seller: row.seller,
         ticket_fee: row.ticket_fee,
         drink_fee: row.drink_fee,
+        other: row.other,
         total_fare: row.total_fare,
         stay_fee: row.stay_fee,
         travel_cost: row.travel_cost,
@@ -1875,6 +1882,7 @@ fn apply_travel_sharing(mut schedule: PublicSchedule, enabled: bool) -> PublicSc
         schedule.seller = None;
         schedule.ticket_fee = None;
         schedule.drink_fee = None;
+        schedule.other = None;
         schedule.total_fare = None;
         schedule.stay_fee = None;
         schedule.travel_cost = None;
@@ -4377,6 +4385,7 @@ async fn get_shared_schedules(
               seller,
               ticket_fee,
               drink_fee,
+              other,
               total_fare,
               stay_fee,
               travel_cost,
@@ -4472,6 +4481,7 @@ async fn get_shared_schedule(
               seller,
               ticket_fee,
               drink_fee,
+              other,
               total_fare,
               stay_fee,
               travel_cost,
@@ -4544,6 +4554,7 @@ async fn list_schedules(
           seller,
           ticket_fee,
           drink_fee,
+          other,
           total_fare,
           stay_fee,
           travel_cost,
@@ -4597,6 +4608,7 @@ async fn list_schedules(
           seller,
           ticket_fee,
           drink_fee,
+          other,
           total_fare,
           stay_fee,
           travel_cost,
@@ -4687,6 +4699,7 @@ async fn list_upcoming(
           seller,
           ticket_fee,
           drink_fee,
+          other,
           total_fare,
           stay_fee,
           travel_cost,
@@ -4732,6 +4745,7 @@ async fn list_upcoming(
           seller,
           ticket_fee,
           drink_fee,
+          other,
           total_fare,
           stay_fee,
           travel_cost,
@@ -4790,24 +4804,25 @@ async fn calculate_rollup(
     .await?
     .map(|sum: i64| sum as i32);
     
-    // スケジュールのticket_feeとdrink_feeを取得
-    let schedule_row: Option<(Option<i32>, Option<i32>)> = sqlx::query_as(
-        "SELECT ticket_fee, drink_fee FROM schedules WHERE id = ?"
+    // スケジュールのticket_fee、drink_fee、otherを取得
+    let schedule_row: Option<(Option<i32>, Option<i32>, Option<i32>)> = sqlx::query_as(
+        "SELECT ticket_fee, drink_fee, other FROM schedules WHERE id = ?"
     )
     .bind(schedule_id)
     .fetch_optional(pool)
     .await?;
     
-    let (ticket_fee, drink_fee) = schedule_row.unwrap_or((None, None));
+    let (ticket_fee, drink_fee, other) = schedule_row.unwrap_or((None, None, None));
     
     // travel_cost: total_fare + stay_fee
     let travel_cost = total_fare
         .unwrap_or(0)
         .saturating_add(stay_fee.unwrap_or(0));
     
-    // total_cost: ticket_fee + drink_fee + travel_cost
+    // total_cost: ticket_fee + drink_fee + other + travel_cost
     let total_cost = ticket_fee.unwrap_or(0)
         .saturating_add(drink_fee.unwrap_or(0))
+        .saturating_add(other.unwrap_or(0))
         .saturating_add(travel_cost);
     
     // スケジュールを更新
@@ -4865,6 +4880,7 @@ async fn create_schedule(
           seller,
           ticket_fee,
           drink_fee,
+          other,
           total_fare,
           stay_fee,
           travel_cost,
@@ -4877,7 +4893,7 @@ async fn create_schedule(
           created_at,
           updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?,
           -- user_seqはSELECT+INSERTを1つの文にまとめることでSQLiteの書き込みロックの
           -- 範囲内に収め、同一ユーザーからの同時作成による連番の重複（競合状態）を防ぐ
           (SELECT COALESCE(MAX(user_seq), 0) + 1 FROM schedules WHERE user_id = ?),
@@ -4904,6 +4920,7 @@ async fn create_schedule(
     .bind(&payload.seller)
     .bind(payload.ticket_fee)
     .bind(payload.drink_fee)
+    .bind(payload.other)
     .bind(payload.status.as_deref().unwrap_or("Pending"))
     .bind(&payload.related_schedule_ids.as_ref().and_then(|ids| {
         if ids.is_empty() {
@@ -4953,6 +4970,7 @@ async fn create_schedule(
           seller,
           ticket_fee,
           drink_fee,
+          other,
           total_fare,
           stay_fee,
           travel_cost,
@@ -5006,6 +5024,7 @@ async fn create_schedule(
                   seller,
                   ticket_fee,
                   drink_fee,
+                  other,
                   total_fare,
                   stay_fee,
                   travel_cost,
@@ -5091,6 +5110,7 @@ async fn update_schedule(
           seller,
           ticket_fee,
           drink_fee,
+          other,
           total_fare,
           stay_fee,
           travel_cost,
@@ -5172,6 +5192,7 @@ async fn update_schedule(
           seller = ?,
           ticket_fee = ?,
           drink_fee = ?,
+          other = ?,
           status = ?,
           related_schedule_ids = ?,
           is_public = ?,
@@ -5197,6 +5218,7 @@ async fn update_schedule(
     .bind(&payload.seller)
     .bind(payload.ticket_fee)
     .bind(payload.drink_fee)
+    .bind(payload.other)
     .bind(payload.status.as_deref().unwrap_or("Pending"))
     .bind(&payload.related_schedule_ids.as_ref().and_then(|ids| {
         if ids.is_empty() {
@@ -5253,6 +5275,7 @@ async fn update_schedule(
           seller,
           ticket_fee,
           drink_fee,
+          other,
           total_fare,
           stay_fee,
           travel_cost,
@@ -5304,6 +5327,7 @@ async fn update_schedule(
               seller,
               ticket_fee,
               drink_fee,
+              other,
               total_fare,
               stay_fee,
               travel_cost,
@@ -5373,6 +5397,7 @@ async fn update_schedule(
               seller,
               ticket_fee,
               drink_fee,
+              other,
               total_fare,
               stay_fee,
               travel_cost,
@@ -5453,6 +5478,7 @@ async fn delete_schedule(
           seller,
           ticket_fee,
           drink_fee,
+          other,
           total_fare,
           stay_fee,
           travel_cost,
@@ -5526,6 +5552,7 @@ async fn delete_schedule(
               seller,
               ticket_fee,
               drink_fee,
+              other,
               total_fare,
               stay_fee,
               travel_cost,
@@ -5674,6 +5701,7 @@ async fn list_public_schedules(
               seller,
               ticket_fee,
               drink_fee,
+              other,
               total_fare,
               stay_fee,
               travel_cost,
@@ -5721,6 +5749,7 @@ async fn list_public_schedules(
               seller,
               ticket_fee,
               drink_fee,
+              other,
               total_fare,
               stay_fee,
               travel_cost,
@@ -5789,6 +5818,7 @@ async fn get_public_schedule(
               seller,
               ticket_fee,
               drink_fee,
+              other,
               total_fare,
               stay_fee,
               travel_cost,
@@ -5825,6 +5855,7 @@ async fn get_public_schedule(
               seller,
               ticket_fee,
               drink_fee,
+              other,
               total_fare,
               stay_fee,
               travel_cost,
@@ -8936,6 +8967,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
       seller       TEXT,
       ticket_fee   INTEGER,
       drink_fee    INTEGER,
+      other        INTEGER,
       total_fare   INTEGER,
       stay_fee     INTEGER,
       travel_cost  INTEGER,
@@ -9082,6 +9114,20 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
 
     sqlx::query(create_users).execute(pool).await?;
     sqlx::query(create_schedules).execute(pool).await?;
+
+    // その他（ロッカー代など）。既存行はDEFAULTなしのためNULLになる。
+    let has_schedule_other: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM pragma_table_info('schedules') WHERE name = 'other'"
+    )
+    .fetch_one(pool)
+    .await?;
+    if has_schedule_other == 0 {
+        sqlx::query("ALTER TABLE schedules ADD COLUMN other INTEGER")
+            .execute(pool)
+            .await?;
+        eprintln!("[Migration] Added schedules.other column");
+    }
+
     sqlx::query(create_traffics).execute(pool).await?;
     sqlx::query(create_stays).execute(pool).await?;
     sqlx::query(create_select_options).execute(pool).await?;
@@ -9248,6 +9294,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
                   seller       TEXT,
                   ticket_fee   INTEGER,
                   drink_fee    INTEGER,
+                  other        INTEGER,
                   total_fare   INTEGER,
                   stay_fee     INTEGER,
                   travel_cost  INTEGER,
@@ -9267,13 +9314,13 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
                 r#"
                 INSERT INTO schedules_new (
                   id, user_id, title, "group", date, open, start, "end", notes, category,
-                  area, venue, target, lineup, seller, ticket_fee, drink_fee, total_fare,
+                  area, venue, target, lineup, seller, ticket_fee, drink_fee, other, total_fare,
                   stay_fee, travel_cost, total_cost, status, related_schedule_ids, is_public,
                   created_at, updated_at
                 )
                 SELECT
                   id, user_id, title, "group", date, open, start, "end", notes, category,
-                  area, venue, target, lineup, seller, ticket_fee, drink_fee, total_fare,
+                  area, venue, target, lineup, seller, ticket_fee, drink_fee, other, total_fare,
                   stay_fee, travel_cost, total_cost, status, related_schedule_ids, is_public,
                   created_at, updated_at
                 FROM schedules
@@ -9359,6 +9406,7 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
               seller       TEXT,
               ticket_fee   INTEGER,
               drink_fee    INTEGER,
+              other        INTEGER,
               total_fare   INTEGER,
               stay_fee     INTEGER,
               travel_cost  INTEGER,
@@ -9378,13 +9426,13 @@ async fn init_db(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
             r#"
             INSERT INTO schedules_new (
               id, user_id, title, "group", date, open, start, "end", notes, category,
-              area, venue, target, lineup, seller, ticket_fee, drink_fee, total_fare,
+              area, venue, target, lineup, seller, ticket_fee, drink_fee, other, total_fare,
               stay_fee, travel_cost, total_cost, status, related_schedule_ids, is_public,
               created_at, updated_at
             )
             SELECT
               id, user_id, title, "group", date, open, start, "end", notes, category,
-              area, venue, target, lineup, seller, ticket_fee, drink_fee, total_fare,
+              area, venue, target, lineup, seller, ticket_fee, drink_fee, other, total_fare,
               stay_fee, travel_cost, total_cost, status, related_schedule_ids, is_public,
               created_at, updated_at
             FROM schedules

@@ -32,24 +32,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?
         .map(|sum: i64| sum as i32);
         
-        // スケジュールのticket_feeとdrink_feeを取得
-        let schedule_row: Option<(Option<i32>, Option<i32>)> = sqlx::query_as(
-            "SELECT ticket_fee, drink_fee FROM schedules WHERE id = ?"
+        // スケジュールのticket_fee、drink_fee、otherを取得
+        let schedule_row: Option<(Option<i32>, Option<i32>, Option<i32>)> = sqlx::query_as(
+            "SELECT ticket_fee, drink_fee, other FROM schedules WHERE id = ?"
         )
         .bind(schedule_id)
         .fetch_optional(&pool)
         .await?;
         
-        let (ticket_fee, drink_fee) = schedule_row.unwrap_or((None, None));
+        let (ticket_fee, drink_fee, other) = schedule_row.unwrap_or((None, None, None));
         
         // travel_cost: total_fare + stay_fee
         let travel_cost = total_fare
             .unwrap_or(0)
             .saturating_add(stay_fee.unwrap_or(0));
         
-        // total_cost: ticket_fee + drink_fee + travel_cost
+        // total_cost: ticket_fee + drink_fee + other + travel_cost
         let total_cost = ticket_fee.unwrap_or(0)
             .saturating_add(drink_fee.unwrap_or(0))
+            .saturating_add(other.unwrap_or(0))
             .saturating_add(travel_cost);
         
         println!("Schedule {}: total_fare={:?}, stay_fee={:?}, travel_cost={}, total_cost={}", 

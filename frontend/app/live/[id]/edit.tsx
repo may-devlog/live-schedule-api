@@ -179,6 +179,7 @@ export default function EditScheduleScreen() {
   const [seller, setSeller] = useState<string | null>(null);
   const [ticketFee, setTicketFee] = useState("");
   const [drinkFee, setDrinkFee] = useState("");
+  const [other, setOther] = useState("");
   const [status, setStatus] = useState<string | null>("Pending");
   const [relatedScheduleIds, setRelatedScheduleIds] = useState<number[]>([]);
   const [isPublic, setIsPublic] = useState(false);
@@ -232,6 +233,7 @@ export default function EditScheduleScreen() {
         setSeller(found.seller || null);
         setTicketFee(found.ticket_fee?.toString() || "");
         setDrinkFee(found.drink_fee?.toString() || "");
+        setOther(found.other?.toString() || "");
         setStatus(found.status || "Pending");
         setRelatedScheduleIds(found.related_schedule_ids || []);
         setIsPublic(found.is_public || false);
@@ -259,6 +261,7 @@ export default function EditScheduleScreen() {
     // 数値系のパース
     const ticketFeeNum = ticketFee ? Number(ticketFee) : undefined;
     const drinkFeeNum = drinkFee ? Number(drinkFee) : undefined;
+    const otherNum = other ? Number(other) : undefined;
 
     if (ticketFee && Number.isNaN(ticketFeeNum)) {
       Alert.alert("入力エラー", "Ticket fee は数値で入力してください。");
@@ -266,6 +269,10 @@ export default function EditScheduleScreen() {
     }
     if (drinkFee && Number.isNaN(drinkFeeNum)) {
       Alert.alert("入力エラー", "Drink fee は数値で入力してください。");
+      return;
+    }
+    if (other && Number.isNaN(otherNum)) {
+      Alert.alert("入力エラー", "その他は数値で入力してください。");
       return;
     }
 
@@ -285,6 +292,7 @@ export default function EditScheduleScreen() {
       seller: seller || null,
       ticket_fee: ticketFeeNum ?? null,
       drink_fee: drinkFeeNum ?? null,
+      other: otherNum ?? null,
       status: status || "Pending",
       related_schedule_ids: relatedScheduleIds,
       is_public: isPublic,
@@ -525,6 +533,14 @@ export default function EditScheduleScreen() {
         style={styles.input}
         value={drinkFee}
         onChangeText={setDrinkFee}
+        keyboardType="numeric"
+      />
+
+      <Text style={styles.label}>その他</Text>
+      <TextInput
+        style={styles.input}
+        value={other}
+        onChangeText={setOther}
         keyboardType="numeric"
       />
 
