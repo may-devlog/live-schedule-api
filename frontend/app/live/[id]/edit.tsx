@@ -261,7 +261,7 @@ export default function EditScheduleScreen() {
     // 数値系のパース
     const ticketFeeNum = ticketFee ? Number(ticketFee) : undefined;
     const drinkFeeNum = drinkFee ? Number(drinkFee) : undefined;
-    const otherNum = other ? Number(other) : undefined;
+    const otherNum = other.trim() ? Number(other) : null;
 
     if (ticketFee && Number.isNaN(ticketFeeNum)) {
       Alert.alert("入力エラー", "Ticket fee は数値で入力してください。");
@@ -271,8 +271,8 @@ export default function EditScheduleScreen() {
       Alert.alert("入力エラー", "Drink fee は数値で入力してください。");
       return;
     }
-    if (other && Number.isNaN(otherNum)) {
-      Alert.alert("入力エラー", "その他は数値で入力してください。");
+    if (otherNum !== null && (!Number.isInteger(otherNum) || otherNum < -2147483648 || otherNum > 2147483647)) {
+      Alert.alert("入力エラー", "その他は -2,147,483,648〜2,147,483,647 の整数で入力してください。");
       return;
     }
 
@@ -292,7 +292,7 @@ export default function EditScheduleScreen() {
       seller: seller || null,
       ticket_fee: ticketFeeNum ?? null,
       drink_fee: drinkFeeNum ?? null,
-      other: otherNum ?? null,
+      other: otherNum,
       status: status || "Pending",
       related_schedule_ids: relatedScheduleIds,
       is_public: isPublic,

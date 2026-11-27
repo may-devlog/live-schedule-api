@@ -1364,10 +1364,30 @@ struct NewSchedule {
     seller: Option<String>,
     ticket_fee: Option<i32>,
     drink_fee: Option<i32>,
-    other: Option<i32>,
+    #[serde(default, deserialize_with = "deserialize_other")]
+    other: Option<Option<i32>>,
     status: Option<String>,
     related_schedule_ids: Option<Vec<i32>>, // 関連スケジュールIDの配列
     is_public: Option<bool>, // 公開フラグ
+}
+
+// Missing fields retain the default outer None. A JSON null is Some(None).
+fn deserialize_other<'de, D>(deserializer: D) -> std::result::Result<Option<Option<i32>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<i32>::deserialize(deserializer).map(Some)
+}
+
+#[test]
+fn schedule_other_distinguishes_missing_null_and_amount() {
+    let mut payload = serde_json::json!({"title": "Live", "area": "Tokyo", "venue": "Hall"});
+    let parse_other = |value| serde_json::from_value::<NewSchedule>(value).unwrap().other;
+    assert_eq!(parse_other(payload.clone()), None);
+    payload["other"] = serde_json::Value::Null;
+    assert_eq!(parse_other(payload.clone()), Some(None));
+    payload["other"] = serde_json::json!(0);
+    assert_eq!(parse_other(payload), Some(Some(0)));
 }
 
 // ====== Traffic 型定義 ======
@@ -4920,7 +4940,7 @@ async fn create_schedule(
     .bind(&payload.seller)
     .bind(payload.ticket_fee)
     .bind(payload.drink_fee)
-    .bind(payload.other)
+    .bind(payload.other.flatten())
     .bind(payload.status.as_deref().unwrap_or("Pending"))
     .bind(&payload.related_schedule_ids.as_ref().and_then(|ids| {
         if ids.is_empty() {
@@ -5192,7 +5212,7 @@ async fn update_schedule(
           seller = ?,
           ticket_fee = ?,
           drink_fee = ?,
-          other = ?,
+          other = CASE WHEN ? THEN ? ELSE other END,
           status = ?,
           related_schedule_ids = ?,
           is_public = ?,
@@ -5218,7 +5238,8 @@ async fn update_schedule(
     .bind(&payload.seller)
     .bind(payload.ticket_fee)
     .bind(payload.drink_fee)
-    .bind(payload.other)
+    .bind(payload.other.is_some())
+    .bind(payload.other.flatten())
     .bind(payload.status.as_deref().unwrap_or("Pending"))
     .bind(&payload.related_schedule_ids.as_ref().and_then(|ids| {
         if ids.is_empty() {
